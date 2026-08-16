@@ -77,38 +77,56 @@ class PhoenixClient:
         if not phoenix_available(self.base_url):
             self.error = f"no Phoenix sink at {self.base_url}"
             return
+        # arize-phoenix-client (phoenix>=20): Client(base_url=...) with
+        # c.projects.list() and c.spans.get_spans_dataframe(project_name=...).
         try:
-            from phoenix.session.client import Client as PhoenixSessionClient
+            from phoenix.client import Client as NewClient
 
-            self._client = PhoenixSessionClient(endpoint=self.base_url)
+            self._client = NewClient(base_url=self.base_url)
+            self._modern = True
+            return
         except Exception:
-            try:
-                import phoenix as px
+            pass
+        # arize-phoenix (legacy): phoenix.session.client.Client(endpoint=...).
+        try:
+            from phoenix.session.client import Client as SessionClient
 
-                self._client = px.Client(endpoint=self.base_url)
-            except Exception as exc:  # pragma: no cover
-                self.error = f"arize-phoenix not importable: {exc}"
+            self._client = SessionClient(endpoint=self.base_url)
+            self._modern = False
+        except Exception as exc:  # pragma: no cover
+            self.error = f"arize-phoenix not importable: {exc}"
 
     @property
     def ready(self) -> bool:
         return self._client is not None
 
+    def _spans_modern(self, project: str, limit: int | None) -> Optional[list[dict]]:
+        df = self._client.spans.get_spans_dataframe(project_name=project)
+        if df is None or df.empty:
+            return []
+        records = df.to_dict(orient="records")
+        return records[:limit] if limit else records
+
+    def _spans_legacy(self, project: str, limit: int | None) -> Optional[list[dict]]:
+        df = self._client.get_spans_dataframe(project_name=project)
+        if df is None or df.empty:
+            return []
+        records = df.to_dict(orient="records")
+        return records[:limit] if limit else records
+
     def spans(self, project_name: str | None = None, limit: int | None = None) -> Optional[list[dict]]:
         """Query project spans as a list of dicts (or None when unavailable).
 
         Project name defaults to ``PHOENIX_PROJECT`` / "default". Span rows
-        carry name, start/end time, attributes, and any context/input/output
-        metadata attached by the extraction pipeline.
+        carry name, kind, start/end time, status, and context (trace/span id).
         """
         if not self.ready:
             return None
         try:
             project = project_name or os.environ.get("PHOENIX_PROJECT", "default")
-            df = self._client.get_spans_dataframe(project_name=project)
-            if df is None or df.empty:
-                return []
-            records = df.to_dict(orient="records")
-            return records[:limit] if limit else records
+            if getattr(self, "_modern", False):
+                return self._spans_modern(project, limit)
+            return self._spans_legacy(project, limit)
         except Exception as exc:  # pragma: no cover
             self.error = str(exc)
             return None

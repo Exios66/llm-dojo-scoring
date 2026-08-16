@@ -35,3 +35,42 @@ def test_phoenix_client_unavailable_graceful():
     assert client.ready is False
     assert client.spans() is None
     assert client.error is not None
+
+
+def test_phoenix_client_modern_spans_path():
+    """Modern phoenix.client path: spans() calls get_spans_dataframe."""
+    import pandas as pd
+
+    fake = mock.Mock()
+    fake.spans.get_spans_dataframe.return_value = pd.DataFrame([
+        {"name": "OpenRouter Request", "span_kind": "LLM",
+         "context.trace_id": "abc", "context.span_id": "def"},
+    ])
+    client = ps.PhoenixClient.__new__(ps.PhoenixClient)
+    client.base_url = "http://localhost:6006"
+    client._client = fake
+    client._modern = True
+    client.error = None
+    spans = client.spans(project_name="default")
+    assert spans is not None
+    assert len(spans) == 1
+    assert spans[0]["name"] == "OpenRouter Request"
+    fake.spans.get_spans_dataframe.assert_called_once_with(project_name="default")
+
+
+def test_phoenix_client_legacy_spans_path():
+    """Legacy path: spans() calls get_spans_dataframe on the session client."""
+    import pandas as pd
+
+    fake = mock.Mock()
+    fake.get_spans_dataframe.return_value = pd.DataFrame(
+        [{"name": "span-a", "span_kind": "LLM"}]
+    )
+    client = ps.PhoenixClient.__new__(ps.PhoenixClient)
+    client.base_url = "http://localhost:6006"
+    client._client = fake
+    client._modern = False
+    client.error = None
+    spans = client.spans()
+    assert len(spans) == 1
+    fake.get_spans_dataframe.assert_called_once_with(project_name="default")

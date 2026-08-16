@@ -41,11 +41,25 @@ def _cli_sync(argv: list[str]) -> int:
     args = parser.parse_args(argv)
 
     from .langfuse_sync import LangfuseClient, load_langfuse_config, sync_sorter_results
-    from .phoenix_sync import check_phoenix
 
+    # --check-phoenix alone is a standalone probe (no Langfuse credentials needed)
+    sync_requested = any([args.session, args.max_items, args.env_file, args.workbook,
+                          args.task != "subtype_classification",
+                          args.outdir != ".", args.no_workbook])
     if args.check_phoenix:
+        from .phoenix_sync import PhoenixClient, check_phoenix
+
         status = check_phoenix()
         print(f"[dojo-sync] {status.describe()}")
+        if status.available:
+            client = PhoenixClient()
+            spans = client.spans()
+            if spans is None:
+                print(f"[dojo-sync] span read failed: {client.error or 'unknown'}")
+            else:
+                print(f"[dojo-sync] {len(spans)} spans in project 'default'.")
+        if not sync_requested:
+            return 0
 
     try:
         client = LangfuseClient(load_langfuse_config(args.env_file))
