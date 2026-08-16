@@ -41,6 +41,56 @@ dojo-export --task sorter --log reports/experiment_log.jsonl --outdir .
 dojo-export --task all --sweep --log reports/experiment_log.jsonl
 ```
 
+## Live sync from Langfuse / Phoenix
+
+The eval runners trace every per-document classification to the `llm-dojo`
+Langfuse project (`sessionId` = experiment name, structured output + per-row
+scores). `dojo-sync` re-reads those traces and reconstructs the reference
+workbook directly — no manual export needed:
+
+```bash
+# Credentials: env vars, or a langfuse.env / .env file
+export LANGFUSE_PUBLIC_KEY=pk-lf-...
+export LANGFUSE_SECRET_KEY=sk-lf-...
+export LANGFUSE_HOST=https://us.cloud.langfuse.com
+
+# Sync ALL subtype-classification runs
+dojo-sync --task subtype_classification --outdir reports/live
+
+# Sync one experiment (session) — fast, rate-limit friendly
+dojo-sync --task subtype_classification \
+          --session qwen3.7-flash_sorter_v13_subtype_langfuse --outdir reports/live
+
+# Probe the local Phoenix/OTLP sink too
+dojo-sync --check-phoenix
+```
+
+`dojo-analyze` also accepts a live source directly:
+
+```bash
+dojo-analyze "langfuse:subtype_classification" --max-items 2000
+```
+
+Library API:
+
+```python
+from llm_dojo_scoring import langfuse_sync as lf
+
+records = lf.fetch_run_records(lf.LangfuseClient(), task=lf.SORTER_TRACE,
+                               session_filter="qwen3.7-flash_sorter_v13_subtype_langfuse")
+frame = lf.records_to_sorter_frame(records)   # -> normalize_results_frame -> analyze
+```
+
+Notes:
+
+- Langfuse list endpoints rate-limit aggressively (~15 req/min on `/traces`);
+  the client backs off on 429 (`Retry-After`) automatically. A full 4,000-trace
+  sync takes a few minutes; syncing one session is ~11 requests.
+- The local Phoenix sink (`http://localhost:6006`) is read through
+  `llm_dojo_scoring.phoenix_sync` (uses the `arize-phoenix` client when the
+  sink is running); when it is down the suite reports a clear status instead
+  of failing (`dojo-sync --check-phoenix`).
+
 Or use the library directly:
 
 ```python
@@ -83,7 +133,9 @@ print(dojo.render_notes(interp))
 | `interpret` | — (new) | Verdicts: champion, significance, version/model leaderboards, reliability, recommendations |
 | `visualize` | — (new) | matplotlib plots: CI bars, prompt-version bars, subtype heatmap, failure stacks, cost scatter |
 | `report` | — (new) | Full Markdown report builder |
-| `cli` | — (new) | `dojo-analyze`, `dojo-export` commands |
+| `langfuse_sync` | — (new) | Pull live experiment traces (Langfuse) into run records + reference workbook |
+| `phoenix_sync` | — (new) | Local Phoenix/OTLP sink probe + span reader (graceful when down) |
+| `cli` | — (new) | `dojo-analyze`, `dojo-export`, `dojo-sync` commands |
 
 ## Configuration
 
@@ -135,6 +187,9 @@ See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap for
 
 ```
 dojo-analyze INPUT [-o REPORT.md] [--plots DIR] [--metric COL] [--target 0.94]
-                  [--min-n N] [--cost-column COL] [--task T] [--no-plots]
+                  [--min-n N] [--cost-column COL] [--task T] [--max-items N]
+                  [--no-plots]        # INPUT may be xlsx | jsonl | langfuse:<name>
 dojo-export  [--task sorter|extraction|all] [--sweep] [--log LOG] [--outdir DIR]
+dojo-sync    [--task TRACE_NAME] [--session NAME] [--max-items N]
+             [--env-file FILE] [--outdir DIR] [--no-workbook] [--check-phoenix]
 ```

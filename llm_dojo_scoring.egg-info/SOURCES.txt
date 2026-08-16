@@ -15,6 +15,8 @@ llm_dojo_scoring/failure_modes.py
 llm_dojo_scoring/field_scoring.py
 llm_dojo_scoring/interpret.py
 llm_dojo_scoring/io.py
+llm_dojo_scoring/langfuse_sync.py
+llm_dojo_scoring/phoenix_sync.py
 llm_dojo_scoring/report.py
 llm_dojo_scoring/visualize.py
 llm_dojo_scoring.egg-info/PKG-INFO
@@ -36,4 +38,6 @@ tests/test_failure_modes.py
 tests/test_field_scoring.py
 tests/test_interpret.py
 tests/test_io.py
+tests/test_langfuse_sync.py
+tests/test_phoenix_sync.py
 tests/test_visualize.py

@@ -23,3 +23,141 @@ Requires-Dist: pytest-mock>=3.14; extra == "dev"
 
 # llm-dojo-scoring
 
+Dedicated **scoring, error-analysis, visualization, and interpretation** suite
+for LLM document pipelines — a single importable library that replaces the
+project-local scoring code spread across the `llm-entity-extraction` and
+`llm-mailroom` repositories.
+
+Import it into those projects and the exact same scoring definitions run
+everywhere: inside eval runners, Braintrust-scorer lookups, post-hoc manifest
+re-scoring, Excel report export, and offline analysis of the resulting
+artifacts (`Sorter_Experiment_Results.xlsx`, `Sorter_Model_Sweep_Results.xlsx`,
+`Sorter_Experiment_Codebook.csv`, …).
+
+## Install
+
+```bash
+pip install -e .                # from this repo
+pip install -e "git+https://github.com/<org>/llm-dojo-scoring.git#egg=llm-dojo-scoring"
+```
+
+Then, in **llm-entity-extraction** / **llm-mailroom**:
+
+```python
+from llm_dojo_scoring import score_extraction, bootstrap_ci, tokens_summary
+```
+
+## Quickstart
+
+Analyze a downloaded results workbook (one row per run) into a Markdown
+report + plots:
+
+```bash
+dojo-analyze Sorter_Experiment_Results.xlsx --target 0.94 --min-n 100
+# -> Sorter_Experiment_Results.xlsx.report.md  (+ *_plots/*.png)
+```
+
+Regenerate the canonical workbooks + codebooks from an experiment log:
+
+```bash
+dojo-export --task sorter --log reports/experiment_log.jsonl --outdir .
+dojo-export --task all --sweep --log reports/experiment_log.jsonl
+```
+
+Or use the library directly:
+
+```python
+import llm_dojo_scoring as dojo
+
+# 1. Score one extraction (field-type-aware, with factuality audit)
+result = dojo.score_extraction(
+    "contract", field_types, predicted, expected, doc_text=text,
+)
+print(result.overall_score, result.ambiguous_fields)
+
+# 2. Bootstrap a CI over per-document scores
+ci = dojo.bootstrap_ci([1.0, 0.0, 1.0, 1.0])
+
+# 3. Aggregate tokens/cost
+summary = dojo.tokens_summary(usage_records, model="qwen/qwen3.7-flash")
+
+# 4. Analyze a workbook artifact
+result = dojo.io.read_workbook("Sorter_Experiment_Results.xlsx")
+frame = dojo.io.normalize_results_frame(result.frame)
+interp = dojo.interpret(frame, target=0.94)
+print(dojo.render_notes(interp))
+```
+
+## Module map
+
+| Module | Replaces (in llm-entity-extraction / llm-mailroom) | What it does |
+|---|---|---|
+| `field_scoring` | `src/field_scoring.py` | Field-type-aware deterministic extraction scoring (`score_extraction`, scalar/list scorers, factuality audit, category presence) |
+| `classification` | `src/scorers.py` | Label normalization, exact match, per-class stats, macro accuracy, confusion matrices, binary P/R/F1 |
+| `failure_modes` | `scripts/eval/run_subtype_eval.py` | Failure-mode taxonomy + `classify_failure`, per-subtype accuracy, confusion builders |
+| `equivalences` | `agents/sorter_agent.py` (constants) | Subtype/doc-subclass normalization + equivalence helpers |
+| `bootstrap` | `src/bootstrap.py` | Bootstrap CIs, two-sample delta significance, Wilson intervals |
+| `cost` | `src/cost_models.py` + `experiment_log.tokens_summary` | Price lookup, cost estimation, usage aggregation |
+| `diagnostics` | `src/metrics.py` | Run-level diagnostics: date/duration/money MAE+R², span drift, field error decomposition |
+| `experiment` | `src/experiment_log.py` (core) | JSONL record append/load, dotted-path access, git snapshot |
+| `export` | `scripts/reporting/export_experiment_results.py`, `export_sweep_results.py` | Reference-format Excel workbooks + codebooks |
+| `io` | — (new) | Load Excel/CSV/JSONL artifacts, parse experiment names, normalized analysis frames |
+| `error_analysis` | — (new) | Best run, group summaries, trend, per-subtype hotspots, failure drivers, regression alerts |
+| `interpret` | — (new) | Verdicts: champion, significance, version/model leaderboards, reliability, recommendations |
+| `visualize` | — (new) | matplotlib plots: CI bars, prompt-version bars, subtype heatmap, failure stacks, cost scatter |
+| `report` | — (new) | Full Markdown report builder |
+| `cli` | — (new) | `dojo-analyze`, `dojo-export` commands |
+
+## Configuration
+
+All thresholds, equivalence sets, subtype lists, cost tables, and failure-mode
+definitions live in one `Settings` object (`llm_dojo_scoring.config`):
+
+```python
+from llm_dojo_scoring import configure, load_settings
+
+configure(field_scoring__bipartite_match_threshold=0.7)   # inline override
+settings = load_settings("config/taxonomy.yaml")          # or a YAML file
+```
+
+```yaml
+# config/taxonomy.yaml (subset)
+field_scoring:
+  ambiguous_band: [0.5, 0.85]
+  bipartite_match_threshold: 0.6
+  embedding_enabled: false
+  partial_gt_fields: [parties, key_obligations, termination_clauses]
+  containment_fields: [governing_law, term_length, renewal_terms]
+  factuality_verification:
+    enabled: true
+    token_coverage: 0.7
+subtype_equivalences:
+  - [reseller, distributor]
+  - [maintenance, license]
+  - [development, license]
+  - [affiliate, joint_venture]
+cost_models:
+  qwen/qwen3.7-flash: [0.03, 0.13]
+```
+
+Set `LLM_DOJO_SCORING_CONFIG` to a YAML path for the process-wide override.
+
+## Tests
+
+```bash
+pip install -e ".[dev]"
+python -m pytest
+```
+
+## Migration
+
+See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap for
+`llm-entity-extraction` / `llm-mailroom`.
+
+## CLI reference
+
+```
+dojo-analyze INPUT [-o REPORT.md] [--plots DIR] [--metric COL] [--target 0.94]
+                  [--min-n N] [--cost-column COL] [--task T] [--no-plots]
+dojo-export  [--task sorter|extraction|all] [--sweep] [--log LOG] [--outdir DIR]
+```

@@ -81,4 +81,7 @@ def test_normalize_results_frame_sweep_real(real_artifacts):
     assert result.kind == "sweep"
     df = normalize_results_frame(result.frame)
     assert "model" in df.columns
-    assert len(df) == 6
+    # The sweep workbook is a live pipeline artifact and can grow as new
+    # model runs land; assert a sane minimum rather than a fixed count.
+    assert len(df) >= 6
+    assert "Notes" in df.columns

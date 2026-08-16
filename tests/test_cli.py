@@ -71,6 +71,35 @@ def test_cli_analyze_xlsx(tmp_path):
     assert len(plots) >= 3
 
 
+def test_cli_analyze_langfuse_sync(tmp_path):
+    """dojo-analyze langfuse:<name> pulls live traces and analyzes them."""
+    from unittest import mock
+
+    from llm_dojo_scoring import langfuse_sync as ls
+
+    trace = {
+        "id": "t1", "name": "subtype_classification",
+        "sessionId": "qwen3.7-flash_sorter_v13_subtype_langfuse",
+        "timestamp": "2026-08-16T00:00:00Z",
+        "input": {"filename": "a.pdf", "expected": "license",
+                  "prompt_version": "sorter_v13", "model": "qwen/qwen3.7-flash"},
+        "output": {"sorter": {
+            "doc_type": "contract", "contract_subtype": "license",
+            "expected_subtype": "license", "doc_type_ok": True,
+            "subtype_ok": True, "subtype_ok_equiv": True, "confidence": 0.95,
+        }},
+    }
+    client = mock.Mock(spec=ls.LangfuseClient)
+    client.list_traces.return_value = [trace]
+    out = tmp_path / "lf.md"
+    with mock.patch.object(ls, "LangfuseClient", return_value=client):
+        rc = _cli_analyze(["langfuse:subtype_classification", "--max-items", "5",
+                           "--no-plots", "-o", str(out)])
+    assert rc == 0
+    assert out.exists()
+    assert "Best run: qwen3.7-flash_sorter_v13_subtype_langfuse" in out.read_text()
+
+
 def test_cli_export(tmp_path):
     from llm_dojo_scoring.experiment import append_experiment
 

@@ -26,6 +26,8 @@ from . import (
     field_scoring,
     io,
     interpret,
+    langfuse_sync,
+    phoenix_sync,
     report,
     visualize,
 )
@@ -73,7 +75,8 @@ __all__ = [
     "__version__",
     "bootstrap", "classification", "config", "cost", "diagnostics",
     "equivalences", "error_analysis", "experiment", "export", "failure_modes",
-    "field_scoring", "io", "interpret", "report", "visualize",
+    "field_scoring", "io", "interpret", "langfuse_sync", "phoenix_sync",
+    "report", "visualize",
     "bootstrap_ci", "delta_significance", "wilson_ci",
     "accuracy", "binary_metrics", "confusion_matrix", "exact_match",
     "macro_accuracy", "normalize_label", "per_class_stats",

@@ -28,6 +28,7 @@ dev = ["pytest>=8.0", "pytest-mock>=3.14"]
 [project.scripts]
 dojo-analyze = "llm_dojo_scoring.cli:analyze_main"
 dojo-export = "llm_dojo_scoring.cli:export_main"
+dojo-sync = "llm_dojo_scoring.cli:sync_main"
 
 [tool.setuptools.packages.find]
 where = ["."]
