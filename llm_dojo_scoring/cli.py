@@ -225,16 +225,16 @@ def _cli_export(argv: list[str]) -> int:
     return 0
 
 
-def analyze_main() -> None:
-    raise SystemExit(_cli_analyze(sys.argv[1:]))
+def analyze_main(argv: list[str] | None = None) -> None:
+    raise SystemExit(_cli_analyze(sys.argv[1:] if argv is None else argv))
 
 
-def export_main() -> None:
-    raise SystemExit(_cli_export(sys.argv[1:]))
+def export_main(argv: list[str] | None = None) -> None:
+    raise SystemExit(_cli_export(sys.argv[1:] if argv is None else argv))
 
 
-def sync_main() -> None:
-    raise SystemExit(_cli_sync(sys.argv[1:]))
+def sync_main(argv: list[str] | None = None) -> None:
+    raise SystemExit(_cli_sync(sys.argv[1:] if argv is None else argv))
 
 
 __all__ = ["_cli_analyze", "_cli_export", "_cli_sync",
@@ -253,7 +253,8 @@ def _dispatch(argv: list[str]) -> int:
     A leading subcommand selects the entry point (``dojo-analyze`` /
     ``dojo-export`` / ``dojo-sync``); anything else is treated as a direct
     ``dojo-analyze`` invocation (a bare input path / ``-o`` report), which is
-    the module's primary use.
+    the module's primary use. Console-script entry points call the mains with
+    no argv and read ``sys.argv[1:]`` themselves.
     """
     if argv and argv[0] in _COMMANDS:
         return _COMMANDS[argv[0]](argv[1:])
