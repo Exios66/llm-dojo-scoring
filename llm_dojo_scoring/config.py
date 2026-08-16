@@ -312,12 +312,18 @@ def _apply_dict(settings: Settings, data: dict[str, Any]) -> None:
 @lru_cache(maxsize=1)
 def load_settings(path: str | Path | None = None) -> Settings:
     """Load settings from a YAML file (or env-overridden path); falls back to
-    pure defaults when no file is given or found. Cached — call
-    :func:`clear_settings_cache` after mutating settings in tests."""
+    pure defaults when no file is given or found. Cached for the env/default
+    resolution — explicit ``path`` calls read fresh (tests / hot-reload)."""
+    if path is not None and str(path).strip():
+        return _load_from_path(Path(path))
+    env_path = os.environ.get(_ENV_CONFIG_PATH, "")
+    if env_path.strip() and Path(env_path).exists():
+        return _load_from_path(Path(env_path))
+    return Settings()
+
+
+def _load_from_path(path: Path) -> Settings:
     settings = Settings()
-    path = Path(path) if path else Path(os.environ.get(_ENV_CONFIG_PATH, ""))
-    if not path or not Path(path).exists():
-        return settings
     with Path(path).open(encoding="utf-8") as fh:
         data = yaml.safe_load(fh) or {}
     _apply_dict(settings, data)

@@ -1,0 +1,3 @@
+[console_scripts]
+dojo-analyze = llm_dojo_scoring.cli:analyze_main
+dojo-export = llm_dojo_scoring.cli:export_main

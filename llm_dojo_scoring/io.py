@@ -57,6 +57,8 @@ class ResultSet:
 def _infer_kind(frame: pd.DataFrame, path: Path) -> str:
     cols = [str(c).lower() for c in frame.columns]
     joined = " ".join(cols)
+    if "notes" in joined and "subtype accuracy" in joined:
+        return "sweep"  # sweep workbook carries the trailing Notes column
     if "subtype accuracy" in joined and "doc type accuracy" in joined:
         if "failures:" in joined or "n total:" in joined:
             return "sorter"
@@ -119,6 +121,11 @@ _NAME_RE = re.compile(
     r"^(?P<model>[a-z0-9.-]+?)_(?:(?P<prompt_kind>sorter|contracts_specialist|legalbench_task)"
     r"_)??(?P<prompt>v?\d+)(?:_(?P<dim>[a-z]+))?(?:_(?P<suffix>.+))?$"
 )
+# Fallback: pull a prompt-version fragment out of arbitrary run names
+# (e.g. "pilot_langfuse_sorter_v5").
+_PROMPT_FRAGMENT_RE = re.compile(
+    r"(?:sorter|contracts_specialist|legalbench_task)_(v?\d+)"
+)
 
 
 def parse_experiment_name(name: Any) -> dict:
@@ -130,9 +137,16 @@ def parse_experiment_name(name: Any) -> dict:
     raw = str(name or "")
     m = _NAME_RE.match(raw.strip())
     if not m:
-        return {"raw": raw, "model_slug": None, "prompt_kind": None,
-                "prompt_version": None, "dimension": None, "suffix": None,
-                "friendly_model": None}
+        fragment = _PROMPT_FRAGMENT_RE.search(raw)
+        return {
+            "raw": raw,
+            "model_slug": raw.split("_")[0] or None,
+            "prompt_kind": None,
+            "prompt_version": fragment.group(1) if fragment else None,
+            "dimension": None,
+            "suffix": None,
+            "friendly_model": display_model(raw.split("_")[0]),
+        }
     parts = m.groupdict()
     return {
         "raw": raw,

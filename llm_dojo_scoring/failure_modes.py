@@ -113,7 +113,12 @@ def per_subtype_accuracy(rows: list[dict], keys: list[str] | None = None,
         bucket["n"] += 1
         bucket["correct"] += int(bool(row.get("subtype_ok")))
         if equivalences:
-            bucket["correct_equiv"] += int(bool(row.get("subtype_ok_equiv")))
+            # A correct subtype is trivially equivalence-correct even when the
+            # row omits subtype_ok_equiv (real rows always set it True for
+            # correct classifications, but be robust to missing flags).
+            bucket["correct_equiv"] += int(
+                bool(row.get("subtype_ok")) or bool(row.get("subtype_ok_equiv"))
+            )
     result: dict[str, dict] = {}
     for key, b in buckets.items():
         out = {
