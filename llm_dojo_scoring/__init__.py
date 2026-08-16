@@ -10,7 +10,7 @@ scoring code (``src/field_scoring.py``, ``src/metrics.py``, ``src/bootstrap.py``
 
 from __future__ import annotations
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 from . import (
     bootstrap,
@@ -29,6 +29,7 @@ from . import (
     langfuse_sync,
     phoenix_sync,
     report,
+    tasks,
     visualize,
 )
 
@@ -70,13 +71,25 @@ from .config import (
     get_settings,
     load_settings,
 )
+from .tasks import (
+    chained_composite,
+    chained_summary,
+    court_opinion_score,
+    legalbench_score,
+    maud_docclass_score,
+    maud_question_score,
+    multiclass_score,
+    normalize_task_answer,
+    score_task,
+    task_kind,
+)
 
 __all__ = [
     "__version__",
     "bootstrap", "classification", "config", "cost", "diagnostics",
     "equivalences", "error_analysis", "experiment", "export", "failure_modes",
     "field_scoring", "io", "interpret", "langfuse_sync", "phoenix_sync",
-    "report", "visualize",
+    "report", "tasks", "visualize",
     "bootstrap_ci", "delta_significance", "wilson_ci",
     "accuracy", "binary_metrics", "confusion_matrix", "exact_match",
     "macro_accuracy", "normalize_label", "per_class_stats",
@@ -89,4 +102,7 @@ __all__ = [
     "score_field", "score_entity_list",
     "Settings", "clear_settings_cache", "configure", "get_settings",
     "load_settings",
+    "chained_composite", "chained_summary", "court_opinion_score",
+    "legalbench_score", "maud_docclass_score", "maud_question_score",
+    "multiclass_score", "normalize_task_answer", "score_task", "task_kind",
 ]

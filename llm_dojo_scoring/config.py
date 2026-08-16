@@ -151,6 +151,74 @@ DOCCLASS_FAILURE_MODES: dict[str, dict[str, str]] = {
 }
 
 # ---------------------------------------------------------------------------
+# Additional document hierarchy (issue #19 / KANBAN-047) — task registries
+# ---------------------------------------------------------------------------
+
+# Primary doc classes across the merged taxonomy (CUAD + MAUD + S-1 + court
+# opinions) — mirrors `config/taxonomy.yaml` doc_classes keys.
+DOC_CLASS_KEYS: list[str] = [
+    "contract", "corporate_record", "due_diligence", "correspondence",
+    "compliance_filing", "court_opinion", "merger_agreement",
+]
+
+# MAUD merger-agreement consideration-type subclass (expert GT dimension —
+# `Type of Consideration`). Keys are the canonical snake_case form used by the
+# docclass eval's `expected_subclass`; the labels are the MAUD answer surface.
+MAUD_CONSIDERATION_TYPES: list[str] = [
+    "all_cash", "all_stock", "mixed_cash_stock",
+    "mixed_cash_stock_election", "other",
+]
+MAUD_CONSIDERATION_LABELS: dict[str, str] = {
+    "all_cash": "All Cash",
+    "all_stock": "All Stock",
+    "mixed_cash_stock": "Mixed Cash & Stock",
+    "mixed_cash_stock_election": "Mixed Cash & Stock (Election)",
+    "other": "Other / Unspecified",
+}
+MAUD_CONSIDERATION_ALIASES: dict[str, str] = {
+    "all cash": "all_cash", "all cash consideration": "all_cash",
+    "cash": "all_cash",
+    "all stock": "all_stock", "all stock consideration": "all_stock",
+    "stock": "all_stock",
+    "mixed cash and stock": "mixed_cash_stock",
+    "mixed cash stock": "mixed_cash_stock",
+    "mixed cash and stock election": "mixed_cash_stock_election",
+    "mixed cash stock election": "mixed_cash_stock_election",
+    "other": "other", "unspecified": "other", "none": "other",
+}
+# Defensible family-level reads for consideration subclasses (the docclass
+# equivalence mirror of SUBTYPE_EQUIVALENCES): an election structure IS a
+# mixed cash+stock deal with a per-shareholder choice.
+MAUD_CONSIDERATION_EQUIVALENCES: dict[str, set[str]] = {
+    "mixed_cash_stock": {"mixed_cash_stock_election"},
+    "mixed_cash_stock_election": {"mixed_cash_stock"},
+}
+
+# LegalBench task-mode labels (binary Yes/No; multiclass sets pass `valid=`).
+LEGALBENCH_BINARY_LABELS: tuple[str, ...] = ("yes", "no")
+LEGALBENCH_YES_NO: dict[str, set[str]] = {
+    "yes": {"y", "yes", "true", "1", "1.0"},
+    "no": {"n", "no", "false", "0", "0.0"},
+}
+
+# Court-opinion doc class (judicial opinions and orders).
+COURT_OPINION_CLASS = "court_opinion"
+
+# Task-type registry: task key -> scoring kind. Unknown keys fall back to
+# plain label classification.
+TASK_KINDS: dict[str, str] = {
+    "subtype": "subtype",
+    "doc_class": "doc_class",
+    "docclass": "docclass",
+    "maud_docclass": "docclass",
+    "maud_question": "maud_question",
+    "legalbench": "legalbench",
+    "multiclass": "multiclass",
+    "court_opinion": "court_opinion",
+    "chained": "chained",
+}
+
+# ---------------------------------------------------------------------------
 # Cost models (per-1M token USD, input / output) — OpenRouter list prices
 # ---------------------------------------------------------------------------
 

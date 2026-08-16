@@ -135,7 +135,31 @@ print(dojo.render_notes(interp))
 | `report` | — (new) | Full Markdown report builder |
 | `langfuse_sync` | — (new) | Pull live experiment traces (Langfuse) into run records + reference workbook |
 | `phoenix_sync` | — (new) | Local Phoenix/OTLP sink probe + span reader (graceful when down) |
+| `tasks` | — (new) | Task-aware scoring across the additional document hierarchy (MAUD, LegalBench, chained runs, multiclass, court opinions) |
 | `cli` | — (new) | `dojo-analyze`, `dojo-export`, `dojo-sync` commands |
+
+## Task coverage — the additional document hierarchy
+
+`score_task(task, expected, predicted, ...)` is the single entry point for
+every classification task the eval loop produces, generalizing the CUAD
+subtype focus to the full merged taxonomy:
+
+| Task key | What it scores | Headline metrics |
+|---|---|---|
+| `subtype` / `doc_class` / `multiclass` | CUAD 25-family subtype, primary doc-class, generic multi-class | exact match + CI, macro accuracy, per-class, confusion, top confusions |
+| `docclass` / `maud_docclass` | hierarchical doc_type **+** second-level subclass (MAUD consideration type) | doc_type accuracy + CI, subclass accuracy strict/equiv, exact match, per-subclass |
+| `maud_question` | MAUD per-question answers (e.g. `Type of Consideration`) | exact match + CI, per-class, macro |
+| `legalbench` | LegalBench task-mode binary Yes/No | exact match + CI, per-class, binary P/R/F1 |
+| `court_opinion` | court_opinion doc-class classification | exact match + CI, per-class, confusion |
+| `chained` | composite sorter→extractor runs (`chained_composite` / `chained_summary`) | sorter exact + subtype, extractor overall + presence, weighted composite (default 0.25/0.75) |
+
+Normalization is task-aware: MAUD consideration answers (`"All Cash"`,
+`"Mixed Cash & Stock (Election)"` → canonical keys) and LegalBench Yes/No
+forms degrade to canonical labels, and consideration-type equivalence
+(`mixed_cash_stock` ↔ `mixed_cash_stock_election`) is honored by the
+equiv metrics. Everything is a deterministic pure function over
+`(predicted, expected)` pairs — offline rescoring and live
+Langfuse/Braintrust scoring can never disagree.
 
 ## Configuration
 
