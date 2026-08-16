@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-dojo-scoring"
+version = "0.1.0"
+description = "Dedicated scoring, error-analysis, visualization, and interpretation suite for LLM document pipelines (llm-entity-extraction / llm-mailroom)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "pandas>=2.0.0",
+    "numpy>=1.26.0",
+    "PyYAML>=6.0",
+    "python-dateutil>=2.8.2",
+    "openpyxl>=3.1.0",
+    "matplotlib>=3.9.0",
+    "scipy>=1.10.0",
+    "structlog>=24.0",
+]
+
+[project.optional-dependencies]
+embeddings = ["sentence-transformers>=3.0"]
+jellyfish = ["jellyfish>=1.0"]
+dev = ["pytest>=8.0", "pytest-mock>=3.14"]
+
+[project.scripts]
+dojo-analyze = "llm_dojo_scoring.cli:analyze_main"
+dojo-export = "llm_dojo_scoring.cli:export_main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["llm_dojo_scoring*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
