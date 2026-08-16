@@ -239,3 +239,26 @@ def sync_main() -> None:
 
 __all__ = ["_cli_analyze", "_cli_export", "_cli_sync",
            "analyze_main", "export_main", "sync_main"]
+
+_COMMANDS = {
+    "analyze": analyze_main,
+    "export": export_main,
+    "sync": sync_main,
+}
+
+
+def _dispatch(argv: list[str]) -> int:
+    """Route ``python -m llm_dojo_scoring.cli <command> [args...]``.
+
+    A leading subcommand selects the entry point (``dojo-analyze`` /
+    ``dojo-export`` / ``dojo-sync``); anything else is treated as a direct
+    ``dojo-analyze`` invocation (a bare input path / ``-o`` report), which is
+    the module's primary use.
+    """
+    if argv and argv[0] in _COMMANDS:
+        return _COMMANDS[argv[0]](argv[1:])
+    return analyze_main(argv)
+
+
+if __name__ == "__main__":
+    raise SystemExit(_dispatch(sys.argv[1:]))
