@@ -29,6 +29,8 @@ from .classification import (
     top_confusions,
 )
 from .config import (
+    CONTRACTEVAL_NO_RELATED_PHRASE,
+    CONTRACTEVAL_POSITIVE_DENOMINATOR,
     LEGALBENCH_BINARY_LABELS,
     LEGALBENCH_YES_NO,
     MAUD_CONSIDERATION_ALIASES,
@@ -147,6 +149,8 @@ def score_task(
     valid=None,
     expected_subclass: list | None = None,
     predicted_subclass: list | None = None,
+    categories: list | None = None,
+    positive_denominator: int | None = CONTRACTEVAL_POSITIVE_DENOMINATOR,
     seed: int = 42,
     n_boot: int = 2000,
 ) -> dict:
@@ -154,12 +158,19 @@ def score_task(
 
     Args:
         task: task key (subtype | doc_class | docclass | maud_docclass |
-            maud_question | legalbench | multiclass | court_opinion).
+            maud_question | legalbench | multiclass | court_opinion |
+            contracteval).
         expected / predicted: parallel sequences of per-document answers.
+            For ``contracteval``: ``expected`` = list of GT label-span lists
+            (empty = category absent) and ``predicted`` = list of raw model
+            outputs — the ContractEval (arXiv 2508.03080) rubric applies.
         valid: optional valid-label table (regex patterns for
             classification kinds, or a key set for doc_subclass scoping).
         expected_subclass / predicted_subclass: the second-level doc_subclass
             dimension (consideration type) for ``docclass`` / ``maud_docclass``.
+        categories / positive_denominator: ``contracteval``-only — per-category
+            breakdown labels and the false-"no related clause" rate denominator
+            (paper default 1,244; ``None`` = the run's own positive count).
         seed / n_boot: bootstrap CI parameters.
 
     Returns a task-appropriate score dict (exact match, per-class, confusion,
@@ -167,6 +178,13 @@ def score_task(
     ``chained`` runs use :func:`chained_composite` / :func:`chained_summary`.
     """
     kind = task_kind(task)
+
+    if kind == "contracteval":
+        return contracteval_metrics(
+            expected, predicted,
+            categories=categories,
+            positive_denominator=positive_denominator,
+        )
 
     if kind == "legalbench":
         norm = lambda v: normalize_task_answer(task, v)
@@ -314,9 +332,185 @@ def chained_summary(
     }
 
 
+def get_jaccard(gt: str, pred: str) -> float:
+    """Token-set Jaccard — EXACT copy of ContractEval's ``Evaluation.py``.
+
+    Strips ``.,;:``, lowercases, replaces ``/`` with a space, then
+    |∩|/|∪| over whitespace tokens (arXiv 2508.03080 §III-D), with an
+    empty-union guard (the paper divides by zero only when both sides are
+    empty, which its positive-pair loop never reaches).
+    """
+    for token in (".", ",", ";", ":"):
+        gt = gt.replace(token, "")
+        pred = pred.replace(token, "")
+    gt = gt.lower().replace("/", " ")
+    pred = pred.lower().replace("/", " ")
+    gt_words = set(gt.split(" "))
+    pred_words = set(pred.split(" "))
+    union = gt_words.union(pred_words)
+    if not union:
+        return 0.0
+    return len(gt_words.intersection(pred_words)) / len(union)
+
+
+def said_no_related(output: str) -> bool:
+    """ContractEval's "no related clause" detector — case-insensitive substring
+    on the whitespace/backtick-stripped output (mirrors ``Evaluation.py``)."""
+    return CONTRACTEVAL_NO_RELATED_PHRASE in output.strip(" \n`").lower()
+
+
+def contracteval_classified(label_spans: list[str], output: str) -> bool:
+    """ContractEval's TP predicate: every GT label span, stripped of
+    whitespace/backticks, is verbatim-contained in the stripped output."""
+    out = output.strip(" \n`")
+    return all(substr.strip(" \n`") in out for substr in label_spans)
+
+
+def contracteval_metrics(
+    expected_spans: list[list[str]],
+    outputs: list[str],
+    *,
+    categories: list[str] | None = None,
+    positive_denominator: int | None = CONTRACTEVAL_POSITIVE_DENOMINATOR,
+) -> dict:
+    """ContractEval's EXACT correctness / output-effectiveness / laziness
+    metrics (arXiv 2508.03080 §III-D), mirroring ``Evaluation.py`` +
+    ``open_source_model.py``.
+
+    Args:
+        expected_spans: parallel list of GT label-span lists (empty = the
+            category is absent for that (contract, question) pair).
+        outputs: parallel list of raw model outputs.
+        categories: optional parallel category labels -> per-category breakdown.
+        positive_denominator: the paper's false-"no related clause" rate
+            divides by its HARDCODED positive count (1,244); pass ``None`` to
+            use the run's own positive count. Both rates are returned.
+
+    Confusion: TP = every GT span verbatim-contained in the output; TN =
+    absent category + "no related clause"; FP = absent category + a non-empty
+    clause; FN = present category + "no related clause" or partial coverage.
+    F1/F2 over the pooled confusion; mean/median token-set Jaccard over
+    POSITIVE pairs; no-related rate over all pairs; false-no-related rate over
+    the positives.
+    """
+    tp = tn = fn = fp = 0
+    jaccards: list[float] = []
+    no_related_cnt = 0
+    false_no_related_cnt = 0
+    per_category: dict[str, dict] = {}
+    for i, (label, output) in enumerate(zip(expected_spans, outputs)):
+        output = str(output or "")
+        no_related = said_no_related(output)
+        classified = bool(label) and contracteval_classified(label, output)
+        if no_related:
+            no_related_cnt += 1
+        if not label:
+            if no_related:
+                tn += 1
+            else:
+                fp += 1
+        else:
+            if no_related:
+                false_no_related_cnt += 1
+            if classified:
+                tp += 1
+            else:
+                fn += 1
+            jaccards.append(get_jaccard(" ".join(label), output.strip(" \n`")))
+        if categories is not None:
+            cat = categories[i]
+            pc = per_category.setdefault(
+                cat, {"tp": 0, "tn": 0, "fp": 0, "fn": 0, "jaccards": []})
+            if not label:
+                if no_related:
+                    pc["tn"] += 1
+                else:
+                    pc["fp"] += 1
+            elif classified:
+                pc["tp"] += 1
+            else:
+                pc["fn"] += 1
+            if label:
+                pc["jaccards"].append(get_jaccard(" ".join(label), output.strip(" \n`")))
+
+    total = tp + tn + fp + fn
+    n_pos = tp + fn
+    precision = tp / (tp + fp) if (tp + fp) else 0.0
+    recall = tp / (tp + fn) if (tp + fn) else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
+    f2 = 5 * precision * recall / (4 * precision + recall) if (4 * precision + recall) else 0.0
+    denominator = positive_denominator if positive_denominator is not None else n_pos
+
+    result = {
+        "task": "contracteval",
+        "kind": "contracteval",
+        "n_pairs": total,
+        "n_positive": n_pos,
+        "tp": tp, "tn": tn, "fp": fp, "fn": fn,
+        "accuracy": round((tp + tn) / total, 4) if total else 0.0,
+        "precision": round(precision, 4),
+        "recall": round(recall, 4),
+        "f1": round(f1, 4),
+        "f2": round(f2, 4),
+        "jaccard_mean": round(sum(jaccards) / len(jaccards), 4) if jaccards else 0.0,
+        "jaccard_median": round(sorted(jaccards)[len(jaccards) // 2], 4) if jaccards else 0.0,
+        "no_related_rate": round(no_related_cnt / total, 4) if total else 0.0,
+        "false_no_related_rate": round(false_no_related_cnt / n_pos, 4) if n_pos else 0.0,
+        "false_no_related_rate_paper": (
+            round(false_no_related_cnt / denominator, 4) if denominator else 0.0),
+        "false_no_related_denominator": denominator,
+    }
+    if categories is not None:
+        result["per_category"] = _contracteval_per_category(per_category)
+    return result
+
+
+def _contracteval_per_category(per_category: dict[str, dict]) -> dict[str, dict]:
+    """Summarize per-category confusion + Jaccard into metric dicts (the paper's
+    Fig-4 per-question breakdown)."""
+    out: dict[str, dict] = {}
+    for cat, c in per_category.items():
+        tp, tn, fp, fn = c["tp"], c["tn"], c["fp"], c["fn"]
+        total = tp + tn + fp + fn
+        n_pos = tp + fn
+        precision = tp / (tp + fp) if (tp + fp) else 0.0
+        recall = tp / (tp + fn) if (tp + fn) else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
+        f2 = 5 * precision * recall / (4 * precision + recall) if (4 * precision + recall) else 0.0
+        j = c["jaccards"]
+        out[cat] = {
+            "n_pairs": total, "n_positive": n_pos,
+            "tp": tp, "tn": tn, "fp": fp, "fn": fn,
+            "accuracy": round((tp + tn) / total, 4) if total else 0.0,
+            "precision": round(precision, 4),
+            "recall": round(recall, 4),
+            "f1": round(f1, 4),
+            "f2": round(f2, 4),
+            "jaccard_mean": round(sum(j) / len(j), 4) if j else 0.0,
+        }
+    return out
+
+
+def contracteval_score(
+    expected_spans: list[list[str]],
+    outputs: list[str],
+    *,
+    categories: list[str] | None = None,
+    positive_denominator: int | None = CONTRACTEVAL_POSITIVE_DENOMINATOR,
+) -> dict:
+    """Convenience alias for :func:`contracteval_metrics` (the ``contracteval``
+    task kind of :func:`score_task`)."""
+    return contracteval_metrics(
+        expected_spans, outputs,
+        categories=categories, positive_denominator=positive_denominator,
+    )
+
+
 __all__ = [
     "task_kind", "normalize_maud_consideration", "normalize_legalbench",
     "normalize_task_answer", "score_task", "multiclass_score",
     "court_opinion_score", "maud_docclass_score", "maud_question_score",
     "legalbench_score", "chained_composite", "chained_summary",
+    "get_jaccard", "said_no_related", "contracteval_classified",
+    "contracteval_metrics", "contracteval_score",
 ]

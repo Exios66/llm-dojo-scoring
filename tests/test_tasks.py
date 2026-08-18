@@ -4,7 +4,10 @@ KANBAN-047): MAUD, LegalBench, chained runs, multiclass, court opinions."""
 from llm_dojo_scoring.tasks import (
     chained_composite,
     chained_summary,
+    contracteval_classified,
+    contracteval_metrics,
     court_opinion_score,
+    get_jaccard,
     legalbench_score,
     maud_docclass_score,
     maud_question_score,
@@ -12,6 +15,7 @@ from llm_dojo_scoring.tasks import (
     normalize_legalbench,
     normalize_maud_consideration,
     normalize_task_answer,
+    said_no_related,
     score_task,
     task_kind,
 )
@@ -126,3 +130,80 @@ def test_score_task_dispatcher_and_chained_guard():
     import pytest
     with pytest.raises(ValueError, match="chained_composite"):
         score_task("chained", ["a"], ["a"])
+
+
+# ---------------------------------------------------------------------------
+# ContractEval (arXiv 2508.03080) — clause-level legal risk identification
+# ---------------------------------------------------------------------------
+
+ANTI = "NEITHER PARTY SHALL, WITHOUT THE PRIOR WRITTEN CONSENT OF THE OTHER PARTY, ASSIGN THIS AGREEMENT"
+
+
+def test_get_jaccard_mirrors_contracteval():
+    assert get_jaccard(ANTI, ANTI.lower()) == 1.0
+    assert get_jaccard("a b c", "a b") == 2 / 3
+    assert get_jaccard("", "") == 0.0  # empty-union guard
+    # punctuation stripped + "/" -> space, exactly as Evaluation.py
+    assert get_jaccard("a/b; c.", "a b c") == 1.0
+
+
+def test_said_no_related_and_classified():
+    assert said_no_related("No related clause.") is True
+    assert said_no_related("No related clause") is True
+    assert said_no_related("no related clause found here") is True
+    assert said_no_related("There is a clause about X") is False
+    assert contracteval_classified([ANTI], ANTI) is True
+    assert contracteval_classified([ANTI], ANTI + " extra trailing") is True
+    assert contracteval_classified([ANTI], "no related clause") is False
+    assert contracteval_classified([ANTI, "SECOND LABEL"], ANTI) is False
+
+
+def test_contracteval_metrics_confusion():
+    m = contracteval_metrics(
+        [[ANTI], [ANTI], [], [], [ANTI, "SECOND"]],
+        [ANTI, "no related clause", "no related clause", "a fabricated clause", ANTI],
+        categories=["Anti-Assignment"] * 5,
+    )
+    assert m["tp"] == 1
+    assert m["fn"] == 2
+    assert m["tn"] == 1
+    assert m["fp"] == 1
+    assert m["n_pairs"] == 5
+    assert m["n_positive"] == 3
+    assert m["precision"] == pytest.approx(1 / 2)
+    assert m["recall"] == pytest.approx(1 / 3, abs=1e-4)
+    assert m["f1"] == pytest.approx(2 * 0.5 * (1 / 3) / (0.5 + 1 / 3))
+    # Jaccard only over positive pairs (3 of them, two "no related clause").
+    assert m["jaccard_mean"] > 0.0
+    # false-no-related: 1 of the 3 positives said "no related clause".
+    assert m["false_no_related_rate"] == pytest.approx(1 / 3, abs=1e-4)
+    # The paper's hardcoded 1,244 denominator is reported separately.
+    assert m["false_no_related_rate_paper"] == pytest.approx(1 / 1244, abs=1e-4)
+    assert m["false_no_related_denominator"] == 1244
+    # per_category breakdown present when categories are supplied.
+    assert "per_category" in m
+    assert m["per_category"]["Anti-Assignment"]["tp"] == 1
+
+
+def test_contracteval_metrics_own_denominator():
+    m = contracteval_metrics([[ANTI], []], ["no related clause", "no related clause"],
+                             positive_denominator=None)
+    assert m["n_positive"] == 1
+    assert m["false_no_related_rate"] == 1.0  # own n_pos denominator
+    assert m["false_no_related_denominator"] == 1
+
+
+def test_contracteval_metrics_scale_free():
+    """The scorer is pure and deterministic over the paper's own TP definition:
+    a fully-correct positive output scores TP regardless of surrounding verbosity."""
+    label = ["CLAUSE ONE"]
+    assert contracteval_metrics([label, label], ["CLAUSE ONE", "CLAUSE ONE."])["tp"] == 2
+    assert contracteval_metrics([label], ["CLAUSE TWO"])["fn"] == 1
+
+
+def test_score_task_contracteval_dispatch():
+    m = score_task("contracteval", [[ANTI], []], [ANTI, "no related clause"],
+                   categories=["Anti-Assignment", "Anti-Assignment"])
+    assert m["kind"] == "contracteval"
+    assert m["tp"] == 1 and m["tn"] == 1
+    assert task_kind("contracteval") == "contracteval"

@@ -26,3 +26,6 @@ reports/
 # Local config
 .env
 *.local.yaml
+*.pyc
+*.pyc
+*.pyc

@@ -204,6 +204,16 @@ LEGALBENCH_YES_NO: dict[str, set[str]] = {
 # Court-opinion doc class (judicial opinions and orders).
 COURT_OPINION_CLASS = "court_opinion"
 
+# ContractEval (arXiv 2508.03080) task constants — clause-level legal risk
+# identification over the CUAD test split, one (contract, question) call per
+# row. The paper's ``Evaluation.py`` flags a positive row's output as correct
+# when every ground-truth label span is verbatim-contained in the output, and
+# flags the "no related clause" answer via this exact phrase; the false-"no
+# related clause" rate is computed over the paper's HARDCODED positive count
+# (1,244) — reported alongside the run's own positive count.
+CONTRACTEVAL_NO_RELATED_PHRASE = "no related clause"
+CONTRACTEVAL_POSITIVE_DENOMINATOR = 1244
+
 # Task-type registry: task key -> scoring kind. Unknown keys fall back to
 # plain label classification.
 TASK_KINDS: dict[str, str] = {
@@ -216,6 +226,7 @@ TASK_KINDS: dict[str, str] = {
     "multiclass": "multiclass",
     "court_opinion": "court_opinion",
     "chained": "chained",
+    "contracteval": "contracteval",
 }
 
 # ---------------------------------------------------------------------------
