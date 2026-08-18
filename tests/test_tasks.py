@@ -1,5 +1,8 @@
 """Task-aware scoring across the additional document hierarchy (issue #19 /
-KANBAN-047): MAUD, LegalBench, chained runs, multiclass, court opinions."""
+KANBAN-047 + KANBAN-052): MAUD, LegalBench, chained runs, multiclass, court
+opinions, ContractEval."""
+
+import pytest
 
 from llm_dojo_scoring.tasks import (
     chained_composite,
@@ -142,7 +145,9 @@ ANTI = "NEITHER PARTY SHALL, WITHOUT THE PRIOR WRITTEN CONSENT OF THE OTHER PART
 def test_get_jaccard_mirrors_contracteval():
     assert get_jaccard(ANTI, ANTI.lower()) == 1.0
     assert get_jaccard("a b c", "a b") == 2 / 3
-    assert get_jaccard("", "") == 0.0  # empty-union guard
+    # The degenerate both-empty case mirrors Evaluation.py exactly (1.0), and
+    # is never reached on the positive-label pairs the metric is defined over.
+    assert get_jaccard("", "") == 1.0
     # punctuation stripped + "/" -> space, exactly as Evaluation.py
     assert get_jaccard("a/b; c.", "a b c") == 1.0
 

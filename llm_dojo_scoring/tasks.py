@@ -336,9 +336,10 @@ def get_jaccard(gt: str, pred: str) -> float:
     """Token-set Jaccard — EXACT copy of ContractEval's ``Evaluation.py``.
 
     Strips ``.,;:``, lowercases, replaces ``/`` with a space, then
-    |∩|/|∪| over whitespace tokens (arXiv 2508.03080 §III-D), with an
-    empty-union guard (the paper divides by zero only when both sides are
-    empty, which its positive-pair loop never reaches).
+    |∩|/|∪| over whitespace tokens (arXiv 2508.03080 §III-D). The degenerate
+    both-empty case returns 1.0 (``"".split(" ")`` = ``[""]``) exactly as the
+    paper's code does — it is never reached on the positive-label pairs the
+    metric is defined over.
     """
     for token in (".", ",", ";", ":"):
         gt = gt.replace(token, "")
