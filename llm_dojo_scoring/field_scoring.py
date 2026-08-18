@@ -69,6 +69,12 @@ def get_embedding_rescue_below() -> float:
     return get_settings().field_scoring.embedding_rescue_below
 
 
+def get_presence_embedding_threshold() -> float:
+    """Minimum embedding cosine for a disaggregated clause span to satisfy a
+    CUAD YES/NO category-presence expectation (issue #21)."""
+    return get_settings().field_scoring.presence_embedding_threshold
+
+
 def embedding_enabled() -> bool:
     return get_settings().field_scoring.embedding_enabled
 
@@ -771,6 +777,92 @@ def audit_scalar_field(field_type: str, pred, exp, doc_text: str | None) -> dict
     }
 
 
+def _split_clause_spans(text: str) -> list[str]:
+    """Split one predicted obligation string into discrete clause fragments.
+
+    Contracts quote several distinct clauses inside a single array item,
+    separated by newlines, semicolons, or sentence-final punctuation. Splitting
+    there keeps each operative clause a self-contained span so the contained-
+    label rule can fire on its own tokens instead of being diluted by the
+    other clauses in the merged item (issue #21). Guards against splitting on
+    decimals ("$5.00"), section refs ("1.2"), and abbreviations ("U.S.")."""
+    parts = re.split(
+        r"(?:\s*\n\s*|\s*;\s+|(?<=[A-Za-z)][.!?])\s+(?=[A-Z0-9\"(]))",
+        str(text or ""),
+    )
+    return [p.strip() for p in parts if p.strip()]
+
+
+def disaggregate_clause_spans(items, min_span_tokens: int = 4) -> list[str]:
+    """Disaggregate multi-clause predicted list items into discrete,
+    sentence-level spans for scoring.
+
+    Each input item is split into clause fragments; fragments shorter than
+    ``min_span_tokens`` are merged back into the preceding fragment so a short
+    standalone clause is not atomized. Returns the flat, de-duplicated list of
+    spans. When an item is already a single clause it passes through intact.
+    """
+    out: list[str] = []
+    for raw in _as_list(items):
+        merged: list[str] = []
+        for piece in _split_clause_spans(str(raw)):
+            if merged and len(_tokenize(piece)) < min_span_tokens:
+                merged[-1] = f"{merged[-1]} {piece}".strip()
+            else:
+                merged.append(piece)
+        out.extend(p for p in merged if p.strip())
+    seen: set[str] = set()
+    unique: list[str] = []
+    for span in out:
+        key = " ".join(_tokenize(span))
+        if key not in seen:
+            seen.add(key)
+            unique.append(span)
+    return unique
+
+
+def _presence_candidates(predicted: dict, category: str, field: str) -> list[str]:
+    """Candidate predicted spans for one CUAD YES/NO category.
+
+    Prefers spans routed explicitly by the extractor's reasoning trace
+    (``reasoning.entries[]`` whose ``field`` is the canonical CUAD category
+    name — issue #21 retag), falling back to the disaggregated items of the
+    category's mapped field (e.g. ``key_obligations``)."""
+    entries = (predicted.get("reasoning") or {}).get("entries") or []
+    routed = [
+        str(e.get("evidence") or e.get("section_ref") or "")
+        for e in entries
+        if str(e.get("field") or "").strip() == category
+    ]
+    if routed:
+        return [r for r in routed if r.strip()]
+    return disaggregate_clause_spans(predicted.get(field))
+
+
+def _presence_matched(item: str, answer: str) -> bool:
+    """Whether one predicted span covers the category's labeled clause.
+
+    Matched when the labeled clause text is token-contained in the span at the
+    verification coverage (0.7), or the embedding rescue raises the semantic
+    similarity at the presence embedding threshold (0.7) — issue #21 fix #3.
+    """
+    if not answer or not item:
+        return False
+    if score_containment_field(item, answer) >= get_verification_coverage():
+        return True
+    if not embedding_enabled():
+        return False
+    embedding = _get_embedding()
+    if embedding is None:
+        return False
+    try:
+        sim = embedding.similarity(item, answer)
+    except Exception:
+        logger.warning("presence_embedding_similarity_failed", exc_info=True)
+        return False
+    return sim is not None and float(sim) >= get_presence_embedding_threshold()
+
+
 def score_category_presence(predicted: dict | None, presence_expectations: dict,
                             field_types: dict[str, str]) -> tuple[float, dict]:
     """Binary YES/NO presence scoring for CUAD's presence-type categories.
@@ -778,7 +870,10 @@ def score_category_presence(predicted: dict | None, presence_expectations: dict,
     ``presence_expectations``: ``{category: {"expected": bool, "answer": str,
     "field": str}}``. Returns ``(score, detail)`` where ``score`` is the share
     of expected-True categories whose clause text is matched by a predicted
-    item in the category's mapped field."""
+    span. A category is matched when ANY candidate span — the disaggregated
+    items of the category's mapped field, or the reasoning-trace entry tagged
+    with the canonical category name — covers the labeled clause by token
+    containment or embedding similarity at the 0.7 threshold (issue #21)."""
     predicted = predicted or {}
     matched = 0
     expected_true = 0
@@ -790,22 +885,8 @@ def score_category_presence(predicted: dict | None, presence_expectations: dict,
             continue
         expected_true += 1
         answer = str(expectation.get("answer") or "")
-        items = [str(item) for item in _as_list(predicted.get(field))]
-        field_type = field_types.get(field) or "name"
-        element_type = field_type.split(":", 1)[1] if is_entity_list(field_type) else field_type
-        threshold = get_bipartite_match_threshold()
-        answer_tokens = set(_tokenize(answer))
-        hit = False
-        for item in items:
-            if _element_similarity(element_type, item, answer) >= threshold:
-                hit = True
-                break
-            if answer_tokens:
-                item_tokens = set(_tokenize(item))
-                coverage = len(answer_tokens & item_tokens) / len(answer_tokens)
-                if coverage >= get_verification_coverage():
-                    hit = True
-                    break
+        items = _presence_candidates(predicted, category, field)
+        hit = any(_presence_matched(item, answer) for item in items)
         if hit:
             matched += 1
         detail[category] = {"expected": True, "matched": hit, "field": field,

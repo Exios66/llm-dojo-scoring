@@ -135,6 +135,79 @@ def test_score_category_presence():
     assert detail["Non-Existent"]["expected"] is False
 
 
+def test_disaggregate_clause_spans():
+    merged = [
+        "NEITHER PARTY SHALL, WITHOUT THE PRIOR WRITTEN CONSENT OF THE OTHER PARTY, "
+        "ASSIGN THIS AGREEMENT; the Company shall not solicit or hire any employee; "
+        "Distributor shall not sell products outside the Territory."
+    ]
+    spans = fs.disaggregate_clause_spans(merged)
+    assert len(spans) == 3
+    assert "ASSIGN THIS AGREEMENT" in spans[0]
+    assert "solicit or hire any employee" in spans[1]
+    assert "outside the Territory" in spans[2]
+
+
+def test_disaggregate_clause_spans_single_passes_through():
+    assert fs.disaggregate_clause_spans(["a single standalone clause"]) == [
+        "a single standalone clause"
+    ]
+    assert fs.disaggregate_clause_spans([]) == []
+    assert fs.disaggregate_clause_spans(None) == []
+
+
+def test_score_category_presence_disaggregated():
+    """Issue #21 fix #1/#3: 4 clauses merged into ONE item no longer dilutes
+    the match — after disaggregation the labeled clause is contained at 1.0."""
+    anti_assignment = (
+        "NEITHER PARTY SHALL, WITHOUT THE PRIOR WRITTEN CONSENT OF THE OTHER "
+        "PARTY, ASSIGN THIS AGREEMENT"
+    )
+    merged = ";\n".join([
+        anti_assignment,
+        "the Company shall not solicit or hire any employee of the Distributor",
+        "during the Term, Distributor shall not sell products outside the Territory",
+        "this Agreement may be terminated by either party upon ninety (90) days written notice",
+    ])
+    expectations = {
+        "Anti-Assignment": {"expected": True, "answer": anti_assignment, "field": "key_obligations"},
+    }
+    field_types = {"key_obligations": "entity_list:free_text"}
+    score, detail = fs.score_category_presence(
+        {"key_obligations": [merged]}, expectations, field_types,
+    )
+    assert score == 1.0
+    assert detail["Anti-Assignment"]["matched"] is True
+
+
+def test_score_category_presence_routed_entries():
+    """Issue #21 fix #2/#3: a reasoning-trace entry tagged with the canonical
+    category name routes its evidence straight to the category evaluator even
+    when the umbrella key_obligations item does not cover the label."""
+    anti_assignment = (
+        "NEITHER PARTY SHALL, WITHOUT THE PRIOR WRITTEN CONSENT OF THE OTHER "
+        "PARTY, ASSIGN THIS AGREEMENT"
+    )
+    predicted = {
+        "key_obligations": ["an unrelated exclusivity provision"],
+        "reasoning": {
+            "entries": [
+                {"field": "Anti-Assignment", "evidence": anti_assignment,
+                 "section_ref": "7.1"},
+            ]
+        },
+    }
+    expectations = {
+        "Anti-Assignment": {"expected": True, "answer": anti_assignment, "field": "key_obligations"},
+    }
+    score, detail = fs.score_category_presence(
+        predicted, expectations, {"key_obligations": "entity_list:free_text"},
+    )
+    assert score == 1.0
+    assert detail["Anti-Assignment"]["matched"] is True
+
+
+
 # ---------------------------------------------------------------------------
 # Composite score_extraction
 # ---------------------------------------------------------------------------

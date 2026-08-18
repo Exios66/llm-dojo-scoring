@@ -247,6 +247,7 @@ class FieldScoringSettings:
     embedding_enabled: bool = False
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     embedding_rescue_below: float = 0.7
+    presence_embedding_threshold: float = 0.7
     partial_gt_fields: set[str] = field(
         default_factory=lambda: {"parties", "key_obligations", "termination_clauses"}
     )
@@ -325,6 +326,7 @@ _SCALAR_KEYS = {
     "embedding_enabled": ("field_scoring", bool, "embedding_enabled"),
     "embedding_model": ("field_scoring", str, "embedding_model"),
     "embedding_rescue_below": ("field_scoring", float, "embedding_rescue_below"),
+    "presence_embedding_threshold": ("field_scoring", float, "presence_embedding_threshold"),
     "verification_enabled": ("field_scoring", bool, "verification_enabled"),
     "verification_token_coverage": ("field_scoring", float, "verification_token_coverage"),
 }
@@ -343,6 +345,8 @@ def _apply_dict(settings: Settings, data: dict[str, Any]) -> None:
         fs_settings.embedding_model = str(fs["embedding_model"])
     if "embedding_rescue_below" in fs:
         fs_settings.embedding_rescue_below = float(fs["embedding_rescue_below"])
+    if "presence_embedding_threshold" in fs:
+        fs_settings.presence_embedding_threshold = float(fs["presence_embedding_threshold"])
     if "partial_gt_fields" in fs:
         fs_settings.partial_gt_fields = {str(f) for f in (fs["partial_gt_fields"] or [])}
     if "containment_fields" in fs:
