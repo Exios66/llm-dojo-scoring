@@ -290,6 +290,51 @@ metrics:
     description: "Per-document classification correctness (strict/equiv)"
     applicable_agents: [sorter, judge, boss]
     source: "classification.exact_match"
+  class_correct:
+    tier: 1
+    description: "Per-document class correctness (mailroom pipeline pilot)"
+    applicable_agents: [ALL]
+    notes: "mailroom SCORE_CONFIGS name; alias of classification_correct"
+  stage_correct:
+    tier: 1
+    description: "Per-stage correctness (mailroom pipeline pilot)"
+    applicable_agents: [ALL]
+    notes: "mailroom SCORE_CONFIGS name"
+  extraction_correctness:
+    tier: 1
+    description: "Per-document extraction correctness (mailroom pilot)"
+    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    notes: "mailroom SCORE_CONFIGS name"
+  extraction_needs_judge_review:
+    tier: 1
+    description: "Routing signal: extraction ambiguous enough to escalate to the judge"
+    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    notes: "mailroom SCORE_CONFIGS name"
+  expected_field_presence:
+    tier: 1
+    description: "Share of expected fields populated"
+    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    notes: "mailroom SCORE_CONFIGS name; alias of field_presence"
+  extraction_overall_verified_precision:
+    tier: 1
+    description: "Precision restricted to doc-verifiable items"
+    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    notes: "mailroom SCORE_CONFIGS name; alias of verified_precision"
+  extraction_hallucination_rate:
+    tier: 1
+    description: "Share of reported values not grounded in GT or the source doc"
+    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    notes: "mailroom SCORE_CONFIGS name; complement of verified precision"
+  completeness_label:
+    tier: 2
+    description: "Categorical completeness label (complete/partial/incomplete)"
+    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    notes: "mailroom SCORE_CONFIGS name; label form of completeness"
+  extraction_correctness_label:
+    tier: 2
+    description: "Categorical correctness label (accurate/partial/inaccurate)"
+    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    notes: "mailroom SCORE_CONFIGS name; label form of extraction_correctness"
   estimated_cost_usd:
     tier: 1
     description: "Estimated USD cost of the call/run"
@@ -369,6 +414,22 @@ metrics:
     applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
     aggregation: none
     source: "field_scoring.score_field"
+  extraction_field_score:
+    tier: 2
+    description: "Per-field score value (mailroom pilot detail)"
+    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    notes: "mailroom SCORE_CONFIGS name; sibling of per_field_scores"
+  extraction_category_presence:
+    tier: 2
+    description: "Category-presence scoring result (verbatim-clause fields)"
+    applicable_agents: [contracts_specialist]
+    source: "field_scoring.score_category_presence"
+    notes: "mailroom SCORE_CONFIGS name"
+  classification_quality:
+    tier: 3
+    description: "Legacy numeric quality score (mailroom); superseded by structured metrics"
+    applicable_agents: [sorter]
+    notes: "mailroom SCORE_CONFIGS name; demoted per pruning plan"
   guardrail_triggered:
     tier: 2
     description: "Guardrail fired (interesting in aggregate, not per-document)"

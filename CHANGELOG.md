@@ -3,6 +3,26 @@
 All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
+## [0.5.1] - 2026-08-21
+
+### Added
+
+- Registry completeness for the llm-mailroom SCORE_CONFIGS schema: all 12
+  remaining mailroom score names are now registered, so `load_registry()`
+  covers 100% of both consumers' emission surfaces (KANBAN-061):
+  - T1 (score): `class_correct`, `stage_correct`, `extraction_correctness`,
+    `extraction_needs_judge_review`, `expected_field_presence` (alias of
+    `field_presence`), `extraction_overall_verified_precision` (alias of
+    `verified_precision`), `extraction_hallucination_rate`
+  - T2 (aggregate): `extraction_field_score`, `extraction_category_presence`,
+    `completeness_label`, `extraction_correctness_label`
+  - T3 (log): `classification_quality`
+
+### Fixed
+
+- `classification_quality` registered as numeric (it was briefly annotated
+  as free-text); it is a NUMERIC Langfuse config in mailroom.
+
 ## [0.5.0] - 2026-08-21
 
 ### Added — unified scoring layer (KANBAN-061, entity-extraction issue #27)
