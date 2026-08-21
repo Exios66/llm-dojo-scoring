@@ -10,9 +10,14 @@ scoring code (``src/field_scoring.py``, ``src/metrics.py``, ``src/bootstrap.py``
 
 from __future__ import annotations
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 from . import (
+    bundles,
+    emitter,
+    profiles,
+    pruning,
+    registry,
     bootstrap,
     classification,
     config,
@@ -83,6 +88,30 @@ from .tasks import (
     score_task,
     task_kind,
 )
+from .bundles import BUILTIN_BUNDLES, Bundle, bundle_metric_names, get_bundle, validate_bundle
+from .emitter import (
+    Emitter,
+    get_emitter,
+    LangfuseSink,
+    LocalManifestSink,
+    reset_default_emitter,
+    ScoreRecord,
+)
+from .profiles import AgentProfile, get_profile, list_profiles, load_profiles
+from .pruning import (
+    dashboard_metrics,
+    headline_metrics,
+    prune_metrics,
+    prune_records,
+)
+from .registry import (
+    clear_registry_cache,
+    get_registry,
+    load_registry,
+    MetricDef,
+    MetricTier,
+    Registry,
+)
 
 __all__ = [
     "__version__",
@@ -105,4 +134,13 @@ __all__ = [
     "chained_composite", "chained_summary", "court_opinion_score",
     "legalbench_score", "maud_docclass_score", "maud_question_score",
     "multiclass_score", "normalize_task_answer", "score_task", "task_kind",
+    "BUILTIN_BUNDLES", "Bundle", "bundle_metric_names", "get_bundle",
+    "validate_bundle",
+    "Emitter", "get_emitter", "LangfuseSink", "LocalManifestSink",
+    "reset_default_emitter", "ScoreRecord",
+    "AgentProfile", "get_profile", "list_profiles", "load_profiles",
+    "DEFAULT_DASHBOARD_TIER", "dashboard_metrics", "headline_metrics",
+    "prune_metrics", "prune_records",
+    "clear_registry_cache", "get_registry", "load_registry", "MetricDef",
+    "MetricTier", "Registry",
 ]

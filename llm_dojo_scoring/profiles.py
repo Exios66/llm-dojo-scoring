@@ -1,0 +1,199 @@
+"""Agent profile system — one declarative registration per agent instead of
+4+ file edits across repos.
+
+A profile declares which task types an agent performs, which metric bundle it
+uses (auto-selected from the bundle registry by task type when omitted), and
+its aggregation rules. Profiles can be defined in code or loaded from a YAML
+file (``LLM_DOJO_SCORING_PROFILES`` env var or explicit path).
+
+Example YAML::
+
+    agents:
+      audit_agent:
+        title: "Extraction Auditor"
+        tasks: [verify_extraction]
+        metrics_bundle: audit
+        fallback_bundle: extraction
+
+The default profile table covers every agent named in the KANBAN-061 proposal
+(sorter, the six specialists, reporter, judge, boss, pdf_transcriber,
+image_extractor, archivist, audit_agent).
+"""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Iterable
+
+import yaml
+
+from .bundles import Bundle, get_bundle
+from .registry import Registry
+
+__all__ = [
+    "AgentProfile",
+    "DEFAULT_PROFILES",
+    "get_profile",
+    "list_profiles",
+    "load_profiles",
+    "clear_profile_cache",
+]
+
+_ENV_VAR = "LLM_DOJO_SCORING_PROFILES"
+
+
+@dataclass(frozen=True)
+class AgentProfile:
+    """One agent's scoring identity."""
+
+    name: str
+    title: str = ""
+    #: Task types performed: classify / extract / review / route / summarize /
+    #: transcribe / verify / store / orchestrate.
+    tasks: tuple[str, ...] = ()
+    #: Primary metric bundle name (resolved via :func:`bundles.get_bundle`).
+    metrics_bundle: str | None = None
+    #: Used when the primary bundle cannot be applied (e.g. verification
+    #: unavailable and the run degrades to plain classification).
+    fallback_bundle: str | None = None
+    #: How per-document scores roll up to run level.
+    aggregation: str = "mean"
+    #: Ground truth available for this agent's evaluation context?
+    ground_truth: bool = True
+    extras: dict[str, Any] = field(default_factory=dict)
+
+    def resolve_bundle(
+        self,
+        *,
+        fallback: bool = False,
+        registry: Registry | None = None,
+    ) -> Bundle:
+        """Resolve the (validated) primary or fallback bundle."""
+        name = self.fallback_bundle if fallback else (self.metrics_bundle or _bundle_for_tasks(self.tasks))
+        if not name:
+            raise ValueError(f"profile {self.name!r}: no metrics_bundle and no task-derived bundle")
+        return get_bundle(name, registry=registry)
+
+
+def _bundle_for_tasks(tasks: Iterable[str]) -> str | None:
+    """Auto-select a bundle from task types (first match wins)."""
+    table = {
+        "classify": "classification",
+        "route": "classification",
+        "extract": "extraction",
+        "review": "audit",
+        "verify": "audit",
+        "transcribe": "transcription",
+        "store": "cost",
+        "orchestrate": "reporter",
+        "summarize": "reporter",
+    }
+    for t in tasks:
+        if t in table:
+            return table[t]
+    return None
+
+
+def _p(
+    name: str,
+    title: str,
+    tasks: tuple[str, ...],
+    bundle: str | None = None,
+    **kw: Any,
+) -> AgentProfile:
+    return AgentProfile(name=name, title=title, tasks=tasks, metrics_bundle=bundle, **kw)
+
+
+DEFAULT_PROFILES: dict[str, AgentProfile] = {
+    p.name: p
+    for p in (
+        _p("sorter", "Document Router", ("classify", "route"), "classification"),
+        _p(
+            "contracts_specialist",
+            "Contract Extraction",
+            ("extract",),
+            "extraction",
+        ),
+        _p("corporate_records_specialist", "Corporate Records Extraction", ("extract",), "extraction"),
+        _p("due_diligence_specialist", "Due-Diligence Extraction", ("extract",), "extraction"),
+        _p("correspondence_specialist", "Correspondence Parsing", ("extract",), "extraction"),
+        _p("compliance_specialist", "Compliance Filing Extraction", ("extract",), "extraction"),
+        _p("court_opinions_specialist", "Court Opinion Analysis", ("extract",), "extraction"),
+        _p("reporter", "Run Reporting", ("summarize",), "reporter"),
+        _p("judge", "Discretionary Adjudication", ("classify", "review"), "classification"),
+        _p("boss", "Orchestration", ("orchestrate",), "reporter"),
+        _p("pdf_transcriber", "PDF→Text", ("transcribe",), "transcription"),
+        _p("image_extractor", "Image→Text/OCR", ("transcribe",), "transcription"),
+        _p("archivist", "Storage/Indexing", ("store",), "cost", ground_truth=False),
+        _p(
+            "audit_agent",
+            "Specialist Output Verification",
+            ("verify", "review"),
+            "audit",
+            fallback_bundle="extraction",
+            ground_truth=False,
+        ),
+    )
+}
+
+
+_CACHE: dict[str, dict[str, AgentProfile]] = {}
+
+
+def load_profiles(path: str | Path | None = None) -> dict[str, AgentProfile]:
+    """Load profiles: defaults overlaid with a YAML file when one resolves.
+
+    Resolution order: explicit ``path`` > ``LLM_DOJO_SCORING_PROFILES`` env >
+    built-in defaults only. YAML entries override same-name defaults; unknown
+    bundle names fail fast through :func:`bundles.get_bundle`.
+    """
+    resolved = path or os.environ.get(_ENV_VAR)
+    if not resolved:
+        return dict(DEFAULT_PROFILES)
+    key = str(Path(resolved).resolve())
+    if key in _CACHE:
+        return _CACHE[key]
+    data = yaml.safe_load(Path(key).read_text(encoding="utf-8")) or {}
+    profiles = dict(DEFAULT_PROFILES)
+    for name, spec in (data.get("agents") or {}).items():
+        spec = dict(spec or {})
+        base = profiles.get(name)
+        bundle = spec.get("metrics_bundle") or (base.metrics_bundle if base else None)
+        tasks = tuple(spec.get("tasks") or (base.tasks if base else ()))
+        # Validate bundle names eagerly.
+        if bundle:
+            get_bundle(bundle)
+        fb = spec.get("fallback_bundle")
+        if fb:
+            get_bundle(fb)
+        profiles[name] = AgentProfile(
+            name=name,
+            title=str(spec.get("title", base.title if base else "")),
+            tasks=tuple(tasks) if isinstance(tasks, (list, tuple)) else (str(tasks),),
+            metrics_bundle=bundle,
+            fallback_bundle=fb,
+            aggregation=str(spec.get("aggregation", base.aggregation if base else "mean")),
+            ground_truth=bool(spec.get("ground_truth", base.ground_truth if base else True)),
+            extras=spec.get("extras", {}) or {},
+        )
+    _CACHE[key] = profiles
+    return profiles
+
+
+def get_profile(name: str, *, path: str | Path | None = None) -> AgentProfile:
+    try:
+        return load_profiles(path)[name]
+    except KeyError:
+        raise KeyError(
+            f"unknown agent profile {name!r}; known: {sorted(load_profiles(path))}"
+        ) from None
+
+
+def list_profiles(*, path: str | Path | None = None) -> list[str]:
+    return sorted(load_profiles(path))
+
+
+def clear_profile_cache() -> None:
+    _CACHE.clear()
