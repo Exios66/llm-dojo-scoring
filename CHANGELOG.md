@@ -3,6 +3,26 @@
 All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
+## [0.6.0] - 2026-08-21
+
+### Added
+
+- Review/audit profile registry for the pipeline architecture alignment
+  (KANBAN-062/063) — eight new agent profiles in `profiles.py`:
+  - `sorter_reviewer` — Classification Review (tasks classify/review, bundle
+    `classification`): the Lane A second-opinion reviewer after the sorter.
+  - `contract_auditor`, `corporate_records_auditor`,
+    `due_diligence_auditor`, `correspondence_auditor`,
+    `compliance_auditor`, `court_opinions_auditor` — one named companion
+    auditor per specialist (tasks verify/review, bundle `audit`, fallback
+    `extraction`, ground-truth-free): dispatch targets for the audit-manager
+    pattern.
+  - `arbiter` — Judgment Arbitration (tasks verify/review, bundle `audit`,
+    ground-truth-free): escalation lane when an in-pipeline judge verdict
+    fails.
+  Audit profiles never require ground truth (they verify specialist output,
+  not GT fields). All bundles resolve eagerly; existing 14 profiles unchanged.
+
 ## [0.5.1] - 2026-08-21
 
 ### Added

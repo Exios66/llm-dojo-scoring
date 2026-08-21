@@ -135,6 +135,72 @@ DEFAULT_PROFILES: dict[str, AgentProfile] = {
             fallback_bundle="extraction",
             ground_truth=False,
         ),
+        # KANBAN-062/063 (architecture alignment): named review/audit lanes.
+        # sorter_reviewer = agent second opinion after the sorter (Lane A);
+        # per-specialist auditors + arbiter = the audit-manager pattern's
+        # dispatch targets (Lane B escalation). Audit profiles never require
+        # ground truth (they verify specialist output, not GT fields).
+        _p(
+            "sorter_reviewer",
+            "Classification Review",
+            ("classify", "review"),
+            "classification",
+        ),
+        _p(
+            "contract_auditor",
+            "Contract Extraction Audit",
+            ("verify", "review"),
+            "audit",
+            fallback_bundle="extraction",
+            ground_truth=False,
+        ),
+        _p(
+            "corporate_records_auditor",
+            "Corporate Records Extraction Audit",
+            ("verify", "review"),
+            "audit",
+            fallback_bundle="extraction",
+            ground_truth=False,
+        ),
+        _p(
+            "due_diligence_auditor",
+            "Due-Diligence Extraction Audit",
+            ("verify", "review"),
+            "audit",
+            fallback_bundle="extraction",
+            ground_truth=False,
+        ),
+        _p(
+            "correspondence_auditor",
+            "Correspondence Parsing Audit",
+            ("verify", "review"),
+            "audit",
+            fallback_bundle="extraction",
+            ground_truth=False,
+        ),
+        _p(
+            "compliance_auditor",
+            "Compliance Filing Extraction Audit",
+            ("verify", "review"),
+            "audit",
+            fallback_bundle="extraction",
+            ground_truth=False,
+        ),
+        _p(
+            "court_opinions_auditor",
+            "Court Opinion Analysis Audit",
+            ("verify", "review"),
+            "audit",
+            fallback_bundle="extraction",
+            ground_truth=False,
+        ),
+        _p(
+            "arbiter",
+            "Judgment Arbitration",
+            ("verify", "review"),
+            "audit",
+            ground_truth=False,
+        ),
     )
 }
 

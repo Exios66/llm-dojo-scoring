@@ -82,13 +82,20 @@ def test_unknown_bundle_raises():
 # ----------------------------- profiles ------------------------------------
 
 
-def test_fourteen_default_profiles():
+def test_default_profiles():
+    # v0.6.0 (KANBAN-062/063): the original 14 plus the review/audit lanes.
     expected = {
         "sorter", "contracts_specialist", "corporate_records_specialist",
         "due_diligence_specialist", "correspondence_specialist",
         "compliance_specialist", "court_opinions_specialist", "reporter",
         "judge", "boss", "pdf_transcriber", "image_extractor", "archivist",
         "audit_agent",
+        # v0.6.0 additions
+        "sorter_reviewer",
+        "contract_auditor", "corporate_records_auditor",
+        "due_diligence_auditor", "correspondence_auditor",
+        "compliance_auditor", "court_opinions_auditor",
+        "arbiter",
     }
     assert set(list_profiles()) == expected
 
