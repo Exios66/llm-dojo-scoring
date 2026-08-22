@@ -3,6 +3,41 @@
 All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
+## [0.7.0] - 2026-08-21
+
+### Added
+
+- **Document-type-aware metric bundles (KANBAN-067):** new module
+  `llm_dojo_scoring.doc_bundles` with `DOC_TYPE_BUNDLES` — one bundle per
+  processed document class (`contract`, `corporate_record`, `due_diligence`,
+  `correspondence`, `compliance_filing`, `court_opinion`, `insurance_claim`,
+  `merger_agreement`). Same `Bundle` shape and registry validation as task
+  bundles, but a SEPARATE namespace (names prefixed `doc:`) so the task-bundle
+  surface is untouched. Where real scoring logic exists today, type-specific
+  metrics ship: contracts get laziness/hallucination overrides,
+  court_opinions get LegalBench metrics. Where they don't, the bundle
+  description says so in plain language (HONEST GAP: MAUD-derived merger
+  scorers, Enron-derived demand-letter/email scorers, DE-SynPUF-grounded
+  claims scorers all PENDING) instead of inventing numbers — the honest-gap
+  mandate from issue #32. New scorers land by adding to the matching key;
+  the registry is the modular extension point.
+- **`AgentProfile.doc_bundle` + explicit-fallback resolver:** optional
+  per-profile doc-type bundle field, plus
+  `AgentProfile.resolve_doc_bundle(doc_type=None, *, fallback=True) ->
+  tuple[Bundle, bool]`. Resolution order: explicit doc_type → profile's
+  `doc_bundle` → task bundle with `used_fallback=True` (an EXPLICIT honesty
+  marker for callers/dashboards — never a silent default); `fallback=False`
+  raises rather than pretending. Additive-only: every v0.6.0 profile keeps
+  its exact tasks/bundle/fallback/ground_truth (pinned by a regression test).
+- **23rd agent profile: `insurance_claims_specialist`** (tasks extract,
+  bundle extraction) — companion to llm-mailroom's insurance_claim document
+  class shipped in Phase 1 of this card (mailroom commit `99536d8`).
+  `test_bundles.py::test_default_profiles` re-pinned deliberately; the full
+  doc-type surface + preexisting-profiles-unchanged regression live in
+  `tests/test_doc_bundles.py` (16 new network-free pins).
+
+Suite: 209 passed / 5 skipped (was 193/5).
+
 ## [0.6.0] - 2026-08-21
 
 ### Added

@@ -10,10 +10,11 @@ scoring code (``src/field_scoring.py``, ``src/metrics.py``, ``src/bootstrap.py``
 
 from __future__ import annotations
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 
 from . import (
     bundles,
+    doc_bundles,
     emitter,
     profiles,
     pruning,
@@ -89,6 +90,13 @@ from .tasks import (
     task_kind,
 )
 from .bundles import BUILTIN_BUNDLES, Bundle, bundle_metric_names, get_bundle, validate_bundle
+from .doc_bundles import (
+    DOC_TYPES,
+    DOC_TYPE_BUNDLES,
+    get_doc_bundle,
+    list_doc_types,
+    validate_doc_bundle,
+)
 from .emitter import (
     Emitter,
     get_emitter,

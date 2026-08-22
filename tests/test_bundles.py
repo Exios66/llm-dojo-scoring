@@ -84,6 +84,8 @@ def test_unknown_bundle_raises():
 
 def test_default_profiles():
     # v0.6.0 (KANBAN-062/063): the original 14 plus the review/audit lanes.
+    # v0.7.0 (KANBAN-067): + insurance_claims_specialist (23rd mailroom agent;
+    # deliberate re-pin — see tests/test_doc_bundles.py for the full surface).
     expected = {
         "sorter", "contracts_specialist", "corporate_records_specialist",
         "due_diligence_specialist", "correspondence_specialist",
@@ -96,6 +98,8 @@ def test_default_profiles():
         "due_diligence_auditor", "correspondence_auditor",
         "compliance_auditor", "court_opinions_auditor",
         "arbiter",
+        # v0.7.0 addition (KANBAN-067)
+        "insurance_claims_specialist",
     }
     assert set(list_profiles()) == expected
 

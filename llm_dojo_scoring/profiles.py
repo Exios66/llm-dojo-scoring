@@ -58,6 +58,11 @@ class AgentProfile:
     #: Used when the primary bundle cannot be applied (e.g. verification
     #: unavailable and the run degrades to plain classification).
     fallback_bundle: str | None = None
+    #: KANBAN-067: optional doc-type bundle name (a ``DOC_TYPE_BUNDLES`` key,
+    #: e.g. ``"insurance_claim"``) for doc-type-aware scoring. When None,
+    #: :meth:`resolve_doc_bundle` degrades to the task bundle and SAYS SO via
+    #: the returned ``used_fallback`` flag — never a silent default.
+    doc_bundle: str | None = None
     #: How per-document scores roll up to run level.
     aggregation: str = "mean"
     #: Ground truth available for this agent's evaluation context?
@@ -75,6 +80,39 @@ class AgentProfile:
         if not name:
             raise ValueError(f"profile {self.name!r}: no metrics_bundle and no task-derived bundle")
         return get_bundle(name, registry=registry)
+
+    def resolve_doc_bundle(
+        self,
+        doc_type: str | None = None,
+        *,
+        fallback: bool = True,
+        registry: Registry | None = None,
+    ) -> tuple[Bundle, bool]:
+        """Resolve the doc-type bundle for this agent (KANBAN-067).
+
+        Returns ``(bundle, used_fallback)``. Resolution order:
+
+        1. ``doc_type`` given → ``doc:doc_type`` bundle from
+           :data:`llm_dojo_scoring.doc_bundles.DOC_TYPE_BUNDLES`;
+        2. else the profile's own ``doc_bundle`` field when set;
+        3. else (``fallback=True``, the default) the task bundle with
+           ``used_fallback=True`` — an EXPLICIT honesty marker for callers
+           and dashboards, never a silent default;
+        4. ``fallback=False`` with nothing to resolve raises ``ValueError``
+           instead of pretending.
+        """
+        from .doc_bundles import get_doc_bundle
+
+        if doc_type:
+            return get_doc_bundle(doc_type, registry=registry), False
+        if self.doc_bundle:
+            return get_doc_bundle(self.doc_bundle, registry=registry), False
+        if fallback:
+            return self.resolve_bundle(registry=registry), True
+        raise ValueError(
+            f"profile {self.name!r}: no doc_bundle and no doc_type given "
+            "(fallback disabled)"
+        )
 
 
 def _bundle_for_tasks(tasks: Iterable[str]) -> str | None:
@@ -121,6 +159,8 @@ DEFAULT_PROFILES: dict[str, AgentProfile] = {
         _p("correspondence_specialist", "Correspondence Parsing", ("extract",), "extraction"),
         _p("compliance_specialist", "Compliance Filing Extraction", ("extract",), "extraction"),
         _p("court_opinions_specialist", "Court Opinion Analysis", ("extract",), "extraction"),
+        # KANBAN-067: the 23rd mailroom agent (Phase 1 added the class).
+        _p("insurance_claims_specialist", "Insurance Claim Extraction", ("extract",), "extraction"),
         _p("reporter", "Run Reporting", ("summarize",), "reporter"),
         _p("judge", "Discretionary Adjudication", ("classify", "review"), "classification"),
         _p("boss", "Orchestration", ("orchestrate",), "reporter"),
