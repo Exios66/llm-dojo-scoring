@@ -27,5 +27,3 @@ reports/
 .env
 *.local.yaml
 *.pyc
-*.pyc
-*.pyc
