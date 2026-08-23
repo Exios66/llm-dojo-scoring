@@ -195,6 +195,43 @@ Your `langfuse.env` (with `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` /
 `LANGFUSE_BASE_URL` / `LANGFUSE_PROJECT=llm-dojo`) is picked up automatically;
 credentials set in the shell win.
 
+## 3c. Adopting the unified scoring layer (v0.5+, optional)
+
+Beyond the drop-in swap above, consumers can route their score emission
+through the package's organizational layer instead of maintaining ad-hoc
+score lists:
+
+```python
+import llm_dojo_scoring as dojo
+
+# One agent's scoring identity: task-derived bundle, fallback, ground-truth flag.
+profile = dojo.get_profile("sorter")                 # 23 default profiles; YAML overlay
+bundle = profile.resolve_bundle()                    # registry-validated metric set
+
+# Doc-type-aware scoring (KANBAN-067) with an EXPLICIT fallback marker:
+doc_bundle, used_fallback = profile.resolve_doc_bundle(doc_type="contract")
+if used_fallback:                                    # never a silent default
+    ...  # dashboards surface the honesty flag
+
+# Emit through sinks; query tier-capped views.
+emitter = dojo.Emitter(sinks=[dojo.LocalManifestSink("reports/scores_manifest.jsonl")])
+emitter.emit_score("sorter", doc_id="doc_17", metric_name="accuracy",
+                   value=0.93, run_id="exp_42")
+card = emitter.get_scorecard("sorter", "exp_42", min_tier=1)   # T0+T1 only
+dojo.dashboard_metrics("contracts_specialist")       # bundle ∩ tier cap
+```
+
+Governance rules that make this safe to adopt incrementally:
+
+- Every emitted name is validated against the registry at emit time
+  (`KeyError` on unknown metrics — fail fast, not silently dropped). Register
+  new names upstream first (built-in `DEFAULT_METRICS_YAML` or a
+  `LLM_DOJO_SCORING_REGISTRY` YAML), then use them downstream.
+- llm-mailroom validates its flat `SCORE_CONFIGS` list against
+  `load_registry().metrics` at import time; llm-entity-extraction wraps the
+  same layer behind a thin `score_emitter` bridge module. Mirror whichever
+  pattern fits your repo.
+
 ## 4. Verification
 
 After the swap, run the suite and re-export — numbers must be unchanged:

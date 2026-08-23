@@ -133,6 +133,12 @@ print(dojo.render_notes(interp))
 | `interpret` | — (new) | Verdicts: champion, significance, version/model leaderboards, reliability, recommendations |
 | `visualize` | — (new) | matplotlib plots: CI bars, prompt-version bars, subtype heatmap, failure stacks, cost scatter |
 | `report` | — (new) | Full Markdown report builder |
+| `registry` | — (new) | Metric definitions registry: every score name → tier (**T0 HEADLINE** / **T1 CORE** / **T2 DEEP** / **T3 LOG**), units, aggregation, applicable agents; YAML-backed (`LLM_DOJO_SCORING_REGISTRY`) |
+| `bundles` | — (new) | Nine pre-built **task** bundles (classification, extraction, extraction_open, cost, factuality, laziness_detection, audit, reporter, transcription), fail-fast validated against the registry |
+| `profiles` | — (new) | **23 agent profiles** — each agent's scoring identity (task-derived bundle resolution, fallback bundle, ground-truth flag); YAML overlay via `LLM_DOJO_SCORING_PROFILES` |
+| `doc_bundles` | — (new) | **Document-type-aware bundles** for the eight processed document classes; honest-gap mandate where type-specific scorers are still pending |
+| `emitter` | — (new) | Unified score emitter: `ScoreRecord`, network-free JSONL manifest sink + credential-checked inert-unless-configured Langfuse sink; scorecards & headline comparison |
+| `pruning` | — (new) | Tier-based dashboard filtering: `dashboard_metrics(agent)` (profile bundle ∩ tier cap), `headline_metrics(agent)` (strictly T0), `prune_records` |
 | `langfuse_sync` | — (new) | Pull live experiment traces (Langfuse) into run records + reference workbook |
 | `phoenix_sync` | — (new) | Local Phoenix/OTLP sink probe + span reader (graceful when down) |
 | `tasks` | — (new) | Task-aware scoring across the additional document hierarchy (MAUD, LegalBench, chained runs, multiclass, court opinions) |
@@ -152,6 +158,7 @@ subtype focus to the full merged taxonomy:
 | `legalbench` | LegalBench task-mode binary Yes/No | exact match + CI, per-class, binary P/R/F1 |
 | `court_opinion` | court_opinion doc-class classification | exact match + CI, per-class, confusion |
 | `chained` | composite sorter→extractor runs (`chained_composite` / `chained_summary`) | sorter exact + subtype, extractor overall + presence, weighted composite (default 0.25/0.75) |
+| `contracteval` | ContractEval clause-mapping benchmark (arXiv 2508.03080 rubric, `contracteval_metrics` / `contracteval_score`) | confusion accuracy/P/R/F1 + recall-weighted **F2**, token-set **Jaccard** over positive pairs, no-related & false-no-related rates (own + paper's 1,244 denominator), per-category breakdown with `categories=` |
 
 Normalization is task-aware: MAUD consideration answers (`"All Cash"`,
 `"Mixed Cash & Stock (Election)"` → canonical keys) and LegalBench Yes/No
@@ -160,6 +167,73 @@ forms degrade to canonical labels, and consideration-type equivalence
 equiv metrics. Everything is a deterministic pure function over
 `(predicted, expected)` pairs — offline rescoring and live
 Langfuse/Braintrust scoring can never disagree.
+
+## Unified scoring layer — tiers, bundles, profiles, doc-type bundles
+
+On top of the calculation engine (v0.5.0+) the package ships the
+organizational layer consumers emit through:
+
+- **`registry`** — the single source mapping every metric name to its tier:
+  **T0 HEADLINE** (board-level, one number per agent) → **T1 CORE**
+  ("what broke yesterday?": P/R/F1/F2, rates, cost) → **T2 DEEP** (confusion,
+  failure modes, bootstrap CIs, calibration) → **T3 LOG** (audit trail only).
+  The built-in default covers this package's full surface plus all 37 flat
+  llm-mailroom `SCORE_CONFIGS` names; override via `LLM_DOJO_SCORING_REGISTRY`
+  or an explicit path.
+- **`bundles`** — nine task bundles (what the agent *does*): classification,
+  extraction, extraction_open, cost, factuality, laziness_detection, audit,
+  reporter, transcription. Every metric must resolve in the registry.
+- **`profiles`** — 23 default **agent profiles**, each one agent's scoring
+  identity: task-derived bundle resolution, a fallback bundle for degraded
+  runs, and a ground-truth flag. Includes the sorter, seven specialists,
+  judge/boss/reporter/transcribers/archivist, the audit agent, and the Lane A/B
+  review set (`sorter_reviewer`, six per-specialist auditors, `arbiter`) that
+  never require ground truth. Overlay with your own YAML via
+  `LLM_DOJO_SCORING_PROFILES`.
+- **`doc_bundles`** — the same idea grouped by the KIND of document processed:
+  eight `DOC_TYPE_BUNDLES` (`contract`, `merger_agreement`,
+  `corporate_record`, `due_diligence`, `correspondence`, `compliance_filing`,
+  `court_opinion`, `insurance_claim`). Honesty mandate: type-specific metrics
+  ship ONLY where real scoring logic exists today (contracts get
+  CUAD-grounded laziness/hallucination overrides, court opinions get
+  LegalBench); types whose scorers are still future work say so in their
+  description instead of inventing numbers. `AgentProfile.resolve_doc_bundle()`
+  degrades to a task bundle with an EXPLICIT `used_fallback=True` marker —
+  never a silent default.
+- **`emitter`** — one fan-out point for score records: registry-validated
+  `emit_score` → sinks (`LocalManifestSink` JSONL always available;
+  `LangfuseSink` inert unless credentials resolve), then aggregated
+  `get_scorecard(agent, run_id, min_tier=...)` and T0-only
+  `compare_headlines`.
+- **`pruning`** — what a dashboard panel shows: profile-bundle ∩ tier cap.
+
+```python
+import llm_dojo_scoring as dojo
+
+# 1. Registry: every score name -> tier / units / aggregation / agents
+reg = dojo.load_registry()
+reg.names_for(max_tier=1, agent="sorter")        # T0+T1 slice for one agent
+
+# 2. Agent profiles: the scoring identity of each pipeline agent
+profile = dojo.get_profile("insurance_claims_specialist")     # 23 defaults
+bundle = profile.resolve_bundle()                             # validated vs registry
+
+# 3. Doc-type bundles: metrics grouped by the kind of document
+doc_bundle, used_fallback = profile.resolve_doc_bundle("insurance_claim")
+assert not used_fallback          # explicit honesty marker — never a silent default
+
+# 4. Emit through sinks; query scorecards
+emitter = dojo.Emitter(sinks=[
+    dojo.LocalManifestSink("reports/scores_manifest.jsonl"),   # network-free
+    dojo.LangfuseSink(),                                       # inert w/o creds
+])
+emitter.emit_score("sorter", "doc_17", "accuracy", 0.93, run_id="exp_42")
+card = emitter.get_scorecard("sorter", "exp_42", min_tier=1)   # dashboard view
+
+# 5. Tier-based pruning
+dojo.dashboard_metrics("contracts_specialist")   # profile bundle ∩ T0+T1
+dojo.headline_metrics("judge")                   # strictly T0
+```
 
 ## Configuration
 
