@@ -48,6 +48,11 @@ Format based on Keep a Changelog; versioning is SemVer.
   checks `agent_overrides` extras against the registry (previously
   looked up the wrong key).
 - Package version **0.8.0** (`pyproject.toml` + `__init__.__version__`).
+- Langfuse env-file loader: stdlib KEY=VALUE fallback when
+  `python-dotenv` is not installed (the previous silent no-op left
+  explicit `langfuse.env` files unread).
+
+Suite: 229 passed / 5 skipped (was 209/5).
 
 ## [0.7.0] - 2026-08-21
 
