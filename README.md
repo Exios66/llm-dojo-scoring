@@ -196,7 +196,16 @@ organizational layer consumers emit through:
   specialist). `suite.score(expected, predicted)` routes to the existing
   calculation (`score_task` / `score_extraction` / audit disagreement /
   transcription token-F1). Type-specific extras ship only where real scorers
-  exist; honest-gap notes record the rest.
+  exist; honest-gap notes record the rest. Each specialist suite binds the
+  extraction fields, subclass catalog, and GT differentiators for its
+  document class from **`corpus`** (pinned to
+  `Lucius-Morningstar/docclass-merged`). `get_suite("merger_agreement")`
+  shares the contracts specialist but rebinds the MAUD consideration
+  catalog — it does not inherit CUAD families.
+- **`corpus`** — published-merge alignment: native vs corpus-present
+  classes, per-type subclass surfaces (CUAD folder labels, MAUD
+  consideration, CMS source table, Enron form, record type), extraction
+  field sets, and `normalize_corpus_subclass` / `suite_schema`.
 - **`doc_bundles`** — the same idea grouped by the KIND of document processed:
   eight `DOC_TYPE_BUNDLES` (`contract`, `merger_agreement`,
   `corporate_record`, `due_diligence`, `correspondence`, `compliance_filing`,

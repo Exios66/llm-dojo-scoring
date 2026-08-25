@@ -158,7 +158,8 @@ DOCCLASS_FAILURE_MODES: dict[str, dict[str, str]] = {
 # opinions) — mirrors `config/taxonomy.yaml` doc_classes keys.
 DOC_CLASS_KEYS: list[str] = [
     "contract", "corporate_record", "due_diligence", "correspondence",
-    "compliance_filing", "court_opinion", "merger_agreement",
+    "compliance_filing", "court_opinion", "insurance_claim",
+    "merger_agreement",
 ]
 
 # MAUD merger-agreement consideration-type subclass (expert GT dimension —

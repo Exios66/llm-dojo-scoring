@@ -70,6 +70,7 @@ DOC_TYPE_ALIASES: dict[str, str] = {
 #: taxonomy file. Override by passing ``field_types=`` to ``score()``.
 DEFAULT_FIELD_TYPES: dict[str, dict[str, str]] = {
     "contract": {
+        "document_name": "name",
         "parties": "entity_list:name",
         "effective_date": "date",
         "term_length": "free_text",
@@ -148,6 +149,7 @@ DEFAULT_FIELD_TYPES: dict[str, dict[str, str]] = {
         "supporting_documents": "entity_list",
     },
     "merger_agreement": {
+        "document_name": "name",
         "parties": "entity_list:name",
         "effective_date": "date",
         "term_length": "free_text",
@@ -220,26 +222,40 @@ _AGENT_EXTRAS: dict[str, tuple[str, ...]] = {
 #: Honest-gap notes — type-specific scorers that do NOT exist yet.
 _HONEST_GAPS: dict[str, str] = {
     "correspondence_specialist": (
-        "HONEST GAP: Enron-derived demand-letter / email-thread scorers "
-        "are pending; today this suite is typed-extraction (date + money "
-        "field types from the mailroom schema)."
+        "HONEST GAP: Enron-derived demand-letter / email-thread *content* "
+        "scorers are pending. The published merge already supplies form "
+        "subclasses (email/memo/demand/…) plus content_topic and sentiment; "
+        "those are classification differentiators, not extraction fields. "
+        "Today this suite scores the typed-extraction schema (date + money)."
     ),
     "insurance_claims_specialist": (
-        "HONEST GAP: DE-SynPUF determination-consistency / amount-exactness "
-        "scorers are pending; today this suite is typed-extraction (date + "
-        "money field types from the mailroom schema)."
+        "HONEST GAP: determination-consistency scorers beyond typed "
+        "extraction are pending. The published merge supplies CMS "
+        "DE-SynPUF source-table subclasses (carrier/inpatient/outpatient/pde) "
+        "— orthogonal to the specialist claim_type field (health/auto/…). "
+        "adjuster and denial_reasons are on the schema but empty in the "
+        "current GT (all coverage_determination=approved)."
     ),
     "due_diligence_specialist": (
-        "HONEST GAP: no external benchmark (synthetic samples only); "
-        "typed-extraction with date diagnostics."
+        "HONEST GAP: due_diligence has zero rows in Lucius-Morningstar/"
+        "docclass-merged; typed-extraction with date diagnostics only "
+        "(no corpus-backed subclass dimension)."
     ),
     "corporate_records_specialist": (
-        "HONEST GAP: no external benchmark (synthetic samples only); "
-        "typed-extraction with date diagnostics."
+        "HONEST GAP: no external extraction benchmark; the published merge "
+        "covers 39 corporate_record rows with record-type subclasses "
+        "(articles_of_incorporation, rights_instrument, …). Suite scores "
+        "typed-extraction plus that subclass catalog."
     ),
     "compliance_specialist": (
-        "HONEST GAP: no external benchmark; deadline/date-field emphasis "
-        "via date_mae_days rather than a dedicated filing scorer."
+        "HONEST GAP: compliance_filing has zero rows in Lucius-Morningstar/"
+        "docclass-merged; deadline/date-field emphasis via date_mae_days "
+        "rather than a dedicated filing scorer."
+    ),
+    "court_opinions_specialist": (
+        "HONEST GAP: court_opinion has zero rows in Lucius-Morningstar/"
+        "docclass-merged; LegalBench metrics still ship as the real "
+        "benchmark surface."
     ),
     "pdf_transcriber": (
         "HONEST GAP: WER/CER are emit-time values; score() uses existing "
@@ -293,9 +309,9 @@ def _kind_for(profile: AgentProfile) -> str:
 
 def _task_key_for(profile: AgentProfile, kind: str) -> str | None:
     if profile.name == "sorter":
-        return "doc_class"
+        return "docclass"
     if profile.name == "sorter_reviewer":
-        return "doc_class"
+        return "docclass"
     if profile.name == "judge":
         return "multiclass"
     if profile.name == "court_opinions_specialist":
@@ -318,6 +334,12 @@ class ScoringSuite:
     extra_metrics: tuple[str, ...] = ()
     honest_gap: str | None = None
     task_key: str | None = None
+    #: Canonical subclass keys for this agent's document class (empty if none).
+    subclasses: tuple[str, ...] = ()
+    #: Corpus GT columns that differentiate this document class.
+    differentiators: tuple[str, ...] = ()
+    #: True when the published docclass-merged corpus has rows of this type.
+    in_corpus: bool = False
 
     @property
     def computable(self) -> bool:
@@ -371,6 +393,18 @@ class ScoringSuite:
 
         return headline_metrics(self.name)
 
+    def normalize_subclass(self, value: Any, *, doc_type: str | None = None) -> str:
+        """Normalize a raw subclass into a canonical catalog.
+
+        *doc_type* overrides the suite's bound type so the sorter can
+        normalize a label once the parent class is known. Without a
+        parent type the result is ``"other"`` — CUAD prefixes are not
+        applied to unlabeled values.
+        """
+        from .corpus import normalize_corpus_subclass
+
+        return normalize_corpus_subclass(doc_type or self.doc_type, value)
+
     def score(
         self,
         expected: Any,
@@ -416,7 +450,13 @@ class ScoringSuite:
             )
         if self.kind == _KIND_TRANSCRIPTION:
             return self._score_transcription(expected, predicted)
-        return score_task(task or self.task_key or "multiclass", expected, predicted, **kwargs)
+        task_name = task or self.task_key or "multiclass"
+        if (
+            self.kind in (_KIND_CLASSIFICATION, _KIND_REVIEW)
+            and kwargs.get("expected_subclass") is not None
+        ):
+            task_name = "docclass"
+        return score_task(task_name, expected, predicted, **kwargs)
 
     def validate_metrics(self, metrics: dict[str, Any]) -> dict[str, Any]:
         """Keep only registry-known names; unknown keys are dropped.
@@ -527,6 +567,9 @@ class ScoringSuite:
             "headline_names": self.headline_names(),
             "honest_gap": self.honest_gap,
             "field_types": dict(self.field_types),
+            "subclasses": list(self.subclasses),
+            "differentiators": list(self.differentiators),
+            "in_corpus": self.in_corpus,
         }
 
 
@@ -554,6 +597,31 @@ def _suite_for_profile(profile: AgentProfile) -> ScoringSuite:
     field_types: dict[str, str] = {}
     if doc_type and doc_type in DEFAULT_FIELD_TYPES:
         field_types = dict(DEFAULT_FIELD_TYPES[doc_type])
+    from .corpus import (
+        CORPUS_DIFFERENTIATORS,
+        CORPUS_DOC_TYPES,
+        CORPUS_EXTRACTION_FIELDS,
+        DOC_TYPE_SUBCLASSES,
+    )
+
+    # Sorter / reviewer see the full merged catalog (no single doc_type).
+    subclasses: tuple[str, ...] = ()
+    differentiators: tuple[str, ...] = ()
+    in_corpus = False
+    if doc_type:
+        subclasses = DOC_TYPE_SUBCLASSES.get(doc_type, ())
+        differentiators = CORPUS_DIFFERENTIATORS.get(doc_type, ())
+        in_corpus = doc_type in CORPUS_DOC_TYPES
+        expected_fields = CORPUS_EXTRACTION_FIELDS.get(doc_type)
+        if expected_fields and set(field_types) != set(expected_fields):
+            # Prefer the corpus-aligned field set; keep scoring types from
+            # DEFAULT_FIELD_TYPES and default unknown keys to name.
+            aligned = {}
+            for key in expected_fields:
+                aligned[key] = field_types.get(key) or "name"
+            field_types = aligned
+    elif profile.name in ("sorter", "sorter_reviewer"):
+        in_corpus = True
     return ScoringSuite(
         name=profile.name,
         title=profile.title,
@@ -564,6 +632,9 @@ def _suite_for_profile(profile: AgentProfile) -> ScoringSuite:
         extra_metrics=_AGENT_EXTRAS.get(profile.name, ()),
         honest_gap=_HONEST_GAPS.get(profile.name),
         task_key=_task_key_for(profile, kind),
+        subclasses=subclasses,
+        differentiators=differentiators,
+        in_corpus=in_corpus,
     )
 
 
@@ -589,13 +660,70 @@ def _resolve_suite_name(name: str) -> str:
     )
 
 
+def _requested_doc_type(name: str) -> str | None:
+    """Return the mailroom class if *name* is a doc-type alias (incl. ``doc:``)."""
+    key = name[4:] if name.startswith("doc:") else name
+    return key if key in DOC_TYPE_ALIASES else None
+
+
+def _rebind_for_doc_type(suite: ScoringSuite, doc_type: str) -> ScoringSuite:
+    """Keep the specialist profile but bind this document class's catalogs.
+
+    ``merger_agreement`` shares the contracts specialist (same extraction
+    fields) but has a MAUD consideration subclass — not the CUAD family
+    catalog. Without this rebind, ``get_suite("merger_agreement")`` would
+    silently score CUAD families.
+    """
+    from dataclasses import replace
+
+    from .corpus import (
+        CORPUS_DIFFERENTIATORS,
+        CORPUS_DOC_TYPES,
+        CORPUS_EXTRACTION_FIELDS,
+        DOC_TYPE_SUBCLASSES,
+    )
+
+    field_types = dict(DEFAULT_FIELD_TYPES.get(doc_type, suite.field_types))
+    expected_fields = CORPUS_EXTRACTION_FIELDS.get(doc_type)
+    if expected_fields and set(field_types) != set(expected_fields):
+        field_types = {key: field_types.get(key) or "name" for key in expected_fields}
+    honest = suite.honest_gap
+    if doc_type == "merger_agreement":
+        honest = (
+            "HONEST GAP: MAUD-derived extraction scorers (per-question "
+            "clause answers beyond Type of Consideration) are pending. "
+            "This suite scores the shared ContractExtraction field map "
+            "plus the MAUD consideration subclass catalog. "
+            "maud_clause_labels are classification differentiators, "
+            "not extraction fields."
+        )
+    return replace(
+        suite,
+        doc_type=doc_type,
+        field_types=field_types,
+        subclasses=DOC_TYPE_SUBCLASSES.get(doc_type, ()),
+        differentiators=CORPUS_DIFFERENTIATORS.get(doc_type, ()),
+        in_corpus=doc_type in CORPUS_DOC_TYPES,
+        honest_gap=honest,
+    )
+
+
 def get_suite(name: str) -> ScoringSuite:
     """Return the dedicated suite for an agent or document type.
 
     Accepts profile names (``sorter``), ``agent:`` prefixes, bare doc
     types (``insurance_claim``), and ``doc:`` prefixes.
+
+    Doc-type aliases that share a specialist but have their own subclass
+    catalog (today: ``merger_agreement``) are rebound so ``suite.doc_type``,
+    ``suite.subclasses``, and ``suite.differentiators`` match the requested
+    class — not the specialist's native class.
     """
-    return DEFAULT_SUITES[_resolve_suite_name(name)]
+    suite = DEFAULT_SUITES[_resolve_suite_name(name)]
+    requested = _requested_doc_type(name)
+    if requested and requested != suite.doc_type:
+        return _rebind_for_doc_type(suite, requested)
+    return suite
 
 
 def list_suites(*, kind: str | None = None) -> list[str]:

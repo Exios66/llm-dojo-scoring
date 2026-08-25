@@ -220,18 +220,24 @@ def score_task(
             "n": len(doc_ok),
         }
         if expected_subclass is not None and predicted_subclass is not None:
+            from .corpus import normalize_corpus_subclass, subclass_equivalent
+
             sub_ok = []
             sub_ok_equiv = []
             sub_exp_norm = []
             sub_pred_norm = []
-            for e, p in zip(expected_subclass, predicted_subclass):
-                en = normalize_maud_consideration(e)
-                pn = normalize_maud_consideration(p)
+            for e, p, doc_type in zip(expected_subclass, predicted_subclass, doc_exp):
+                # Scope the subclass catalog to the *expected* doc type so a
+                # CUAD family is not forced through the MAUD consideration
+                # normalizer (the pre-0.8.1 bug on the merged corpus).
+                en = normalize_corpus_subclass(doc_type, e)
+                pn = normalize_corpus_subclass(doc_type, p)
                 sub_exp_norm.append(en)
                 sub_pred_norm.append(pn)
                 sub_ok.append(1.0 if en == pn else 0.0)
-                equiv = equivalent_doc_subclasses(en, pn, allowed=set(MAUD_CONSIDERATION_TYPES))
-                sub_ok_equiv.append(1.0 if (en == pn or equiv) else 0.0)
+                sub_ok_equiv.append(
+                    1.0 if (en == pn or subclass_equivalent(doc_type, en, pn)) else 0.0
+                )
             exact = [1.0 if (de == dp and se == sp)
                      else 0.0 for de, dp, se, sp in
                      zip(doc_exp, doc_pred, sub_exp_norm, sub_pred_norm)]
