@@ -29,8 +29,9 @@ def normalize_subtype(value, settings=None) -> str:
     keys = s.contract_subtype_keys
     if key in keys:
         return key
-    if key in s.subtype_aliases:
-        return s.subtype_aliases[key]
+    aliases = {_ALIAS_KEY_RE.sub("", k): v for k, v in s.subtype_aliases.items()}
+    if key in aliases:
+        return aliases[key]
     # "License Agreement" -> "license"; "Non-Compete" -> non_compete_no_solicit.
     for subtype in s.contract_subtypes:
         norm_label = _ALIAS_KEY_RE.sub("", subtype["label"].lower())
