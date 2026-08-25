@@ -211,6 +211,17 @@ bundle = profile.resolve_bundle()                    # registry-validated metric
 # Dedicated suite — preferred import for mailroom / entity-extraction:
 suite = dojo.get_suite("sorter")                     # or get_suite("insurance_claim")
 result = suite.score(expected_labels, predicted_labels)
+# Hierarchical sorter (doc type + per-class subclass from docclass-merged):
+result = suite.score(
+    expected_doc_types, predicted_doc_types,
+    expected_subclass=expected_subclasses,
+    predicted_subclass=predicted_subclasses,
+)
+# Merger agreements share the contracts specialist but bind MAUD subclasses:
+assert dojo.get_suite("merger_agreement").subclasses[0] == "all_cash"
+assert dojo.suite_schema("insurance_claim")["subclasses"] == [
+    "carrier", "inpatient", "outpatient", "pde",
+]
 
 # Doc-type-aware scoring (KANBAN-067) with an EXPLICIT fallback marker:
 doc_bundle, used_fallback = profile.resolve_doc_bundle(doc_type="contract")

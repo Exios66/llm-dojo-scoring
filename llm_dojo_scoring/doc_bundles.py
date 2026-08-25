@@ -12,23 +12,25 @@ scorers are still future work say so in their description instead of
 pretending. New scorers land in the matching key — the registry is the
 modular extension point.
 
-Doc-type → dataset grounding:
+Doc-type → dataset grounding (published merge:
+Lucius-Morningstar/docclass-merged, 1,210 GT rows):
 
 ==================  =====================================================
 doc type            corpus / benchmark grounding
 ==================  =====================================================
-contract            CUAD v1 (via atticus) — contracteval + laziness metrics
-merger_agreement    MAUD (EDA: Exios66/atticus-investigation) — MAUD-derived
-                    scorers PENDING; today = contract surface + notes
-correspondence      Enron email corpus (EDA:
-                    Exios66/Enron-Evaluation-Environment) — demand-letter /
-                    client-email scorers PENDING; today = extraction base
-due_diligence       no external benchmark — synthetic samples only
-corporate_record    no external benchmark — synthetic samples only
-compliance_filing   no external benchmark — synthetic samples only
-court_opinion       LegalBench subsets — legalbench_* metrics (real)
-insurance_claim     CMS DE-SynPUF candidate corpus, EDA pending — claims
-                    scorers PENDING; today = extraction base + notes
+contract            CUAD v1 (509 rows, 25 families, 41 clause categories)
+                    — contracteval + laziness metrics
+merger_agreement    MAUD (152 rows, consideration subclass) — MAUD-derived
+                    extraction scorers PENDING; today = contract surface
+correspondence      Enron (110 rows, form + topic + sentiment) —
+                    content scorers PENDING; today = extraction base
+due_diligence       zero rows in the published merge — extraction schema
+corporate_record    39 rows (record-type subclass) — no external
+                    extraction benchmark
+compliance_filing   zero rows in the published merge — extraction schema
+court_opinion       zero rows in the published merge; LegalBench metrics
+insurance_claim     CMS DE-SynPUF (400 rows, source-table subclass) —
+                    claims consistency scorers PENDING; today = extraction
 ==================  =====================================================
 """
 

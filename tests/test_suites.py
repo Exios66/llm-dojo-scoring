@@ -78,7 +78,7 @@ def test_specialist_suites_embed_mailroom_field_types():
 def test_sorter_suite_is_classification_and_computable():
     suite = get_suite("sorter")
     assert suite.kind == "classification"
-    assert suite.task_key == "doc_class"
+    assert suite.task_key == "docclass"
     assert "confusion_matrix" in suite.metric_names()
     assert "accuracy" in suite.headline_names()
 
@@ -88,10 +88,25 @@ def test_sorter_score_doc_class_labels():
         "sorter",
         expected=["contract", "insurance_claim", "court_opinion"],
         predicted=["contract", "insurance_claim", "correspondence"],
+        task="doc_class",
     )
     assert result["task"] == "doc_class"
     assert result["exact_match"] == pytest.approx(2 / 3, abs=1e-3)
     assert result["n"] == 3
+
+
+def test_sorter_score_hierarchical_corpus_subclasses():
+    result = score_suite(
+        "sorter",
+        expected=["contract", "merger_agreement", "insurance_claim", "correspondence"],
+        predicted=["contract", "merger_agreement", "insurance_claim", "correspondence"],
+        expected_subclass=["License_Agreements", "all_cash", "carrier", "attorney_demand"],
+        predicted_subclass=["license", "all_cash", "carrier", "email"],
+    )
+    assert result["kind"] == "docclass"
+    assert result["doc_type_accuracy"] == 1.0
+    assert result["subclass_accuracy"] == 0.75  # correspondence form miss
+    assert result["exact_match"] == 0.75
 
 
 def test_contracts_specialist_score_uses_field_types():
@@ -187,7 +202,7 @@ def test_contracts_and_court_have_real_benchmark_extras():
     assert {"jaccard_similarity", "laziness_rate"} <= contracts
     assert {"legalbench_accuracy", "legalbench_macro_f1"} <= court
     assert get_suite("contracts_specialist").honest_gap is None
-    assert get_suite("court_opinions_specialist").honest_gap is None
+    assert "LegalBench" in (get_suite("court_opinions_specialist").honest_gap or "")
 
 
 def test_insurance_specialist_is_on_extraction_metrics():

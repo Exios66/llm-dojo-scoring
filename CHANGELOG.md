@@ -3,6 +3,55 @@
 All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
+## [0.8.1] - 2026-08-25
+
+### Added
+
+- **`llm_dojo_scoring.corpus`** — single source mapping each mailroom
+  class to the published
+  [`Lucius-Morningstar/docclass-merged`](https://huggingface.co/datasets/Lucius-Morningstar/docclass-merged)
+  schema (1,210 GT rows: 1,081 train / 129 test). Exports subclass
+  catalogs, extraction-field sets, type-specific GT differentiators,
+  CUAD (41) / MAUD (22 questions, 7 categories) clause surfaces,
+  correspondence topics, and `normalize_corpus_subclass` /
+  `suite_schema`.
+- **Per-type subclass catalogs on every specialist suite**
+  (`ScoringSuite.subclasses` / `differentiators` / `in_corpus`):
+  CUAD 25-family (contract), MAUD consideration (merger_agreement),
+  CMS DE-SynPUF source table `carrier|inpatient|outpatient|pde`
+  (insurance_claim — orthogonal to specialist `claim_type`), Enron
+  form (correspondence), record type (corporate_record). Native
+  classes with zero rows (`due_diligence`, `compliance_filing`,
+  `court_opinion`) stay honest: empty subclass catalog + gap note.
+
+### Fixed
+
+- **Hierarchical `docclass` scoring no longer forces every subclass
+  through the MAUD consideration normalizer.** CUAD folder labels,
+  CMS source tables, and Enron forms were collapsing to `"other"`.
+  `score_task("docclass")` now scopes normalization to the *expected*
+  parent class.
+- **`get_suite("merger_agreement")` rebinds the MAUD catalog** instead
+  of silently inheriting the contracts specialist's CUAD families.
+  Shared `ContractExtraction` field map (incl. `document_name`) is
+  unchanged; `suite.doc_type` / subclasses / differentiators match
+  the requested class.
+- Sorter default task is hierarchical `docclass` (not label-only
+  `doc_class`). `normalize_subclass` without a parent type returns
+  `"other"` so CUAD prefixes cannot rewrite unlabeled CMS / Enron
+  values; pass `doc_type=` once the parent class is known.
+- `DOC_CLASS_KEYS` includes `insurance_claim`. Subtype alias lookup
+  strips non-alphanumerics so CUAD folder labels
+  (`License_Agreements`, `Joint Venture _ Filing`) resolve.
+
+### Changed
+
+- Package version **0.8.1**.
+- Honest-gap notes record corpus-absent types and the insurance
+  CMS-table vs `claim_type` split (`adjuster` / `denial_reasons`
+  are on the schema but empty in the current GT; all
+  `coverage_determination=approved`).
+
 ## [0.8.0] - 2026-08-25
 
 ### Added
