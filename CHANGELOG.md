@@ -52,6 +52,8 @@ Format based on Keep a Changelog; versioning is SemVer.
   are on the schema but empty in the current GT; all
   `coverage_determination=approved`).
 
+Suite: 244 passed / 5 skipped (was 229/5).
+
 ## [0.8.0] - 2026-08-25
 
 ### Added
