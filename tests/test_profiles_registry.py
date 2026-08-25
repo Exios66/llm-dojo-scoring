@@ -14,6 +14,7 @@ NEW_PROFILES = [
     "correspondence_auditor",
     "compliance_auditor",
     "court_opinions_auditor",
+    "insurance_claims_auditor",
     "arbiter",
 ]
 
@@ -31,7 +32,7 @@ def test_sorter_reviewer_profile_shape():
 
 def test_specialist_auditor_profiles_share_shape():
     auditors = [n for n in NEW_PROFILES if n.endswith("_auditor")]
-    assert len(auditors) == 6  # one per specialist
+    assert len(auditors) == 7  # one per specialist (incl. insurance_claims)
     for name in auditors:
         p = get_profile(name)
         assert p.tasks == ("verify", "review")

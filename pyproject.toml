@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-dojo-scoring"
-version = "0.7.0"
+version = "0.8.0"
 description = "Dedicated scoring, error-analysis, visualization, and interpretation suite for LLM document pipelines (llm-entity-extraction / llm-mailroom)"
 readme = "README.md"
 requires-python = ">=3.10"

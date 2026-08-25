@@ -3,6 +3,52 @@
 All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
+## [0.8.0] - 2026-08-25
+
+### Added
+
+- **Dedicated per-agent scoring suites:** new module
+  `llm_dojo_scoring.suites` — one importable `ScoringSuite` per pipeline
+  agent so llm-mailroom / llm-entity-extraction call
+  `get_suite("sorter").score(...)` / `get_suite("insurance_claim").score(...)`
+  instead of assembling a profile + bundle + field-type map. Suites
+  embed the mailroom taxonomy field-type maps, materialize an
+  `agent:<name>` bundle, route `score()` to existing package functions
+  (`score_task`, `score_extraction`, audit disagreement as
+  `1 - overall_score`, transcription token-F1), and document honest
+  gaps where type-specific scorers are still pending. Doc-type aliases
+  cover all eight processed classes (incl. `merger_agreement` →
+  contracts specialist).
+- **24th agent profile: `insurance_claims_auditor`** — companion auditor
+  for the seventh specialist, matching the KANBAN-062/063 per-specialist
+  auditor pattern.
+- **Registry family tokens** (`SPECIALISTS`, `AUDITORS`, `CLASSIFIERS`,
+  `TRANSCRIBERS`) so a newly added specialist cannot be omitted from
+  extraction `applicable_agents` (the v0.7.0 `insurance_claims_specialist`
+  gap). `insurance_claims_specialist` is now on every extraction metric
+  that the other specialists already had.
+- **Diagnostic metrics registered:** `date_mae_days`, `money_mae_usd`
+  (T1) and `duration_mae_days` (T2) — existing
+  `diagnostics.extraction_diagnostics` surface, now emit-able from
+  every specialist suite.
+- **Per-specialist extraction extras** on the task and doc-type
+  bundles (date/money diagnostics + hallucination) so every specialist
+  has a dedicated extras set, not just contracts and court opinions.
+- Sorter / reviewer / judge classification extras; audit metrics now
+  apply to every named auditor + arbiter. `insurance_claim` added to
+  the default classification label table.
+
+### Changed
+
+- Specialist profiles now bind their native `doc_bundle` (contract,
+  corporate_record, …) so `resolve_doc_bundle()` no longer falls back
+  to the task bundle for those seven agents. Agents without a native
+  doc type (sorter, judge, …) still return `used_fallback=True`.
+- YAML profile overlays persist `doc_bundle`. Bundle validation now
+  checks `agent_overrides` extras against the registry (previously
+  looked up the wrong key).
+- Package version **0.8.0** (`pyproject.toml` + `__init__.__version__`).
+
 ## [0.7.0] - 2026-08-21
 
 ### Added

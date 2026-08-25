@@ -24,6 +24,7 @@ _DEFAULT_CLASSES_RE: dict[str, re.Pattern[str]] = {
     "correspondence": re.compile(r"\bcorrespondence\b"),
     "compliance_filing": re.compile(r"\bcompliance[_ ]?filing\b"),
     "court_opinion": re.compile(r"\bcourt[_ ]?opinion\b"),
+    "insurance_claim": re.compile(r"\binsurance[_ ]?claim\b"),
     "merger_agreement": re.compile(r"\bmerger[_ ]?agreement\b"),
 }
 

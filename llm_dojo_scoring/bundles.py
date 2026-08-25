@@ -81,6 +81,7 @@ BUILTIN_BUNDLES: dict[str, Bundle] = {
             ),
             agent_overrides={
                 "sorter": ("confusion_matrix", "failure_mode_breakdown", "per_class_stats", "bootstrap_ci"),
+                "sorter_reviewer": ("confusion_matrix", "per_class_stats", "bootstrap_ci"),
                 "judge": ("confidence_calibration_error",),
             },
         ),
@@ -105,10 +106,42 @@ BUILTIN_BUNDLES: dict[str, Bundle] = {
                     "jaccard_similarity",
                     "laziness_rate",
                     "hallucination_rate",
+                    "extraction_category_presence",
+                    "date_mae_days",
+                    "money_mae_usd",
+                ),
+                "corporate_records_specialist": (
+                    "date_mae_days",
+                    "per_field_scores",
+                    "hallucination_rate",
+                ),
+                "due_diligence_specialist": (
+                    "date_mae_days",
+                    "per_field_scores",
+                    "hallucination_rate",
+                ),
+                "correspondence_specialist": (
+                    "date_mae_days",
+                    "money_mae_usd",
+                    "per_field_scores",
+                    "hallucination_rate",
+                ),
+                "compliance_specialist": (
+                    "date_mae_days",
+                    "per_field_scores",
+                    "hallucination_rate",
                 ),
                 "court_opinions_specialist": (
                     "legalbench_accuracy",
                     "legalbench_macro_f1",
+                    "date_mae_days",
+                    "hallucination_rate",
+                ),
+                "insurance_claims_specialist": (
+                    "date_mae_days",
+                    "money_mae_usd",
+                    "per_field_scores",
+                    "hallucination_rate",
                 ),
             },
         ),
@@ -217,9 +250,10 @@ def validate_bundle(
     """
     reg = registry or load_registry()
     for name in bundle.metric_names:
-        for extra in bundle.agent_overrides.get(name, ()):  # pragma: no cover
-            reg.get(extra)
         reg.get(name)
+    for extras in bundle.agent_overrides.values():
+        for extra in extras:
+            reg.get(extra)
     return list(bundle.metric_names)
 
 
