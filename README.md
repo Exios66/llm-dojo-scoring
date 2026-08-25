@@ -135,7 +135,8 @@ print(dojo.render_notes(interp))
 | `report` | — (new) | Full Markdown report builder |
 | `registry` | — (new) | Metric definitions registry: every score name → tier (**T0 HEADLINE** / **T1 CORE** / **T2 DEEP** / **T3 LOG**), units, aggregation, applicable agents; YAML-backed (`LLM_DOJO_SCORING_REGISTRY`) |
 | `bundles` | — (new) | Nine pre-built **task** bundles (classification, extraction, extraction_open, cost, factuality, laziness_detection, audit, reporter, transcription), fail-fast validated against the registry |
-| `profiles` | — (new) | **23 agent profiles** — each agent's scoring identity (task-derived bundle resolution, fallback bundle, ground-truth flag); YAML overlay via `LLM_DOJO_SCORING_PROFILES` |
+| `profiles` | — (new) | **24 agent profiles** — each agent's scoring identity (task-derived bundle resolution, fallback bundle, ground-truth flag); YAML overlay via `LLM_DOJO_SCORING_PROFILES` |
+| `suites` | — (new) | **Dedicated scoring suite per pipeline agent** — importable `get_suite` / `score_suite` with field-type maps, doc-type aliases, and honest-gap notes; the API mailroom consumers should call |
 | `doc_bundles` | — (new) | **Document-type-aware bundles** for the eight processed document classes; honest-gap mandate where type-specific scorers are still pending |
 | `emitter` | — (new) | Unified score emitter: `ScoreRecord`, network-free JSONL manifest sink + credential-checked inert-unless-configured Langfuse sink; scorecards & headline comparison |
 | `pruning` | — (new) | Tier-based dashboard filtering: `dashboard_metrics(agent)` (profile bundle ∩ tier cap), `headline_metrics(agent)` (strictly T0), `prune_records` |
@@ -183,13 +184,19 @@ organizational layer consumers emit through:
 - **`bundles`** — nine task bundles (what the agent *does*): classification,
   extraction, extraction_open, cost, factuality, laziness_detection, audit,
   reporter, transcription. Every metric must resolve in the registry.
-- **`profiles`** — 23 default **agent profiles**, each one agent's scoring
+- **`profiles`** — 24 default **agent profiles**, each one agent's scoring
   identity: task-derived bundle resolution, a fallback bundle for degraded
   runs, and a ground-truth flag. Includes the sorter, seven specialists,
   judge/boss/reporter/transcribers/archivist, the audit agent, and the Lane A/B
-  review set (`sorter_reviewer`, six per-specialist auditors, `arbiter`) that
-  never require ground truth. Overlay with your own YAML via
-  `LLM_DOJO_SCORING_PROFILES`.
+  review set (`sorter_reviewer`, seven per-specialist auditors including
+  `insurance_claims_auditor`, `arbiter`) that never require ground truth.
+  Overlay with your own YAML via `LLM_DOJO_SCORING_PROFILES`.
+- **`suites`** — one dedicated, importable scoring suite per pipeline agent
+  (and a doc-type alias so `get_suite("insurance_claim")` resolves the
+  specialist). `suite.score(expected, predicted)` routes to the existing
+  calculation (`score_task` / `score_extraction` / audit disagreement /
+  transcription token-F1). Type-specific extras ship only where real scorers
+  exist; honest-gap notes record the rest.
 - **`doc_bundles`** — the same idea grouped by the KIND of document processed:
   eight `DOC_TYPE_BUNDLES` (`contract`, `merger_agreement`,
   `corporate_record`, `due_diligence`, `correspondence`, `compliance_filing`,
@@ -214,8 +221,13 @@ import llm_dojo_scoring as dojo
 reg = dojo.load_registry()
 reg.names_for(max_tier=1, agent="sorter")        # T0+T1 slice for one agent
 
-# 2. Agent profiles: the scoring identity of each pipeline agent
-profile = dojo.get_profile("insurance_claims_specialist")     # 23 defaults
+# 2. Dedicated suite: the import mailroom projects should use
+suite = dojo.get_suite("insurance_claims_specialist")          # 24 defaults
+result = suite.score(expected_fields, predicted_fields)       # field-type-aware
+assert suite.name == dojo.get_suite("insurance_claim").name   # doc-type alias
+
+# 2b. Agent profiles: the scoring identity of each pipeline agent
+profile = dojo.get_profile("insurance_claims_specialist")
 bundle = profile.resolve_bundle()                             # validated vs registry
 
 # 3. Doc-type bundles: metrics grouped by the kind of document

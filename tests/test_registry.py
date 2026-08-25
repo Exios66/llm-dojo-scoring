@@ -133,8 +133,10 @@ def test_mailroom_score_configs_preserved_as_aliases():
 
 def test_audit_metrics_are_new_and_core():
     reg = load_registry()
-    assert reg.get("audit_disagreement_rate").applicable_agents == ("audit_agent",)
-    assert reg.get("audit_resolution_rate").applicable_agents == ("audit_agent",)
+    assert "audit_agent" in reg.get("audit_disagreement_rate").applicable_agents
+    assert "insurance_claims_auditor" in reg.get("audit_disagreement_rate").applicable_agents
+    assert "arbiter" in reg.get("audit_resolution_rate").applicable_agents
+    assert not reg.get("audit_disagreement_rate").applies_to("sorter")
 
 
 def test_metricdef_defaults():

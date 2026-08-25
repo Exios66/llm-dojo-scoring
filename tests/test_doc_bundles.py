@@ -116,14 +116,22 @@ def test_resolve_doc_bundle_profile_field_when_no_doc_type():
 
 
 def test_resolve_doc_bundle_explicit_fallback_flag():
+    # v0.8.0: specialists bind a native doc_bundle, so the no-arg
+    # resolver hits that field (used_fallback=False) rather than the
+    # task bundle. Agents without a doc_bundle still fall back honestly.
     p = get_profile("contracts_specialist")
     bundle, used_fallback = p.resolve_doc_bundle()
-    assert used_fallback is True
-    assert bundle.name == "extraction"  # task bundle, honestly labeled
+    assert used_fallback is False
+    assert bundle.name == "doc:contract"
+
+    sorter = get_profile("sorter")
+    fallback_bundle, sorter_fallback = sorter.resolve_doc_bundle()
+    assert sorter_fallback is True
+    assert fallback_bundle.name == "classification"
 
 
 def test_resolve_doc_bundle_no_fallback_raises():
-    p = get_profile("contracts_specialist")
+    p = get_profile("sorter")  # no native doc_bundle
     with pytest.raises(ValueError, match="no doc_bundle"):
         p.resolve_doc_bundle(fallback=False)
 
@@ -141,11 +149,12 @@ def test_profile_set_re_pinned_to_23():
         "sorter_reviewer",
         "contract_auditor", "corporate_records_auditor",
         "due_diligence_auditor", "correspondence_auditor",
-        "compliance_auditor", "court_opinions_auditor",
+        "compliance_auditor",         "court_opinions_auditor",
+        "insurance_claims_auditor",  # v0.8.0 — 7th specialist companion
         "arbiter",
     }
     assert set(list_profiles()) == expected
-    assert len(expected) == 23
+    assert len(expected) == 24
 
 
 def test_preexisting_22_profiles_unchanged_by_v070():
@@ -184,7 +193,12 @@ def test_preexisting_22_profiles_unchanged_by_v070():
         assert p.metrics_bundle == bundle, name
         assert p.fallback_bundle == fb, name
         assert p.ground_truth is gt, name
-        assert p.doc_bundle is None, name  # additive-only: no doc_bundle yet
+        # v0.8.0: specialists now bind their native doc-type bundle;
+        # every other v0.6.0 profile stays unbound.
+        if name.endswith("_specialist") and name != "audit_agent":
+            assert p.doc_bundle is not None, name
+        else:
+            assert p.doc_bundle is None, name
 
 
 def test_new_specialist_resolves_extraction_task_bundle():

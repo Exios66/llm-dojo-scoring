@@ -105,6 +105,9 @@ DOC_TYPE_BUNDLES: dict[str, Bundle] = {
                     "jaccard_similarity",
                     "laziness_rate",
                     "hallucination_rate",
+                    "extraction_category_presence",
+                    "date_mae_days",
+                    "money_mae_usd",
                 ),
             },
         ),
@@ -121,6 +124,9 @@ DOC_TYPE_BUNDLES: dict[str, Bundle] = {
                     "jaccard_similarity",
                     "laziness_rate",
                     "hallucination_rate",
+                    "extraction_category_presence",
+                    "date_mae_days",
+                    "money_mae_usd",
                 ),
             },
         ),
@@ -132,21 +138,40 @@ DOC_TYPE_BUNDLES: dict[str, Bundle] = {
             "demand-letter or email-thread scorer exists yet; today this is "
             "the typed-extraction base. Enron-derived scorers land here.",
             _EXTRACTION_BASE,
-            {},
+            {
+                "correspondence_specialist": (
+                    "date_mae_days",
+                    "money_mae_usd",
+                    "per_field_scores",
+                    "hallucination_rate",
+                ),
+            },
         ),
         (
             "due_diligence",
             "Due-diligence materials — no external benchmark (synthetic "
             "samples only); typed-extraction base",
             _EXTRACTION_BASE,
-            {},
+            {
+                "due_diligence_specialist": (
+                    "date_mae_days",
+                    "per_field_scores",
+                    "hallucination_rate",
+                ),
+            },
         ),
         (
             "corporate_record",
             "Corporate records — no external benchmark (synthetic samples "
             "only); typed-extraction base",
             _EXTRACTION_BASE,
-            {},
+            {
+                "corporate_records_specialist": (
+                    "date_mae_days",
+                    "per_field_scores",
+                    "hallucination_rate",
+                ),
+            },
         ),
         (
             "compliance_filing",
@@ -154,7 +179,13 @@ DOC_TYPE_BUNDLES: dict[str, Bundle] = {
             "only); typed-extraction base. Future: deadline/date-field "
             "emphasis via field_presence weighting.",
             _EXTRACTION_BASE,
-            {},
+            {
+                "compliance_specialist": (
+                    "date_mae_days",
+                    "per_field_scores",
+                    "hallucination_rate",
+                ),
+            },
         ),
         (
             "court_opinion",
@@ -165,6 +196,8 @@ DOC_TYPE_BUNDLES: dict[str, Bundle] = {
                 "court_opinions_specialist": (
                     "legalbench_accuracy",
                     "legalbench_macro_f1",
+                    "date_mae_days",
+                    "hallucination_rate",
                 ),
             },
         ),
@@ -174,9 +207,17 @@ DOC_TYPE_BUNDLES: dict[str, Bundle] = {
             "DE-SynPUF is the candidate corpus (EDA pending), so samples "
             "are synthetic-only today. Claims-specific scorers "
             "(determination-consistency, amount-exactness) land here when "
-            "implemented; today this is the typed-extraction base.",
+            "implemented; today this is the typed-extraction base plus "
+            "date/money diagnostics.",
             _EXTRACTION_BASE,
-            {},
+            {
+                "insurance_claims_specialist": (
+                    "date_mae_days",
+                    "money_mae_usd",
+                    "per_field_scores",
+                    "hallucination_rate",
+                ),
+            },
         ),
     )
 }
