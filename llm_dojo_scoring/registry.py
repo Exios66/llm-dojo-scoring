@@ -41,10 +41,72 @@ __all__ = [
     "MetricDef",
     "Registry",
     "DEFAULT_METRICS_YAML",
+    "SPECIALIST_AGENTS",
+    "AUDITOR_AGENTS",
+    "CLASSIFIER_AGENTS",
+    "TRANSCRIBER_AGENTS",
+    "expand_agent_families",
     "load_registry",
     "get_registry",
     "clear_registry_cache",
 ]
+
+# Canonical pipeline roster. Family tokens in ``applicable_agents``
+# (``SPECIALISTS``, ``AUDITORS``, ``CLASSIFIERS``, ``TRANSCRIBERS``) expand
+# to these tuples so a newly added specialist cannot be omitted from the
+# extraction metric surface (the v0.7.0 ``insurance_claims_specialist`` gap).
+SPECIALIST_AGENTS: tuple[str, ...] = (
+    "contracts_specialist",
+    "corporate_records_specialist",
+    "due_diligence_specialist",
+    "correspondence_specialist",
+    "compliance_specialist",
+    "court_opinions_specialist",
+    "insurance_claims_specialist",
+)
+
+AUDITOR_AGENTS: tuple[str, ...] = (
+    "audit_agent",
+    "contract_auditor",
+    "corporate_records_auditor",
+    "due_diligence_auditor",
+    "correspondence_auditor",
+    "compliance_auditor",
+    "court_opinions_auditor",
+    "insurance_claims_auditor",
+    "arbiter",
+)
+
+CLASSIFIER_AGENTS: tuple[str, ...] = (
+    "sorter",
+    "sorter_reviewer",
+    "judge",
+)
+
+TRANSCRIBER_AGENTS: tuple[str, ...] = (
+    "pdf_transcriber",
+    "image_extractor",
+)
+
+_AGENT_FAMILIES: dict[str, tuple[str, ...]] = {
+    "SPECIALISTS": SPECIALIST_AGENTS,
+    "AUDITORS": AUDITOR_AGENTS,
+    "CLASSIFIERS": CLASSIFIER_AGENTS,
+    "TRANSCRIBERS": TRANSCRIBER_AGENTS,
+}
+
+
+def expand_agent_families(agents: Iterable[str]) -> tuple[str, ...]:
+    """Expand roster family tokens; unknown names pass through unchanged."""
+    out: list[str] = []
+    seen: set[str] = set()
+    for agent in agents:
+        members = _AGENT_FAMILIES.get(agent, (agent,))
+        for member in members:
+            if member not in seen:
+                seen.add(member)
+                out.append(member)
+    return tuple(out)
 
 _ENV_VAR = "LLM_DOJO_SCORING_REGISTRY"
 
@@ -154,12 +216,13 @@ class Registry:
             agents = spec.get("applicable_agents") or ["ALL"]
             if isinstance(agents, str):
                 agents = [agents]
+            agents = expand_agent_families(agents)
             reg.metrics[name] = MetricDef(
                 name=name,
                 tier=tier,
                 units=str(spec.get("units", "float[0,1]")),
                 description=str(spec.get("description", "")),
-                applicable_agents=tuple(agents),
+                applicable_agents=agents,
                 aggregation=str(spec.get("aggregation", "mean")),
                 source=spec.get("source"),
                 notes=str(spec.get("notes", "")),
@@ -195,7 +258,7 @@ metrics:
   extraction_overall_score:
     tier: 0
     description: "Specialist headline: overall extraction score for the run"
-    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    applicable_agents: [SPECIALISTS]
     aggregation: mean
     source: "field_scoring.score_extraction"
 
@@ -246,23 +309,23 @@ metrics:
   field_presence:
     tier: 1
     description: "Share of expected fields populated by the model"
-    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    applicable_agents: [SPECIALISTS]
     source: "field_scoring.score_extraction"
     notes: "mailroom alias: expected_field_presence"
   entity_list_precision:
     tier: 1
     description: "Precision over extracted list items (bipartite match)"
-    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    applicable_agents: [SPECIALISTS]
     source: "field_scoring.score_entity_list"
   entity_list_recall:
     tier: 1
     description: "Recall over extracted list items (bipartite match)"
-    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    applicable_agents: [SPECIALISTS]
     source: "field_scoring.score_entity_list"
   verified_precision:
     tier: 1
     description: "Precision restricted to doc-verifiable items"
-    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    applicable_agents: [SPECIALISTS]
     source: "field_scoring.audit_list_field"
     notes: "mailroom alias: extraction_overall_verified_precision"
   schema_valid:
@@ -288,7 +351,7 @@ metrics:
   classification_correct:
     tier: 1
     description: "Per-document classification correctness (strict/equiv)"
-    applicable_agents: [sorter, judge, boss]
+    applicable_agents: [CLASSIFIERS, boss]
     source: "classification.exact_match"
   class_correct:
     tier: 1
@@ -303,37 +366,37 @@ metrics:
   extraction_correctness:
     tier: 1
     description: "Per-document extraction correctness (mailroom pilot)"
-    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    applicable_agents: [SPECIALISTS]
     notes: "mailroom SCORE_CONFIGS name"
   extraction_needs_judge_review:
     tier: 1
     description: "Routing signal: extraction ambiguous enough to escalate to the judge"
-    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    applicable_agents: [SPECIALISTS]
     notes: "mailroom SCORE_CONFIGS name"
   expected_field_presence:
     tier: 1
     description: "Share of expected fields populated"
-    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    applicable_agents: [SPECIALISTS]
     notes: "mailroom SCORE_CONFIGS name; alias of field_presence"
   extraction_overall_verified_precision:
     tier: 1
     description: "Precision restricted to doc-verifiable items"
-    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    applicable_agents: [SPECIALISTS]
     notes: "mailroom SCORE_CONFIGS name; alias of verified_precision"
   extraction_hallucination_rate:
     tier: 1
     description: "Share of reported values not grounded in GT or the source doc"
-    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    applicable_agents: [SPECIALISTS]
     notes: "mailroom SCORE_CONFIGS name; complement of verified precision"
   completeness_label:
     tier: 2
     description: "Categorical completeness label (complete/partial/incomplete)"
-    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    applicable_agents: [SPECIALISTS]
     notes: "mailroom SCORE_CONFIGS name; label form of completeness"
   extraction_correctness_label:
     tier: 2
     description: "Categorical correctness label (accurate/partial/inaccurate)"
-    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    applicable_agents: [SPECIALISTS]
     notes: "mailroom SCORE_CONFIGS name; label form of extraction_correctness"
   estimated_cost_usd:
     tier: 1
@@ -352,13 +415,13 @@ metrics:
   audit_disagreement_rate:
     tier: 1
     description: "Rate where the audit pass disagrees with the specialist output"
-    applicable_agents: [audit_agent]
-    notes: "NEW (KANBAN-061) — feeds KANBAN-060's contracts_audit_v0 pass"
+    applicable_agents: [AUDITORS]
+    notes: "NEW (KANBAN-061) — feeds KANBAN-060's contracts_audit_v0 pass; shared by every named auditor + arbiter"
   audit_resolution_rate:
     tier: 1
     description: "Rate where the specialist adopts the audit pass correction"
-    applicable_agents: [audit_agent]
-    notes: "NEW (KANBAN-061)"
+    applicable_agents: [AUDITORS]
+    notes: "NEW (KANBAN-061); shared by every named auditor + arbiter"
   legalbench_accuracy:
     tier: 1
     description: "LegalBench binary accuracy"
@@ -371,24 +434,44 @@ metrics:
     applicable_agents: [court_opinions_specialist]
     source: "tasks.legalbench_score"
     notes: "legalbench_* cluster"
+  date_mae_days:
+    tier: 1
+    units: days
+    description: "Mean absolute date error in days (run-level diagnostic)"
+    applicable_agents: [SPECIALISTS]
+    source: "diagnostics.extraction_diagnostics"
+    notes: "Existing diagnostics surface; registered so every specialist suite can emit it"
+  money_mae_usd:
+    tier: 1
+    units: USD
+    description: "Mean absolute money-field error in USD (run-level diagnostic)"
+    applicable_agents: [SPECIALISTS]
+    source: "diagnostics.extraction_diagnostics"
+    notes: "Existing diagnostics surface; registered so money-bearing specialist suites can emit it"
+  duration_mae_days:
+    tier: 2
+    units: days
+    description: "Mean absolute duration-field error in days"
+    applicable_agents: [SPECIALISTS]
+    source: "diagnostics.extraction_diagnostics"
 
   # ===================== T2 — DEEP =====================
   confusion_matrix:
     tier: 2
     description: "Class-confusion matrix"
-    applicable_agents: [sorter, judge, boss]
+    applicable_agents: [CLASSIFIERS, boss]
     aggregation: none
     source: "classification.confusion_matrix"
   per_class_stats:
     tier: 2
     description: "Per-class precision/recall/support"
-    applicable_agents: [sorter, judge]
+    applicable_agents: [CLASSIFIERS]
     aggregation: none
     source: "classification.per_class_stats"
   failure_mode_breakdown:
     tier: 2
     description: "Failure taxonomy counts (family_confusion, function_over_form, ...)"
-    applicable_agents: [sorter, judge]
+    applicable_agents: [CLASSIFIERS]
     aggregation: none
     source: "failure_modes.summarize_failures"
   bootstrap_ci:
@@ -405,19 +488,19 @@ metrics:
   hallucination_rate:
     tier: 2
     description: "Rate of doc-unverifiable extracted items"
-    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist, audit_agent]
+    applicable_agents: [SPECIALISTS, AUDITORS]
     source: "field_scoring.verify_list_items"
     notes: "mailroom alias: extraction_hallucination_rate"
   per_field_scores:
     tier: 2
     description: "Type-aware per-field scores (date MAE, money error, name fuzzy match)"
-    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    applicable_agents: [SPECIALISTS]
     aggregation: none
     source: "field_scoring.score_field"
   extraction_field_score:
     tier: 2
     description: "Per-field score value (mailroom pilot detail)"
-    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    applicable_agents: [SPECIALISTS]
     notes: "mailroom SCORE_CONFIGS name; sibling of per_field_scores"
   extraction_category_presence:
     tier: 2
@@ -446,12 +529,12 @@ metrics:
   classification_confidence:
     tier: 3
     description: "Raw classifier confidence (input to calibration)"
-    applicable_agents: [sorter, judge]
+    applicable_agents: [CLASSIFIERS]
     notes: "merged into confidence_calibration_error per pruning plan"
   extraction_confidence:
     tier: 3
     description: "Raw extractor confidence (input to calibration)"
-    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    applicable_agents: [SPECIALISTS]
     notes: "merged into confidence_calibration_error per pruning plan"
   judge_notes:
     tier: 3
@@ -499,7 +582,7 @@ metrics:
     tier: 3
     units: count
     description: "Retry attempts for the extraction stage"
-    applicable_agents: [contracts_specialist, corporate_records_specialist, due_diligence_specialist, correspondence_specialist, compliance_specialist, court_opinions_specialist]
+    applicable_agents: [SPECIALISTS]
     aggregation: sum
   prompt_version:
     tier: 3

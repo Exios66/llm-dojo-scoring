@@ -100,6 +100,8 @@ def test_default_profiles():
         "arbiter",
         # v0.7.0 addition (KANBAN-067)
         "insurance_claims_specialist",
+        # v0.8.0: dedicated auditor matching the 7th specialist
+        "insurance_claims_auditor",
     }
     assert set(list_profiles()) == expected
 

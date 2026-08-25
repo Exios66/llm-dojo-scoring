@@ -15,9 +15,11 @@ Example YAML::
         metrics_bundle: audit
         fallback_bundle: extraction
 
-The default profile table covers every agent named in the KANBAN-061 proposal
-(sorter, the six specialists, reporter, judge, boss, pdf_transcriber,
-image_extractor, archivist, audit_agent).
+The default profile table covers every pipeline agent: sorter, seven
+specialists (incl. insurance_claims), reporter, judge, boss,
+pdf_transcriber, image_extractor, archivist, audit_agent, the
+review/audit lanes (sorter_reviewer, per-specialist auditors, arbiter),
+and the insurance_claims_auditor companion.
 """
 
 from __future__ import annotations
@@ -153,14 +155,51 @@ DEFAULT_PROFILES: dict[str, AgentProfile] = {
             "Contract Extraction",
             ("extract",),
             "extraction",
+            doc_bundle="contract",
         ),
-        _p("corporate_records_specialist", "Corporate Records Extraction", ("extract",), "extraction"),
-        _p("due_diligence_specialist", "Due-Diligence Extraction", ("extract",), "extraction"),
-        _p("correspondence_specialist", "Correspondence Parsing", ("extract",), "extraction"),
-        _p("compliance_specialist", "Compliance Filing Extraction", ("extract",), "extraction"),
-        _p("court_opinions_specialist", "Court Opinion Analysis", ("extract",), "extraction"),
+        _p(
+            "corporate_records_specialist",
+            "Corporate Records Extraction",
+            ("extract",),
+            "extraction",
+            doc_bundle="corporate_record",
+        ),
+        _p(
+            "due_diligence_specialist",
+            "Due-Diligence Extraction",
+            ("extract",),
+            "extraction",
+            doc_bundle="due_diligence",
+        ),
+        _p(
+            "correspondence_specialist",
+            "Correspondence Parsing",
+            ("extract",),
+            "extraction",
+            doc_bundle="correspondence",
+        ),
+        _p(
+            "compliance_specialist",
+            "Compliance Filing Extraction",
+            ("extract",),
+            "extraction",
+            doc_bundle="compliance_filing",
+        ),
+        _p(
+            "court_opinions_specialist",
+            "Court Opinion Analysis",
+            ("extract",),
+            "extraction",
+            doc_bundle="court_opinion",
+        ),
         # KANBAN-067: the 23rd mailroom agent (Phase 1 added the class).
-        _p("insurance_claims_specialist", "Insurance Claim Extraction", ("extract",), "extraction"),
+        _p(
+            "insurance_claims_specialist",
+            "Insurance Claim Extraction",
+            ("extract",),
+            "extraction",
+            doc_bundle="insurance_claim",
+        ),
         _p("reporter", "Run Reporting", ("summarize",), "reporter"),
         _p("judge", "Discretionary Adjudication", ("classify", "review"), "classification"),
         _p("boss", "Orchestration", ("orchestrate",), "reporter"),
@@ -235,6 +274,14 @@ DEFAULT_PROFILES: dict[str, AgentProfile] = {
             ground_truth=False,
         ),
         _p(
+            "insurance_claims_auditor",
+            "Insurance Claim Extraction Audit",
+            ("verify", "review"),
+            "audit",
+            fallback_bundle="extraction",
+            ground_truth=False,
+        ),
+        _p(
             "arbiter",
             "Judgment Arbitration",
             ("verify", "review"),
@@ -274,12 +321,18 @@ def load_profiles(path: str | Path | None = None) -> dict[str, AgentProfile]:
         fb = spec.get("fallback_bundle")
         if fb:
             get_bundle(fb)
+        doc_bundle = spec.get("doc_bundle", base.doc_bundle if base else None)
+        if doc_bundle:
+            from .doc_bundles import get_doc_bundle
+
+            get_doc_bundle(doc_bundle)
         profiles[name] = AgentProfile(
             name=name,
             title=str(spec.get("title", base.title if base else "")),
             tasks=tuple(tasks) if isinstance(tasks, (list, tuple)) else (str(tasks),),
             metrics_bundle=bundle,
             fallback_bundle=fb,
+            doc_bundle=doc_bundle,
             aggregation=str(spec.get("aggregation", base.aggregation if base else "mean")),
             ground_truth=bool(spec.get("ground_truth", base.ground_truth if base else True)),
             extras=spec.get("extras", {}) or {},

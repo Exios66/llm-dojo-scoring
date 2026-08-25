@@ -10,7 +10,7 @@ scoring code (``src/field_scoring.py``, ``src/metrics.py``, ``src/bootstrap.py``
 
 from __future__ import annotations
 
-__version__ = "0.7.0"
+__version__ = "0.8.0"
 
 from . import (
     bundles,
@@ -19,6 +19,7 @@ from . import (
     profiles,
     pruning,
     registry,
+    suites,
     bootstrap,
     classification,
     config,
@@ -107,10 +108,22 @@ from .emitter import (
 )
 from .profiles import AgentProfile, get_profile, list_profiles, load_profiles
 from .pruning import (
+    DEFAULT_DASHBOARD_TIER,
     dashboard_metrics,
     headline_metrics,
     prune_metrics,
     prune_records,
+)
+from .suites import (
+    DEFAULT_FIELD_TYPES,
+    DEFAULT_SUITES,
+    DOC_TYPE_ALIASES,
+    SPECIALIST_DOC_TYPES,
+    ScoringSuite,
+    get_suite,
+    list_suites,
+    score_suite,
+    suite_for_doc_type,
 )
 from .registry import (
     clear_registry_cache,
@@ -126,7 +139,7 @@ __all__ = [
     "bootstrap", "classification", "config", "cost", "diagnostics",
     "equivalences", "error_analysis", "experiment", "export", "failure_modes",
     "field_scoring", "io", "interpret", "langfuse_sync", "phoenix_sync",
-    "report", "tasks", "visualize",
+    "report", "suites", "tasks", "visualize",
     "bootstrap_ci", "delta_significance", "wilson_ci",
     "accuracy", "binary_metrics", "confusion_matrix", "exact_match",
     "macro_accuracy", "normalize_label", "per_class_stats",
@@ -151,4 +164,7 @@ __all__ = [
     "prune_metrics", "prune_records",
     "clear_registry_cache", "get_registry", "load_registry", "MetricDef",
     "MetricTier", "Registry",
+    "ScoringSuite", "DEFAULT_SUITES", "DEFAULT_FIELD_TYPES",
+    "DOC_TYPE_ALIASES", "SPECIALIST_DOC_TYPES",
+    "get_suite", "list_suites", "score_suite", "suite_for_doc_type",
 ]

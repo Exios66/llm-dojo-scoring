@@ -72,12 +72,30 @@ class LangfuseConfig:
 
 
 def _load_dotenv(path: Path) -> None:
+    """Load KEY=VALUE pairs. Prefer python-dotenv; fall back to a stdlib
+    parser so an explicit env file still works when the extra is absent.
+    Never overrides a non-empty variable already in the environment.
+    """
     try:
         from dotenv import load_dotenv
 
         load_dotenv(path, override=False)
+        return
     except ImportError:
         pass
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip().strip("'\"")
+        if key and os.environ.get(key) in (None, ""):
+            os.environ[key] = value
 
 
 def _discover_env_file() -> Path | None:

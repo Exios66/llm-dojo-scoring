@@ -205,8 +205,12 @@ score lists:
 import llm_dojo_scoring as dojo
 
 # One agent's scoring identity: task-derived bundle, fallback, ground-truth flag.
-profile = dojo.get_profile("sorter")                 # 23 default profiles; YAML overlay
+profile = dojo.get_profile("sorter")                 # 24 default profiles; YAML overlay
 bundle = profile.resolve_bundle()                    # registry-validated metric set
+
+# Dedicated suite — preferred import for mailroom / entity-extraction:
+suite = dojo.get_suite("sorter")                     # or get_suite("insurance_claim")
+result = suite.score(expected_labels, predicted_labels)
 
 # Doc-type-aware scoring (KANBAN-067) with an EXPLICIT fallback marker:
 doc_bundle, used_fallback = profile.resolve_doc_bundle(doc_type="contract")
