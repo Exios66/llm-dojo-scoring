@@ -22,9 +22,11 @@ from . import (
     corpus,
     mailroom,
     suites,
+    asr,
     bootstrap,
     classification,
     config,
+    content_scoring,
     cost,
     diagnostics,
     equivalences,
@@ -86,11 +88,23 @@ from .tasks import (
     court_opinion_score,
     legalbench_score,
     maud_docclass_score,
+    maud_extraction_score,
     maud_question_score,
     multiclass_score,
     normalize_task_answer,
     score_task,
     task_kind,
+)
+from .asr import (
+    character_error_rate,
+    score_transcription,
+    word_error_rate,
+)
+from .content_scoring import (
+    score_content_topic,
+    score_correspondence_content,
+    score_maud_extraction,
+    score_sentiment,
 )
 from .bundles import BUILTIN_BUNDLES, Bundle, bundle_metric_names, get_bundle, validate_bundle
 from .doc_bundles import (
@@ -156,10 +170,10 @@ from .registry import (
 
 __all__ = [
     "__version__",
-    "bootstrap", "classification", "config", "cost", "diagnostics",
+    "bootstrap", "classification", "config", "content_scoring", "cost", "diagnostics",
     "equivalences", "error_analysis", "experiment", "export", "failure_modes",
     "field_scoring", "io", "interpret", "langfuse_sync", "phoenix_sync",
-    "report", "corpus", "mailroom", "suites", "tasks", "visualize",
+    "report", "asr", "corpus", "mailroom", "suites", "tasks", "visualize",
     "bootstrap_ci", "delta_significance", "wilson_ci",
     "accuracy", "binary_metrics", "confusion_matrix", "exact_match",
     "macro_accuracy", "normalize_label", "per_class_stats",
@@ -173,7 +187,8 @@ __all__ = [
     "Settings", "clear_settings_cache", "configure", "get_settings",
     "load_settings",
     "chained_composite", "chained_summary", "court_opinion_score",
-    "legalbench_score", "maud_docclass_score", "maud_question_score",
+    "legalbench_score", "maud_docclass_score", "maud_extraction_score",
+    "maud_question_score",
     "multiclass_score", "normalize_task_answer", "score_task", "task_kind",
     "BUILTIN_BUNDLES", "Bundle", "bundle_metric_names", "get_bundle",
     "validate_bundle",
@@ -193,4 +208,7 @@ __all__ = [
     "EXTRACT_CLASS_ALIASES", "NODE_OBSERVATION_TYPES",
     "align_doc_type", "langfuse_score_name", "observation_type_for",
     "resolve_extract_class", "score_aligned_classification",
+    "word_error_rate", "character_error_rate", "score_transcription",
+    "score_content_topic", "score_sentiment",
+    "score_correspondence_content", "score_maud_extraction",
 ]

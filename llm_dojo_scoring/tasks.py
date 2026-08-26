@@ -158,7 +158,8 @@ def score_task(
 
     Args:
         task: task key (subtype | doc_class | docclass | maud_docclass |
-            maud_question | legalbench | multiclass | court_opinion |
+            maud_question | maud_extraction | enron_topic | enron_sentiment |
+            transcription | legalbench | multiclass | court_opinion |
             contracteval).
         expected / predicted: parallel sequences of per-document answers.
             For ``contracteval``: ``expected`` = list of GT label-span lists
@@ -178,6 +179,26 @@ def score_task(
     ``chained`` runs use :func:`chained_composite` / :func:`chained_summary`.
     """
     kind = task_kind(task)
+
+    if kind == "enron_topic":
+        from .content_scoring import score_content_topic
+
+        return score_content_topic(expected, predicted)
+
+    if kind == "enron_sentiment":
+        from .content_scoring import score_sentiment
+
+        return score_sentiment(expected, predicted)
+
+    if kind == "maud_extraction":
+        from .content_scoring import score_maud_extraction
+
+        return score_maud_extraction(expected, predicted)
+
+    if kind == "transcription":
+        from .asr import score_transcription
+
+        return score_transcription(expected, predicted)
 
     if kind == "contracteval":
         return contracteval_metrics(
@@ -309,9 +330,21 @@ def maud_docclass_score(expected_doc_type: list, predicted_doc_type: list,
 
 def maud_question_score(expected: list, predicted: list, *,
                         seed: int = 42, n_boot: int = 2000) -> dict:
-    """MAUD per-question classification score (exact match + per-class)."""
+    """MAUD Type-of-Consideration classification (legacy per-question surface).
+
+    Scores parallel consideration-type answers (``All Cash`` → ``all_cash``).
+    For the 22 Hub ``maud_clause_labels`` questions use
+    :func:`maud_extraction_score`.
+    """
     return score_task("maud_question", expected, predicted,
                       seed=seed, n_boot=n_boot)
+
+
+def maud_extraction_score(expected, predicted) -> dict:
+    """MAUD per-question extraction over the 22 Hub clause keys."""
+    from .content_scoring import score_maud_extraction
+
+    return score_maud_extraction(expected, predicted)
 
 
 def legalbench_score(expected: list, predicted: list, *,
@@ -537,6 +570,7 @@ __all__ = [
     "task_kind", "normalize_maud_consideration", "normalize_legalbench",
     "normalize_task_answer", "score_task", "multiclass_score",
     "court_opinion_score", "maud_docclass_score", "maud_question_score",
+    "maud_extraction_score",
     "legalbench_score", "chained_composite", "chained_summary",
     "get_jaccard", "said_no_related", "contracteval_classified",
     "contracteval_metrics", "contracteval_score",

@@ -42,6 +42,7 @@ __all__ = [
     "MAUD_QUESTION_KEYS",
     "MAUD_CLAUSE_CATEGORIES",
     "CORRESPONDENCE_TOPICS",
+    "CORRESPONDENCE_SENTIMENT_LABELS",
     "INSURANCE_CLAIM_TYPES",
     "normalize_corpus_subclass",
     "subclass_equivalent",
@@ -427,6 +428,13 @@ CORRESPONDENCE_TOPICS: tuple[str, ...] = (
     "regulatory",
     "scheduling",
     "travel_logistics",
+)
+
+#: Enron ``sentiment_label`` catalog (110/110 correspondence rows populated).
+CORRESPONDENCE_SENTIMENT_LABELS: tuple[str, ...] = (
+    "negative",
+    "neutral",
+    "positive",
 )
 
 #: Specialist ``claim_type`` extraction enum — Hub CMS tokens first, then

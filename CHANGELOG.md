@@ -33,6 +33,20 @@ Format based on Keep a Changelog; versioning is SemVer.
 - `LangfuseSink` emits the short transport alias on the wire.
 - `list_suites(live_only=True)` hides retired specialists.
 - `score_task("pipeline" | "document-pipeline")` for HF eval.
+- **Enron content scorers** (`content_scoring.score_content_topic` /
+  `score_sentiment`) — 11-topic + 3-class sentiment accuracy / macro-F1
+  over correspondence GT differentiators (`content_topic`,
+  `sentiment_label`). Wired as extras on `correspondence_specialist`.
+- **MAUD per-question extraction** (`score_maud_extraction` /
+  `score_task("maud_extraction")`) — exact / valid-class / presence /
+  category over the 22 Hub `maud_clause_labels` keys (or specialist
+  `'<Question>: <Answer>'` spans). Distinct from the legacy
+  `maud_question` consideration-type classifier. Rebound onto
+  `get_suite("merger_agreement")`.
+- **WER/CER** (`asr.word_error_rate` / `character_error_rate`) —
+  word- and character-level Levenshtein over reference length, plus
+  `word_accuracy = max(0, 1 - WER)`. `pdf_transcriber` /
+  `image_extractor` `score()` now returns these alongside token-F1.
 
 ### Changed
 
@@ -45,11 +59,13 @@ Format based on Keep a Changelog; versioning is SemVer.
   `adjuster` null matches empty (CMS rows).
 - Package version **0.9.0**.
 
-Honesty mandate unchanged: no invented KPIs. Enron content scorers,
-MAUD per-question extraction scorers, and WER/CER remain documented
-gaps.
+Honesty mandate unchanged for remaining gaps: insurance
+determination-consistency, retired court/DD, zero-row compliance, and
+corporate_record (no external extraction benchmark). Enron topic/
+sentiment, MAUD per-question extraction, and WER/CER now ship as real
+scorers.
 
-Suite: 258 passed / 5 skipped (was 244/5).
+Suite: 281 passed / 5 skipped (was 258/5 before these scorers).
 
 ## [0.8.1] - 2026-08-25
 

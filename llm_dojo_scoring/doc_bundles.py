@@ -9,8 +9,9 @@ bundles and doc bundles can evolve independently.
 Honesty mandate (KANBAN-067): a doc type gets type-specific metrics ONLY
 where real, checkable scoring logic exists today. Types whose specialist
 scorers are still future work say so in their description instead of
-pretending. New scorers land in the matching key — the registry is the
-modular extension point.
+pretending. Enron topic/sentiment, MAUD per-question extraction, and
+WER/CER now ship as real scorers. New scorers land in the matching key —
+the registry is the modular extension point.
 
 Doc-type → dataset grounding (published merge:
 Lucius-Morningstar/docclass-merged, 1,210 GT rows):
@@ -19,11 +20,12 @@ Lucius-Morningstar/docclass-merged, 1,210 GT rows):
 doc type            corpus / benchmark grounding
 ==================  =====================================================
 contract            CUAD v1 (509 rows, 25 families, 41 clause categories)
-                    — contracteval + laziness metrics
-merger_agreement    MAUD (152 rows, consideration subclass) — MAUD-derived
-                    extraction scorers PENDING; today = contract surface
+                    — contracteval + laziness metrics; MAUD extras when
+                    maud_clause_labels / maud_clauses are present
+merger_agreement    MAUD (152 rows, consideration subclass + 22 question
+                    keys) — per-question exact / valid-class / presence
 correspondence      Enron (110 rows, form + topic + sentiment) —
-                    content scorers PENDING; today = extraction base
+                    content_topic + sentiment_label accuracy / macro-F1
 due_diligence       zero rows in the published merge — extraction schema
 corporate_record    39 rows (record-type subclass) — no external
                     extraction benchmark
@@ -110,16 +112,20 @@ DOC_TYPE_BUNDLES: dict[str, Bundle] = {
                     "extraction_category_presence",
                     "date_mae_days",
                     "money_mae_usd",
+                    "maud_question_accuracy",
+                    "maud_question_macro_accuracy",
+                    "maud_clause_presence",
+                    "maud_valid_class_rate",
                 ),
             },
         ),
         (
             "merger_agreement",
             "Merger agreements — MAUD-grounded (EDA: "
-            "Exios66/atticus-investigation). HONEST GAP: no MAUD-derived "
-            "scorer exists yet; today this is the contract surface. "
-            "MAUD-specific scorers (clause-category F1, amendment drift) "
-            "land here when implemented.",
+            "Exios66/atticus-investigation). Per-question extraction over "
+            "the 22 Hub maud_clause_labels keys (exact / valid-class / "
+            "presence) plus the shared ContractExtraction field map and "
+            "MAUD consideration subclass catalog.",
             _EXTRACTION_BASE,
             {
                 "contracts_specialist": (
@@ -129,6 +135,11 @@ DOC_TYPE_BUNDLES: dict[str, Bundle] = {
                     "extraction_category_presence",
                     "date_mae_days",
                     "money_mae_usd",
+                    "maud_question_accuracy",
+                    "maud_question_macro_accuracy",
+                    "maud_clause_presence",
+                    "maud_valid_class_rate",
+                    "maud_category_accuracy",
                 ),
             },
         ),
@@ -136,9 +147,9 @@ DOC_TYPE_BUNDLES: dict[str, Bundle] = {
             "correspondence",
             "Correspondence — Enron-grounded (EDA: "
             "Exios66/Enron-Evaluation-Environment): client emails, attorney "
-            "demand letters, inter-agency messaging. HONEST GAP: no "
-            "demand-letter or email-thread scorer exists yet; today this is "
-            "the typed-extraction base. Enron-derived scorers land here.",
+            "demand letters, inter-agency messaging. Content scorers cover "
+            "the 11 content_topic labels and 3 sentiment_label classes; "
+            "typed extraction (sender/recipient/…) stays a separate schema.",
             _EXTRACTION_BASE,
             {
                 "correspondence_specialist": (
@@ -146,6 +157,10 @@ DOC_TYPE_BUNDLES: dict[str, Bundle] = {
                     "money_mae_usd",
                     "per_field_scores",
                     "hallucination_rate",
+                    "content_topic_accuracy",
+                    "content_topic_f1_macro",
+                    "sentiment_accuracy",
+                    "sentiment_f1_macro",
                 ),
             },
         ),

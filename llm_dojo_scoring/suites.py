@@ -18,8 +18,12 @@ instead of assembling a profile + bundle + field-type map themselves.
 Honesty mandate (KANBAN-067): suites only compute with functions that
 already exist in this package. Type-specific scorers that are still
 future work are recorded on ``ScoringSuite.honest_gap`` rather than
-invented here. New scorers land by adding a metric to the registry and
-an extra on the matching suite.
+invented here. Enron topic/sentiment, MAUD per-question extraction, and
+WER/CER are implemented (``content_scoring`` / ``asr``) and registered;
+remaining gaps (insurance determination-consistency, retired court/DD,
+zero-row compliance, corporate_record with no external extraction
+benchmark) stay documented. New scorers land by adding a metric to the
+registry and an extra on the matching suite.
 """
 
 from __future__ import annotations
@@ -59,7 +63,7 @@ SPECIALIST_DOC_TYPES: dict[str, str] = {
 
 #: Doc-type lookup aliases (mailroom ``doc_type`` → specialist suite).
 #: ``merger_agreement`` is a MAUD-grounded contract subtype scored by the
-#: contracts specialist today (honest gap lives on the doc bundle).
+#: contracts specialist with the MAUD consideration catalog rebound.
 DOC_TYPE_ALIASES: dict[str, str] = {
     **{doc_type: agent for agent, doc_type in SPECIALIST_DOC_TYPES.items()},
     "merger_agreement": "contracts_specialist",
@@ -191,6 +195,10 @@ _AGENT_EXTRAS: dict[str, tuple[str, ...]] = {
         "extraction_category_presence",
         "date_mae_days",
         "money_mae_usd",
+        "maud_question_accuracy",
+        "maud_question_macro_accuracy",
+        "maud_clause_presence",
+        "maud_valid_class_rate",
     ),
     "corporate_records_specialist": (
         "date_mae_days",
@@ -207,6 +215,10 @@ _AGENT_EXTRAS: dict[str, tuple[str, ...]] = {
         "money_mae_usd",
         "per_field_scores",
         "hallucination_rate",
+        "content_topic_accuracy",
+        "content_topic_f1_macro",
+        "sentiment_accuracy",
+        "sentiment_f1_macro",
     ),
     "compliance_specialist": (
         "date_mae_days",
@@ -225,17 +237,29 @@ _AGENT_EXTRAS: dict[str, tuple[str, ...]] = {
         "per_field_scores",
         "hallucination_rate",
     ),
+    "pdf_transcriber": (
+        "wer",
+        "cer",
+        "word_accuracy",
+    ),
+    "image_extractor": (
+        "wer",
+        "cer",
+        "word_accuracy",
+    ),
 }
+
+#: MAUD per-question extras rebound onto ``get_suite("merger_agreement")``.
+_MERGER_EXTRAS: tuple[str, ...] = (
+    "maud_question_accuracy",
+    "maud_question_macro_accuracy",
+    "maud_clause_presence",
+    "maud_valid_class_rate",
+    "maud_category_accuracy",
+)
 
 #: Honest-gap notes — type-specific scorers that do NOT exist yet.
 _HONEST_GAPS: dict[str, str] = {
-    "correspondence_specialist": (
-        "HONEST GAP: Enron-derived demand-letter / email-thread *content* "
-        "scorers are pending. The published merge already supplies form "
-        "subclasses (email/memo/demand/…) plus content_topic and sentiment; "
-        "those are classification differentiators, not extraction fields. "
-        "Today this suite scores the typed-extraction schema (date + money)."
-    ),
     "insurance_claims_specialist": (
         "HONEST GAP: determination-consistency scorers beyond typed "
         "extraction are pending. The published merge supplies CMS "
@@ -267,14 +291,6 @@ _HONEST_GAPS: dict[str, str] = {
         "docclass-merged. Hub SEC form-body inventory (10-K, 10-Q, 8-K, …) "
         "is the live subclass catalog; suite scores typed-extraction plus "
         "that inventory (no corpus-backed rows yet)."
-    ),
-    "pdf_transcriber": (
-        "HONEST GAP: WER/CER are emit-time values; score() uses existing "
-        "free-text token-F1 + exact match, not a standalone ASR evaluator."
-    ),
-    "image_extractor": (
-        "HONEST GAP: WER/CER are emit-time values; score() uses existing "
-        "free-text token-F1 + exact match, not a standalone OCR evaluator."
     ),
 }
 
@@ -437,13 +453,17 @@ class ScoringSuite:
 
         - **extraction** — :func:`score_extraction` with this suite's
           field-type map (override via ``field_types=``). Accepts one
-          document (dicts) or a list of documents.
+          document (dicts) or a list of documents. Correspondence
+          ``content_topic`` / ``sentiment_label`` and merger
+          ``maud_clause_labels`` are scored as content extras (not
+          extraction fields) when present on the dicts or passed as
+          kwargs.
         - **classification / review** — :func:`score_task` (default task
           from the suite; override via ``task=``).
         - **audit** — field-type-aware comparison of specialist vs
           auditor output (dicts) via :func:`score_extraction`, plus a
           disagreement rate (``1 - overall_score``).
-        - **transcription** — exact match + free-text token F1.
+        - **transcription** — exact match + free-text token F1 + WER/CER.
         - **reporter / cost** — emit-only. Pass ``metrics=`` to validate
           a precomputed dict against the suite; otherwise ``TypeError``.
         """
@@ -457,7 +477,8 @@ class ScoringSuite:
             )
         if self.kind == _KIND_EXTRACTION:
             return self._score_extraction(
-                expected, predicted, doc_text=doc_text, field_types=field_types
+                expected, predicted, doc_text=doc_text, field_types=field_types,
+                **kwargs,
             )
         if self.kind == _KIND_AUDIT:
             return self._score_audit(
@@ -497,22 +518,111 @@ class ScoringSuite:
         *,
         doc_text: str | None,
         field_types: dict[str, str] | None,
-    ) -> ExtractionScoreResult | list[ExtractionScoreResult]:
+        **kwargs: Any,
+    ) -> ExtractionScoreResult | list[ExtractionScoreResult] | dict[str, Any]:
+        from .content_scoring import (
+            peel_non_extraction_fields,
+            score_correspondence_content,
+            score_maud_extraction,
+        )
+
         ftypes = field_types or self.field_types
         doc_class = self.doc_type or self.name
+        extras: dict[str, Any] = {}
+
+        def _run(exp: Any, pred: Any, text: str | None):
+            return score_extraction(doc_class, ftypes, pred, exp, doc_text=text)
+
+        topic_e = kwargs.get("expected_topic")
+        topic_p = kwargs.get("predicted_topic")
+        sent_e = kwargs.get("expected_sentiment")
+        sent_p = kwargs.get("predicted_sentiment")
+        maud_e = kwargs.get("expected_maud")
+        maud_p = kwargs.get("predicted_maud")
+
         if isinstance(expected, list) and isinstance(predicted, list):
             texts: Iterable[str | None]
             if isinstance(doc_text, list):
                 texts = doc_text
             else:
                 texts = [doc_text] * len(expected)
-            return [
-                score_extraction(doc_class, ftypes, pred, exp, doc_text=text)
-                for exp, pred, text in zip(expected, predicted, texts)
+            peeled_exp: list = []
+            peeled_pred: list = []
+            topics_e: list = []
+            topics_p: list = []
+            sents_e: list = []
+            sents_p: list = []
+            mauds_e: list = []
+            mauds_p: list = []
+            saw_topic = saw_sent = saw_maud = False
+            for exp, pred in zip(expected, predicted):
+                if isinstance(exp, dict) and isinstance(pred, dict):
+                    e2, p2, payload = peel_non_extraction_fields(exp, pred)
+                    peeled_exp.append(e2)
+                    peeled_pred.append(p2)
+                    if "content_topic" in payload:
+                        saw_topic = True
+                        topics_e.append(payload["content_topic"][0])
+                        topics_p.append(payload["content_topic"][1])
+                    if "sentiment_label" in payload:
+                        saw_sent = True
+                        sents_e.append(payload["sentiment_label"][0])
+                        sents_p.append(payload["sentiment_label"][1])
+                    if "maud" in payload:
+                        saw_maud = True
+                        mauds_e.append(payload["maud"][0])
+                        mauds_p.append(payload["maud"][1])
+                else:
+                    peeled_exp.append(exp)
+                    peeled_pred.append(pred)
+            extraction = [
+                _run(exp, pred, text)
+                for exp, pred, text in zip(peeled_exp, peeled_pred, texts)
             ]
-        return score_extraction(
-            doc_class, ftypes, predicted, expected, doc_text=doc_text
-        )
+            if saw_topic and topic_e is None:
+                topic_e, topic_p = topics_e, topics_p
+            if saw_sent and sent_e is None:
+                sent_e, sent_p = sents_e, sents_p
+            if saw_maud and maud_e is None:
+                maud_e, maud_p = mauds_e, mauds_p
+        elif isinstance(expected, dict) and isinstance(predicted, dict):
+            e2, p2, payload = peel_non_extraction_fields(expected, predicted)
+            extraction = _run(e2, p2, doc_text)
+            if "content_topic" in payload and topic_e is None:
+                topic_e, topic_p = payload["content_topic"]
+            if "sentiment_label" in payload and sent_e is None:
+                sent_e, sent_p = payload["sentiment_label"]
+            if "maud" in payload and maud_e is None:
+                maud_e, maud_p = payload["maud"]
+        else:
+            extraction = _run(expected, predicted, doc_text)
+
+        if topic_e is not None or topic_p is not None:
+            extras.update(
+                score_correspondence_content(
+                    expected_topic=topic_e if topic_e is not None else "",
+                    predicted_topic=topic_p if topic_p is not None else "",
+                )
+            )
+        if sent_e is not None or sent_p is not None:
+            extras.update(
+                score_correspondence_content(
+                    expected_sentiment=sent_e if sent_e is not None else "",
+                    predicted_sentiment=sent_p if sent_p is not None else "",
+                )
+            )
+        if maud_e is not None or maud_p is not None:
+            maud_result = score_maud_extraction(maud_e, maud_p)
+            if maud_result.get("n_questions"):
+                extras.update(maud_result)
+
+        if not extras:
+            return extraction
+        return {"extraction": extraction, **{
+            k: v for k, v in extras.items()
+            if k not in {"task", "kind", "topic", "sentiment", "per_question",
+                         "per_document"}
+        }, "detail": extras}
 
     def _score_audit(
         self,
@@ -551,8 +661,10 @@ class ScoringSuite:
         }
 
     def _score_transcription(self, expected: Any, predicted: Any) -> dict[str, Any]:
+        from .asr import score_transcription
         from .classification import accuracy, exact_match
 
+        asr = score_transcription(expected, predicted)
         if isinstance(expected, list) and isinstance(predicted, list):
             per_row = [exact_match(p, e) for e, p in zip(expected, predicted)]
             token_f1 = [
@@ -562,11 +674,23 @@ class ScoringSuite:
             return {
                 "accuracy": accuracy(expected, predicted),
                 "f1_macro": round(sum(token_f1) / len(token_f1), 4) if token_f1 else 0.0,
+                "wer": asr["wer"],
+                "cer": asr["cer"],
+                "word_accuracy": asr["word_accuracy"],
+                "character_accuracy": asr["character_accuracy"],
                 "n": len(per_row),
             }
         em = exact_match(predicted, expected)
         token_f1 = float(score_field("free_text", predicted, expected) or 0.0)
-        return {"accuracy": em, "f1_macro": token_f1, "n": 1}
+        return {
+            "accuracy": em,
+            "f1_macro": token_f1,
+            "wer": asr["wer"],
+            "cer": asr["cer"],
+            "word_accuracy": asr["word_accuracy"],
+            "character_accuracy": asr["character_accuracy"],
+            "n": 1,
+        }
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -708,19 +832,15 @@ def _rebind_for_doc_type(suite: ScoringSuite, doc_type: str) -> ScoringSuite:
     if expected_fields and set(field_types) != set(expected_fields):
         field_types = {key: field_types.get(key) or "name" for key in expected_fields}
     honest = suite.honest_gap
+    extras = suite.extra_metrics
     if doc_type == "merger_agreement":
-        honest = (
-            "HONEST GAP: MAUD-derived extraction scorers (per-question "
-            "clause answers beyond Type of Consideration) are pending. "
-            "This suite scores the shared ContractExtraction field map "
-            "plus the MAUD consideration subclass catalog. "
-            "maud_clause_labels are classification differentiators, "
-            "not extraction fields."
-        )
+        honest = None
+        extras = tuple(dict.fromkeys((*suite.extra_metrics, *_MERGER_EXTRAS)))
     return replace(
         suite,
         doc_type=doc_type,
         field_types=field_types,
+        extra_metrics=extras,
         subclasses=DOC_TYPE_SUBCLASSES.get(doc_type, ()),
         differentiators=CORPUS_DIFFERENTIATORS.get(doc_type, ()),
         in_corpus=doc_type in CORPUS_DOC_TYPES,

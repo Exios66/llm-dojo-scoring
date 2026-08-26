@@ -237,6 +237,15 @@ TASK_KINDS: dict[str, str] = {
     "contracteval": "contracteval",
     "pipeline": "pipeline",
     "document-pipeline": "pipeline",
+    "enron_topic": "enron_topic",
+    "content_topic": "enron_topic",
+    "enron_sentiment": "enron_sentiment",
+    "sentiment": "enron_sentiment",
+    "maud_extraction": "maud_extraction",
+    "maud_clause": "maud_extraction",
+    "transcription": "transcription",
+    "wer": "transcription",
+    "cer": "transcription",
 }
 
 # ---------------------------------------------------------------------------

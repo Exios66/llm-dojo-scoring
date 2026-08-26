@@ -168,6 +168,9 @@ def test_transcription_suite_uses_existing_token_f1():
     )
     assert out["accuracy"] == 1.0
     assert out["f1_macro"] == 1.0
+    assert out["wer"] == 0.0
+    assert out["cer"] == 0.0
+    assert out["word_accuracy"] == 1.0
 
 
 def test_emit_only_suites_raise_without_metrics():
@@ -186,16 +189,17 @@ def test_emit_only_suites_raise_without_metrics():
 
 def test_honest_gaps_documented_not_invented():
     for agent in (
-        "correspondence_specialist",
         "insurance_claims_specialist",
         "due_diligence_specialist",
         "corporate_records_specialist",
         "compliance_specialist",
-        "pdf_transcriber",
-        "image_extractor",
     ):
         gap = get_suite(agent).honest_gap
         assert gap and "HONEST GAP" in gap
+    assert get_suite("correspondence_specialist").honest_gap is None
+    assert get_suite("pdf_transcriber").honest_gap is None
+    assert get_suite("image_extractor").honest_gap is None
+    assert get_suite("merger_agreement").honest_gap is None
 
 
 def test_contracts_and_court_have_real_benchmark_extras():
