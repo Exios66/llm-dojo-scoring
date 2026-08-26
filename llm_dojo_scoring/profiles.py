@@ -17,9 +17,10 @@ Example YAML::
 
 the default profile table covers every pipeline agent: sorter, seven
 specialists (five live + two retired), reporter, judge, boss,
-pdf_transcriber, image_extractor, archivist, intake clerk, audit_agent, the
-review/audit lanes (sorter_reviewer, per-specialist auditors, arbiter),
-and the insurance_claims_auditor companion.
+pdf_transcriber, image_extractor, archivist, intake clerk (pre-sorter
+text prep), audit_agent, the review/audit lanes (sorter_reviewer,
+per-specialist auditors, arbiter), and the insurance_claims_auditor
+companion.
 """
 
 from __future__ import annotations
@@ -53,7 +54,7 @@ class AgentProfile:
     name: str
     title: str = ""
     #: Task types performed: classify / extract / review / route / summarize /
-    #: transcribe / verify / store / orchestrate.
+    #: transcribe / verify / store / orchestrate / prepare / normalize.
     tasks: tuple[str, ...] = ()
     #: Primary metric bundle name (resolved via :func:`bundles.get_bundle`).
     metrics_bundle: str | None = None
@@ -126,6 +127,8 @@ def _bundle_for_tasks(tasks: Iterable[str]) -> str | None:
         "review": "audit",
         "verify": "audit",
         "transcribe": "transcription",
+        "prepare": "intake",
+        "normalize": "intake",
         "store": "cost",
         "orchestrate": "reporter",
         "summarize": "reporter",
@@ -209,9 +212,27 @@ DEFAULT_PROFILES: dict[str, AgentProfile] = {
         _p(
             "intake",
             "Intake Clerk",
-            ("store",),
-            "cost",
-            ground_truth=False,
+            ("prepare", "normalize"),
+            "intake",
+            extras={
+                "span": "normalize-intake",
+                "observation_type": "span",
+                "handoff_node": "classify-document",
+                "handoff_agent": "sorter",
+                "live_method": "deterministic",
+                "methods": ["deterministic", "llm"],
+                "prep_steps": [
+                    "nfc_normalize",
+                    "newline_unify",
+                    "nbsp_to_space",
+                    "strip_zero_width",
+                    "control_chars",
+                    "hyphen_unwrap",
+                    "collapse_blank_runs",
+                    "collapse_horizontal_space",
+                    "trim_edges",
+                ],
+            },
         ),
         _p(
             "audit_agent",

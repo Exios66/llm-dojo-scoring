@@ -247,6 +247,13 @@ _AGENT_EXTRAS: dict[str, tuple[str, ...]] = {
         "cer",
         "word_accuracy",
     ),
+    "intake": (
+        "intake_prep_completeness",
+        "intake_changed_rate",
+        "intake_messy_rate",
+        "intake_hyphen_unwraps",
+        "intake_collapsed_blanks",
+    ),
 }
 
 #: MAUD per-question extras rebound onto ``get_suite("merger_agreement")``.
@@ -300,6 +307,7 @@ _KIND_REVIEW = "review"
 _KIND_EXTRACTION = "extraction"
 _KIND_AUDIT = "audit"
 _KIND_TRANSCRIPTION = "transcription"
+_KIND_INTAKE = "intake"
 _KIND_REPORTER = "reporter"
 _KIND_COST = "cost"
 
@@ -310,13 +318,14 @@ _COMPUTABLE_KINDS = frozenset(
         _KIND_EXTRACTION,
         _KIND_AUDIT,
         _KIND_TRANSCRIPTION,
+        _KIND_INTAKE,
     }
 )
 
 
 def _kind_for(profile: AgentProfile) -> str:
-    if profile.name == "intake":
-        return _KIND_COST
+    if profile.name == "intake" or "prepare" in profile.tasks or "normalize" in profile.tasks:
+        return _KIND_INTAKE
     if profile.name in SPECIALIST_DOC_TYPES:
         return _KIND_EXTRACTION
     if profile.name in ("sorter", "judge"):
@@ -345,6 +354,8 @@ def _task_key_for(profile: AgentProfile, kind: str) -> str | None:
         return "multiclass"
     if profile.name == "court_opinions_specialist":
         return "court_opinion"
+    if profile.name == "intake":
+        return "intake"
     if kind in (_KIND_CLASSIFICATION, _KIND_REVIEW):
         return "multiclass"
     return None
@@ -464,6 +475,10 @@ class ScoringSuite:
           auditor output (dicts) via :func:`score_extraction`, plus a
           disagreement rate (``1 - overall_score``).
         - **transcription** — exact match + free-text token F1 + WER/CER.
+        - **intake** — deterministic clerk gold vs predicted cleaned text
+          or ``normalize-intake`` span payload (prep completeness, messy /
+          changed flags, hyphen unwraps). LLM intake is scored against the
+          same clerk.
         - **reporter / cost** — emit-only. Pass ``metrics=`` to validate
           a precomputed dict against the suite; otherwise ``TypeError``.
         """
@@ -486,6 +501,10 @@ class ScoringSuite:
             )
         if self.kind == _KIND_TRANSCRIPTION:
             return self._score_transcription(expected, predicted)
+        if self.kind == _KIND_INTAKE:
+            return self._score_intake(
+                expected, predicted, raw_text=kwargs.get("raw_text")
+            )
         task_name = task or self.task_key or "multiclass"
         if (
             self.kind in (_KIND_CLASSIFICATION, _KIND_REVIEW)
@@ -691,6 +710,17 @@ class ScoringSuite:
             "character_accuracy": asr["character_accuracy"],
             "n": 1,
         }
+
+    def _score_intake(
+        self,
+        expected: Any,
+        predicted: Any,
+        *,
+        raw_text: str | None = None,
+    ) -> dict[str, Any]:
+        from .intake import score_intake
+
+        return score_intake(expected, predicted, raw_text=raw_text)
 
     def to_dict(self) -> dict[str, Any]:
         return {

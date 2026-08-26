@@ -46,6 +46,7 @@ __all__ = [
     "AUDITOR_AGENTS",
     "CLASSIFIER_AGENTS",
     "TRANSCRIBER_AGENTS",
+    "INTAKE_AGENTS",
     "expand_agent_families",
     "load_registry",
     "get_registry",
@@ -99,12 +100,17 @@ TRANSCRIBER_AGENTS: tuple[str, ...] = (
     "image_extractor",
 )
 
+INTAKE_AGENTS: tuple[str, ...] = (
+    "intake",
+)
+
 _AGENT_FAMILIES: dict[str, tuple[str, ...]] = {
     "SPECIALISTS": SPECIALIST_AGENTS,
     "LIVE_SPECIALISTS": LIVE_SPECIALIST_AGENTS,
     "AUDITORS": AUDITOR_AGENTS,
     "CLASSIFIERS": CLASSIFIER_AGENTS,
     "TRANSCRIBERS": TRANSCRIBER_AGENTS,
+    "INTAKE": INTAKE_AGENTS,
 }
 
 
@@ -566,6 +572,36 @@ metrics:
     description: "max(0, 1 - CER) complementary character-level transcription accuracy"
     applicable_agents: [TRANSCRIBERS]
     source: "asr.character_accuracy"
+  intake_prep_completeness:
+    tier: 1
+    description: "Share of intake prep-step invariants that hold before sorter handoff"
+    applicable_agents: [INTAKE]
+    source: "intake.intake_prep_completeness"
+    notes: "NFC, newline unify, NBSP, zero-width, C0, hyphen unwrap, blank-run collapse, horizontal space, trim"
+  intake_changed_rate:
+    tier: 1
+    description: "Share of documents whose intake clerk mutated the transcribed text"
+    applicable_agents: [INTAKE]
+    source: "intake.score_intake"
+  intake_messy_rate:
+    tier: 1
+    description: "Share of documents flagged looks_messy after intake (OCR residue / wrap artifacts)"
+    applicable_agents: [INTAKE]
+    source: "intake.looks_messy"
+  intake_hyphen_unwraps:
+    tier: 2
+    units: count
+    description: "Hyphen-wrap unwraps performed (line-broken words rejoined)"
+    applicable_agents: [INTAKE]
+    aggregation: mean
+    source: "intake.deterministic_normalize"
+  intake_collapsed_blanks:
+    tier: 2
+    units: count
+    description: "Collapsed 3+ blank-line runs (paragraph-break normalize)"
+    applicable_agents: [INTAKE]
+    aggregation: mean
+    source: "intake.deterministic_normalize"
 
   # ===================== T2 — DEEP =====================
   confusion_matrix:

@@ -20,6 +20,7 @@ laziness_detection   contract evaluators
 audit                audit agent (disagreement/resolution)
 reporter             aggregators (derived-only)
 transcription        pdf_transcriber, image_extractor
+intake               intake clerk (pre-sorter text prep)
 ===================  =====================================================
 """
 
@@ -214,6 +215,29 @@ BUILTIN_BUNDLES: dict[str, Bundle] = {
                 "cer",
                 "word_accuracy",
             ),
+        ),
+        Bundle(
+            name="intake",
+            description=(
+                "Pre-sorter text prep (NFC, hyphen unwrap, whitespace, "
+                "messy flag) — deterministic clerk gold; LLM intake scored "
+                "against the same gold"
+            ),
+            metric_names=(
+                "accuracy",
+                "f1_macro",
+                "intake_prep_completeness",
+                "intake_changed_rate",
+                "intake_messy_rate",
+                "success_rate",
+                "cost_per_document",
+            ),
+            agent_overrides={
+                "intake": (
+                    "intake_hyphen_unwraps",
+                    "intake_collapsed_blanks",
+                ),
+            },
         ),
     )
 }

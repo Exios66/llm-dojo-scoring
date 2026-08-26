@@ -221,6 +221,43 @@ def test_row_from_trace_document_pipeline():
     assert row["expected"] == "insurance_claim"
 
 
+def test_row_from_trace_pipeline_includes_intake_span():
+    trace = {
+        "id": "abc",
+        "name": "document-pipeline",
+        "sessionId": "pilot-hf-1",
+        "input": {
+            "filename": "claim.txt",
+            "ground_truth": {"expected_hf_class": "insurance_claim"},
+        },
+        "output": {
+            "doc_type": "insurance_claim",
+            "intake_changed": True,
+            "intake_messy": False,
+        },
+        "observations": [
+            {
+                "name": "normalize-intake",
+                "output": {
+                    "messy": False,
+                    "changed": True,
+                    "method": "deterministic",
+                    "chars": 42,
+                    "hyphen_unwraps": 1,
+                    "collapsed_blank_runs": 2,
+                },
+            }
+        ],
+        "metadata": {},
+    }
+    row = ls.row_from_trace(trace, task=ls.PIPELINE_TRACE)
+    assert row["intake_changed"] is True
+    assert row["intake_messy"] is False
+    assert row["intake_method"] == "deterministic"
+    assert row["intake_hyphen_unwraps"] == 1
+    assert row["intake_collapsed_blanks"] == 2
+
+
 def test_row_from_trace_pipeline_aligns_merger():
     trace = {
         "id": "m",

@@ -178,7 +178,7 @@ def test_emit_only_suites_raise_without_metrics():
         get_suite("reporter").score(None, None)
     with pytest.raises(TypeError, match="emit-only"):
         get_suite("archivist").score(None, None)
-    with pytest.raises(TypeError, match="emit-only"):
+    with pytest.raises(TypeError, match="raw text"):
         get_suite("intake").score(None, None)
     validated = get_suite("boss").score(
         None, None, metrics={"accuracy": 0.9, "not_a_metric": 1}

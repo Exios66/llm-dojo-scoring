@@ -13,8 +13,12 @@ Format based on Keep a Changelog; versioning is SemVer.
   extract alias, Hub subclass inventories, Langfuse observation-type
   map, score transport aliases, `user_id` / `release` identity, and
   exact vs aligned HF classification (`merger_agreement` ≡ `contract`).
-- **25th agent profile: `intake`** — procedural intake clerk (span
-  `normalize-intake`). Emit-only; never requires ground truth.
+- **25th agent profile: `intake`** — pre-sorter intake clerk (span
+  `normalize-intake`). Tasks `prepare`/`normalize`; dedicated `intake`
+  bundle. Deterministic clerk gold (NFC, newline unify, NBSP, zero-width,
+  C0, hyphen unwrap, blank-run collapse, horizontal-space collapse,
+  trim) with LLM intake scored against the same gold. Handoff is
+  `classify-document` (sorter). Computable — not emit-only.
 - **CUAD / MAUD inventory fields** on the contracts / merger extraction
   maps: `cuad_family`, `merger_consideration`, `cuad_clauses`,
   `maud_clauses` (mailroom Hub specialist hardening).
@@ -27,8 +31,8 @@ Format based on Keep a Changelog; versioning is SemVer.
   Family token `LIVE_SPECIALISTS`.
 - Langfuse sync understands `document-pipeline` traces (filename,
   `expected_hf_class`, exact/aligned, `user_id`, `release`,
-  `environment`). Config reads `LANGFUSE_RELEASE`,
-  `MAILROOM_TRACE_USER_ID`, `LANGFUSE_FLUSH_AT` /
+  `environment`, `normalize-intake` span stats). Config reads
+  `LANGFUSE_RELEASE`, `MAILROOM_TRACE_USER_ID`, `LANGFUSE_FLUSH_AT` /
   `LANGFUSE_FLUSH_INTERVAL`, `OBSERVABILITY_ENVIRONMENT`.
 - `LangfuseSink` emits the short transport alias on the wire.
 - `list_suites(live_only=True)` hides retired specialists.
@@ -65,7 +69,7 @@ corporate_record (no external extraction benchmark). Enron topic/
 sentiment, MAUD per-question extraction, and WER/CER now ship as real
 scorers.
 
-Suite: 281 passed / 5 skipped (was 258/5 before these scorers).
+Suite: 294 passed / 5 skipped.
 
 ## [0.8.1] - 2026-08-25
 
