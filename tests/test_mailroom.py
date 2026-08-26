@@ -117,10 +117,12 @@ def test_retired_suites_flagged_live_filter():
 def test_intake_clerk_profile_and_suite():
     assert INTAKE_AGENT in list_profiles()
     profile = get_profile("intake")
-    assert profile.ground_truth is False
+    assert profile.ground_truth is True
+    assert profile.tasks == ("prepare", "normalize")
     suite = get_suite("intake")
-    assert suite.kind == "cost"
-    assert suite.computable is False
+    assert suite.kind == "intake"
+    assert suite.computable is True
+    assert suite.task_key == "intake"
 
 
 def test_contract_suite_scores_hub_inventory_fields():

@@ -15,6 +15,15 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
+from .intake import (
+    INTAKE_HANDOFF_NODE,
+    INTAKE_LIVE_METHOD,
+    INTAKE_METHODS,
+    INTAKE_PREP_STEPS,
+    INTAKE_SPAN,
+    INTAKE_SPAN_KEYS,
+)
+
 __all__ = [
     "LIVE_DOC_TYPES",
     "RETIRED_DOC_TYPES",
@@ -25,6 +34,12 @@ __all__ = [
     "RETIRED_SPECIALISTS",
     "RETIRED_AUDITORS",
     "INTAKE_AGENT",
+    "INTAKE_SPAN",
+    "INTAKE_HANDOFF_NODE",
+    "INTAKE_METHODS",
+    "INTAKE_LIVE_METHOD",
+    "INTAKE_SPAN_KEYS",
+    "INTAKE_PREP_STEPS",
     "PIPELINE_TRACE",
     "NODE_OBSERVATION_TYPES",
     "LANGFUSE_SCORE_NAME_ALIASES",

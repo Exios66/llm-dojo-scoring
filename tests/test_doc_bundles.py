@@ -157,7 +157,7 @@ def test_profile_set_re_pinned_to_25():
         "compliance_auditor",         "court_opinions_auditor",
         "insurance_claims_auditor",  # v0.8.0 — 7th specialist companion
         "arbiter",
-        "intake",  # v0.9.0 — procedural intake clerk
+        "intake",  # v0.9.0 — pre-sorter intake clerk (deterministic / LLM)
     }
     assert set(list_profiles()) == expected
     assert len(expected) == 25
