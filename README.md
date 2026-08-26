@@ -13,15 +13,23 @@ artifacts (`Sorter_Experiment_Results.xlsx`, `Sorter_Model_Sweep_Results.xlsx`,
 
 ## Install
 
+Published release: [v0.9.0](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.9.0)
+(`f815544` on `main`). Dependents pin the **tag**, not a floating SHA.
+
 ```bash
-pip install -e .                # from this repo
-pip install -e "git+https://github.com/<org>/llm-dojo-scoring.git#egg=llm-dojo-scoring"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.9.0"
+pip install -e .                # from a local checkout
 ```
 
-Then, in **llm-entity-extraction** / **llm-mailroom**:
+In **llm-entity-extraction** / **llm-mailroom** `pyproject.toml`:
+
+```
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.9.0
+```
 
 ```python
 from llm_dojo_scoring import score_extraction, bootstrap_ci, tokens_summary
+from llm_dojo_scoring import get_suite, apply_intake, score_task
 ```
 
 ## Quickstart
@@ -135,17 +143,18 @@ print(dojo.render_notes(interp))
 | `report` | — (new) | Full Markdown report builder |
 | `registry` | — (new) | Metric definitions registry: every score name → tier (**T0 HEADLINE** / **T1 CORE** / **T2 DEEP** / **T3 LOG**), units, aggregation, applicable agents; YAML-backed (`LLM_DOJO_SCORING_REGISTRY`) |
 | `bundles` | — (new) | Ten pre-built **task** bundles (classification, extraction, extraction_open, cost, factuality, laziness_detection, audit, reporter, transcription, intake), fail-fast validated against the registry |
-| `profiles` | — (new) | **24 agent profiles** — each agent's scoring identity (task-derived bundle resolution, fallback bundle, ground-truth flag); YAML overlay via `LLM_DOJO_SCORING_PROFILES` |
-| `suites` | — (new) | **Dedicated scoring suite per pipeline agent** — importable `get_suite` / `score_suite` with field-type maps, doc-type aliases, and honest-gap notes; the API mailroom consumers should call |
-| `doc_bundles` | — (new) | **Document-type-aware bundles** for the eight processed document classes; honest-gap mandate where type-specific scorers are still pending (insurance determination-consistency, retired court/DD, zero-row compliance) |
+| `profiles` | — (new) | **25 agent profiles** — each agent's scoring identity (task-derived bundle resolution, fallback bundle, ground-truth flag); YAML overlay via `LLM_DOJO_SCORING_PROFILES` |
+| `suites` | — (new) | **Dedicated scoring suite per pipeline agent** — importable `get_suite` / `score_suite` with field-type maps, doc-type aliases, and honest-gap notes; the API mailroom consumers should call. `list_suites(live_only=True)` hides retired court/DD specialists |
+| `doc_bundles` | — (new) | **Document-type-aware bundles** for the eight processed document classes; honest-gap mandate where type-specific scorers are still pending (insurance determination-consistency, retired court/DD, zero-row compliance, corporate_record with no external extraction benchmark) |
+| `mailroom` | — (new) | Live LLM-Mailroom / The-Mailroom contract: five extract classes, `unknown`, merger extract alias, Hub inventories, Langfuse observation types, 35-char score alias, exact vs aligned HF accuracy |
 | `content_scoring` | — (new) | Enron `content_topic` / `sentiment_label` accuracy + macro-F1; MAUD per-question extraction over the 22 Hub keys |
 | `asr` | — (new) | WER / CER / word-accuracy for PDF transcription and OCR |
 | `intake` | — (new) | Pre-sorter clerk: NFC / hyphen unwrap / whitespace prep; deterministic gold, LLM intake scored against it |
 | `emitter` | — (new) | Unified score emitter: `ScoreRecord`, network-free JSONL manifest sink + credential-checked inert-unless-configured Langfuse sink; scorecards & headline comparison |
 | `pruning` | — (new) | Tier-based dashboard filtering: `dashboard_metrics(agent)` (profile bundle ∩ tier cap), `headline_metrics(agent)` (strictly T0), `prune_records` |
-| `langfuse_sync` | — (new) | Pull live experiment traces (Langfuse) into run records + reference workbook |
+| `langfuse_sync` | — (new) | Pull live experiment traces (Langfuse) into run records + reference workbook — subtype sessions **and** mailroom `document-pipeline` traces (intake span, exact/aligned HF accuracy, `user_id` / `release`) |
 | `phoenix_sync` | — (new) | Local Phoenix/OTLP sink probe + span reader (graceful when down) |
-| `tasks` | — (new) | Task-aware scoring across the additional document hierarchy (MAUD, LegalBench, chained runs, multiclass, court opinions) |
+| `tasks` | — (new) | Task-aware scoring across the additional document hierarchy (MAUD consideration + 22-question extraction, LegalBench, chained runs, multiclass, court opinions, Enron topic/sentiment, WER/CER, intake, `pipeline` HF eval) |
 | `cli` | — (new) | `dojo-analyze`, `dojo-export`, `dojo-sync` commands |
 
 ## Task coverage — the additional document hierarchy
@@ -271,6 +280,12 @@ card = emitter.get_scorecard("sorter", "exp_42", min_tier=1)   # dashboard view
 # 5. Tier-based pruning
 dojo.dashboard_metrics("contracts_specialist")   # profile bundle ∩ T0+T1
 dojo.headline_metrics("judge")                   # strictly T0
+
+# 6. v0.9.0 extras — intake clerk, live-only suites
+raw = "A hyphen-\nated  line"
+cleaned, _stats = dojo.apply_intake(raw)
+intake = dojo.get_suite("intake").score(raw, cleaned)
+live = dojo.list_suites(live_only=True)            # hides retired court/DD
 ```
 
 ## Configuration

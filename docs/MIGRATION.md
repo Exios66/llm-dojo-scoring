@@ -8,11 +8,19 @@ scorers, and reporting scripts keep working with minimal edits.
 ## 1. Install the package
 
 ```bash
-# in llm-entity-extraction / llm-mailroom
-pip install -e "git+https://github.com/<org>/llm-dojo-scoring.git#egg=llm-dojo-scoring"
+# in llm-entity-extraction / llm-mailroom — pin the published tag
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.9.0"
 # or from a local checkout
 pip install -e /path/to/llm-dojo-scoring
 ```
+
+`pyproject.toml` / `requirements.txt`:
+
+```
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.9.0
+```
+
+Do not pin a merge SHA. Release notes: https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.9.0
 
 ## 2. Import swap table
 
@@ -246,6 +254,41 @@ Governance rules that make this safe to adopt incrementally:
   `load_registry().metrics` at import time; llm-entity-extraction wraps the
   same layer behind a thin `score_emitter` bridge module. Mirror whichever
   pattern fits your repo.
+
+## 3d. Pinning the v0.9.0 release
+
+Dependents pin the published GitHub Release tag — not a merge SHA:
+
+```
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.9.0
+```
+
+https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.9.0
+
+v0.9.0 is additive on the v0.5+ swap above:
+
+```python
+import llm_dojo_scoring as dojo
+
+# Live five-class extract roster; retired court/DD suites stay but hide here.
+assert "contract" in dojo.LIVE_DOC_TYPES
+live = dojo.list_suites(live_only=True)
+
+# Pre-sorter intake clerk (deterministic gold; LLM method is scored, not run).
+raw = "hyphen-\nated"
+cleaned, stats = dojo.apply_intake(raw)
+dojo.get_suite("intake").score(raw, cleaned)
+
+# Enron correspondence extras + MAUD 22-question extraction + WER/CER.
+dojo.score_content_topic(["business"], ["business"])
+dojo.score_task("maud_extraction", ["No-Shop: Yes"], ["No-Shop: Yes"])
+dojo.word_error_rate("the cat", "the cat")
+
+# HF pipeline eval; Langfuse sync reads document-pipeline traces.
+dojo.score_task("pipeline", ["contract"], ["merger_agreement"])  # aligned via mailroom
+```
+
+Honesty gaps that remain (do not invent KPIs): insurance determination-consistency, retired court/DD, zero-row compliance, corporate_record with no external extraction benchmark.
 
 ## 4. Verification
 
