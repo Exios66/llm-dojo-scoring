@@ -1,6 +1,6 @@
 import pytest
 
-    from llm_dojo_scoring.classification import (
+from llm_dojo_scoring.classification import (
     accuracy,
     binary_metrics,
     class_distribution,
