@@ -246,6 +246,7 @@ TASK_KINDS: dict[str, str] = {
     "transcription": "transcription",
     "wer": "transcription",
     "cer": "transcription",
+    "intake": "intake",
 }
 
 # ---------------------------------------------------------------------------

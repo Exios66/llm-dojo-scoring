@@ -49,6 +49,42 @@ EXTRACTION_TRACE = "contract_entity_extraction"
 CHAINED_TRACE = "chained_sorter_extractor"
 PIPELINE_TRACE = "document-pipeline"
 
+
+def _intake_fields_from_trace(trace: dict, out: dict, meta: dict) -> dict:
+    """Pull ``normalize-intake`` span stats onto a pipeline row when present."""
+    payload: dict = {}
+    for obs in trace.get("observations") or []:
+        if not isinstance(obs, dict):
+            continue
+        if obs.get("name") == "normalize-intake":
+            obs_out = obs.get("output")
+            if isinstance(obs_out, dict):
+                payload = obs_out
+            break
+
+    def _first(*vals):
+        for val in vals:
+            if val is not None:
+                return val
+        return None
+
+    messy = _first(out.get("intake_messy"), payload.get("messy"), meta.get("intake_messy"))
+    changed = _first(
+        out.get("intake_changed"), payload.get("changed"), meta.get("intake_changed")
+    )
+    method = _first(
+        out.get("intake_method"), payload.get("method"), meta.get("intake_method")
+    )
+    return {
+        "intake_messy": None if messy is None else bool(messy),
+        "intake_changed": None if changed is None else bool(changed),
+        "intake_method": method,
+        "intake_chars": _first(out.get("intake_chars"), payload.get("chars")),
+        "intake_hyphen_unwraps": payload.get("hyphen_unwraps"),
+        "intake_collapsed_blanks": payload.get("collapsed_blank_runs"),
+    }
+
+
 # Fallback file names for credential discovery (also tried as config/*.env).
 _ENV_FILES = ("langfuse.env", ".env", "config/environments/langfuse.env")
 
@@ -353,6 +389,7 @@ def _row_from_pipeline_trace(trace: dict) -> dict | None:
         "extraction_confidence": out.get("extraction_confidence"),
         "run_aborted": bool(out.get("run_aborted")),
         "tags": identity["tags"],
+        **_intake_fields_from_trace(trace, out, meta),
     }
 
 
