@@ -18,12 +18,13 @@ instead of assembling a profile + bundle + field-type map themselves.
 Honesty mandate (KANBAN-067): suites only compute with functions that
 already exist in this package. Type-specific scorers that are still
 future work are recorded on ``ScoringSuite.honest_gap`` rather than
-invented here. Enron topic/sentiment, MAUD per-question extraction, and
-WER/CER are implemented (``content_scoring`` / ``asr``) and registered;
-remaining gaps (insurance determination-consistency, retired court/DD,
-zero-row compliance, corporate_record with no external extraction
-benchmark) stay documented. New scorers land by adding a metric to the
-registry and an extra on the matching suite.
+invented here. Enron topic/sentiment, MAUD per-question extraction,
+WER/CER, field-micro extraction P/R/F1/F2, and insurance
+determination-consistency now ship as real scorers. Remaining gaps
+(retired court/DD, zero-row compliance, corporate_record with no
+*external* extraction benchmark, CMS GT homogeneity) stay documented.
+New scorers land by adding a metric to the registry and an extra on
+the matching suite.
 """
 
 from __future__ import annotations
@@ -236,6 +237,9 @@ _AGENT_EXTRAS: dict[str, tuple[str, ...]] = {
         "money_mae_usd",
         "per_field_scores",
         "hallucination_rate",
+        "determination_consistency",
+        "amount_exactness",
+        "extraction_f2",
     ),
     "pdf_transcriber": (
         "wer",
@@ -268,13 +272,14 @@ _MERGER_EXTRAS: tuple[str, ...] = (
 #: Honest-gap notes — type-specific scorers that do NOT exist yet.
 _HONEST_GAPS: dict[str, str] = {
     "insurance_claims_specialist": (
-        "HONEST GAP: determination-consistency scorers beyond typed "
-        "extraction are pending. The published merge supplies CMS "
-        "DE-SynPUF source-table subclasses (carrier/inpatient/outpatient/pde). "
-        "Mailroom claim_type now also accepts those Hub tokens plus legacy "
-        "FNOL lines (health/auto/…). adjuster is Optional (null valid for "
-        "CMS rows); denial_reasons empty in the current GT (all "
-        "coverage_determination=approved)."
+        "HONEST GAP: CMS DE-SynPUF ground truth in the published merge is "
+        "homogeneous — coverage_determination is all-approved and "
+        "denial_reasons is empty — so determination_consistency is "
+        "degenerate (always 1.0 on GT-shaped predictions). The scorer "
+        "itself now exists (approved ⇒ empty reasons; denied/partial ⇒ "
+        "non-empty). Mailroom claim_type accepts Hub source-table tokens "
+        "plus legacy FNOL lines; those catalogs are orthogonal and are "
+        "not a KPI. adjuster is Optional (null valid for CMS rows)."
     ),
     "due_diligence_specialist": (
         "HONEST GAP: due_diligence was RETIRED from the live llm-mailroom "
@@ -288,10 +293,11 @@ _HONEST_GAPS: dict[str, str] = {
         "metrics still ship as the real benchmark surface."
     ),
     "corporate_records_specialist": (
-        "HONEST GAP: no external extraction benchmark; the published merge "
-        "covers 39 corporate_record rows with record-type subclasses "
+        "HONEST GAP: no *external* extraction benchmark (CUAD/MAUD-grade "
+        "coverage is not claimed). The published merge covers 39 "
+        "corporate_record rows with record-type subclasses "
         "(articles_of_incorporation, rights_instrument, …). Suite scores "
-        "typed-extraction plus that subclass catalog."
+        "typed-extraction field-micro P/R/F1/F2 plus that subclass catalog."
     ),
     "compliance_specialist": (
         "HONEST GAP: compliance_filing has zero rows in Lucius-Morningstar/"
@@ -544,13 +550,27 @@ class ScoringSuite:
             score_correspondence_content,
             score_maud_extraction,
         )
+        from .extraction_metrics import (
+            extraction_binary_metrics,
+            merge_extraction_counts,
+            prf_bundle_keys,
+        )
 
         ftypes = field_types or self.field_types
         doc_class = self.doc_type or self.name
         extras: dict[str, Any] = {}
+        peeled_exp: list = []
+        peeled_pred: list = []
 
         def _run(exp: Any, pred: Any, text: str | None):
             return score_extraction(doc_class, ftypes, pred, exp, doc_text=text)
+
+        def _prf_one(exp: Any, pred: Any, result: ExtractionScoreResult) -> dict[str, Any]:
+            if not isinstance(exp, dict) or not isinstance(pred, dict):
+                return {}
+            return extraction_binary_metrics(
+                exp, pred, field_map=ftypes, doc_class=doc_class, result=result
+            )
 
         topic_e = kwargs.get("expected_topic")
         topic_p = kwargs.get("predicted_topic")
@@ -565,8 +585,6 @@ class ScoringSuite:
                 texts = doc_text
             else:
                 texts = [doc_text] * len(expected)
-            peeled_exp: list = []
-            peeled_pred: list = []
             topics_e: list = []
             topics_p: list = []
             sents_e: list = []
@@ -606,6 +624,7 @@ class ScoringSuite:
                 maud_e, maud_p = mauds_e, mauds_p
         elif isinstance(expected, dict) and isinstance(predicted, dict):
             e2, p2, payload = peel_non_extraction_fields(expected, predicted)
+            peeled_exp, peeled_pred = [e2], [p2]
             extraction = _run(e2, p2, doc_text)
             if "content_topic" in payload and topic_e is None:
                 topic_e, topic_p = payload["content_topic"]
@@ -635,13 +654,56 @@ class ScoringSuite:
             if maud_result.get("n_questions"):
                 extras.update(maud_result)
 
-        if not extras:
+        is_batch = isinstance(extraction, list)
+        prf_payload: dict[str, Any] = {}
+        if is_batch and peeled_exp:
+            rows = [
+                _prf_one(exp, pred, result)
+                for exp, pred, result in zip(peeled_exp, peeled_pred, extraction)
+                if isinstance(result, ExtractionScoreResult)
+            ]
+            rows = [row for row in rows if row]
+            if rows:
+                prf_payload = prf_bundle_keys(merge_extraction_counts(rows))
+        elif isinstance(extraction, ExtractionScoreResult) and peeled_exp:
+            one = _prf_one(peeled_exp[0], peeled_pred[0], extraction)
+            if one:
+                prf_payload = prf_bundle_keys(one)
+
+        # Claims extras wrap the return (batch always; single-doc stays the
+        # dataclass unless other extras already force a dict).
+        if self.name == "insurance_claims_specialist" and peeled_exp and is_batch:
+            from .claims_consistency import score_claims_extras
+
+            claim_rows = [
+                score_claims_extras(exp, pred)
+                for exp, pred in zip(peeled_exp, peeled_pred)
+                if isinstance(exp, dict) and isinstance(pred, dict)
+            ]
+            if claim_rows:
+                consist = [row["determination_consistency"] for row in claim_rows]
+                amounts = [
+                    row["amount_exactness"]
+                    for row in claim_rows
+                    if row["amount_exactness"] is not None
+                ]
+                extras["determination_consistency"] = (
+                    round(sum(consist) / len(consist), 4) if consist else None
+                )
+                extras["amount_exactness"] = (
+                    round(sum(amounts) / len(amounts), 4) if amounts else None
+                )
+
+        if not extras and not is_batch:
             return extraction
-        return {"extraction": extraction, **{
+        if not extras and is_batch:
+            return {"extraction": extraction, **prf_payload}
+        filtered = {
             k: v for k, v in extras.items()
             if k not in {"task", "kind", "topic", "sentiment", "per_question",
                          "per_document"}
-        }, "detail": extras}
+        }
+        return {"extraction": extraction, **prf_payload, **filtered, "detail": extras}
 
     def _score_audit(
         self,

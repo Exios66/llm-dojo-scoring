@@ -47,6 +47,11 @@ def test_tier_distribution_matches_pruning_plan():
         assert reg.get(name).tier is MetricTier.DEEP, name
     for name in ("judge_notes", "raw_prediction", "trace_id", "llm_call_count"):
         assert reg.get(name).tier is MetricTier.LOG, name
+    assert reg.get("f1_macro").source == "classification.macro_prf"
+    assert reg.get("extraction_f1").source == "extraction_metrics.extraction_binary_metrics"
+    assert reg.get("extraction_f2").tier is MetricTier.HEADLINE
+    assert reg.get("content_topic_f1_macro").tier is MetricTier.HEADLINE
+    assert reg.get("determination_consistency").applies_to("insurance_claims_specialist")
 
 
 def test_filter_by_max_tier_and_agent():

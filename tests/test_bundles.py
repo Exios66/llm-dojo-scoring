@@ -168,7 +168,9 @@ def test_dashboard_metrics_sorter_headline_only():
 
 def test_dashboard_metrics_contracts_specialist():
     head = headline_metrics("contracts_specialist")
-    assert head == ["extraction_overall_score"]
+    assert "extraction_overall_score" in head
+    assert "extraction_f1" in head
+    assert "extraction_f2" in head
 
 
 def test_dashboard_metrics_audit_agent():

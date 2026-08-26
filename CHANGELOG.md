@@ -5,14 +5,46 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-08-26
+
+### Added
+
+- **Field-micro extraction P/R/F1/F2** (`extraction_metrics.extraction_binary_metrics`)
+  over (field, value) events. TP requires typed score `>= 1.0`; partial list
+  matches stay in the soft `extraction_overall_score` mean. F2 uses van
+  Rijsbergen β=2 (`5PR/(4P+R)`). Registered as `extraction_precision` /
+  `extraction_recall` / `extraction_f1` (T0) / `extraction_f2` (T0) plus
+  `entity_list_f1` (existing diagnostics `entity_list_raw_f1`).
+- **Classification macro-PRF** (`classification.fbeta`, `macro_prf`).
+  `binary_metrics` now returns `f2`. `per_class_stats` gains precision /
+  recall / f1 / f2. `score_task("docclass")` and `score_task("pipeline")`
+  attach `f1_macro` / `precision_macro` / `recall_macro` / `f2_macro` on
+  doc_type and `subclass_*` macros when subclasses are present. Registry
+  T1 names `precision` / `recall` / `f2` are filled with the macros.
+- **Insurance claims extras** (`claims_consistency`): `determination_consistency`
+  (approved ⇒ empty denial reasons; denied/partial ⇒ non-empty) and
+  `amount_exactness` (money-field exact after the existing one-cent
+  normalize). CMS GT homogeneity (all-approved) is pinned, not hidden.
+- Correspondence **`content_topic_f1_macro` promoted to T0** and wired onto
+  the extraction bundle override so `headline_metrics("correspondence_specialist")`
+  includes it.
+
 ### Changed
 
-- **Docs currency for the published v0.9.0 tag.** README install/pin uses
-  `@v0.9.0` (not a placeholder org or floating SHA); the module map lists
-  all 25 profiles, the `mailroom` contract, and `document-pipeline`
-  Langfuse sync. MIGRATION §1 / §3d show the consumer pin plus intake,
-  Enron/MAUD/WER, and `list_suites(live_only=True)`. Package version stays
-  **0.9.0**.
+- Sorter T0 `f1_macro` is actually computed (`classification.macro_prf`);
+  registry `source:` for `f1_macro` no longer points at `binary_metrics`.
+- Insurance honest-gap text shrinks from “scorer pending” to GT homogeneity.
+- Corporate-records honest gap keeps “no *external* extraction benchmark”
+  (39-row GT is enough for field-micro; do not claim CUAD/MAUD-grade coverage).
+- Package version **0.10.0**. Consumer pin:
+
+  ```
+  llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.10.0
+  ```
+
+Single-doc `get_suite(<specialist>).score(dict, dict)` still returns
+`ExtractionScoreResult`. Batch extraction returns a dict with run-level
+`extraction_*` keys when those are present.
 
 ## [0.9.0] - 2026-08-26
 

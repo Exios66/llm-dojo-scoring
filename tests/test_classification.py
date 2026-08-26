@@ -8,6 +8,7 @@ from llm_dojo_scoring.classification import (
     confusion_matrix,
     exact_match,
     failure,
+    fbeta,
     macro_accuracy,
     normalize_label,
     per_class_stats,
@@ -75,6 +76,19 @@ def test_binary_metrics():
     )
     assert out["tp"] == 1 and out["fp"] == 1 and out["fn"] == 1 and out["tn"] == 1
     assert out["precision"] == 0.5 and out["recall"] == 0.5 and out["f1"] == 0.5
+    assert out["f2"] == 0.5
+
+
+def test_macro_prf_unweighted_mean():
+    from llm_dojo_scoring.classification import macro_prf
+
+    exp = ["contract", "contract", "insurance_claim"]
+    pred = ["contract", "correspondence", "insurance_claim"]
+    out = macro_prf(exp, pred)
+    assert out["n_classes"] == 2
+    assert "f1_macro" in out and "f2_macro" in out
+    assert out["precision"] == out["precision_macro"]
+    assert out["f2"] == out["f2_macro"]
 
 
 def test_class_distribution():
