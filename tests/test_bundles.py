@@ -39,11 +39,11 @@ def _clean_caches():
 # ----------------------------- bundles -------------------------------------
 
 
-def test_all_nine_bundles_exist():
+def test_all_ten_bundles_exist():
     assert set(list_bundles()) == {
         "classification", "extraction", "extraction_open", "cost",
         "factuality", "laziness_detection", "audit", "reporter",
-        "transcription",
+        "transcription", "intake",
     }
 
 
@@ -102,7 +102,7 @@ def test_default_profiles():
         "insurance_claims_specialist",
         # v0.8.0: dedicated auditor matching the 7th specialist
         "insurance_claims_auditor",
-        # v0.9.0: procedural intake clerk
+        # v0.9.0: intake clerk (pre-sorter text prep)
         "intake",
     }
     assert set(list_profiles()) == expected

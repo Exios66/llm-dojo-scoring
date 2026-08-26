@@ -200,6 +200,11 @@ def score_task(
 
         return score_transcription(expected, predicted)
 
+    if kind == "intake":
+        from .intake import score_intake
+
+        return score_intake(expected, predicted)
+
     if kind == "contracteval":
         return contracteval_metrics(
             expected, predicted,

@@ -35,6 +35,7 @@ from . import (
     export,
     failure_modes,
     field_scoring,
+    intake,
     io,
     interpret,
     langfuse_sync,
@@ -106,6 +107,12 @@ from .content_scoring import (
     score_maud_extraction,
     score_sentiment,
 )
+from .intake import (
+    apply_intake,
+    deterministic_normalize,
+    looks_messy,
+    score_intake,
+)
 from .bundles import BUILTIN_BUNDLES, Bundle, bundle_metric_names, get_bundle, validate_bundle
 from .doc_bundles import (
     DOC_TYPES,
@@ -173,7 +180,7 @@ __all__ = [
     "bootstrap", "classification", "config", "content_scoring", "cost", "diagnostics",
     "equivalences", "error_analysis", "experiment", "export", "failure_modes",
     "field_scoring", "io", "interpret", "langfuse_sync", "phoenix_sync",
-    "report", "asr", "corpus", "mailroom", "suites", "tasks", "visualize",
+    "report", "asr", "corpus", "intake", "mailroom", "suites", "tasks", "visualize",
     "bootstrap_ci", "delta_significance", "wilson_ci",
     "accuracy", "binary_metrics", "confusion_matrix", "exact_match",
     "macro_accuracy", "normalize_label", "per_class_stats",
@@ -211,4 +218,5 @@ __all__ = [
     "word_error_rate", "character_error_rate", "score_transcription",
     "score_content_topic", "score_sentiment",
     "score_correspondence_content", "score_maud_extraction",
+    "apply_intake", "deterministic_normalize", "looks_messy", "score_intake",
 ]
