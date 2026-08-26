@@ -42,6 +42,7 @@ __all__ = [
     "Registry",
     "DEFAULT_METRICS_YAML",
     "SPECIALIST_AGENTS",
+    "LIVE_SPECIALIST_AGENTS",
     "AUDITOR_AGENTS",
     "CLASSIFIER_AGENTS",
     "TRANSCRIBER_AGENTS",
@@ -55,6 +56,7 @@ __all__ = [
 # (``SPECIALISTS``, ``AUDITORS``, ``CLASSIFIERS``, ``TRANSCRIBERS``) expand
 # to these tuples so a newly added specialist cannot be omitted from the
 # extraction metric surface (the v0.7.0 ``insurance_claims_specialist`` gap).
+# All specialists the registry still scores (live + retired historical).
 SPECIALIST_AGENTS: tuple[str, ...] = (
     "contracts_specialist",
     "corporate_records_specialist",
@@ -62,6 +64,15 @@ SPECIALIST_AGENTS: tuple[str, ...] = (
     "correspondence_specialist",
     "compliance_specialist",
     "court_opinions_specialist",
+    "insurance_claims_specialist",
+)
+#: Live llm-mailroom extraction roster (v0.5+). Retired specialists stay
+#: in SPECIALIST_AGENTS so historical traces still validate.
+LIVE_SPECIALIST_AGENTS: tuple[str, ...] = (
+    "contracts_specialist",
+    "corporate_records_specialist",
+    "correspondence_specialist",
+    "compliance_specialist",
     "insurance_claims_specialist",
 )
 
@@ -90,6 +101,7 @@ TRANSCRIBER_AGENTS: tuple[str, ...] = (
 
 _AGENT_FAMILIES: dict[str, tuple[str, ...]] = {
     "SPECIALISTS": SPECIALIST_AGENTS,
+    "LIVE_SPECIALISTS": LIVE_SPECIALIST_AGENTS,
     "AUDITORS": AUDITOR_AGENTS,
     "CLASSIFIERS": CLASSIFIER_AGENTS,
     "TRANSCRIBERS": TRANSCRIBER_AGENTS,
@@ -238,8 +250,8 @@ DEFAULT_METRICS_YAML = """
 # llm-dojo-scoring default metric registry (KANBAN-061).
 # Every entry maps to an EXISTING package function (source:) or is an
 # emitter-level definition (audit metrics). Aliases of the 37 flat
-# llm-mailroom SCORE_CONFIGS names are preserved as notes so the
-# consolidation is lossless.
+# llm-mailroom SCORE_CONFIGS names plus Langfuse transport aliases
+# (extraction_verified_precision) and The-Mailroom judge scores.
 
 metrics:
   # ===================== T0 — HEADLINE =====================
@@ -383,6 +395,36 @@ metrics:
     description: "Precision restricted to doc-verifiable items"
     applicable_agents: [SPECIALISTS]
     notes: "mailroom SCORE_CONFIGS name; alias of verified_precision"
+  extraction_verified_precision:
+    tier: 1
+    description: "Langfuse wire alias of extraction_overall_verified_precision (35-char config limit)"
+    applicable_agents: [SPECIALISTS]
+    notes: "mailroom LANGFUSE_SCORE_NAME_ALIASES transport name"
+  mailroom-pipeline-judge:
+    tier: 1
+    description: "The-Mailroom LLM-as-judge verdict (CORRECT / PARTIAL / MISS)"
+    applicable_agents: [judge]
+    notes: "The-Mailroom JUDGE_VERDICT_SCORES; CATEGORICAL"
+  mailroom-pipeline-quality:
+    tier: 1
+    description: "The-Mailroom LLM-as-judge quality (0..1)"
+    applicable_agents: [judge]
+    notes: "The-Mailroom JUDGE_QUALITY_SCORES; NUMERIC"
+  exact_accuracy:
+    tier: 1
+    description: "HF pipeline exact doc-type accuracy (merger_agreement ≠ contract)"
+    applicable_agents: [CLASSIFIERS]
+    source: "mailroom.score_aligned_classification"
+  aligned_accuracy:
+    tier: 1
+    description: "HF pipeline aligned doc-type accuracy (merger_agreement ≡ contract)"
+    applicable_agents: [CLASSIFIERS]
+    source: "mailroom.score_aligned_classification"
+  subclass_accuracy:
+    tier: 1
+    description: "HF pipeline subclass accuracy (CUAD family / CMS table / Enron form / …)"
+    applicable_agents: [CLASSIFIERS]
+    source: "tasks.score_task"
   extraction_hallucination_rate:
     tier: 1
     description: "Share of reported values not grounded in GT or the source doc"

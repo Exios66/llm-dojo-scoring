@@ -205,7 +205,7 @@ score lists:
 import llm_dojo_scoring as dojo
 
 # One agent's scoring identity: task-derived bundle, fallback, ground-truth flag.
-profile = dojo.get_profile("sorter")                 # 24 default profiles; YAML overlay
+profile = dojo.get_profile("sorter")                 # 25 default profiles; YAML overlay
 bundle = profile.resolve_bundle()                    # registry-validated metric set
 
 # Dedicated suite — preferred import for mailroom / entity-extraction:

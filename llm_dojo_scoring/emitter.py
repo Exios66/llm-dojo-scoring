@@ -30,6 +30,13 @@ from typing import Any, Iterable, Protocol
 
 from .registry import MetricTier, Registry, load_registry
 
+
+def _wire_score_name(name: str) -> str:
+    """Langfuse transport name (35-char config limit aliases)."""
+    from .mailroom import langfuse_score_name
+
+    return langfuse_score_name(name)
+
 __all__ = [
     "ScoreRecord",
     "ScoreSink",
@@ -149,7 +156,7 @@ class LangfuseSink:
         try:
             self._client.score(
                 trace_id=record.metadata.get("trace_id"),
-                name=record.metric,
+                name=_wire_score_name(record.metric),
                 value=record.value,
                 data_type=record.metadata.get("data_type", "NUMERIC"),
                 comment=record.metadata.get("comment"),

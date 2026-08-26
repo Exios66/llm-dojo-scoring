@@ -79,6 +79,10 @@ DEFAULT_FIELD_TYPES: dict[str, dict[str, str]] = {
         "key_obligations": "entity_list:free_text",
         "contract_value": "money",
         "renewal_terms": "free_text",
+        "cuad_family": "name",
+        "merger_consideration": "name",
+        "cuad_clauses": "entity_list:free_text",
+        "maud_clauses": "entity_list:free_text",
     },
     "corporate_record": {
         "entity_name": "name",
@@ -158,6 +162,10 @@ DEFAULT_FIELD_TYPES: dict[str, dict[str, str]] = {
         "key_obligations": "entity_list:free_text",
         "contract_value": "money",
         "renewal_terms": "free_text",
+        "cuad_family": "name",
+        "merger_consideration": "name",
+        "cuad_clauses": "entity_list:free_text",
+        "maud_clauses": "entity_list:free_text",
     },
 }
 
@@ -231,15 +239,22 @@ _HONEST_GAPS: dict[str, str] = {
     "insurance_claims_specialist": (
         "HONEST GAP: determination-consistency scorers beyond typed "
         "extraction are pending. The published merge supplies CMS "
-        "DE-SynPUF source-table subclasses (carrier/inpatient/outpatient/pde) "
-        "— orthogonal to the specialist claim_type field (health/auto/…). "
-        "adjuster and denial_reasons are on the schema but empty in the "
-        "current GT (all coverage_determination=approved)."
+        "DE-SynPUF source-table subclasses (carrier/inpatient/outpatient/pde). "
+        "Mailroom claim_type now also accepts those Hub tokens plus legacy "
+        "FNOL lines (health/auto/…). adjuster is Optional (null valid for "
+        "CMS rows); denial_reasons empty in the current GT (all "
+        "coverage_determination=approved)."
     ),
     "due_diligence_specialist": (
-        "HONEST GAP: due_diligence has zero rows in Lucius-Morningstar/"
-        "docclass-merged; typed-extraction with date diagnostics only "
-        "(no corpus-backed subclass dimension)."
+        "HONEST GAP: due_diligence was RETIRED from the live llm-mailroom "
+        "pipeline (v0.5.0 / PR #21). The sorter emits unknown (human review) "
+        "instead of extracting. This suite remains for historical traces; "
+        "zero rows in Lucius-Morningstar/docclass-merged."
+    ),
+    "court_opinions_specialist": (
+        "HONEST GAP: court_opinion was RETIRED from the live llm-mailroom "
+        "pipeline (v0.5.0 / PR #21). The sorter emits unknown. LegalBench "
+        "metrics still ship as the real benchmark surface."
     ),
     "corporate_records_specialist": (
         "HONEST GAP: no external extraction benchmark; the published merge "
@@ -249,13 +264,9 @@ _HONEST_GAPS: dict[str, str] = {
     ),
     "compliance_specialist": (
         "HONEST GAP: compliance_filing has zero rows in Lucius-Morningstar/"
-        "docclass-merged; deadline/date-field emphasis via date_mae_days "
-        "rather than a dedicated filing scorer."
-    ),
-    "court_opinions_specialist": (
-        "HONEST GAP: court_opinion has zero rows in Lucius-Morningstar/"
-        "docclass-merged; LegalBench metrics still ship as the real "
-        "benchmark surface."
+        "docclass-merged. Hub SEC form-body inventory (10-K, 10-Q, 8-K, …) "
+        "is the live subclass catalog; suite scores typed-extraction plus "
+        "that inventory (no corpus-backed rows yet)."
     ),
     "pdf_transcriber": (
         "HONEST GAP: WER/CER are emit-time values; score() uses existing "
@@ -288,6 +299,8 @@ _COMPUTABLE_KINDS = frozenset(
 
 
 def _kind_for(profile: AgentProfile) -> str:
+    if profile.name == "intake":
+        return _KIND_COST
     if profile.name in SPECIALIST_DOC_TYPES:
         return _KIND_EXTRACTION
     if profile.name in ("sorter", "judge"):
@@ -340,6 +353,8 @@ class ScoringSuite:
     differentiators: tuple[str, ...] = ()
     #: True when the published docclass-merged corpus has rows of this type.
     in_corpus: bool = False
+    #: True when the live llm-mailroom pipeline no longer dispatches this agent.
+    retired: bool = False
 
     @property
     def computable(self) -> bool:
@@ -570,6 +585,7 @@ class ScoringSuite:
             "subclasses": list(self.subclasses),
             "differentiators": list(self.differentiators),
             "in_corpus": self.in_corpus,
+            "retired": self.retired,
         }
 
 
@@ -622,6 +638,9 @@ def _suite_for_profile(profile: AgentProfile) -> ScoringSuite:
             field_types = aligned
     elif profile.name in ("sorter", "sorter_reviewer"):
         in_corpus = True
+    from .mailroom import RETIRED_AUDITORS, RETIRED_SPECIALISTS
+
+    retired = profile.name in RETIRED_SPECIALISTS or profile.name in RETIRED_AUDITORS
     return ScoringSuite(
         name=profile.name,
         title=profile.title,
@@ -635,6 +654,7 @@ def _suite_for_profile(profile: AgentProfile) -> ScoringSuite:
         subclasses=subclasses,
         differentiators=differentiators,
         in_corpus=in_corpus,
+        retired=retired,
     )
 
 
@@ -726,12 +746,14 @@ def get_suite(name: str) -> ScoringSuite:
     return suite
 
 
-def list_suites(*, kind: str | None = None) -> list[str]:
-    """Sorted suite names, optionally filtered by :attr:`ScoringSuite.kind`."""
+def list_suites(*, kind: str | None = None, live_only: bool = False) -> list[str]:
+    """Sorted suite names, optionally filtered by kind and live roster."""
     names = sorted(DEFAULT_SUITES)
-    if kind is None:
-        return names
-    return [n for n in names if DEFAULT_SUITES[n].kind == kind]
+    if kind is not None:
+        names = [n for n in names if DEFAULT_SUITES[n].kind == kind]
+    if live_only:
+        names = [n for n in names if not DEFAULT_SUITES[n].retired]
+    return names
 
 
 def suite_for_doc_type(doc_type: str) -> ScoringSuite:

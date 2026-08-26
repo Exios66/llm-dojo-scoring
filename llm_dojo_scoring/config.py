@@ -154,13 +154,20 @@ DOCCLASS_FAILURE_MODES: dict[str, dict[str, str]] = {
 # Additional document hierarchy (issue #19 / KANBAN-047) — task registries
 # ---------------------------------------------------------------------------
 
-# Primary doc classes across the merged taxonomy (CUAD + MAUD + S-1 + court
-# opinions) — mirrors `config/taxonomy.yaml` doc_classes keys.
+# Full historical + live class set the scorer still understands.
+# Live pipeline (llm-mailroom v0.5+) extracts five of these; court_opinion
+# and due_diligence are RETIRED (sorter emits ``unknown``); merger_agreement
+# is an extract alias of contract. See :mod:`llm_dojo_scoring.mailroom`.
 DOC_CLASS_KEYS: list[str] = [
     "contract", "corporate_record", "due_diligence", "correspondence",
     "compliance_filing", "court_opinion", "insurance_claim",
     "merger_agreement",
 ]
+LIVE_DOC_CLASS_KEYS: list[str] = [
+    "contract", "corporate_record", "correspondence",
+    "compliance_filing", "insurance_claim",
+]
+RETIRED_DOC_CLASS_KEYS: list[str] = ["court_opinion", "due_diligence"]
 
 # MAUD merger-agreement consideration-type subclass (expert GT dimension —
 # `Type of Consideration`). Keys are the canonical snake_case form used by the
@@ -228,6 +235,8 @@ TASK_KINDS: dict[str, str] = {
     "court_opinion": "court_opinion",
     "chained": "chained",
     "contracteval": "contracteval",
+    "pipeline": "pipeline",
+    "document-pipeline": "pipeline",
 }
 
 # ---------------------------------------------------------------------------

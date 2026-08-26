@@ -1056,8 +1056,11 @@ def get_field_types(doc_class: str, taxonomy: dict | None = None) -> dict[str, s
     helper so the consuming project can wire its taxonomy straight through."""
     if not taxonomy:
         return {}
+    from .mailroom import EXTRACT_CLASS_ALIASES
+
+    resolved = EXTRACT_CLASS_ALIASES.get(doc_class, doc_class)
     for cls in taxonomy.get("doc_classes", []):
-        if cls.get("key") == doc_class:
+        if cls.get("key") == doc_class or cls.get("key") == resolved:
             return dict(cls.get("field_types") or {})
     return {}
 

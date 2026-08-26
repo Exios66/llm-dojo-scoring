@@ -102,6 +102,8 @@ def test_default_profiles():
         "insurance_claims_specialist",
         # v0.8.0: dedicated auditor matching the 7th specialist
         "insurance_claims_auditor",
+        # v0.9.0: procedural intake clerk
+        "intake",
     }
     assert set(list_profiles()) == expected
 

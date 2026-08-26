@@ -179,16 +179,19 @@ organizational layer consumers emit through:
   ("what broke yesterday?": P/R/F1/F2, rates, cost) → **T2 DEEP** (confusion,
   failure modes, bootstrap CIs, calibration) → **T3 LOG** (audit trail only).
   The built-in default covers this package's full surface plus all 37 flat
-  llm-mailroom `SCORE_CONFIGS` names; override via `LLM_DOJO_SCORING_REGISTRY`
+  llm-mailroom `SCORE_CONFIGS` names, the Langfuse 35-char transport alias
+  (`extraction_verified_precision`), and The-Mailroom judge scores; override
+  via `LLM_DOJO_SCORING_REGISTRY`
   or an explicit path.
 - **`bundles`** — nine task bundles (what the agent *does*): classification,
   extraction, extraction_open, cost, factuality, laziness_detection, audit,
   reporter, transcription. Every metric must resolve in the registry.
-- **`profiles`** — 24 default **agent profiles**, each one agent's scoring
+- **`profiles`** — 25 default **agent profiles**, each one agent's scoring
   identity: task-derived bundle resolution, a fallback bundle for degraded
-  runs, and a ground-truth flag. Includes the sorter, seven specialists,
-  judge/boss/reporter/transcribers/archivist, the audit agent, and the Lane A/B
-  review set (`sorter_reviewer`, seven per-specialist auditors including
+  runs, and a ground-truth flag. Includes the sorter, seven specialists
+  (five live + two retired), judge/boss/reporter/transcribers/archivist/
+  intake clerk, the audit agent, and the Lane A/B review set
+  (`sorter_reviewer`, seven per-specialist auditors including
   `insurance_claims_auditor`, `arbiter`) that never require ground truth.
   Overlay with your own YAML via `LLM_DOJO_SCORING_PROFILES`.
 - **`suites`** — one dedicated, importable scoring suite per pipeline agent
@@ -206,6 +209,10 @@ organizational layer consumers emit through:
   classes, per-type subclass surfaces (CUAD folder labels, MAUD
   consideration, CMS source table, Enron form, record type), extraction
   field sets, and `normalize_corpus_subclass` / `suite_schema`.
+- **`mailroom`** — live pipeline contract for LLM-Mailroom / The-Mailroom:
+  five live extract classes, `unknown` routing token, merger extract
+  alias, Hub inventories, Langfuse observation types, score transport
+  aliases, and exact vs aligned HF accuracy.
 - **`doc_bundles`** — the same idea grouped by the KIND of document processed:
   eight `DOC_TYPE_BUNDLES` (`contract`, `merger_agreement`,
   `corporate_record`, `due_diligence`, `correspondence`, `compliance_filing`,
@@ -231,7 +238,7 @@ reg = dojo.load_registry()
 reg.names_for(max_tier=1, agent="sorter")        # T0+T1 slice for one agent
 
 # 2. Dedicated suite: the import mailroom projects should use
-suite = dojo.get_suite("insurance_claims_specialist")          # 24 defaults
+suite = dojo.get_suite("insurance_claims_specialist")          # 25 defaults
 result = suite.score(expected_fields, predicted_fields)       # field-type-aware
 assert suite.name == dojo.get_suite("insurance_claim").name   # doc-type alias
 

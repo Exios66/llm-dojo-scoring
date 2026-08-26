@@ -105,8 +105,8 @@ DOC_TYPE_SUBCLASSES: dict[str, tuple[str, ...]] = {
         "meeting_request",
         "press_release",
     ),
-    # CMS DE-SynPUF *source table* — NOT the specialist ``claim_type``
-    # extraction field (health/auto/…). Two orthogonal dimensions.
+    # CMS DE-SynPUF *source table* subclass. Mailroom ``claim_type`` now
+    # also accepts these Hub tokens plus legacy FNOL product lines.
     "insurance_claim": (
         "carrier",
         "inpatient",
@@ -114,7 +114,19 @@ DOC_TYPE_SUBCLASSES: dict[str, tuple[str, ...]] = {
         "pde",
     ),
     "due_diligence": (),
-    "compliance_filing": (),
+    "compliance_filing": (
+        "10-K",
+        "10-Q",
+        "8-K",
+        "S-1",
+        "DEF 14A",
+        "13D",
+        "13G",
+        "Form 4",
+        "20-F",
+        "6-K",
+        "other",
+    ),
     "court_opinion": (),
 }
 
@@ -213,7 +225,7 @@ CORPUS_DIFFERENTIATORS: dict[str, tuple[str, ...]] = {
     ),
     "corporate_record": ("expected_subclass",),
     "due_diligence": (),
-    "compliance_filing": (),
+    "compliance_filing": ("expected_subclass",),
     "court_opinion": (),
 }
 
@@ -232,6 +244,10 @@ CORPUS_EXTRACTION_FIELDS: dict[str, tuple[str, ...]] = {
         "key_obligations",
         "contract_value",
         "renewal_terms",
+        "cuad_family",
+        "merger_consideration",
+        "cuad_clauses",
+        "maud_clauses",
     ),
     "merger_agreement": (
         "document_name",
@@ -243,6 +259,10 @@ CORPUS_EXTRACTION_FIELDS: dict[str, tuple[str, ...]] = {
         "key_obligations",
         "contract_value",
         "renewal_terms",
+        "cuad_family",
+        "merger_consideration",
+        "cuad_clauses",
+        "maud_clauses",
     ),
     "corporate_record": (
         "entity_name",
@@ -409,9 +429,16 @@ CORRESPONDENCE_TOPICS: tuple[str, ...] = (
     "travel_logistics",
 )
 
-#: Specialist ``claim_type`` extraction enum (product line) — orthogonal to
-#: the CMS source-table subclass (carrier/inpatient/outpatient/pde).
+#: Specialist ``claim_type`` extraction enum — Hub CMS tokens first, then
+#: legacy FNOL product lines. Orthogonal to the subclass dimension only in
+#: the published merge (all 400 rows use CMS tables as ``expected_subclass``
+#: and ``claim_type=health``); mailroom now accepts CMS tokens on
+#: ``claim_type`` as well (``doc_inventories.INSURANCE_CLAIM_TYPES``).
 INSURANCE_CLAIM_TYPES: tuple[str, ...] = (
+    "pde",
+    "inpatient",
+    "outpatient",
+    "carrier",
     "auto",
     "property",
     "liability",
