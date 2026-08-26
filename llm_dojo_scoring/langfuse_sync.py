@@ -1,14 +1,23 @@
 """Langfuse sync — pull live experiment traces into the dojo scoring pipeline.
 
-The llm-entity-extraction eval runners (``run_langfuse_*_eval.py``) trace every
-per-document classification to the Langfuse project under ``sessionId =
-experiment_name`` with structured output (``doc_type_ok``, ``subtype_ok``,
-``subtype_ok_equiv``, ``failure_mode``, …) and per-row scores
-(``exact_match``, ``subtype_accuracy``, ``subtype_accuracy_equiv``,
-``confidence``). This module re-reads those traces, groups them into runs, and
-reconstructs the SAME experiment-log records + workbook rows the pipeline
-exports — so ``dojo-analyze`` can score directly off the live sink with no
-manual workbook export.
+Two producer families land here:
+
+- **llm-entity-extraction** eval runners (``run_langfuse_*_eval.py``) trace
+  per-document classification under ``sessionId = experiment_name`` with
+  structured output (``doc_type_ok``, ``subtype_ok``, ``subtype_ok_equiv``,
+  ``failure_mode``, …) and per-row scores (``exact_match``,
+  ``subtype_accuracy``, ``subtype_accuracy_equiv``, ``confidence``).
+- **llm-mailroom** ``document-pipeline`` traces (v0.9.0): filename,
+  ``expected_hf_class``, exact/aligned accuracy, ``user_id`` / ``release`` /
+  ``environment``, and ``normalize-intake`` span stats. Observation types
+  follow :mod:`llm_dojo_scoring.mailroom` (chain / agent / evaluator / …).
+  Score names on the wire may be the 35-char alias
+  ``extraction_verified_precision``.
+
+This module re-reads those traces, groups them into runs, and reconstructs
+the SAME experiment-log records + workbook rows the pipeline exports — so
+``dojo-analyze`` can score directly off the live sink with no manual
+workbook export.
 
 Synced sources:
 - Langfuse (cloud or self-hosted): the primary experiment sink.
@@ -18,7 +27,9 @@ Synced sources:
 Credential resolution (in priority order): shell environment variables, then
 ``langfuse.env``, then ``.env``. Keys: ``LANGFUSE_PUBLIC_KEY``,
 ``LANGFUSE_SECRET_KEY``, ``LANGFUSE_HOST``/``LANGFUSE_BASE_URL``,
-``LANGFUSE_PROJECT``, ``LANGFUSE_ENVIRONMENT``.
+``LANGFUSE_PROJECT``, ``LANGFUSE_ENVIRONMENT``, ``LANGFUSE_RELEASE``,
+``MAILROOM_TRACE_USER_ID``, ``LANGFUSE_FLUSH_AT`` /
+``LANGFUSE_FLUSH_INTERVAL``, ``OBSERVABILITY_ENVIRONMENT``.
 """
 
 from __future__ import annotations
