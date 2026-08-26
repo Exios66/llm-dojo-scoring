@@ -3,6 +3,17 @@
 All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
+## [Unreleased]
+
+### Changed
+
+- **Docs currency for the published v0.9.0 tag.** README install/pin uses
+  `@v0.9.0` (not a placeholder org or floating SHA); the module map lists
+  all 25 profiles, the `mailroom` contract, and `document-pipeline`
+  Langfuse sync. MIGRATION §1 / §3d show the consumer pin plus intake,
+  Enron/MAUD/WER, and `list_suites(live_only=True)`. Package version stays
+  **0.9.0**.
+
 ## [0.9.0] - 2026-08-26
 
 ### Added
