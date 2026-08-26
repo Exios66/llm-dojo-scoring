@@ -24,7 +24,9 @@ from .classification import (
     ERROR_PREFIX,
     binary_metrics,
     confusion_matrix,
+    fbeta,
     macro_accuracy,
+    macro_prf,
     normalize_label,
     top_confusions,
 )
@@ -97,21 +99,73 @@ def normalize_task_answer(task: str, value: Any, valid=None) -> str:
 
 
 def _per_class(expected: Iterable, predicted: Iterable) -> dict[str, dict]:
-    """Per-expected-class exact-match stats over pre-normalized pairs.
+    """Per-expected-class exact-match + one-vs-rest P/R/F1/F2.
 
     Failed rows (``ERROR_PREFIX`` predictions) are skipped, matching
-    :func:`.classification.per_class_stats`.
+    :func:`.classification.per_class_stats`. Labels are assumed already
+    normalized (LegalBench / subclass tokens must not re-enter
+    :func:`normalize_label`).
     """
+    pairs = [
+        (e, p) for e, p in zip(expected, predicted)
+        if not str(p).startswith(ERROR_PREFIX)
+    ]
+    labels = sorted({e for e, _ in pairs})
     by_class: dict[str, dict] = {}
-    for e, p in zip(expected, predicted):
-        if str(p).startswith(ERROR_PREFIX):
-            continue
-        bucket = by_class.setdefault(e, {"n": 0, "correct": 0})
-        bucket["n"] += 1
-        bucket["correct"] += int(p == e)
-    for bucket in by_class.values():
-        bucket["accuracy"] = round(bucket["correct"] / bucket["n"], 4) if bucket["n"] else 0.0
+    for cls in labels:
+        n = sum(1 for e, _ in pairs if e == cls)
+        correct = sum(1 for e, p in pairs if e == cls and p == cls)
+        tp = correct
+        fp = sum(1 for e, p in pairs if e != cls and p == cls)
+        fn = sum(1 for e, p in pairs if e == cls and p != cls)
+        precision = round(tp / (tp + fp), 4) if tp + fp else 0.0
+        recall = round(tp / (tp + fn), 4) if tp + fn else 0.0
+        by_class[cls] = {
+            "n": n,
+            "correct": correct,
+            "accuracy": round(correct / n, 4) if n else 0.0,
+            "precision": precision,
+            "recall": recall,
+            "f1": fbeta(precision, recall, beta=1.0),
+            "f2": fbeta(precision, recall, beta=2.0),
+        }
     return by_class
+
+
+def _macros_from_per_class(
+    per_class: dict[str, dict],
+    *,
+    prefix: str = "",
+) -> dict[str, float]:
+    """Unweighted mean of per-class P/R/F1/F2.
+
+    With ``prefix=""`` also copies macros onto registry T1 names
+    ``precision`` / ``recall`` / ``f2`` and T0 ``f1_macro``.
+    """
+    n_cls = len(per_class)
+    if not n_cls:
+        zeros = {
+            f"{prefix}precision_macro": 0.0,
+            f"{prefix}recall_macro": 0.0,
+            f"{prefix}f1_macro": 0.0,
+            f"{prefix}f2_macro": 0.0,
+        }
+        if not prefix:
+            zeros.update(precision=0.0, recall=0.0, f2=0.0, f1_macro=0.0)
+        return zeros
+    precision = round(sum(s["precision"] for s in per_class.values()) / n_cls, 4)
+    recall = round(sum(s["recall"] for s in per_class.values()) / n_cls, 4)
+    f1 = round(sum(s["f1"] for s in per_class.values()) / n_cls, 4)
+    f2 = round(sum(s["f2"] for s in per_class.values()) / n_cls, 4)
+    out = {
+        f"{prefix}precision_macro": precision,
+        f"{prefix}recall_macro": recall,
+        f"{prefix}f1_macro": f1,
+        f"{prefix}f2_macro": f2,
+    }
+    if not prefix:
+        out.update(precision=precision, recall=recall, f2=f2, f1_macro=f1)
+    return out
 
 
 def _ci(per_row: list[float], *, seed: int, n_boot: int):
@@ -128,13 +182,17 @@ def _label_score(task: str, expected: list, predicted: list, *,
     pred = [p for _, p in pairs]
     per_row = [1.0 if e == p else 0.0 for e, p in pairs]
     matrix, labels = confusion_matrix(exp, pred)
+    exact = round(sum(per_row) / len(per_row), 4) if per_row else 0.0
+    per_class = _per_class(exp, pred)
     return {
         "task": task,
         "kind": task_kind(task),
-        "exact_match": round(sum(per_row) / len(per_row), 4) if per_row else 0.0,
+        "exact_match": exact,
+        "accuracy": exact,
         "exact_match_ci": _ci(per_row, seed=seed, n_boot=n_boot),
         "macro_accuracy": macro_accuracy(exp, pred),
-        "per_class": _per_class(exp, pred),
+        "per_class": per_class,
+        **_macros_from_per_class(per_class),
         "confusion": {"matrix": matrix, "labels": labels},
         "top_confusions": top_confusions(matrix, labels),
         "n": len(per_row),
@@ -220,12 +278,16 @@ def score_task(
         per_row = [1.0 if e == p else 0.0 for e, p in pairs]
         matrix, labels = confusion_matrix(exp, pred)
         positive = LEGALBENCH_BINARY_LABELS[0]
+        per_class = _per_class(exp, pred)
+        exact = round(sum(per_row) / len(per_row), 4) if per_row else 0.0
         return {
             "task": task,
             "kind": kind,
-            "exact_match": round(sum(per_row) / len(per_row), 4) if per_row else 0.0,
+            "exact_match": exact,
+            "accuracy": exact,
             "exact_match_ci": _ci(per_row, seed=seed, n_boot=n_boot),
-            "per_class": _per_class(exp, pred),
+            "per_class": per_class,
+            **_macros_from_per_class(per_class),
             "binary": binary_metrics(exp, pred, positive=positive),
             "confusion": {"matrix": matrix, "labels": labels},
             "top_confusions": top_confusions(matrix, labels),
@@ -236,20 +298,42 @@ def score_task(
         from .mailroom import align_doc_type, score_aligned_classification
 
         aligned = score_aligned_classification(expected, predicted)
-        result = {"task": task, "kind": kind, **aligned}
+        prf = macro_prf(list(expected), list(predicted))
+        result = {
+            "task": task,
+            "kind": kind,
+            **aligned,
+            "accuracy": aligned.get("exact_accuracy", 0.0),
+            "f1_macro": prf["f1_macro"],
+            "precision_macro": prf["precision_macro"],
+            "recall_macro": prf["recall_macro"],
+            "f2_macro": prf["f2_macro"],
+            "precision": prf["precision"],
+            "recall": prf["recall"],
+            "f2": prf["f2"],
+            "per_class": prf["per_class"],
+        }
         if expected_subclass is not None and predicted_subclass is not None:
             from .corpus import normalize_corpus_subclass
 
             sub_ok = []
+            sub_exp_norm = []
+            sub_pred_norm = []
             for e, p, doc in zip(expected_subclass, predicted_subclass, expected):
                 parent = align_doc_type(doc)
                 en = normalize_corpus_subclass(parent, e)
                 pn = normalize_corpus_subclass(parent, p)
+                sub_exp_norm.append(en)
+                sub_pred_norm.append(pn)
                 sub_ok.append(1.0 if en == pn else 0.0)
             result["subclass_accuracy"] = (
                 round(sum(sub_ok) / len(sub_ok), 4) if sub_ok else 0.0
             )
             result["n_subclass_scored"] = len(sub_ok)
+            result["per_subclass"] = _per_class(sub_exp_norm, sub_pred_norm)
+            result.update(
+                _macros_from_per_class(result["per_subclass"], prefix="subclass_")
+            )
         return result
 
     if kind == "docclass":
@@ -257,12 +341,16 @@ def score_task(
         doc_exp = [norm_dt(e) for e in expected]
         doc_pred = [norm_dt(p) for p in predicted]
         doc_ok = [1.0 if e == p else 0.0 for e, p in zip(doc_exp, doc_pred)]
+        doc_acc = round(sum(doc_ok) / len(doc_ok), 4) if doc_ok else 0.0
+        per_class = _per_class(doc_exp, doc_pred)
         result = {
             "task": task,
             "kind": kind,
-            "doc_type_accuracy": round(sum(doc_ok) / len(doc_ok), 4) if doc_ok else 0.0,
+            "doc_type_accuracy": doc_acc,
+            "accuracy": doc_acc,
             "doc_type_accuracy_ci": _ci(doc_ok, seed=seed, n_boot=n_boot),
-            "per_class": _per_class(doc_exp, doc_pred),
+            "per_class": per_class,
+            **_macros_from_per_class(per_class),
             "n": len(doc_ok),
         }
         if expected_subclass is not None and predicted_subclass is not None:
@@ -287,14 +375,16 @@ def score_task(
             exact = [1.0 if (de == dp and se == sp)
                      else 0.0 for de, dp, se, sp in
                      zip(doc_exp, doc_pred, sub_exp_norm, sub_pred_norm)]
+            per_subclass = _per_class(sub_exp_norm, sub_pred_norm)
             result.update({
                 "subclass_accuracy": round(sum(sub_ok) / len(sub_ok), 4) if sub_ok else 0.0,
                 "subclass_accuracy_ci": _ci(sub_ok, seed=seed, n_boot=n_boot),
                 "subclass_accuracy_equiv": round(sum(sub_ok_equiv) / len(sub_ok_equiv), 4) if sub_ok_equiv else 0.0,
                 "exact_match": round(sum(exact) / len(exact), 4) if exact else 0.0,
                 "exact_match_ci": _ci(exact, seed=seed, n_boot=n_boot),
-                "per_subclass": _per_class(sub_exp_norm, sub_pred_norm),
+                "per_subclass": per_subclass,
                 "n_subclass_scored": len(sub_ok),
+                **_macros_from_per_class(per_subclass, prefix="subclass_"),
             })
         return result
 
