@@ -191,6 +191,66 @@ def test_sync_sorter_results_forwards_session(tmp_path):
                                                session="run_a", max_items=None)
 
 
+def test_row_from_trace_document_pipeline():
+    trace = {
+        "id": "abc",
+        "name": "document-pipeline",
+        "sessionId": "pilot-hf-1",
+        "userId": "eval",
+        "release": "mailroom@0.5.0",
+        "environment": "pilot",
+        "input": {
+            "filename": "claim.txt",
+            "ground_truth": {
+                "expected_hf_class": "insurance_claim",
+                "expected_subclass": "carrier",
+            },
+        },
+        "output": {
+            "doc_type": "insurance_claim",
+            "stage": "archived",
+            "classification_confidence": 0.97,
+        },
+        "metadata": {},
+    }
+    row = ls.row_from_trace(trace, task=ls.PIPELINE_TRACE)
+    assert row["exact_ok"] is True
+    assert row["aligned_ok"] is True
+    assert row["user_id"] == "eval"
+    assert row["release"] == "mailroom@0.5.0"
+    assert row["expected"] == "insurance_claim"
+
+
+def test_row_from_trace_pipeline_aligns_merger():
+    trace = {
+        "id": "m",
+        "name": "document-pipeline",
+        "input": {"filename": "ma.txt", "ground_truth": {"expected_hf_class": "merger_agreement"}},
+        "output": {"doc_type": "contract"},
+        "metadata": {},
+    }
+    row = ls.row_from_trace(trace, task=ls.PIPELINE_TRACE)
+    assert row["exact_ok"] is False
+    assert row["aligned_ok"] is True
+
+
+def test_aggregate_run_pipeline():
+    rows = [
+        {"expected": "merger_agreement", "predicted": "contract",
+         "exact_ok": False, "aligned_ok": True,
+         "expected_subclass": "all_cash", "predicted_subclass": "all_cash",
+         "user_id": "u", "release": "mailroom@0.5.0", "environment": "pilot"},
+        {"expected": "contract", "predicted": "contract",
+         "exact_ok": True, "aligned_ok": True,
+         "expected_subclass": None, "predicted_subclass": None},
+    ]
+    rec = ls.aggregate_run("pilot-hf-1", rows, task=ls.PIPELINE_TRACE)
+    assert rec["scores"]["pipeline"]["exact_accuracy"] == 0.5
+    assert rec["scores"]["pipeline"]["aligned_accuracy"] == 1.0
+    assert rec["scores"]["pipeline"]["subclass_accuracy"] == 1.0
+    assert rec["release"] == "mailroom@0.5.0"
+
+
 # ---------------------------------------------------------------------------
 # Live integration (opt-in)
 # ---------------------------------------------------------------------------

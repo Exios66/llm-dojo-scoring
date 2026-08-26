@@ -3,6 +3,54 @@
 All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
+## [0.9.0] - 2026-08-26
+
+### Added
+
+- **`llm_dojo_scoring.mailroom`** — live LLM-Mailroom / The-Mailroom
+  pipeline contract (PRs #21–#29 / The-Mailroom #10). Live five-class
+  roster, `unknown` routing token, `merger_agreement` → `contract`
+  extract alias, Hub subclass inventories, Langfuse observation-type
+  map, score transport aliases, `user_id` / `release` identity, and
+  exact vs aligned HF classification (`merger_agreement` ≡ `contract`).
+- **25th agent profile: `intake`** — procedural intake clerk (span
+  `normalize-intake`). Emit-only; never requires ground truth.
+- **CUAD / MAUD inventory fields** on the contracts / merger extraction
+  maps: `cuad_family`, `merger_consideration`, `cuad_clauses`,
+  `maud_clauses` (mailroom Hub specialist hardening).
+- **Hub SEC form-body inventory** as the `compliance_filing` subclass
+  catalog (zero corpus rows still; inventory is live extract enum).
+- Registry: `extraction_verified_precision` (35-char Langfuse wire
+  alias of `extraction_overall_verified_precision`),
+  `mailroom-pipeline-judge`, `mailroom-pipeline-quality`,
+  `exact_accuracy`, `aligned_accuracy`, `subclass_accuracy`.
+  Family token `LIVE_SPECIALISTS`.
+- Langfuse sync understands `document-pipeline` traces (filename,
+  `expected_hf_class`, exact/aligned, `user_id`, `release`,
+  `environment`). Config reads `LANGFUSE_RELEASE`,
+  `MAILROOM_TRACE_USER_ID`, `LANGFUSE_FLUSH_AT` /
+  `LANGFUSE_FLUSH_INTERVAL`, `OBSERVABILITY_ENVIRONMENT`.
+- `LangfuseSink` emits the short transport alias on the wire.
+- `list_suites(live_only=True)` hides retired specialists.
+- `score_task("pipeline" | "document-pipeline")` for HF eval.
+
+### Changed
+
+- **Retired live specialists** `court_opinions_specialist` and
+  `due_diligence_specialist` (and their auditors) are flagged
+  `ScoringSuite.retired=True`. Suites remain for historical traces and
+  LegalBench; the sorter emits `unknown` instead of extracting.
+- Insurance `claim_type` enum includes CMS source-table tokens
+  (`pde`/`inpatient`/`outpatient`/`carrier`) plus legacy FNOL lines.
+  `adjuster` null matches empty (CMS rows).
+- Package version **0.9.0**.
+
+Honesty mandate unchanged: no invented KPIs. Enron content scorers,
+MAUD per-question extraction scorers, and WER/CER remain documented
+gaps.
+
+Suite: 258 passed / 5 skipped (was 244/5).
+
 ## [0.8.1] - 2026-08-25
 
 ### Added

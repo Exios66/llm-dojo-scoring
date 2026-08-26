@@ -111,7 +111,10 @@ def test_absent_corpus_types_are_honest():
         assert schema["honest_gap"] and "zero rows" in schema["honest_gap"]
         suite = get_suite(doc_type)
         assert suite.in_corpus is False
-        assert suite.subclasses == ()
+        if doc_type == "compliance_filing":
+            assert "10-K" in suite.subclasses
+        else:
+            assert suite.subclasses == ()
 
 
 def test_insurance_gt_fields_are_on_the_suite():
@@ -131,6 +134,8 @@ def test_insurance_gt_fields_are_on_the_suite():
 def test_contract_suite_has_cuad_clause_surface_and_document_name():
     suite = get_suite("contract")
     assert "document_name" in suite.field_types
+    assert "cuad_family" in suite.field_types
+    assert "maud_clauses" in suite.field_types
     assert "extraction_category_presence" in suite.metric_names()
     assert "Parties" in CUAD_CLAUSE_CATEGORIES
     assert "Type of Consideration" in MAUD_QUESTION_KEYS

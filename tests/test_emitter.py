@@ -97,6 +97,29 @@ def test_sum_aggregation_for_cost(tmp_path):
     assert em.get_scorecard("sorter")["estimated_cost_usd"] == pytest.approx(0.6)
 
 
+def test_langfuse_sink_uses_transport_alias():
+    captured = {}
+
+    class _Client:
+        def score(self, **kwargs):
+            captured.update(kwargs)
+
+        def flush(self):
+            return None
+
+    sink = LangfuseSink(client=_Client())
+    sink.emit(
+        ScoreRecord(
+            agent="contracts_specialist",
+            metric="extraction_overall_verified_precision",
+            value=0.9,
+            metadata={"trace_id": "t1", "data_type": "NUMERIC"},
+        )
+    )
+    assert captured["name"] == "extraction_verified_precision"
+    assert captured["trace_id"] == "t1"
+
+
 def test_langfuse_sink_inert_without_keys(monkeypatch):
     """Without keys the sink marks itself unavailable and never raises."""
     import os
