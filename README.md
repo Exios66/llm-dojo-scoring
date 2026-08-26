@@ -13,18 +13,18 @@ artifacts (`Sorter_Experiment_Results.xlsx`, `Sorter_Model_Sweep_Results.xlsx`,
 
 ## Install
 
-Published release: [v0.9.0](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.9.0)
-(`f815544` on `main`). Dependents pin the **tag**, not a floating SHA.
+Published release: [v0.10.0](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.10.0).
+Dependents pin the **tag**, not a floating SHA.
 
 ```bash
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.9.0"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.10.0"
 pip install -e .                # from a local checkout
 ```
 
 In **llm-entity-extraction** / **llm-mailroom** `pyproject.toml`:
 
 ```
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.9.0
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.10.0
 ```
 
 ```python
@@ -128,7 +128,9 @@ print(dojo.render_notes(interp))
 | Module | Replaces (in llm-entity-extraction / llm-mailroom) | What it does |
 |---|---|---|
 | `field_scoring` | `src/field_scoring.py` | Field-type-aware deterministic extraction scoring (`score_extraction`, scalar/list scorers, factuality audit, category presence) |
-| `classification` | `src/scorers.py` | Label normalization, exact match, per-class stats, macro accuracy, confusion matrices, binary P/R/F1 |
+| `classification` | `src/scorers.py` | Label normalization, exact match, per-class P/R/F1/F2, macro-PRF, confusion matrices, binary P/R/F1/F2 |
+| `extraction_metrics` | — (new) | Field-micro extraction P/R/F1/F2 over (field, value) events — additive to the soft `extraction_overall_score` mean |
+| `claims_consistency` | — (new) | Insurance `determination_consistency` and `amount_exactness` |
 | `failure_modes` | `scripts/eval/run_subtype_eval.py` | Failure-mode taxonomy + `classify_failure`, per-subtype accuracy, confusion builders |
 | `equivalences` | `agents/sorter_agent.py` (constants) | Subtype/doc-subclass normalization + equivalence helpers |
 | `bootstrap` | `src/bootstrap.py` | Bootstrap CIs, two-sample delta significance, Wilson intervals |
@@ -145,7 +147,7 @@ print(dojo.render_notes(interp))
 | `bundles` | — (new) | Ten pre-built **task** bundles (classification, extraction, extraction_open, cost, factuality, laziness_detection, audit, reporter, transcription, intake), fail-fast validated against the registry |
 | `profiles` | — (new) | **25 agent profiles** — each agent's scoring identity (task-derived bundle resolution, fallback bundle, ground-truth flag); YAML overlay via `LLM_DOJO_SCORING_PROFILES` |
 | `suites` | — (new) | **Dedicated scoring suite per pipeline agent** — importable `get_suite` / `score_suite` with field-type maps, doc-type aliases, and honest-gap notes; the API mailroom consumers should call. `list_suites(live_only=True)` hides retired court/DD specialists |
-| `doc_bundles` | — (new) | **Document-type-aware bundles** for the eight processed document classes; honest-gap mandate where type-specific scorers are still pending (insurance determination-consistency, retired court/DD, zero-row compliance, corporate_record with no external extraction benchmark) |
+| `doc_bundles` | — (new) | **Document-type-aware bundles** for the eight processed document classes; remaining honest gaps: retired court/DD, zero-row compliance, corporate_record with no *external* extraction benchmark, CMS GT homogeneity (all-approved) |
 | `mailroom` | — (new) | Live LLM-Mailroom / The-Mailroom contract: five extract classes, `unknown`, merger extract alias, Hub inventories, Langfuse observation types, 35-char score alias, exact vs aligned HF accuracy |
 | `content_scoring` | — (new) | Enron `content_topic` / `sentiment_label` accuracy + macro-F1; MAUD per-question extraction over the 22 Hub keys |
 | `asr` | — (new) | WER / CER / word-accuracy for PDF transcription and OCR |
@@ -166,7 +168,7 @@ subtype focus to the full merged taxonomy:
 | Task key | What it scores | Headline metrics |
 |---|---|---|
 | `subtype` / `doc_class` / `multiclass` | CUAD 25-family subtype, primary doc-class, generic multi-class | exact match + CI, macro accuracy, per-class, confusion, top confusions |
-| `docclass` / `maud_docclass` | hierarchical doc_type **+** second-level subclass (MAUD consideration type) | doc_type accuracy + CI, subclass accuracy strict/equiv, exact match, per-subclass |
+| `docclass` / `maud_docclass` | hierarchical doc_type **+** second-level subclass (MAUD consideration type) | doc_type accuracy + macro P/R/F1/F2, subclass accuracy + subclass macro-F1, exact match, per-class P/R/F1 |
 | `maud_question` | MAUD Type-of-Consideration answers (`All Cash` → `all_cash`) | exact match + CI, per-class, macro |
 | `maud_extraction` | MAUD 22 Hub `maud_clause_labels` questions (or `'<Question>: <Answer>'` spans) | per-question exact / valid-class / presence / category |
 | `enron_topic` / `content_topic` | Enron correspondence topics (11 labels) | accuracy, macro-F1, per-class, confusion |
@@ -281,7 +283,10 @@ card = emitter.get_scorecard("sorter", "exp_42", min_tier=1)   # dashboard view
 dojo.dashboard_metrics("contracts_specialist")   # profile bundle ∩ T0+T1
 dojo.headline_metrics("judge")                   # strictly T0
 
-# 6. v0.9.0 extras — intake clerk, live-only suites
+# 6. v0.10.0 extras — specialist F1/F2 headlines, insurance consistency
+assert "extraction_f1" in dojo.headline_metrics("contracts_specialist")
+assert "extraction_f2" in dojo.headline_metrics("insurance_claims_specialist")
+assert "content_topic_f1_macro" in dojo.headline_metrics("correspondence_specialist")
 raw = "A hyphen-\nated  line"
 cleaned, _stats = dojo.apply_intake(raw)
 intake = dojo.get_suite("intake").score(raw, cleaned)

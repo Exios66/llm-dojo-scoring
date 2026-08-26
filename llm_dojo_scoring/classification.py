@@ -70,23 +70,48 @@ def accuracy(expected: list, predicted: list) -> float:
     return round(hits / len(expected), 4)
 
 
-def per_class_stats(expected: list, predicted: list) -> dict[str, dict]:
-    """Aggregate exact-match accuracy per expected class.
+def fbeta(precision: float, recall: float, *, beta: float = 1.0) -> float:
+    """van Rijsbergen F-beta. ``beta=1`` is F1; ``beta=2`` recall-weights F2."""
+    if precision <= 0.0 and recall <= 0.0:
+        return 0.0
+    b2 = beta * beta
+    denom = b2 * precision + recall
+    if denom == 0.0:
+        return 0.0
+    return round((1.0 + b2) * precision * recall / denom, 4)
 
-    Returns ``{class: {"n": int, "correct": int, "accuracy": float}}``.
+
+def per_class_stats(expected: list, predicted: list) -> dict[str, dict]:
+    """Aggregate exact-match accuracy plus one-vs-rest P/R/F1 per expected class.
+
+    Returns ``{class: {n, correct, accuracy, precision, recall, f1, f2}}``.
     Failed rows (``ERROR_PREFIX`` predictions) are skipped entirely.
     """
-    by_class: dict[str, dict] = {}
+    pairs: list[tuple[str, str]] = []
     for e, p in zip(expected, predicted):
-        cls = normalize_label(e)
         out = str(p)
         if out.startswith(ERROR_PREFIX):
             continue
-        bucket = by_class.setdefault(cls, {"n": 0, "correct": 0})
-        bucket["n"] += 1
-        bucket["correct"] += int(normalize_label(out) == cls)
-    for bucket in by_class.values():
-        bucket["accuracy"] = round(bucket["correct"] / bucket["n"], 4) if bucket["n"] else 0.0
+        pairs.append((normalize_label(e), normalize_label(out)))
+    by_class: dict[str, dict] = {}
+    labels = sorted({e for e, _ in pairs})
+    for cls in labels:
+        n = sum(1 for e, _ in pairs if e == cls)
+        correct = sum(1 for e, p in pairs if e == cls and p == cls)
+        tp = correct
+        fp = sum(1 for e, p in pairs if e != cls and p == cls)
+        fn = sum(1 for e, p in pairs if e == cls and p != cls)
+        precision = round(tp / (tp + fp), 4) if tp + fp else 0.0
+        recall = round(tp / (tp + fn), 4) if tp + fn else 0.0
+        by_class[cls] = {
+            "n": n,
+            "correct": correct,
+            "accuracy": round(correct / n, 4) if n else 0.0,
+            "precision": precision,
+            "recall": recall,
+            "f1": fbeta(precision, recall, beta=1.0),
+            "f2": fbeta(precision, recall, beta=2.0),
+        }
     return by_class
 
 
@@ -149,11 +174,72 @@ def binary_metrics(expected: list, predicted: list, positive: str,
             tn += 1
     precision = round(tp / (tp + fp), 4) if tp + fp else 0.0
     recall = round(tp / (tp + fn), 4) if tp + fn else 0.0
-    f1 = round(2 * precision * recall / (precision + recall), 4) if precision + recall else 0.0
+    f1 = fbeta(precision, recall, beta=1.0)
+    f2 = fbeta(precision, recall, beta=2.0)
+    total = tp + tn + fp + fn
     return {
         "tp": tp, "tn": tn, "fp": fp, "fn": fn,
-        "precision": precision, "recall": recall, "f1": f1,
-        "accuracy": round((tp + tn) / (tp + tn + fp + fn), 4) if tp + tn + fp + fn else 0.0,
+        "precision": precision, "recall": recall, "f1": f1, "f2": f2,
+        "accuracy": round((tp + tn) / total, 4) if total else 0.0,
+        "false_positive_rate": round(fp / (fp + tn), 4) if fp + tn else 0.0,
+        "false_negative_rate": round(fn / (fn + tp), 4) if fn + tp else 0.0,
+    }
+
+
+def macro_prf(expected: list, predicted: list, *, normalize: bool = True) -> dict:
+    """Unweighted mean of one-vs-rest P/R/F1/F2 over labels in *expected*.
+
+    Standard multiclass macro-average for imbalanced doc-type / subclass
+    catalogs (sorter T0 ``f1_macro``). Failed ``ERROR_PREFIX`` rows are skipped.
+    """
+    pairs: list[tuple[str, str]] = []
+    for e, p in zip(expected, predicted):
+        if str(p).startswith(ERROR_PREFIX):
+            continue
+        ev = normalize_label(e) if normalize else str(e)
+        pv = normalize_label(p) if normalize else str(p)
+        pairs.append((ev, pv))
+    labels = sorted({e for e, _ in pairs if e})
+    empty = {
+        "precision_macro": 0.0,
+        "recall_macro": 0.0,
+        "f1_macro": 0.0,
+        "f2_macro": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f2": 0.0,
+        "per_class": {},
+        "n": len(pairs),
+        "n_classes": 0,
+    }
+    if not labels:
+        return empty
+    exp = [e for e, _ in pairs]
+    pred = [p for _, p in pairs]
+    per_class = per_class_stats(exp, pred) if not normalize else per_class_stats(
+        # already normalized; per_class_stats normalizes again (idempotent)
+        exp, pred,
+    )
+    # Restrict to labels that appeared in expected.
+    per_class = {k: v for k, v in per_class.items() if k in set(labels)}
+    n_cls = len(per_class)
+    if not n_cls:
+        return empty
+    precision_macro = round(sum(s["precision"] for s in per_class.values()) / n_cls, 4)
+    recall_macro = round(sum(s["recall"] for s in per_class.values()) / n_cls, 4)
+    f1_macro = round(sum(s["f1"] for s in per_class.values()) / n_cls, 4)
+    f2_macro = round(sum(s["f2"] for s in per_class.values()) / n_cls, 4)
+    return {
+        "precision_macro": precision_macro,
+        "recall_macro": recall_macro,
+        "f1_macro": f1_macro,
+        "f2_macro": f2_macro,
+        "precision": precision_macro,
+        "recall": recall_macro,
+        "f2": f2_macro,
+        "per_class": per_class,
+        "n": len(pairs),
+        "n_classes": n_cls,
     }
 
 
@@ -185,7 +271,8 @@ def class_distribution(labels: list) -> dict[str, int]:
 
 __all__ = [
     "ERROR_PREFIX", "normalize_label", "exact_match", "failure", "accuracy",
-    "per_class_stats", "macro_accuracy", "confusion_matrix",
+    "fbeta", "per_class_stats", "macro_accuracy", "macro_prf",
+    "confusion_matrix",
     "binary_metrics", "confusion_accuracy", "top_confusions",
     "class_distribution",
 ]
