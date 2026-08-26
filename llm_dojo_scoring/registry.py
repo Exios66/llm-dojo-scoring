@@ -266,7 +266,7 @@ metrics:
     description: "Macro-averaged F1 across classes — the universal classifier headline"
     applicable_agents: [ALL]
     aggregation: mean
-    source: "classification.binary_metrics"
+    source: "classification.macro_prf"
   accuracy:
     tier: 0
     description: "Overall exact-match accuracy"
@@ -279,6 +279,19 @@ metrics:
     applicable_agents: [SPECIALISTS]
     aggregation: mean
     source: "field_scoring.score_extraction"
+  extraction_f1:
+    tier: 0
+    description: "Field-micro F1 over (field, value) events (ACE / CoNLL / SemEval slot filling)"
+    applicable_agents: [SPECIALISTS]
+    aggregation: mean
+    source: "extraction_metrics.extraction_binary_metrics"
+  extraction_f2:
+    tier: 0
+    description: "Field-micro F2 (β=2, van Rijsbergen) — recall-weighted; insurance claims board number"
+    applicable_agents: [SPECIALISTS]
+    aggregation: mean
+    source: "extraction_metrics.extraction_binary_metrics"
+    notes: "Partial list matches are not TP; they stay in extraction_overall_score"
 
   # ===================== T1 — CORE =====================
   precision:
@@ -340,6 +353,67 @@ metrics:
     description: "Recall over extracted list items (bipartite match)"
     applicable_agents: [SPECIALISTS]
     source: "field_scoring.score_entity_list"
+  entity_list_f1:
+    tier: 1
+    description: "Mean entity-list bipartite F1 (dashboard name for diagnostics.entity_list_raw_f1)"
+    applicable_agents: [SPECIALISTS]
+    source: "extraction_metrics.mean_entity_list_f1"
+    notes: "existing diagnostics.entity_list_raw_f1 registered under this name"
+  extraction_precision:
+    tier: 1
+    description: "Field-micro precision over (field, value) extraction events"
+    applicable_agents: [SPECIALISTS]
+    source: "extraction_metrics.extraction_binary_metrics"
+  extraction_recall:
+    tier: 1
+    description: "Field-micro recall over (field, value) extraction events"
+    applicable_agents: [SPECIALISTS]
+    source: "extraction_metrics.extraction_binary_metrics"
+  determination_consistency:
+    tier: 1
+    description: "Insurance coverage_determination agrees with denial_reasons (approved ⇒ empty; denied/partial ⇒ non-empty)"
+    applicable_agents: [insurance_claims_specialist]
+    source: "claims_consistency.determination_consistency"
+  amount_exactness:
+    tier: 1
+    description: "Claimed-amount exact match after money normalize (complement of money_mae_usd)"
+    applicable_agents: [insurance_claims_specialist]
+    source: "claims_consistency.amount_exactness"
+  precision_macro:
+    tier: 1
+    description: "Unweighted mean of one-vs-rest precision (doc_type)"
+    applicable_agents: [CLASSIFIERS]
+    source: "classification.macro_prf"
+  recall_macro:
+    tier: 1
+    description: "Unweighted mean of one-vs-rest recall (doc_type)"
+    applicable_agents: [CLASSIFIERS]
+    source: "classification.macro_prf"
+  f2_macro:
+    tier: 1
+    description: "Unweighted mean of one-vs-rest F2 (doc_type)"
+    applicable_agents: [CLASSIFIERS]
+    source: "classification.macro_prf"
+  subclass_f1_macro:
+    tier: 1
+    description: "Macro-F1 over doc subclasses (CUAD family / CMS table / Enron form / …)"
+    applicable_agents: [CLASSIFIERS]
+    source: "tasks.score_task"
+  subclass_precision_macro:
+    tier: 1
+    description: "Macro precision over doc subclasses"
+    applicable_agents: [CLASSIFIERS]
+    source: "tasks.score_task"
+  subclass_recall_macro:
+    tier: 1
+    description: "Macro recall over doc subclasses"
+    applicable_agents: [CLASSIFIERS]
+    source: "tasks.score_task"
+  subclass_f2_macro:
+    tier: 1
+    description: "Macro F2 over doc subclasses"
+    applicable_agents: [CLASSIFIERS]
+    source: "tasks.score_task"
   verified_precision:
     tier: 1
     description: "Precision restricted to doc-verifiable items"
@@ -510,10 +584,11 @@ metrics:
     applicable_agents: [correspondence_specialist]
     source: "content_scoring.score_content_topic"
   content_topic_f1_macro:
-    tier: 1
-    description: "Enron correspondence content_topic macro-F1 over expected topics"
+    tier: 0
+    description: "Enron correspondence content_topic macro-F1 over expected topics (imbalanced 11-way)"
     applicable_agents: [correspondence_specialist]
     source: "content_scoring.score_content_topic"
+    notes: "Promoted to T0 — topic imbalance makes macro-F1 the correspondence board number"
   sentiment_accuracy:
     tier: 1
     description: "Enron correspondence sentiment_label accuracy (negative/neutral/positive)"

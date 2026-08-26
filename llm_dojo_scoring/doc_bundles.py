@@ -32,7 +32,8 @@ corporate_record    39 rows (record-type subclass) — no external
 compliance_filing   zero rows in the published merge — extraction schema
 court_opinion       zero rows in the published merge; LegalBench metrics
 insurance_claim     CMS DE-SynPUF (400 rows, source-table subclass) —
-                    claims consistency scorers PENDING; today = extraction
+                    determination_consistency + amount_exactness computed;
+                    GT is homogeneous (all-approved / empty denials)
 ==================  =====================================================
 """
 
@@ -80,9 +81,14 @@ def _doc(
 
 _EXTRACTION_BASE: tuple[str, ...] = (
     "extraction_overall_score",
+    "extraction_f1",
+    "extraction_f2",
+    "extraction_precision",
+    "extraction_recall",
     "field_presence",
     "entity_list_precision",
     "entity_list_recall",
+    "entity_list_f1",
     "verified_precision",
     "completeness",
     "schema_valid",
@@ -179,8 +185,10 @@ DOC_TYPE_BUNDLES: dict[str, Bundle] = {
         ),
         (
             "corporate_record",
-            "Corporate records — no external benchmark (synthetic samples "
-            "only); typed-extraction base",
+            "Corporate records — no *external* extraction benchmark "
+            "(39-row GT is enough for field-micro P/R/F1/F2; do not claim "
+            "CUAD/MAUD-grade coverage). record_type is a typed name field "
+            "plus the subclass catalog.",
             _EXTRACTION_BASE,
             {
                 "corporate_records_specialist": (
@@ -220,12 +228,11 @@ DOC_TYPE_BUNDLES: dict[str, Bundle] = {
         ),
         (
             "insurance_claim",
-            "Insurance claims — HONEST GAP: no external benchmark yet; CMS "
-            "DE-SynPUF is the candidate corpus (EDA pending), so samples "
-            "are synthetic-only today. Claims-specific scorers "
-            "(determination-consistency, amount-exactness) land here when "
-            "implemented; today this is the typed-extraction base plus "
-            "date/money diagnostics.",
+            "Insurance claims — CMS DE-SynPUF grounded. Field-micro P/R/F1/F2 "
+            "plus determination_consistency and amount_exactness. HONEST GAP: "
+            "published GT is homogeneous (all coverage_determination=approved, "
+            "empty denial_reasons), so consistency is degenerate on "
+            "GT-shaped predictions rather than a missing scorer.",
             _EXTRACTION_BASE,
             {
                 "insurance_claims_specialist": (
@@ -233,6 +240,8 @@ DOC_TYPE_BUNDLES: dict[str, Bundle] = {
                     "money_mae_usd",
                     "per_field_scores",
                     "hallucination_rate",
+                    "determination_consistency",
+                    "amount_exactness",
                 ),
             },
         ),

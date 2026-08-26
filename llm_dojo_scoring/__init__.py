@@ -10,7 +10,7 @@ scoring code (``src/field_scoring.py``, ``src/metrics.py``, ``src/bootstrap.py``
 
 from __future__ import annotations
 
-__version__ = "0.9.0"
+__version__ = "0.10.0"
 
 from . import (
     bundles,
@@ -25,6 +25,7 @@ from . import (
     asr,
     bootstrap,
     classification,
+    claims_consistency,
     config,
     content_scoring,
     cost,
@@ -33,6 +34,7 @@ from . import (
     error_analysis,
     experiment,
     export,
+    extraction_metrics,
     failure_modes,
     field_scoring,
     intake,
@@ -52,7 +54,9 @@ from .classification import (
     binary_metrics,
     confusion_matrix,
     exact_match,
+    fbeta,
     macro_accuracy,
+    macro_prf,
     normalize_label,
     per_class_stats,
 )
@@ -75,6 +79,16 @@ from .field_scoring import (
     score_extraction,
     score_field,
     score_entity_list,
+)
+from .extraction_metrics import (
+    extraction_binary_metrics,
+    mean_entity_list_f1,
+    merge_extraction_counts,
+)
+from .claims_consistency import (
+    amount_exactness,
+    determination_consistency,
+    score_claims_extras,
 )
 from .config import (
     Settings,
@@ -177,13 +191,13 @@ from .registry import (
 
 __all__ = [
     "__version__",
-    "bootstrap", "classification", "config", "content_scoring", "cost", "diagnostics",
-    "equivalences", "error_analysis", "experiment", "export", "failure_modes",
+    "bootstrap", "classification", "claims_consistency", "config", "content_scoring", "cost", "diagnostics",
+    "equivalences", "error_analysis", "experiment", "export", "extraction_metrics", "failure_modes",
     "field_scoring", "io", "interpret", "langfuse_sync", "phoenix_sync",
     "report", "asr", "corpus", "intake", "mailroom", "suites", "tasks", "visualize",
     "bootstrap_ci", "delta_significance", "wilson_ci",
     "accuracy", "binary_metrics", "confusion_matrix", "exact_match",
-    "macro_accuracy", "normalize_label", "per_class_stats",
+    "fbeta", "macro_accuracy", "macro_prf", "normalize_label", "per_class_stats",
     "estimate_cost", "tokens_summary",
     "equivalent_doc_subclasses", "equivalent_subtypes",
     "normalize_doc_subclass", "normalize_subtype",
@@ -191,6 +205,8 @@ __all__ = [
     "summarize_failures",
     "EntityListScore", "ExtractionScoreResult", "score_extraction",
     "score_field", "score_entity_list",
+    "extraction_binary_metrics", "mean_entity_list_f1", "merge_extraction_counts",
+    "amount_exactness", "determination_consistency", "score_claims_extras",
     "Settings", "clear_settings_cache", "configure", "get_settings",
     "load_settings",
     "chained_composite", "chained_summary", "court_opinion_score",
