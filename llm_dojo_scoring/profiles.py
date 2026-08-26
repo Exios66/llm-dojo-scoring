@@ -15,9 +15,9 @@ Example YAML::
         metrics_bundle: audit
         fallback_bundle: extraction
 
-The default profile table covers every pipeline agent: sorter, seven
-specialists (incl. insurance_claims), reporter, judge, boss,
-pdf_transcriber, image_extractor, archivist, audit_agent, the
+the default profile table covers every pipeline agent: sorter, seven
+specialists (five live + two retired), reporter, judge, boss,
+pdf_transcriber, image_extractor, archivist, intake clerk, audit_agent, the
 review/audit lanes (sorter_reviewer, per-specialist auditors, arbiter),
 and the insurance_claims_auditor companion.
 """
@@ -206,6 +206,13 @@ DEFAULT_PROFILES: dict[str, AgentProfile] = {
         _p("pdf_transcriber", "PDF→Text", ("transcribe",), "transcription"),
         _p("image_extractor", "Image→Text/OCR", ("transcribe",), "transcription"),
         _p("archivist", "Storage/Indexing", ("store",), "cost", ground_truth=False),
+        _p(
+            "intake",
+            "Intake Clerk",
+            ("store",),
+            "cost",
+            ground_truth=False,
+        ),
         _p(
             "audit_agent",
             "Specialist Output Verification",

@@ -47,6 +47,7 @@ SORTER_TRACE = "subtype_classification"
 DOCCLASS_TRACE = "docclass_classification"
 EXTRACTION_TRACE = "contract_entity_extraction"
 CHAINED_TRACE = "chained_sorter_extractor"
+PIPELINE_TRACE = "document-pipeline"
 
 # Fallback file names for credential discovery (also tried as config/*.env).
 _ENV_FILES = ("langfuse.env", ".env", "config/environments/langfuse.env")
@@ -69,6 +70,10 @@ class LangfuseConfig:
     secret_key: str
     project: str = DEFAULT_PROJECT
     environment: str = DEFAULT_ENVIRONMENT
+    release: str | None = None
+    user_id: str | None = None
+    flush_at: int | None = None
+    flush_interval: float | None = None
 
 
 def _load_dotenv(path: Path) -> None:
@@ -123,13 +128,41 @@ def load_langfuse_config(env_file: str | Path | None = None) -> LangfuseConfig:
         value = os.environ.get(name)
         return value if value not in (None, "") else default
 
+    def get_int(name: str) -> int | None:
+        raw = get(name)
+        if not raw:
+            return None
+        try:
+            return int(raw)
+        except ValueError:
+            return None
+
+    def get_float(name: str) -> float | None:
+        raw = get(name)
+        if not raw:
+            return None
+        try:
+            return float(raw)
+        except ValueError:
+            return None
+
     base_url = get("LANGFUSE_HOST") or get("LANGFUSE_BASE_URL", DEFAULT_BASE_URL)
+    environment = (
+        get("LANGFUSE_ENVIRONMENT")
+        or get("OBSERVABILITY_ENVIRONMENT")
+        or get("LANGFUSE_TRACING_ENVIRONMENT")
+        or DEFAULT_ENVIRONMENT
+    )
     return LangfuseConfig(
         base_url=base_url.rstrip("/"),
         public_key=get("LANGFUSE_PUBLIC_KEY"),
         secret_key=get("LANGFUSE_SECRET_KEY"),
         project=get("LANGFUSE_PROJECT", DEFAULT_PROJECT),
-        environment=get("LANGFUSE_ENVIRONMENT", DEFAULT_ENVIRONMENT),
+        environment=environment,
+        release=get("LANGFUSE_RELEASE") or None,
+        user_id=get("MAILROOM_TRACE_USER_ID") or None,
+        flush_at=get_int("LANGFUSE_FLUSH_AT"),
+        flush_interval=get_float("LANGFUSE_FLUSH_INTERVAL"),
     )
 
 
@@ -257,13 +290,81 @@ _TASK_ROW_KEYS: dict[str, tuple] = {
 }
 
 
+def _row_from_pipeline_trace(trace: dict) -> dict | None:
+    """Normalize a live ``document-pipeline`` trace (llm-mailroom / The-Mailroom)."""
+    from .mailroom import GROUND_TRUTH_KEYS, align_doc_type, trace_identity
+
+    inp = trace.get("input") or {}
+    if not isinstance(inp, dict):
+        inp = {}
+    out = trace.get("output") or {}
+    if not isinstance(out, dict):
+        out = {}
+    meta = trace.get("metadata") or {}
+    if not isinstance(meta, dict):
+        meta = {}
+    gt = inp.get("ground_truth") if isinstance(inp.get("ground_truth"), dict) else {}
+    identity = trace_identity(trace)
+
+    expected = None
+    for key in GROUND_TRUTH_KEYS:
+        expected = gt.get(key) or meta.get(key) or inp.get(key)
+        if expected:
+            break
+    predicted = out.get("doc_type") or (out.get("sorter") or {}).get("doc_type")
+    subclass = (
+        gt.get("expected_subclass")
+        or meta.get("expected_subclass")
+        or (out.get("sorter") or {}).get("expected_subclass")
+    )
+    predicted_subclass = (
+        (out.get("sorter") or {}).get("doc_subclass")
+        or (out.get("sorter") or {}).get("contract_subtype")
+        or out.get("doc_subclass")
+    )
+    if not expected and not predicted:
+        return None
+    exact_ok = (
+        str(expected).strip().lower() == str(predicted).strip().lower()
+        if expected and predicted
+        else False
+    )
+    aligned_ok = (
+        align_doc_type(expected) == align_doc_type(predicted)
+        if expected and predicted
+        else False
+    )
+    return {
+        "filename": inp.get("filename"),
+        "trace_id": identity["trace_id"],
+        "session_id": identity["session_id"],
+        "user_id": identity["user_id"],
+        "release": identity["release"],
+        "environment": identity["environment"],
+        "expected": expected,
+        "predicted": predicted,
+        "expected_subclass": subclass,
+        "predicted_subclass": predicted_subclass,
+        "exact_ok": exact_ok,
+        "aligned_ok": aligned_ok,
+        "stage": out.get("stage"),
+        "classification_confidence": out.get("classification_confidence")
+        or (out.get("sorter") or {}).get("confidence"),
+        "extraction_confidence": out.get("extraction_confidence"),
+        "run_aborted": bool(out.get("run_aborted")),
+        "tags": identity["tags"],
+    }
+
+
 def row_from_trace(trace: dict, task: str = SORTER_TRACE) -> dict | None:
     """One normalized per-document result row from a Langfuse trace.
 
-    Returns None for traces without sorter output (skipped rows). The row uses
-    the keys the dojo failure/accuracy aggregators expect, plus the raw trace
-    id and filename for the failure ledger.
+    Returns None for traces without sorter / pipeline output (skipped rows).
     """
+    name = (trace.get("name") or task or "").strip()
+    if task == PIPELINE_TRACE or name == PIPELINE_TRACE:
+        return _row_from_pipeline_trace(trace)
+
     output = trace.get("output") or {}
     sorter = output.get("sorter") or output if isinstance(output, dict) else {}
     if not isinstance(sorter, dict) or not (
@@ -272,10 +373,20 @@ def row_from_trace(trace: dict, task: str = SORTER_TRACE) -> dict | None:
     ):
         return None
     inp = trace.get("input") or {}
+    identity = None
+    try:
+        from .mailroom import trace_identity
+
+        identity = trace_identity(trace)
+    except Exception:
+        identity = {"trace_id": trace.get("id"), "user_id": None, "release": None}
     if task == SORTER_TRACE:
         return {
             "filename": inp.get("filename"),
-            "trace_id": trace.get("id"),
+            "trace_id": identity.get("trace_id") or trace.get("id"),
+            "user_id": identity.get("user_id"),
+            "release": identity.get("release"),
+            "environment": identity.get("environment"),
             "expected_subtype": sorter.get("expected_subtype"),
             "contract_subtype": sorter.get("contract_subtype"),
             "subtype_ok": bool(sorter.get("subtype_ok")),
@@ -287,7 +398,10 @@ def row_from_trace(trace: dict, task: str = SORTER_TRACE) -> dict | None:
     if task == DOCCLASS_TRACE:
         return {
             "filename": inp.get("filename"),
-            "trace_id": trace.get("id"),
+            "trace_id": identity.get("trace_id") or trace.get("id"),
+            "user_id": identity.get("user_id"),
+            "release": identity.get("release"),
+            "environment": identity.get("environment"),
             "expected_subclass": sorter.get("expected_subclass"),
             "doc_subclass": sorter.get("doc_subclass"),
             "subclass_ok": bool(sorter.get("subclass_ok")),
@@ -323,6 +437,50 @@ def aggregate_run(session: str, rows: list[dict], task: str = SORTER_TRACE,
     column specs can render it into the reference workbook directly.
     """
     n = len(rows)
+    if task == PIPELINE_TRACE:
+        from .mailroom import score_aligned_classification
+
+        expected = [r.get("expected") for r in rows]
+        predicted = [r.get("predicted") for r in rows]
+        aligned = score_aligned_classification(expected, predicted)
+        n_sub = sum(
+            1
+            for r in rows
+            if r.get("expected_subclass") not in (None, "")
+            and r.get("predicted_subclass") not in (None, "")
+        )
+        n_sub_ok = sum(
+            1
+            for r in rows
+            if r.get("expected_subclass") not in (None, "")
+            and str(r.get("expected_subclass")).strip().lower()
+            == str(r.get("predicted_subclass") or "").strip().lower()
+        )
+        subclass_acc = round(n_sub_ok / n_sub, 4) if n_sub else None
+        return {
+            "type": "experiment",
+            "task": task,
+            "experiment_name": session,
+            "model": model,
+            "prompt_versions": {"pipeline": prompt_version} if prompt_version else {},
+            "timestamp": trace_ts or datetime.now(timezone.utc).isoformat(),
+            "n_rows": n,
+            "n_ok": aligned["n_aligned"],
+            "user_id": next((r.get("user_id") for r in rows if r.get("user_id")), None),
+            "release": next((r.get("release") for r in rows if r.get("release")), None),
+            "environment": next((r.get("environment") for r in rows if r.get("environment")), None),
+            "scores": {
+                "pipeline": {
+                    "exact_accuracy": aligned["exact_accuracy"],
+                    "aligned_accuracy": aligned["aligned_accuracy"],
+                    "subclass_accuracy": subclass_acc,
+                    "n": n,
+                    "n_subclass_scored": n_sub,
+                }
+            },
+            "tokens": {"pipeline": {"rows_with_usage": n}},
+            "data_source": {"project": f"langfuse:{DEFAULT_PROJECT}"},
+        }
     if task == SORTER_TRACE:
         per_doc_acc = [1.0 if r["subtype_ok"] else 0.0 for r in rows]
         per_doc_equiv = [1.0 if r["subtype_ok_equiv"] else 0.0 for r in rows]

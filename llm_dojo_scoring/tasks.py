@@ -206,6 +206,26 @@ def score_task(
             "n": len(per_row),
         }
 
+    if kind == "pipeline":
+        from .mailroom import align_doc_type, score_aligned_classification
+
+        aligned = score_aligned_classification(expected, predicted)
+        result = {"task": task, "kind": kind, **aligned}
+        if expected_subclass is not None and predicted_subclass is not None:
+            from .corpus import normalize_corpus_subclass
+
+            sub_ok = []
+            for e, p, doc in zip(expected_subclass, predicted_subclass, expected):
+                parent = align_doc_type(doc)
+                en = normalize_corpus_subclass(parent, e)
+                pn = normalize_corpus_subclass(parent, p)
+                sub_ok.append(1.0 if en == pn else 0.0)
+            result["subclass_accuracy"] = (
+                round(sum(sub_ok) / len(sub_ok), 4) if sub_ok else 0.0
+            )
+            result["n_subclass_scored"] = len(sub_ok)
+        return result
+
     if kind == "docclass":
         norm_dt = lambda v: normalize_label(v)
         doc_exp = [norm_dt(e) for e in expected]

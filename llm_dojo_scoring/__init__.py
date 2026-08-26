@@ -10,7 +10,7 @@ scoring code (``src/field_scoring.py``, ``src/metrics.py``, ``src/bootstrap.py``
 
 from __future__ import annotations
 
-__version__ = "0.8.1"
+__version__ = "0.9.0"
 
 from . import (
     bundles,
@@ -20,6 +20,7 @@ from . import (
     pruning,
     registry,
     corpus,
+    mailroom,
     suites,
     bootstrap,
     classification,
@@ -121,6 +122,18 @@ from .corpus import (
     normalize_corpus_subclass,
     suite_schema,
 )
+from .mailroom import (
+    EXTRACT_CLASS_ALIASES,
+    LIVE_DOC_TYPES,
+    LIVE_SPECIALISTS,
+    NODE_OBSERVATION_TYPES,
+    PIPELINE_TRACE,
+    align_doc_type,
+    langfuse_score_name,
+    observation_type_for,
+    resolve_extract_class,
+    score_aligned_classification,
+)
 from .suites import (
     DEFAULT_FIELD_TYPES,
     DEFAULT_SUITES,
@@ -146,7 +159,7 @@ __all__ = [
     "bootstrap", "classification", "config", "cost", "diagnostics",
     "equivalences", "error_analysis", "experiment", "export", "failure_modes",
     "field_scoring", "io", "interpret", "langfuse_sync", "phoenix_sync",
-    "report", "corpus", "suites", "tasks", "visualize",
+    "report", "corpus", "mailroom", "suites", "tasks", "visualize",
     "bootstrap_ci", "delta_significance", "wilson_ci",
     "accuracy", "binary_metrics", "confusion_matrix", "exact_match",
     "macro_accuracy", "normalize_label", "per_class_stats",
@@ -176,4 +189,8 @@ __all__ = [
     "get_suite", "list_suites", "score_suite", "suite_for_doc_type",
     "CORPUS_DOC_TYPES", "DOC_TYPE_SUBCLASSES",
     "normalize_corpus_subclass", "suite_schema",
+    "LIVE_DOC_TYPES", "LIVE_SPECIALISTS", "PIPELINE_TRACE",
+    "EXTRACT_CLASS_ALIASES", "NODE_OBSERVATION_TYPES",
+    "align_doc_type", "langfuse_score_name", "observation_type_for",
+    "resolve_extract_class", "score_aligned_classification",
 ]
