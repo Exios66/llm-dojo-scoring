@@ -68,17 +68,22 @@ def test_contract_doc_bundle_has_laziness_overrides():
     assert "laziness_rate" in extras and "hallucination_rate" in extras
 
 
-def test_merger_agreement_bundle_declares_honest_gap():
+def test_merger_agreement_bundle_has_maud_extraction_extras():
     b = get_doc_bundle("merger_agreement")
-    assert "HONEST GAP" in b.description
-    # today it mirrors the contract surface — no invented MAUD metrics
-    assert b.metric_names == get_doc_bundle("contract").metric_names
+    assert "HONEST GAP" not in b.description
+    assert "22 Hub" in b.description or "per-question" in b.description.lower()
+    extras = b.metrics_for("contracts_specialist")
+    assert "maud_question_accuracy" in extras
+    assert "maud_clause_presence" in extras
 
 
-def test_correspondence_bundle_declares_honest_gap():
+def test_correspondence_bundle_has_enron_content_extras():
     b = get_doc_bundle("correspondence")
-    assert "HONEST GAP" in b.description
+    assert "HONEST GAP" not in b.description
     assert "Enron" in b.description
+    extras = b.metrics_for("correspondence_specialist")
+    assert "content_topic_accuracy" in extras
+    assert "sentiment_f1_macro" in extras
 
 
 def test_insurance_claim_bundle_declares_honest_gap():
@@ -87,7 +92,7 @@ def test_insurance_claim_bundle_declares_honest_gap():
     assert "DE-SynPUF" in b.description
 
 
-def test_court_opinion_is_the_only_real_benchmark_doc_bundle_today():
+def test_court_opinion_bundle_ships_legalbench():
     b = get_doc_bundle("court_opinion")
     extras = b.metrics_for("court_opinions_specialist")
     assert "legalbench_accuracy" in extras

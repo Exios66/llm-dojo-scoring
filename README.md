@@ -137,7 +137,9 @@ print(dojo.render_notes(interp))
 | `bundles` | — (new) | Nine pre-built **task** bundles (classification, extraction, extraction_open, cost, factuality, laziness_detection, audit, reporter, transcription), fail-fast validated against the registry |
 | `profiles` | — (new) | **24 agent profiles** — each agent's scoring identity (task-derived bundle resolution, fallback bundle, ground-truth flag); YAML overlay via `LLM_DOJO_SCORING_PROFILES` |
 | `suites` | — (new) | **Dedicated scoring suite per pipeline agent** — importable `get_suite` / `score_suite` with field-type maps, doc-type aliases, and honest-gap notes; the API mailroom consumers should call |
-| `doc_bundles` | — (new) | **Document-type-aware bundles** for the eight processed document classes; honest-gap mandate where type-specific scorers are still pending |
+| `doc_bundles` | — (new) | **Document-type-aware bundles** for the eight processed document classes; honest-gap mandate where type-specific scorers are still pending (insurance determination-consistency, retired court/DD, zero-row compliance) |
+| `content_scoring` | — (new) | Enron `content_topic` / `sentiment_label` accuracy + macro-F1; MAUD per-question extraction over the 22 Hub keys |
+| `asr` | — (new) | WER / CER / word-accuracy for PDF transcription and OCR |
 | `emitter` | — (new) | Unified score emitter: `ScoreRecord`, network-free JSONL manifest sink + credential-checked inert-unless-configured Langfuse sink; scorecards & headline comparison |
 | `pruning` | — (new) | Tier-based dashboard filtering: `dashboard_metrics(agent)` (profile bundle ∩ tier cap), `headline_metrics(agent)` (strictly T0), `prune_records` |
 | `langfuse_sync` | — (new) | Pull live experiment traces (Langfuse) into run records + reference workbook |
@@ -155,7 +157,11 @@ subtype focus to the full merged taxonomy:
 |---|---|---|
 | `subtype` / `doc_class` / `multiclass` | CUAD 25-family subtype, primary doc-class, generic multi-class | exact match + CI, macro accuracy, per-class, confusion, top confusions |
 | `docclass` / `maud_docclass` | hierarchical doc_type **+** second-level subclass (MAUD consideration type) | doc_type accuracy + CI, subclass accuracy strict/equiv, exact match, per-subclass |
-| `maud_question` | MAUD per-question answers (e.g. `Type of Consideration`) | exact match + CI, per-class, macro |
+| `maud_question` | MAUD Type-of-Consideration answers (`All Cash` → `all_cash`) | exact match + CI, per-class, macro |
+| `maud_extraction` | MAUD 22 Hub `maud_clause_labels` questions (or `'<Question>: <Answer>'` spans) | per-question exact / valid-class / presence / category |
+| `enron_topic` / `content_topic` | Enron correspondence topics (11 labels) | accuracy, macro-F1, per-class, confusion |
+| `enron_sentiment` / `sentiment` | Enron sentiment (`negative` / `neutral` / `positive`) | accuracy, macro-F1, per-class |
+| `transcription` / `wer` | PDF→text / OCR hypothesis vs reference | WER, CER, word_accuracy |
 | `legalbench` | LegalBench task-mode binary Yes/No | exact match + CI, per-class, binary P/R/F1 |
 | `court_opinion` | court_opinion doc-class classification | exact match + CI, per-class, confusion |
 | `chained` | composite sorter→extractor runs (`chained_composite` / `chained_summary`) | sorter exact + subtype, extractor overall + presence, weighted composite (default 0.25/0.75) |
@@ -198,10 +204,11 @@ organizational layer consumers emit through:
   (and a doc-type alias so `get_suite("insurance_claim")` resolves the
   specialist). `suite.score(expected, predicted)` routes to the existing
   calculation (`score_task` / `score_extraction` / audit disagreement /
-  transcription token-F1). Type-specific extras ship only where real scorers
-  exist; honest-gap notes record the rest. Each specialist suite binds the
-  extraction fields, subclass catalog, and GT differentiators for its
-  document class from **`corpus`** (pinned to
+  transcription WER/CER + token-F1). Type-specific extras ship where real
+  scorers exist (CUAD laziness, LegalBench, Enron topic/sentiment, MAUD
+  per-question extraction, WER/CER); honest-gap notes record the rest.
+  Each specialist suite binds the extraction fields, subclass catalog,
+  and GT differentiators for its document class from **`corpus`** (pinned to
   `Lucius-Morningstar/docclass-merged`). `get_suite("merger_agreement")`
   shares the contracts specialist but rebinds the MAUD consideration
   catalog — it does not inherit CUAD families.
@@ -218,9 +225,10 @@ organizational layer consumers emit through:
   `corporate_record`, `due_diligence`, `correspondence`, `compliance_filing`,
   `court_opinion`, `insurance_claim`). Honesty mandate: type-specific metrics
   ship ONLY where real scoring logic exists today (contracts get
-  CUAD-grounded laziness/hallucination overrides, court opinions get
-  LegalBench); types whose scorers are still future work say so in their
-  description instead of inventing numbers. `AgentProfile.resolve_doc_bundle()`
+  CUAD-grounded laziness/hallucination overrides, merger agreements get
+  MAUD per-question extraction, correspondence gets Enron topic/sentiment,
+  court opinions get LegalBench); types whose scorers are still future work
+  say so in their description instead of inventing numbers. `AgentProfile.resolve_doc_bundle()`
   degrades to a task bundle with an EXPLICIT `used_fallback=True` marker —
   never a silent default.
 - **`emitter`** — one fan-out point for score records: registry-validated

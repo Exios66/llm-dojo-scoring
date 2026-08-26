@@ -206,10 +206,13 @@ BUILTIN_BUNDLES: dict[str, Bundle] = {
         ),
         Bundle(
             name="transcription",
-            description="PDF→text / OCR quality (WER/CER computed at emit time)",
+            description="PDF→text / OCR quality (WER/CER + token-F1 + exact match)",
             metric_names=(
                 "accuracy",
                 "f1_macro",
+                "wer",
+                "cer",
+                "word_accuracy",
             ),
         ),
     )
