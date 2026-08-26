@@ -497,6 +497,76 @@ metrics:
     applicable_agents: [SPECIALISTS]
     source: "diagnostics.extraction_diagnostics"
 
+  # ===================== T1 — CONTENT / ASR =====================
+  content_topic_accuracy:
+    tier: 1
+    description: "Enron correspondence content_topic exact-match accuracy (11 topics)"
+    applicable_agents: [correspondence_specialist]
+    source: "content_scoring.score_content_topic"
+  content_topic_f1_macro:
+    tier: 1
+    description: "Enron correspondence content_topic macro-F1 over expected topics"
+    applicable_agents: [correspondence_specialist]
+    source: "content_scoring.score_content_topic"
+  sentiment_accuracy:
+    tier: 1
+    description: "Enron correspondence sentiment_label accuracy (negative/neutral/positive)"
+    applicable_agents: [correspondence_specialist]
+    source: "content_scoring.score_sentiment"
+  sentiment_f1_macro:
+    tier: 1
+    description: "Enron correspondence sentiment_label macro-F1"
+    applicable_agents: [correspondence_specialist]
+    source: "content_scoring.score_sentiment"
+  maud_question_accuracy:
+    tier: 1
+    description: "MAUD per-question micro exact-answer accuracy over the 22 Hub keys"
+    applicable_agents: [contracts_specialist]
+    source: "content_scoring.score_maud_extraction"
+  maud_question_macro_accuracy:
+    tier: 1
+    description: "MAUD per-question macro accuracy (unweighted mean over questions)"
+    applicable_agents: [contracts_specialist]
+    source: "content_scoring.score_maud_extraction"
+  maud_clause_presence:
+    tier: 1
+    description: "Share of expected MAUD questions present in the prediction"
+    applicable_agents: [contracts_specialist]
+    source: "content_scoring.score_maud_extraction"
+  maud_valid_class_rate:
+    tier: 1
+    description: "Share of predicted MAUD answers in the question's known class set"
+    applicable_agents: [contracts_specialist]
+    source: "content_scoring.score_maud_extraction"
+  maud_category_accuracy:
+    tier: 2
+    description: "MAUD clause-category exact match when both sides have a category"
+    applicable_agents: [contracts_specialist]
+    source: "content_scoring.score_maud_extraction"
+  wer:
+    tier: 1
+    units: error_rate
+    description: "Word error rate (word-level Levenshtein / |reference|); lower is better"
+    applicable_agents: [TRANSCRIBERS]
+    source: "asr.word_error_rate"
+    notes: "WER may exceed 1.0 when the hypothesis is longer than the reference"
+  cer:
+    tier: 1
+    units: error_rate
+    description: "Character error rate (character-level Levenshtein / |reference|); lower is better"
+    applicable_agents: [TRANSCRIBERS]
+    source: "asr.character_error_rate"
+  word_accuracy:
+    tier: 1
+    description: "max(0, 1 - WER) complementary transcription headline"
+    applicable_agents: [TRANSCRIBERS]
+    source: "asr.word_accuracy"
+  character_accuracy:
+    tier: 2
+    description: "max(0, 1 - CER) complementary character-level transcription accuracy"
+    applicable_agents: [TRANSCRIBERS]
+    source: "asr.character_accuracy"
+
   # ===================== T2 — DEEP =====================
   confusion_matrix:
     tier: 2

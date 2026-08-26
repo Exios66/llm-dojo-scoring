@@ -101,7 +101,8 @@ def test_merger_agreement_rebinds_maud_not_cuad():
     assert "all_cash" not in contract.subclasses
     assert "maud_clause_labels" in merger.differentiators
     assert "cuad_clause_labels" in contract.differentiators
-    assert merger.honest_gap and "MAUD" in merger.honest_gap
+    assert merger.honest_gap is None
+    assert "maud_question_accuracy" in merger.metric_names()
 
 
 def test_absent_corpus_types_are_honest():
