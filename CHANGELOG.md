@@ -5,6 +5,41 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-08-27
+
+### Added
+
+- **`docs/SCORING.md`** — canonical scoring reference: per-agent T0/T1 from
+  `headline_metrics` / `dashboard_metrics`, `DEFAULT_FIELD_TYPES` field maps,
+  full `_HONEST_GAPS` prose, extraction confusion model, and every T0/T1
+  metric with citation, inclusion, and ground-truth label.
+- **Registry metadata** on `MetricDef`: `citation`, `inclusion`,
+  `ground_truth` (`required` | `optional` | `structural` | `none`). Filled
+  for all T0/T1 names. Emitter-only mailroom aliases keep `source: null` and
+  `ground_truth: none`. `field_presence` documents that `score_extraction`
+  does not emit it (honesty gap, not a new scorer).
+- **`llm_dojo_scoring.prompts`** — importable catalog of production + latest
+  docclass-merged templates (`get_prompt`, `list_prompts`, `PromptRecord`).
+  Covers all 25 `DEFAULT_PROFILES` plus judge completeness / classification /
+  correctness variants. Intake is `kind=deterministic`, archivist
+  `procedural`, remaining `*_auditor` roles `proposed` with empty `text`.
+  Metric bundle / field map stay in catalog metadata; snake_case T0/T1
+  registry ids are forbidden in LLM bodies. Live colloquial “precision” /
+  “completeness” and judge JSON keys that collide with registry names are
+  flagged on `priming`, not rewritten.
+- **`docs/PROMPTS.md`** — import API, production vs `family="docclass"`,
+  non-LLM roles, anti-priming rule.
+
+### Changed
+
+- Package version **0.11.0**. Consumer pin:
+
+  ```
+  llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.11.0
+  ```
+
+Scoring formulas and T0 names from v0.10.0 are unchanged.
+
 ## [0.10.0] - 2026-08-26
 
 ### Added

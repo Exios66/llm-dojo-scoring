@@ -149,3 +149,64 @@ def test_metricdef_defaults():
     assert d.applies_to("whoever")
     assert d.units == "float[0,1]"
     assert d.aggregation == "mean"
+    assert d.citation == ""
+    assert d.inclusion == ""
+    assert d.ground_truth == ""
+
+
+_ALLOWED_GT = {"required", "optional", "structural", "none"}
+
+# Mailroom aliases this package does not compute (source stays null).
+_EMITTER_ONLY = {
+    "schema_valid",
+    "parse_error",
+    "success_rate",
+    "completeness",
+    "class_correct",
+    "stage_correct",
+    "extraction_correctness",
+    "extraction_needs_judge_review",
+    "expected_field_presence",
+    "extraction_overall_verified_precision",
+    "extraction_verified_precision",
+    "mailroom-pipeline-judge",
+    "mailroom-pipeline-quality",
+    "extraction_hallucination_rate",
+}
+
+
+def test_t0_t1_metrics_have_citation_inclusion_ground_truth():
+    reg = load_registry()
+    t0_t1 = [m for m in reg.metrics.values() if m.tier <= MetricTier.CORE]
+    assert t0_t1
+    for m in t0_t1:
+        assert m.citation.strip(), m.name
+        assert m.inclusion.strip(), m.name
+        assert m.ground_truth in _ALLOWED_GT, (m.name, m.ground_truth)
+        if m.name in _EMITTER_ONLY:
+            assert m.source is None, m.name
+            assert m.ground_truth == "none", m.name
+        elif m.name != "field_presence":
+            assert m.source, m.name
+
+
+def test_field_presence_honesty_gap_is_documented():
+    m = load_registry().get("field_presence")
+    assert "does not emit" in m.citation.lower() or "does not emit" in m.notes.lower()
+    assert "not computed" in m.inclusion.lower()
+
+
+def test_structural_metrics_are_labeled_structural():
+    reg = load_registry()
+    assert reg.get("determination_consistency").ground_truth == "structural"
+    assert reg.get("intake_prep_completeness").ground_truth == "structural"
+
+
+def test_custom_yaml_loads_without_citation_keys(tmp_path):
+    path = tmp_path / "reg.yaml"
+    path.write_text(yaml.safe_dump({"metrics": {"only_mine": {"tier": "core"}}}))
+    reg = Registry.from_yaml(path)
+    m = reg.get("only_mine")
+    assert m.citation == ""
+    assert m.inclusion == ""
+    assert m.ground_truth == ""
