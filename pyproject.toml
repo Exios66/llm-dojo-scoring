@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-dojo-scoring"
-version = "0.10.0"
+version = "0.11.0"
 description = "Dedicated scoring, error-analysis, visualization, and interpretation suite for LLM document pipelines (llm-entity-extraction / llm-mailroom)"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -33,6 +33,9 @@ dojo-sync = "llm_dojo_scoring.cli:sync_main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["llm_dojo_scoring*"]
+
+[tool.setuptools.package-data]
+llm_dojo_scoring = ["prompts/*.yaml", "prompts/templates/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

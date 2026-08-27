@@ -13,23 +13,24 @@ artifacts (`Sorter_Experiment_Results.xlsx`, `Sorter_Model_Sweep_Results.xlsx`,
 
 ## Install
 
-Published release: [v0.10.0](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.10.0).
+Published release: [v0.11.0](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.11.0).
 Dependents pin the **tag**, not a floating SHA.
 
 ```bash
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.10.0"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.11.0"
 pip install -e .                # from a local checkout
 ```
 
 In **llm-entity-extraction** / **llm-mailroom** `pyproject.toml`:
 
 ```
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.10.0
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.11.0
 ```
 
 ```python
 from llm_dojo_scoring import score_extraction, bootstrap_ci, tokens_summary
 from llm_dojo_scoring import get_suite, apply_intake, score_task
+from llm_dojo_scoring.prompts import get_prompt
 ```
 
 ## Quickstart
@@ -197,11 +198,13 @@ organizational layer consumers emit through:
   **T0 HEADLINE** (board-level, one number per agent) → **T1 CORE**
   ("what broke yesterday?": P/R/F1/F2, rates, cost) → **T2 DEEP** (confusion,
   failure modes, bootstrap CIs, calibration) → **T3 LOG** (audit trail only).
-  The built-in default covers this package's full surface plus all 37 flat
-  llm-mailroom `SCORE_CONFIGS` names, the Langfuse 35-char transport alias
-  (`extraction_verified_precision`), and The-Mailroom judge scores; override
-  via `LLM_DOJO_SCORING_REGISTRY`
-  or an explicit path.
+  T0/T1 entries carry **citation**, **inclusion**, and **ground_truth**
+  (`required` / `optional` / `structural` / `none`). Full tables:
+  [`docs/SCORING.md`](docs/SCORING.md). The built-in default covers this
+  package's full surface plus all 37 flat llm-mailroom `SCORE_CONFIGS` names,
+  the Langfuse 35-char transport alias (`extraction_verified_precision`), and
+  The-Mailroom judge scores; override via `LLM_DOJO_SCORING_REGISTRY` or an
+  explicit path.
 - **`bundles`** — ten task bundles (what the agent *does*): classification,
   extraction, extraction_open, cost, factuality, laziness_detection, audit,
   reporter, transcription, intake. Every metric must resolve in the registry.
@@ -250,6 +253,11 @@ organizational layer consumers emit through:
   `get_scorecard(agent, run_id, min_tier=...)` and T0-only
   `compare_headlines`.
 - **`pruning`** — what a dashboard panel shows: profile-bundle ∩ tier cap.
+- **`prompts`** — importable catalog of production + latest docclass-merged
+  templates (`get_prompt("sorter")`, `get_prompt("sorter", family="docclass")`).
+  Intake / archivist / proposed auditors are honest non-LLM entries (`text=""`).
+  Metric names stay in metadata, not in model-visible text. See
+  [`docs/PROMPTS.md`](docs/PROMPTS.md).
 
 ```python
 import llm_dojo_scoring as dojo
@@ -283,7 +291,12 @@ card = emitter.get_scorecard("sorter", "exp_42", min_tier=1)   # dashboard view
 dojo.dashboard_metrics("contracts_specialist")   # profile bundle ∩ T0+T1
 dojo.headline_metrics("judge")                   # strictly T0
 
-# 6. v0.10.0 extras — specialist F1/F2 headlines, insurance consistency
+# 6. Prompt catalog — production vs docclass family
+from llm_dojo_scoring.prompts import get_prompt
+system = get_prompt("contracts_specialist", family="docclass").text
+assert get_prompt("intake").kind == "deterministic"
+
+# 7. v0.10.0 extras — specialist F1/F2 headlines, insurance consistency
 assert "extraction_f1" in dojo.headline_metrics("contracts_specialist")
 assert "extraction_f2" in dojo.headline_metrics("insurance_claims_specialist")
 assert "content_topic_f1_macro" in dojo.headline_metrics("correspondence_specialist")
@@ -337,7 +350,9 @@ python -m pytest
 ## Migration
 
 See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap for
-`llm-entity-extraction` / `llm-mailroom`.
+`llm-entity-extraction` / `llm-mailroom`. Scoring tables:
+[`docs/SCORING.md`](docs/SCORING.md). Prompt catalog:
+[`docs/PROMPTS.md`](docs/PROMPTS.md).
 
 ## CLI reference
 
