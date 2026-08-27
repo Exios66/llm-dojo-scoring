@@ -9,7 +9,7 @@ scorers, and reporting scripts keep working with minimal edits.
 
 ```bash
 # in llm-entity-extraction / llm-mailroom — pin the published tag
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.10.0"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.11.0"
 # or from a local checkout
 pip install -e /path/to/llm-dojo-scoring
 ```
@@ -17,10 +17,10 @@ pip install -e /path/to/llm-dojo-scoring
 `pyproject.toml` / `requirements.txt`:
 
 ```
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.10.0
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.11.0
 ```
 
-Do not pin a merge SHA. Release notes: https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.10.0
+Do not pin a merge SHA. Release notes: https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.11.0
 
 ## 2. Import swap table
 
@@ -290,6 +290,41 @@ assert dojo.determination_consistency(
 ```
 
 Honesty gaps that remain (do not invent KPIs): retired court/DD, zero-row compliance, corporate_record with no *external* extraction benchmark, CMS GT homogeneity (all-approved / empty denials).
+
+## 3e. Pinning the v0.11.0 release (scoring docs + prompt catalog)
+
+Dependents pin the published GitHub Release tag — not a merge SHA:
+
+```
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.11.0
+```
+
+https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.11.0
+
+v0.11.0 is additive on the v0.10.0 scoring surface (formulas and T0 names are unchanged). New imports:
+
+```python
+from llm_dojo_scoring.prompts import get_prompt, list_prompts
+
+# Live production template (mailroom sorter_v14 / contracts v32, …)
+system = get_prompt("sorter").text
+
+# Docclass-merged arm (entity-extraction prompts_docclass latest keys)
+system = get_prompt("contracts_specialist", family="docclass").text
+
+# Honest non-LLM roles — no fake auditor/intake system prompts
+assert get_prompt("intake").kind == "deterministic" and get_prompt("intake").text == ""
+assert get_prompt("archivist").kind == "procedural"
+assert get_prompt("insurance_claims_auditor").kind == "proposed"
+
+# T0/T1 metrics now carry citation / inclusion / ground_truth
+m = __import__("llm_dojo_scoring").load_registry().get("extraction_f1")
+assert m.citation and m.ground_truth == "required"
+```
+
+Canonical scoring tables (per-agent T0/T1, field maps, honest gaps, metric catalog): [`docs/SCORING.md`](SCORING.md). Prompt catalog rules: [`docs/PROMPTS.md`](PROMPTS.md).
+
+Do not push pin PRs to llm-mailroom / llm-entity-extraction / The-Mailroom from this package PR — consumers bump when they choose.
 
 ## 4. Verification
 

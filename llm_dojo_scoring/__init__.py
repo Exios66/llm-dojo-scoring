@@ -10,7 +10,7 @@ scoring code (``src/field_scoring.py``, ``src/metrics.py``, ``src/bootstrap.py``
 
 from __future__ import annotations
 
-__version__ = "0.10.0"
+__version__ = "0.11.0"
 
 from . import (
     bundles,
@@ -42,6 +42,7 @@ from . import (
     interpret,
     langfuse_sync,
     phoenix_sync,
+    prompts,
     report,
     tasks,
     visualize,
@@ -181,6 +182,7 @@ from .suites import (
     suite_for_doc_type,
 )
 from .registry import (
+    ALLOWED_GROUND_TRUTH,
     clear_registry_cache,
     get_registry,
     load_registry,
@@ -188,13 +190,14 @@ from .registry import (
     MetricTier,
     Registry,
 )
+from .prompts import PromptRecord, get_prompt, list_prompts
 
 __all__ = [
     "__version__",
     "bootstrap", "classification", "claims_consistency", "config", "content_scoring", "cost", "diagnostics",
     "equivalences", "error_analysis", "experiment", "export", "extraction_metrics", "failure_modes",
     "field_scoring", "io", "interpret", "langfuse_sync", "phoenix_sync",
-    "report", "asr", "corpus", "intake", "mailroom", "suites", "tasks", "visualize",
+    "report", "asr", "corpus", "intake", "mailroom", "prompts", "suites", "tasks", "visualize",
     "bootstrap_ci", "delta_significance", "wilson_ci",
     "accuracy", "binary_metrics", "confusion_matrix", "exact_match",
     "fbeta", "macro_accuracy", "macro_prf", "normalize_label", "per_class_stats",
@@ -221,7 +224,8 @@ __all__ = [
     "DEFAULT_DASHBOARD_TIER", "dashboard_metrics", "headline_metrics",
     "prune_metrics", "prune_records",
     "clear_registry_cache", "get_registry", "load_registry", "MetricDef",
-    "MetricTier", "Registry",
+    "MetricTier", "Registry", "ALLOWED_GROUND_TRUTH",
+    "PromptRecord", "get_prompt", "list_prompts",
     "ScoringSuite", "DEFAULT_SUITES", "DEFAULT_FIELD_TYPES",
     "DOC_TYPE_ALIASES", "SPECIALIST_DOC_TYPES",
     "get_suite", "list_suites", "score_suite", "suite_for_doc_type",

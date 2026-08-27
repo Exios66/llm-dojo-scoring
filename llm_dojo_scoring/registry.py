@@ -2,8 +2,10 @@
 to its tier, units, aggregation, and the agents that consume it.
 
 The registry is ORGANIZATIONAL, not computational: every metric here maps to a
-function that already exists in this package (see ``source``), or — for the
-audit-agent metrics — to a definition consumed by ``llm_dojo_scoring.emitter``.
+function that already exists in this package (see ``source``), or — for
+emitter-only mailroom aliases — to a name the pipeline emits. T0/T1 entries
+carry ``citation``, ``inclusion``, and ``ground_truth`` (merged from
+:mod:`llm_dojo_scoring.metric_meta` when the YAML omits them).
 No calculation logic lives in this module.
 
 Tiers (the dashboard discipline — everything below T1 is opt-in exploration):
@@ -36,6 +38,8 @@ from typing import Iterable
 
 import yaml
 
+from .metric_meta import ALLOWED_GROUND_TRUTH, METRIC_META
+
 __all__ = [
     "MetricTier",
     "MetricDef",
@@ -51,6 +55,7 @@ __all__ = [
     "load_registry",
     "get_registry",
     "clear_registry_cache",
+    "ALLOWED_GROUND_TRUTH",
 ]
 
 # Canonical pipeline roster. Family tokens in ``applicable_agents``
@@ -162,6 +167,12 @@ class MetricDef:
     source: str | None = None
     #: Migration/pruning notes (aliases, consolidations, promotions).
     notes: str = ""
+    #: Method / paper the implemented scorer follows. Empty on custom YAML.
+    citation: str = ""
+    #: When the metric is computed vs skipped / ``None``.
+    inclusion: str = ""
+    #: ``required`` | ``optional`` | ``structural`` | ``none`` (empty = unset).
+    ground_truth: str = ""
 
     def applies_to(self, agent: str) -> bool:
         return "ALL" in self.applicable_agents or agent in self.applicable_agents
@@ -235,6 +246,23 @@ class Registry:
             if isinstance(agents, str):
                 agents = [agents]
             agents = expand_agent_families(agents)
+            meta = METRIC_META.get(name, {})
+            citation = str(spec.get("citation") or meta.get("citation") or "")
+            inclusion = str(spec.get("inclusion") or meta.get("inclusion") or "")
+            ground_truth = str(
+                spec.get("ground_truth") or meta.get("ground_truth") or ""
+            )
+            if ground_truth not in ALLOWED_GROUND_TRUTH:
+                raise ValueError(
+                    f"metric {name!r} ground_truth={ground_truth!r}; "
+                    f"allowed: {sorted(ALLOWED_GROUND_TRUTH - {''})}"
+                )
+            source = spec.get("source")
+            if source is None and name in (
+                "audit_disagreement_rate",
+                "audit_resolution_rate",
+            ):
+                source = "suites.ScoringSuite._score_audit"
             reg.metrics[name] = MetricDef(
                 name=name,
                 tier=tier,
@@ -242,8 +270,11 @@ class Registry:
                 description=str(spec.get("description", "")),
                 applicable_agents=agents,
                 aggregation=str(spec.get("aggregation", "mean")),
-                source=spec.get("source"),
+                source=source,
                 notes=str(spec.get("notes", "")),
+                citation=citation,
+                inclusion=inclusion,
+                ground_truth=ground_truth,
             )
         return reg
 
@@ -258,6 +289,12 @@ DEFAULT_METRICS_YAML = """
 # emitter-level definition (audit metrics). Aliases of the 37 flat
 # llm-mailroom SCORE_CONFIGS names plus Langfuse transport aliases
 # (extraction_verified_precision) and The-Mailroom judge scores.
+#
+# Optional keys (empty-string default so older custom YAML still loads):
+#   citation      — method/paper the implemented scorer follows
+#   inclusion     — when the metric is computed vs skipped / None
+#   ground_truth  — required | optional | structural | none
+# T0/T1 defaults are filled from llm_dojo_scoring.metric_meta when omitted.
 
 metrics:
   # ===================== T0 — HEADLINE =====================
@@ -267,24 +304,36 @@ metrics:
     applicable_agents: [ALL]
     aggregation: mean
     source: "classification.macro_prf"
+    citation: "Unweighted macro-average of one-vs-rest F1 (classification.macro_prf); F1 is van Rijsbergen Fβ with β=1."
+    inclusion: "Computed when expected and predicted label sequences are non-empty. Empty/null labels dropped. score_task drops ERROR_PREFIX rows."
+    ground_truth: required
   accuracy:
     tier: 0
     description: "Overall exact-match accuracy"
     applicable_agents: [ALL]
     aggregation: mean
     source: "classification.accuracy"
+    citation: "Exact-match accuracy after task-aware normalize_label (classification.accuracy)."
+    inclusion: "Computed when expected and predicted label sequences are non-empty. Empty/null labels dropped."
+    ground_truth: required
   extraction_overall_score:
     tier: 0
     description: "Specialist headline: overall extraction score for the run"
     applicable_agents: [SPECIALISTS]
     aggregation: mean
     source: "field_scoring.score_extraction"
+    citation: "Mean of per-field typed scores from field_scoring.score_extraction (soft mean; partial list credit stays here)."
+    inclusion: "None when there are no scorable fields. Empty/null expected dict yields no overall score."
+    ground_truth: required
   extraction_f1:
     tier: 0
     description: "Field-micro F1 over (field, value) events (ACE / CoNLL / SemEval slot filling)"
     applicable_agents: [SPECIALISTS]
     aggregation: mean
     source: "extraction_metrics.extraction_binary_metrics"
+    citation: "ACE / CoNLL / SemEval slot filling; TP requires typed score ≥ 1.0. F1 is van Rijsbergen β=1."
+    inclusion: "Skipped when expected is empty/null. Empty GT field values are not FN. List F1 is None if no list fields."
+    ground_truth: required
   extraction_f2:
     tier: 0
     description: "Field-micro F2 (β=2, van Rijsbergen) — recall-weighted; insurance claims board number"
@@ -292,6 +341,9 @@ metrics:
     aggregation: mean
     source: "extraction_metrics.extraction_binary_metrics"
     notes: "Partial list matches are not TP; they stay in extraction_overall_score"
+    citation: "ACE / CoNLL / SemEval slot filling; F2 is van Rijsbergen Fβ with β=2 (5PR/(4P+R))."
+    inclusion: "Same inclusion as extraction_f1. Partial list matches are not TP."
+    ground_truth: required
 
   # ===================== T1 — CORE =====================
   precision:
@@ -342,7 +394,10 @@ metrics:
     description: "Share of expected fields populated by the model"
     applicable_agents: [SPECIALISTS]
     source: "field_scoring.score_extraction"
-    notes: "mailroom alias: expected_field_presence"
+    notes: "mailroom alias: expected_field_presence. HONEST GAP: score_extraction does not emit this name as of 0.11.0."
+    citation: "ACE-style expected-field presence. Registry source points at score_extraction, which does not emit this name."
+    inclusion: "Not computed in this package as of 0.11.0 — honesty gap, not a scorer. Do not treat a missing key as 0.0."
+    ground_truth: required
   entity_list_precision:
     tier: 1
     description: "Precision over extracted list items (bipartite match)"
@@ -374,11 +429,17 @@ metrics:
     description: "Insurance coverage_determination agrees with denial_reasons (approved ⇒ empty; denied/partial ⇒ non-empty)"
     applicable_agents: [insurance_claims_specialist]
     source: "claims_consistency.determination_consistency"
+    citation: "Structural check on the prediction; ground truth is unused (claims_consistency.determination_consistency)."
+    inclusion: "Always defined on a predicted dict; 0.0 when determination is missing. CMS GT homogeneity makes GT-shaped predictions degenerate (always 1.0)."
+    ground_truth: structural
   amount_exactness:
     tier: 1
     description: "Claimed-amount exact match after money normalize (complement of money_mae_usd)"
     applicable_agents: [insurance_claims_specialist]
     source: "claims_consistency.amount_exactness"
+    citation: "Money-field exact after one-cent normalize (claims_consistency.amount_exactness)."
+    inclusion: "None if either side is empty or unparseable."
+    ground_truth: required
   precision_macro:
     tier: 1
     description: "Unweighted mean of one-vs-rest precision (doc_type)"
@@ -424,22 +485,30 @@ metrics:
     tier: 1
     description: "Output parsed to the expected schema (quick health check — promoted per pruning plan)"
     applicable_agents: [ALL]
-    notes: "mailroom SCORE_CONFIGS name preserved"
+    notes: "mailroom SCORE_CONFIGS name preserved; not computed in this package"
+    source: null
+    ground_truth: none
   parse_error:
     tier: 1
     description: "Output failed to parse (quick health check — promoted per pruning plan)"
     applicable_agents: [ALL]
-    notes: "mailroom SCORE_CONFIGS name preserved"
+    notes: "mailroom SCORE_CONFIGS name preserved; not computed in this package"
+    source: null
+    ground_truth: none
   success_rate:
     tier: 1
     description: "Runs completing without abort/stage failure"
     applicable_agents: [ALL]
-    notes: "consolidates mailroom stage_completed + run_aborted"
+    notes: "consolidates mailroom stage_completed + run_aborted; not computed in this package"
+    source: null
+    ground_truth: none
   completeness:
     tier: 1
     description: "Numeric completeness of the required output shape"
     applicable_agents: [ALL]
-    notes: "mailroom completeness_label (CATEGORICAL) folds into this numeric score"
+    notes: "mailroom completeness_label (CATEGORICAL) folds into this numeric score; not computed in this package"
+    source: null
+    ground_truth: none
   classification_correct:
     tier: 1
     description: "Per-document classification correctness (strict/equiv)"
@@ -538,11 +607,13 @@ metrics:
     tier: 1
     description: "Rate where the audit pass disagrees with the specialist output"
     applicable_agents: [AUDITORS]
+    source: "suites.ScoringSuite._score_audit"
     notes: "NEW (KANBAN-061) — feeds KANBAN-060's contracts_audit_v0 pass; shared by every named auditor + arbiter"
   audit_resolution_rate:
     tier: 1
     description: "Rate where the specialist adopts the audit pass correction"
     applicable_agents: [AUDITORS]
+    source: "suites.ScoringSuite._score_audit"
     notes: "NEW (KANBAN-061); shared by every named auditor + arbiter"
   legalbench_accuracy:
     tier: 1
@@ -589,6 +660,9 @@ metrics:
     applicable_agents: [correspondence_specialist]
     source: "content_scoring.score_content_topic"
     notes: "Promoted to T0 — topic imbalance makes macro-F1 the correspondence board number"
+    citation: "Enron 11-topic catalog; unweighted macro-F1 (content_scoring.score_content_topic)."
+    inclusion: "Computed when a content_topic gold label is present; skipped when the field is empty/null."
+    ground_truth: required
   sentiment_accuracy:
     tier: 1
     description: "Enron correspondence sentiment_label accuracy (negative/neutral/positive)"
