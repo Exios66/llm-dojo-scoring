@@ -51,6 +51,7 @@ __all__ = [
     "CLASSIFIER_AGENTS",
     "TRANSCRIBER_AGENTS",
     "INTAKE_AGENTS",
+    "SERVING_AGENTS",
     "expand_agent_families",
     "load_registry",
     "get_registry",
@@ -109,6 +110,10 @@ INTAKE_AGENTS: tuple[str, ...] = (
     "intake",
 )
 
+SERVING_AGENTS: tuple[str, ...] = (
+    "local_vs_api",
+)
+
 _AGENT_FAMILIES: dict[str, tuple[str, ...]] = {
     "SPECIALISTS": SPECIALIST_AGENTS,
     "LIVE_SPECIALISTS": LIVE_SPECIALIST_AGENTS,
@@ -116,6 +121,7 @@ _AGENT_FAMILIES: dict[str, tuple[str, ...]] = {
     "CLASSIFIERS": CLASSIFIER_AGENTS,
     "TRANSCRIBERS": TRANSCRIBER_AGENTS,
     "INTAKE": INTAKE_AGENTS,
+    "SERVING": SERVING_AGENTS,
 }
 
 
@@ -751,6 +757,216 @@ metrics:
     applicable_agents: [INTAKE]
     aggregation: mean
     source: "intake.deterministic_normalize"
+
+  # ===================== T0/T1 — LOCAL VS API SERVING =====================
+  ttft_seconds:
+    tier: 0
+    units: seconds
+    description: "Time to first token (streaming first-token timestamp − request start)"
+    applicable_agents: [SERVING]
+    source: "serving.score_serving_run"
+  tokens_per_second:
+    tier: 0
+    units: tokens/s
+    description: "Decode throughput: completion_tokens / e2e latency"
+    applicable_agents: [SERVING]
+    source: "serving.score_serving_run"
+  tpot_seconds:
+    tier: 1
+    units: seconds
+    description: "Time per output token after first token ((e2e − ttft) / (completion_tokens − 1))"
+    applicable_agents: [SERVING]
+    source: "serving.score_serving_run"
+  e2e_latency_seconds:
+    tier: 1
+    units: seconds
+    description: "End-to-end request wall-clock (start → last token)"
+    applicable_agents: [SERVING]
+    source: "serving.score_serving_run"
+  ttft_p50:
+    tier: 1
+    units: seconds
+    description: "Median time to first token over requests"
+    applicable_agents: [SERVING]
+    aggregation: none
+    source: "serving.aggregate_serving"
+  ttft_p95:
+    tier: 1
+    units: seconds
+    description: "95th-percentile time to first token over requests"
+    applicable_agents: [SERVING]
+    aggregation: none
+    source: "serving.aggregate_serving"
+  e2e_p50:
+    tier: 1
+    units: seconds
+    description: "Median end-to-end latency over requests"
+    applicable_agents: [SERVING]
+    aggregation: none
+    source: "serving.aggregate_serving"
+  e2e_p95:
+    tier: 1
+    units: seconds
+    description: "95th-percentile end-to-end latency over requests"
+    applicable_agents: [SERVING]
+    aggregation: none
+    source: "serving.aggregate_serving"
+  output_tokens_per_second:
+    tier: 1
+    units: tokens/s
+    description: "completion_tokens / (e2e − ttft) — decode-only throughput"
+    applicable_agents: [SERVING]
+    source: "serving.score_serving_run"
+  prompt_tokens_per_second:
+    tier: 1
+    units: tokens/s
+    description: "prompt_tokens / ttft — prefill throughput when TTFT is recorded"
+    applicable_agents: [SERVING]
+    source: "serving.score_serving_run"
+  requests_per_second:
+    tier: 1
+    units: req/s
+    description: "n_requests / summed e2e window (sequential throughput)"
+    applicable_agents: [SERVING]
+    source: "serving.aggregate_serving"
+  docs_per_second:
+    tier: 1
+    units: docs/s
+    description: "n_docs / summed e2e window (documents processed per second)"
+    applicable_agents: [SERVING]
+    source: "serving.aggregate_serving"
+  gpu_utilization:
+    tier: 1
+    description: "Local GPU SM utilization in [0,1] (nvidia-smi / vLLM). None on API-key runs"
+    applicable_agents: [SERVING]
+    source: "serving.score_serving_run"
+  kv_cache_utilization:
+    tier: 1
+    description: "vLLM KV-cache / prefix-cache occupancy in [0,1]. None on API-key runs"
+    applicable_agents: [SERVING]
+    source: "serving.score_serving_run"
+  gpu_memory_used_gb:
+    tier: 1
+    units: GB
+    description: "Local GPU memory used in GiB. None on API-key runs"
+    applicable_agents: [SERVING]
+    source: "serving.score_serving_run"
+  queue_time_seconds:
+    tier: 1
+    units: seconds
+    description: "Scheduler wait before generation starts (vLLM waiting_time / queue_time)"
+    applicable_agents: [SERVING]
+    source: "serving.score_serving_run"
+  error_rate:
+    tier: 1
+    description: "Share of serving requests recorded as failed"
+    applicable_agents: [SERVING]
+    source: "serving.aggregate_serving"
+  prompt_tokens:
+    tier: 1
+    units: count
+    description: "Prompt / input token count for the serving run"
+    applicable_agents: [SERVING]
+    aggregation: sum
+    source: "serving.score_serving_run"
+  completion_tokens:
+    tier: 1
+    units: count
+    description: "Completion / output token count for the serving run"
+    applicable_agents: [SERVING]
+    aggregation: sum
+    source: "serving.score_serving_run"
+  serving_kind:
+    tier: 3
+    units: tag
+    description: "local | api | unknown — serving family of the run"
+    applicable_agents: [SERVING]
+    aggregation: none
+    source: "serving.classify_serving_kind"
+  quantization:
+    tier: 3
+    units: tag
+    description: "Quantization tag (awq, gptq, fp16, q4_k_m, …) registered with the run"
+    applicable_agents: [SERVING]
+    aggregation: none
+    source: "serving.normalize_serving_record"
+  gpu_name:
+    tier: 3
+    units: tag
+    description: "Local GPU product name when recorded"
+    applicable_agents: [SERVING]
+    aggregation: none
+    source: "serving.normalize_serving_record"
+  max_model_len:
+    tier: 3
+    units: count
+    description: "Context window / max_model_len of the served model"
+    applicable_agents: [SERVING]
+    aggregation: none
+    source: "serving.normalize_serving_record"
+  model:
+    tier: 3
+    units: tag
+    description: "Served model slug (Ollama tag or OpenRouter id)"
+    applicable_agents: [SERVING]
+    aggregation: none
+    source: "serving.normalize_serving_record"
+  provider:
+    tier: 3
+    units: tag
+    description: "Serving provider family (ollama, vllm, openrouter, …)"
+    applicable_agents: [SERVING]
+    aggregation: none
+    source: "serving.normalize_serving_record"
+  dtype:
+    tier: 3
+    units: tag
+    description: "Model dtype (fp16, bf16, fp8, …) when recorded"
+    applicable_agents: [SERVING]
+    aggregation: none
+    source: "serving.normalize_serving_record"
+  gpu_count:
+    tier: 3
+    units: count
+    description: "Local GPU count / tensor-parallel width when recorded"
+    applicable_agents: [SERVING]
+    aggregation: none
+    source: "serving.normalize_serving_record"
+  tensor_parallel:
+    tier: 3
+    units: count
+    description: "vLLM tensor_parallel_size when recorded"
+    applicable_agents: [SERVING]
+    aggregation: none
+    source: "serving.normalize_serving_record"
+  serving_profile:
+    tier: 3
+    units: tag
+    description: "Sandbox profile name (ollama, vllm-local, openrouter, …)"
+    applicable_agents: [SERVING]
+    aggregation: none
+    source: "serving.normalize_serving_record"
+  base_url_host:
+    tier: 3
+    units: tag
+    description: "Hostname of the local or API endpoint"
+    applicable_agents: [SERVING]
+    aggregation: none
+    source: "serving.normalize_serving_record"
+  n_requests:
+    tier: 3
+    units: count
+    description: "Number of per-request serving observations in the run"
+    applicable_agents: [SERVING]
+    aggregation: sum
+    source: "serving.aggregate_serving"
+  n_docs:
+    tier: 3
+    units: count
+    description: "Document count for the serving run (identity.n, else n_requests)"
+    applicable_agents: [SERVING]
+    aggregation: sum
+    source: "serving.aggregate_serving"
 
   # ===================== T2 — DEEP =====================
   confusion_matrix:

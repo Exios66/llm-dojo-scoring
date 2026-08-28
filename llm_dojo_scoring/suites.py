@@ -258,6 +258,18 @@ _AGENT_EXTRAS: dict[str, tuple[str, ...]] = {
         "intake_hyphen_unwraps",
         "intake_collapsed_blanks",
     ),
+    "local_vs_api": (
+        "ttft_seconds",
+        "tokens_per_second",
+        "tpot_seconds",
+        "e2e_latency_seconds",
+        "gpu_utilization",
+        "kv_cache_utilization",
+        "serving_kind",
+        "quantization",
+        "model",
+        "provider",
+    ),
 }
 
 #: MAUD per-question extras rebound onto ``get_suite("merger_agreement")``.
@@ -305,6 +317,14 @@ _HONEST_GAPS: dict[str, str] = {
         "is the live subclass catalog; suite scores typed-extraction plus "
         "that inventory (no corpus-backed rows yet)."
     ),
+    "local_vs_api": (
+        "HONEST GAP: TTFT is None unless a first-token timestamp or explicit "
+        "ttft_seconds is recorded — never inferred from e2e/n_tokens. GPU "
+        "utilization, KV-cache occupancy, and GPU memory are local-only; "
+        "API-key providers (OpenRouter, …) cannot supply them. Local Ollama "
+        "tags without an OpenRouter price table leave estimated_cost_usd None "
+        "(do not fabricate electricity)."
+    ),
 }
 
 #: score() kind — routes to an existing package function.
@@ -316,6 +336,7 @@ _KIND_TRANSCRIPTION = "transcription"
 _KIND_INTAKE = "intake"
 _KIND_REPORTER = "reporter"
 _KIND_COST = "cost"
+_KIND_SERVING = "serving"
 
 _COMPUTABLE_KINDS = frozenset(
     {
@@ -325,6 +346,7 @@ _COMPUTABLE_KINDS = frozenset(
         _KIND_AUDIT,
         _KIND_TRANSCRIPTION,
         _KIND_INTAKE,
+        _KIND_SERVING,
     }
 )
 
@@ -348,6 +370,8 @@ def _kind_for(profile: AgentProfile) -> str:
         return _KIND_TRANSCRIPTION
     if profile.name == "archivist" or "store" in profile.tasks:
         return _KIND_COST
+    if profile.name == "local_vs_api" or "compare" in profile.tasks:
+        return _KIND_SERVING
     return _KIND_REPORTER
 
 
@@ -485,6 +509,9 @@ class ScoringSuite:
           or ``normalize-intake`` span payload (prep completeness, messy /
           changed flags, hyphen unwraps). LLM intake is scored against the
           same clerk.
+        - **serving** (`local_vs_api`) — compare local vs API-key runs
+          (:func:`llm_dojo_scoring.serving.compare_serving`). ``expected``
+          is the local record(s); ``predicted`` is the API record(s).
         - **reporter / cost** — emit-only. Pass ``metrics=`` to validate
           a precomputed dict against the suite; otherwise ``TypeError``.
         """
@@ -510,6 +537,12 @@ class ScoringSuite:
         if self.kind == _KIND_INTAKE:
             return self._score_intake(
                 expected, predicted, raw_text=kwargs.get("raw_text")
+            )
+        if self.kind == _KIND_SERVING:
+            from .serving import compare_serving
+
+            return compare_serving(
+                expected, predicted, quality_metric=kwargs.get("quality_metric")
             )
         task_name = task or self.task_key or "multiclass"
         if (
