@@ -4,8 +4,8 @@ Vendors live production templates plus the latest docclass-merged family.
 Metric bundle and field-map live on the record metadata — never as eval
 targets in the model-visible string.
 
-Non-LLM roles (intake clerk, archivist, proposed auditors) are catalogued
-with empty ``text`` and an honest ``kind``.
+Non-LLM roles (intake clerk, archivist, local-vs-API serving comparison,
+proposed auditors) are catalogued with empty ``text`` and an honest ``kind``.
 """
 
 from __future__ import annotations

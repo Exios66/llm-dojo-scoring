@@ -268,6 +268,16 @@ def test_headline_metrics_sorter_unchanged():
     assert headline_metrics("sorter") == ["accuracy", "f1_macro"]
 
 
+def test_headline_metrics_local_vs_api_ttft_and_throughput():
+    head = headline_metrics("local_vs_api")
+    assert "ttft_seconds" in head
+    assert "tokens_per_second" in head
+    assert "accuracy" not in head
+    core = dashboard_metrics("local_vs_api")
+    assert "gpu_utilization" in core
+    assert "e2e_latency_seconds" in core
+
+
 def test_dashboard_includes_extraction_precision_recall():
     core = dashboard_metrics("contracts_specialist")
     assert "extraction_precision" in core

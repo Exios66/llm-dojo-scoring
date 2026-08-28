@@ -10,7 +10,7 @@ scoring code (``src/field_scoring.py``, ``src/metrics.py``, ``src/bootstrap.py``
 
 from __future__ import annotations
 
-__version__ = "0.11.0"
+__version__ = "0.12.0"
 
 from . import (
     bundles,
@@ -44,6 +44,7 @@ from . import (
     phoenix_sync,
     prompts,
     report,
+    serving,
     tasks,
     visualize,
 )
@@ -191,13 +192,25 @@ from .registry import (
     Registry,
 )
 from .prompts import PromptRecord, get_prompt, list_prompts
+from .serving import (
+    CANONICAL_SERVING_KEYS,
+    ServingIdentity,
+    ServingObservation,
+    ServingRun,
+    classify_serving_kind,
+    compare_serving,
+    pair_comparable_runs,
+    score_serving_run,
+    split_local_api,
+)
 
 __all__ = [
     "__version__",
     "bootstrap", "classification", "claims_consistency", "config", "content_scoring", "cost", "diagnostics",
     "equivalences", "error_analysis", "experiment", "export", "extraction_metrics", "failure_modes",
     "field_scoring", "io", "interpret", "langfuse_sync", "phoenix_sync",
-    "report", "asr", "corpus", "intake", "mailroom", "prompts", "suites", "tasks", "visualize",
+    "report", "asr", "corpus", "intake", "mailroom", "prompts", "serving",
+    "suites", "tasks", "visualize",
     "bootstrap_ci", "delta_significance", "wilson_ci",
     "accuracy", "binary_metrics", "confusion_matrix", "exact_match",
     "fbeta", "macro_accuracy", "macro_prf", "normalize_label", "per_class_stats",
@@ -239,4 +252,7 @@ __all__ = [
     "score_content_topic", "score_sentiment",
     "score_correspondence_content", "score_maud_extraction",
     "apply_intake", "deterministic_normalize", "looks_messy", "score_intake",
+    "CANONICAL_SERVING_KEYS", "ServingIdentity", "ServingObservation",
+    "ServingRun", "classify_serving_kind", "compare_serving",
+    "pair_comparable_runs", "score_serving_run", "split_local_api",
 ]
