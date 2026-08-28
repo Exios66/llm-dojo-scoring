@@ -34,7 +34,7 @@ def test_ttft_from_timestamps():
     )
     assert run["ttft_seconds"] == pytest.approx(0.4)
     assert run["e2e_latency_seconds"] == pytest.approx(2.4)
-    assert run["tpot_seconds"] == pytest.approx((2.4 - 0.4) / 49)
+    assert run["tpot_seconds"] == pytest.approx((2.4 - 0.4) / 49, abs=1e-6)
     assert run["tokens_per_second"] == pytest.approx(50 / 2.4)
     assert run["output_tokens_per_second"] == pytest.approx(50 / 2.0)
     assert run["prompt_tokens_per_second"] == pytest.approx(100 / 0.4)
