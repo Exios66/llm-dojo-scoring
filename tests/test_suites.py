@@ -75,6 +75,18 @@ def test_specialist_suites_embed_mailroom_field_types():
         assert suite.profile.doc_bundle == doc_type
 
 
+def test_local_vs_api_suite_is_serving_and_computable():
+    suite = get_suite("local_vs_api")
+    assert suite.kind == "serving"
+    assert suite.computable is True
+    assert list_suites(kind="serving") == ["local_vs_api"]
+    assert "TTFT" in (suite.honest_gap or "")
+    names = suite.metric_names()
+    assert "ttft_seconds" in names
+    assert "quantization" in names
+    assert "model" in names
+
+
 def test_sorter_suite_is_classification_and_computable():
     suite = get_suite("sorter")
     assert suite.kind == "classification"
@@ -223,6 +235,7 @@ def test_expand_agent_families_covers_insurance():
     assert "insurance_claims_specialist" in expand_agent_families(["SPECIALISTS"])
     assert "insurance_claims_auditor" in expand_agent_families(["AUDITORS"])
     assert "sorter_reviewer" in expand_agent_families(["CLASSIFIERS"])
+    assert "local_vs_api" in expand_agent_families(["SERVING"])
     assert expand_agent_families(["ALL"]) == ("ALL",)
 
 

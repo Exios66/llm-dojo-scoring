@@ -1,4 +1,4 @@
-version: 0.11.0
+version: 0.12.0
 description: Importable prompt catalog for llm-dojo-scoring. LLM bodies are production + latest
   docclass-merged keys. Metric names live in entry metadata (metrics_bundle / doc_bundle),
   never as eval targets in the model-visible template.
@@ -467,4 +467,17 @@ prompts:
   notes: No live LLM auditor prompt. Suite score() compares auditor output to the insurance_claim
     specialist field map via score_extraction. contracts_audit_v0 is the only authored auditor
     body (see contract_auditor).
+  priming: []
+- agent: local_vs_api
+  family: production
+  version: procedural
+  kind: procedural
+  metrics_bundle: serving
+  doc_bundle: null
+  source_repo: llm-dojo-scoring
+  source_key: local_vs_api
+  template: null
+  notes: 'Procedural serving comparison: TTFT, throughput, utilization, and identity
+    tags (model, quantization, GPU). No LLM system prompt. Compare local vs API-key
+    runs via serving.compare_serving / get_suite("local_vs_api").score(local, api).'
   priming: []

@@ -1,4 +1,4 @@
-# Prompt catalog (v0.11.0)
+# Prompt catalog (v0.12.0)
 
 Importable catalog of the prompts the dojo scores against. This package
 **does not execute agents** — it vendors the live production template plus
@@ -25,7 +25,7 @@ system = get_prompt("contracts_specialist", family="docclass").text
 ```
 
 `list_prompts()` returns every catalog entry. Filter with `agent=`, `family=`,
-or `kind=`. Every name in `DEFAULT_PROFILES` (25 agents) has at least one
+or `kind=`. Every name in `DEFAULT_PROFILES` (26 agents) has at least one
 entry. Judge variants (`judge-completeness`, `judge-classification`,
 `judge-correctness`) are extra keys for the completeness / classification /
 correctness arms.
@@ -60,6 +60,7 @@ This catalog does **not** vendor the ~1.8MB historical prompt archive.
 |---|---|---|
 | `intake` | `deterministic` | Clerk invariants (NFC, newline unify, NBSP, zero-width, C0, hyphen unwrap, blank-run / horizontal collapse, trim). Gold is `llm_dojo_scoring.intake`. |
 | `archivist` | `procedural` | Content-addressed archive + audit hash. No system prompt. |
+| `local_vs_api` | `procedural` | Serving comparison (TTFT, throughput, utilization, identity). No system prompt. Gold is recorded timings, not a quality label. |
 | `corporate_records_auditor`, `due_diligence_auditor`, `correspondence_auditor`, `compliance_auditor`, `court_opinions_auditor`, `insurance_claims_auditor` | `proposed` | Stub pointing at the specialist field map + suite `score()`. **No LLM body.** |
 | `audit_agent` / `contract_auditor` | `llm` | The only authored auditor prompt: entity-extraction `contracts_audit_v0`. |
 

@@ -39,17 +39,24 @@ def _clean_caches():
 # ----------------------------- bundles -------------------------------------
 
 
-def test_all_ten_bundles_exist():
+def test_all_eleven_bundles_exist():
     assert set(list_bundles()) == {
         "classification", "extraction", "extraction_open", "cost",
         "factuality", "laziness_detection", "audit", "reporter",
-        "transcription", "intake",
+        "transcription", "intake", "serving",
     }
 
 
 def test_every_bundle_validates_against_default_registry():
     for name in list_bundles():
         assert validate_bundle(get_bundle(name))  # raises KeyError on typo
+
+
+def test_serving_bundle_contents():
+    names = set(bundle_metric_names("serving"))
+    assert {"ttft_seconds", "tokens_per_second", "gpu_utilization"} <= names
+    assert "quantization" in names
+    assert "accuracy" not in names
 
 
 def test_audit_bundle_contents():
@@ -104,6 +111,8 @@ def test_default_profiles():
         "insurance_claims_auditor",
         # v0.9.0: intake clerk (pre-sorter text prep)
         "intake",
+        # v0.12.0: local vs API serving comparison
+        "local_vs_api",
     }
     assert set(list_profiles()) == expected
 

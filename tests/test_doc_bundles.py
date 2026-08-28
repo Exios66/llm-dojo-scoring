@@ -143,7 +143,7 @@ def test_resolve_doc_bundle_no_fallback_raises():
 
 # ----------------------------- 22→23 re-pin + regression ------------------------------
 
-def test_profile_set_re_pinned_to_25():
+def test_profile_set_re_pinned_to_26():
     expected = {
         "sorter", "contracts_specialist", "corporate_records_specialist",
         "due_diligence_specialist", "correspondence_specialist",
@@ -158,9 +158,10 @@ def test_profile_set_re_pinned_to_25():
         "insurance_claims_auditor",  # v0.8.0 — 7th specialist companion
         "arbiter",
         "intake",  # v0.9.0 — pre-sorter intake clerk (deterministic / LLM)
+        "local_vs_api",  # v0.12.0 — local vs API serving comparison
     }
     assert set(list_profiles()) == expected
-    assert len(expected) == 25
+    assert len(expected) == 26
 
 
 def test_preexisting_22_profiles_unchanged_by_v070():

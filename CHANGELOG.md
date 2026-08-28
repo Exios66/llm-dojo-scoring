@@ -5,6 +5,43 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-08-28
+
+### Added
+
+- **`local_vs_api` serving suite** — 26th profile, 11th bundle (`serving`).
+  Compare a local run (Ollama / vLLM / llama.cpp / LM Studio) against an
+  API-key run (OpenRouter / OpenAI / …) on the metrics both sides can
+  actually record: TTFT, TPOT, e2e latency + p50/p95, decode and prefill
+  throughput, requests/docs per second, queue time, error rate, token
+  counts, and cost when a price table exists.
+- **`llm_dojo_scoring.serving`** — `compare_serving`, `score_serving_run`,
+  `split_local_api`, `pair_comparable_runs`, plus identity tags (model,
+  quantization, dtype, GPU, max_model_len, provider, profile).
+  `get_suite("local_vs_api").score(local_records, api_records)` is the
+  importable entry point for dependents (including
+  `local-mailroom-sandbox`).
+- Registry T0 `ttft_seconds` / `tokens_per_second` and T1 serving names
+  are **SERVING-only** — sorter headlines stay `accuracy` + `f1_macro`.
+
+Honesty (do not invent KPIs):
+
+- TTFT is `None` unless a first-token timestamp or explicit `ttft_seconds`
+  is recorded. Never inferred from e2e / n_tokens.
+- GPU / KV-cache / VRAM are local-only and stripped on API-key records.
+- Local Ollama tags without an OpenRouter price table leave
+  `estimated_cost_usd` `None` (no fabricated electricity).
+
+### Changed
+
+- Package version **0.12.0**. Consumer pin:
+
+  ```
+  llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.0
+  ```
+
+Scoring formulas and T0 names from v0.10.0 / v0.11.0 are unchanged.
+
 ## [0.11.0] - 2026-08-27
 
 ### Added

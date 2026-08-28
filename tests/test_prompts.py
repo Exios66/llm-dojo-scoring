@@ -55,6 +55,13 @@ def test_archivist_is_procedural_empty_text():
     assert rec.text == ""
 
 
+def test_local_vs_api_is_procedural_empty_text():
+    rec = get_prompt("local_vs_api")
+    assert rec.kind == "procedural"
+    assert rec.text == ""
+    assert rec.metrics_bundle == "serving"
+
+
 def test_proposed_auditors_have_no_llm_body():
     for agent in (
         "corporate_records_auditor",

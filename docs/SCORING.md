@@ -1,4 +1,4 @@
-# Scoring (v0.11.0)
+# Scoring (v0.12.0)
 
 Canonical scoring reference for `llm-dojo-scoring`. The metric **source of truth**
 is [`llm_dojo_scoring/registry.py`](../llm_dojo_scoring/registry.py) `DEFAULT_METRICS_YAML`
@@ -45,6 +45,7 @@ task-kind specific: sorter exact, ContractEval F2, etc.).
 | `court_opinions_auditor` | `audit` | — | `audit_disagreement_rate`, `audit_resolution_rate`, `verified_precision`, `cost_per_document` |
 | `insurance_claims_auditor` | `audit` | — | `audit_disagreement_rate`, `audit_resolution_rate`, `verified_precision`, `cost_per_document` |
 | `arbiter` | `audit` | — | `audit_disagreement_rate`, `audit_resolution_rate`, `verified_precision`, `cost_per_document` |
+| `local_vs_api` | `serving` | `ttft_seconds`, `tokens_per_second` | `tpot_seconds`, `e2e_latency_seconds`, `ttft_p50`, `ttft_p95`, `e2e_p50`, `e2e_p95`, `output_tokens_per_second`, `prompt_tokens_per_second`, `requests_per_second`, `docs_per_second`, `gpu_utilization`, `kv_cache_utilization`, `gpu_memory_used_gb`, `queue_time_seconds`, `error_rate`, `prompt_tokens`, `completion_tokens`, `estimated_cost_usd`, `cost_per_document` |
 
 Notes:
 
@@ -58,6 +59,8 @@ Notes:
   itself is `intake_prep_completeness` (structural, T1).
 - `field_presence` appears on extraction dashboards but **is not emitted** by
   `score_extraction` — see the metric catalog.
+- `local_vs_api` T0 is TTFT + tokens/s. GPU / KV / VRAM are T1 and local-only.
+  Serving names do not apply to sorter or specialists.
 
 ## Extraction confusion model
 
@@ -233,6 +236,37 @@ HONEST GAP: no *external* extraction benchmark (CUAD/MAUD-grade coverage is not 
 ### `compliance_specialist`
 
 HONEST GAP: compliance_filing has zero rows in Lucius-Morningstar/docclass-merged. Hub SEC form-body inventory (10-K, 10-Q, 8-K, …) is the live subclass catalog; suite scores typed-extraction plus that inventory (no corpus-backed rows yet).
+
+### `local_vs_api`
+
+HONEST GAP: TTFT is None unless a first-token timestamp or explicit ttft_seconds is recorded — never inferred from e2e/n_tokens. GPU utilization, KV-cache occupancy, and GPU memory are local-only; API-key providers (OpenRouter, …) cannot supply them. Local Ollama tags without an OpenRouter price table leave estimated_cost_usd None (do not fabricate electricity).
+
+## Local vs API serving
+
+Importable comparison for any consumer that has paired local and API-key runs
+(including `local-mailroom-sandbox`):
+
+```python
+from llm_dojo_scoring import get_suite
+cmp = get_suite("local_vs_api").score(local_records, api_records)
+```
+
+`expected` is the local side; `predicted` is the API-key side.
+Identity (model, quantization, dtype, GPU, max_model_len, provider, profile)
+is registered on each side, not scored as quality.
+
+Formulas (vLLM / NVIDIA NIM / OpenAI streaming conventions):
+
+- **TTFT** = `t_first_token − t_start` (or explicit `ttft_seconds`)
+- **e2e** = `t_end − t_start` (or recorded latency)
+- **TPOT** = `(e2e − ttft) / (completion_tokens − 1)`
+- **tokens/s** = `completion_tokens / e2e`
+- **decode tokens/s** = `completion_tokens / (e2e − ttft)`
+- **prefill tokens/s** = `prompt_tokens / ttft`
+- **req/s** = `n_requests / sum(e2e)`
+- GPU util values `> 1` are treated as percent and stored in `[0, 1]`
+
+Canonical record keys: `llm_dojo_scoring.serving.CANONICAL_SERVING_KEYS`.
 
 ## T0 / T1 metric catalog
 
@@ -965,4 +999,55 @@ max(0, 1 - WER) complementary transcription headline
 - **units:** `float[0,1]` · **aggregation:** `mean`
 - **citation:** max(0, 1 − WER) complementary transcription headline (asr.word_accuracy).
 - **inclusion:** Same inclusion as wer.
+
+### `ttft_seconds` (T0)
+
+Time to first token (streaming first-token timestamp − request start)
+
+- **source:** `serving.score_serving_run`
+- **ground_truth:** `none`
+- **units:** `seconds` · **aggregation:** `mean`
+- **citation:** Time to first token: t_first_token − t_request_start (vLLM / NVIDIA NIM / OpenAI streaming). serving.score_serving_run.
+- **inclusion:** None unless first-token timestamp or explicit ttft_seconds is recorded. Never inferred from e2e / n_tokens.
+
+### `tokens_per_second` (T0)
+
+Decode throughput: completion_tokens / e2e latency
+
+- **source:** `serving.score_serving_run`
+- **ground_truth:** `none`
+- **units:** `tokens/s` · **aggregation:** `mean`
+- **citation:** Decode throughput: completion_tokens / e2e_latency (vLLM tokens/s convention).
+- **inclusion:** None when e2e ≤ 0 or completion_tokens missing.
+
+### `tpot_seconds` (T1)
+
+Time per output token after the first: (e2e − ttft) / (completion_tokens − 1)
+
+- **source:** `serving.score_serving_run`
+- **ground_truth:** `none`
+- **units:** `seconds` · **aggregation:** `mean`
+- **citation:** Time per output token after the first: (e2e − ttft) / (completion_tokens − 1) (NVIDIA NIM TPOT / inter-token latency).
+- **inclusion:** None when TTFT missing, completion_tokens ≤ 1, or e2e < ttft.
+
+### `e2e_latency_seconds` (T1)
+
+End-to-end request wall-clock (start → last token)
+
+- **source:** `serving.score_serving_run`
+- **ground_truth:** `none`
+- **units:** `seconds` · **aggregation:** `mean`
+- **citation:** End-to-end wall-clock from request start to last token (or recorded latency).
+- **inclusion:** None when neither duration nor start/end timestamps are present.
+
+### `gpu_utilization` (T1)
+
+Local GPU SM utilization in [0,1]. None on API-key runs
+
+- **source:** `serving.score_serving_run`
+- **ground_truth:** `none`
+- **units:** `float[0,1]` · **aggregation:** `mean`
+- **citation:** Local GPU SM utilization in [0,1] from nvidia-smi / vLLM. Values >1 treated as percent.
+- **inclusion:** None on API-key providers and when the local run did not record utilization.
+
 

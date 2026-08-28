@@ -13,23 +13,23 @@ artifacts (`Sorter_Experiment_Results.xlsx`, `Sorter_Model_Sweep_Results.xlsx`,
 
 ## Install
 
-Published release: [v0.11.0](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.11.0).
+Published release: [v0.12.0](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.0).
 Dependents pin the **tag**, not a floating SHA.
 
 ```bash
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.11.0"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.0"
 pip install -e .                # from a local checkout
 ```
 
 In **llm-entity-extraction** / **llm-mailroom** `pyproject.toml`:
 
 ```
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.11.0
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.0
 ```
 
 ```python
 from llm_dojo_scoring import score_extraction, bootstrap_ci, tokens_summary
-from llm_dojo_scoring import get_suite, apply_intake, score_task
+from llm_dojo_scoring import get_suite, apply_intake, score_task, compare_serving
 from llm_dojo_scoring.prompts import get_prompt
 ```
 
@@ -145,14 +145,15 @@ print(dojo.render_notes(interp))
 | `visualize` | — (new) | matplotlib plots: CI bars, prompt-version bars, subtype heatmap, failure stacks, cost scatter |
 | `report` | — (new) | Full Markdown report builder |
 | `registry` | — (new) | Metric definitions registry: every score name → tier (**T0 HEADLINE** / **T1 CORE** / **T2 DEEP** / **T3 LOG**), units, aggregation, applicable agents; YAML-backed (`LLM_DOJO_SCORING_REGISTRY`) |
-| `bundles` | — (new) | Ten pre-built **task** bundles (classification, extraction, extraction_open, cost, factuality, laziness_detection, audit, reporter, transcription, intake), fail-fast validated against the registry |
-| `profiles` | — (new) | **25 agent profiles** — each agent's scoring identity (task-derived bundle resolution, fallback bundle, ground-truth flag); YAML overlay via `LLM_DOJO_SCORING_PROFILES` |
+| `bundles` | — (new) | Eleven pre-built **task** bundles (classification, extraction, extraction_open, cost, factuality, laziness_detection, audit, reporter, transcription, intake, serving), fail-fast validated against the registry |
+| `profiles` | — (new) | **26 agent profiles** — each agent's scoring identity (task-derived bundle resolution, fallback bundle, ground-truth flag); YAML overlay via `LLM_DOJO_SCORING_PROFILES` |
 | `suites` | — (new) | **Dedicated scoring suite per pipeline agent** — importable `get_suite` / `score_suite` with field-type maps, doc-type aliases, and honest-gap notes; the API mailroom consumers should call. `list_suites(live_only=True)` hides retired court/DD specialists |
 | `doc_bundles` | — (new) | **Document-type-aware bundles** for the eight processed document classes; remaining honest gaps: retired court/DD, zero-row compliance, corporate_record with no *external* extraction benchmark, CMS GT homogeneity (all-approved) |
 | `mailroom` | — (new) | Live LLM-Mailroom / The-Mailroom contract: five extract classes, `unknown`, merger extract alias, Hub inventories, Langfuse observation types, 35-char score alias, exact vs aligned HF accuracy |
 | `content_scoring` | — (new) | Enron `content_topic` / `sentiment_label` accuracy + macro-F1; MAUD per-question extraction over the 22 Hub keys |
 | `asr` | — (new) | WER / CER / word-accuracy for PDF transcription and OCR |
 | `intake` | — (new) | Pre-sorter clerk: NFC / hyphen unwrap / whitespace prep; deterministic gold, LLM intake scored against it |
+| `serving` | — (new) | Local vs API-key serving comparison: TTFT, throughput, utilization, identity (model / quantization / GPU) |
 | `emitter` | — (new) | Unified score emitter: `ScoreRecord`, network-free JSONL manifest sink + credential-checked inert-unless-configured Langfuse sink; scorecards & headline comparison |
 | `pruning` | — (new) | Tier-based dashboard filtering: `dashboard_metrics(agent)` (profile bundle ∩ tier cap), `headline_metrics(agent)` (strictly T0), `prune_records` |
 | `langfuse_sync` | — (new) | Pull live experiment traces (Langfuse) into run records + reference workbook — subtype sessions **and** mailroom `document-pipeline` traces (intake span, exact/aligned HF accuracy, `user_id` / `release`) |
@@ -205,24 +206,25 @@ organizational layer consumers emit through:
   the Langfuse 35-char transport alias (`extraction_verified_precision`), and
   The-Mailroom judge scores; override via `LLM_DOJO_SCORING_REGISTRY` or an
   explicit path.
-- **`bundles`** — ten task bundles (what the agent *does*): classification,
+- **`bundles`** — eleven task bundles (what the agent *does*): classification,
   extraction, extraction_open, cost, factuality, laziness_detection, audit,
-  reporter, transcription, intake. Every metric must resolve in the registry.
-- **`profiles`** — 25 default **agent profiles**, each one agent's scoring
+  reporter, transcription, intake, serving. Every metric must resolve in the registry.
+- **`profiles`** — 26 default **agent profiles**, each one agent's scoring
   identity: task-derived bundle resolution, a fallback bundle for degraded
   runs, and a ground-truth flag. Includes the sorter, seven specialists
   (five live + two retired), judge/boss/reporter/transcribers/archivist/
-  intake clerk, the audit agent, and the Lane A/B review set
+  intake clerk, the audit agent, the Lane A/B review set
   (`sorter_reviewer`, seven per-specialist auditors including
-  `insurance_claims_auditor`, `arbiter`) that never require ground truth.
+  `insurance_claims_auditor`, `arbiter`) that never require ground truth,
+  and `local_vs_api` (serving comparison; no ground truth).
   Overlay with your own YAML via `LLM_DOJO_SCORING_PROFILES`.
 - **`suites`** — one dedicated, importable scoring suite per pipeline agent
   (and a doc-type alias so `get_suite("insurance_claim")` resolves the
   specialist). `suite.score(expected, predicted)` routes to the existing
   calculation (`score_task` / `score_extraction` / audit disagreement /
-  transcription WER/CER + token-F1 / intake prep). Type-specific extras ship where real
+  transcription WER/CER + token-F1 / intake prep / `compare_serving`). Type-specific extras ship where real
   scorers exist (CUAD laziness, LegalBench, Enron topic/sentiment, MAUD
-  per-question extraction, WER/CER); honest-gap notes record the rest.
+  per-question extraction, WER/CER, local vs API serving); honest-gap notes record the rest.
   Each specialist suite binds the extraction fields, subclass catalog,
   and GT differentiators for its document class from **`corpus`** (pinned to
   `Lucius-Morningstar/docclass-merged`). `get_suite("merger_agreement")`
@@ -255,7 +257,8 @@ organizational layer consumers emit through:
 - **`pruning`** — what a dashboard panel shows: profile-bundle ∩ tier cap.
 - **`prompts`** — importable catalog of production + latest docclass-merged
   templates (`get_prompt("sorter")`, `get_prompt("sorter", family="docclass")`).
-  Intake / archivist / proposed auditors are honest non-LLM entries (`text=""`).
+  Intake / archivist / `local_vs_api` / proposed auditors are honest non-LLM
+  entries (`text=""`).
   Metric names stay in metadata, not in model-visible text. See
   [`docs/PROMPTS.md`](docs/PROMPTS.md).
 
@@ -267,7 +270,7 @@ reg = dojo.load_registry()
 reg.names_for(max_tier=1, agent="sorter")        # T0+T1 slice for one agent
 
 # 2. Dedicated suite: the import mailroom projects should use
-suite = dojo.get_suite("insurance_claims_specialist")          # 25 defaults
+suite = dojo.get_suite("insurance_claims_specialist")          # 26 defaults
 result = suite.score(expected_fields, predicted_fields)       # field-type-aware
 assert suite.name == dojo.get_suite("insurance_claim").name   # doc-type alias
 
@@ -300,6 +303,16 @@ assert get_prompt("intake").kind == "deterministic"
 assert "extraction_f1" in dojo.headline_metrics("contracts_specialist")
 assert "extraction_f2" in dojo.headline_metrics("insurance_claims_specialist")
 assert "content_topic_f1_macro" in dojo.headline_metrics("correspondence_specialist")
+
+# 8. v0.12.0 — local vs API serving comparison (TTFT, throughput, utilization)
+local_run = {"provider": "ollama", "model": "qwen3:8b", "quantization": "q4_k_m",
+             "ttft_seconds": 0.4, "e2e_latency_seconds": 2.4, "completion_tokens": 50}
+api_run = {"provider": "openrouter", "model": "qwen/qwen3-8b",
+           "ttft_seconds": 0.15, "e2e_latency_seconds": 0.9, "completion_tokens": 50}
+cmp = dojo.get_suite("local_vs_api").score(local_run, api_run)
+assert cmp["metrics"]["ttft_seconds"]["delta_local_minus_api"] is not None
+assert "ttft_seconds" in dojo.headline_metrics("local_vs_api")
+assert "ttft_seconds" not in dojo.headline_metrics("sorter")
 raw = "A hyphen-\nated  line"
 cleaned, _stats = dojo.apply_intake(raw)
 intake = dojo.get_suite("intake").score(raw, cleaned)

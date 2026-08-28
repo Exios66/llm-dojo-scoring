@@ -9,7 +9,7 @@ scorers, and reporting scripts keep working with minimal edits.
 
 ```bash
 # in llm-entity-extraction / llm-mailroom — pin the published tag
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.11.0"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.0"
 # or from a local checkout
 pip install -e /path/to/llm-dojo-scoring
 ```
@@ -17,10 +17,10 @@ pip install -e /path/to/llm-dojo-scoring
 `pyproject.toml` / `requirements.txt`:
 
 ```
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.11.0
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.0
 ```
 
-Do not pin a merge SHA. Release notes: https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.11.0
+Do not pin a merge SHA. Release notes: https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.0
 
 ## 2. Import swap table
 
@@ -325,6 +325,43 @@ assert m.citation and m.ground_truth == "required"
 Canonical scoring tables (per-agent T0/T1, field maps, honest gaps, metric catalog): [`docs/SCORING.md`](SCORING.md). Prompt catalog rules: [`docs/PROMPTS.md`](PROMPTS.md).
 
 Do not push pin PRs to llm-mailroom / llm-entity-extraction / The-Mailroom from this package PR — consumers bump when they choose.
+
+## 3f. Pinning the v0.12.0 release (local vs API serving suite)
+
+Dependents pin the published GitHub Release tag — not a merge SHA:
+
+```
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.0
+```
+
+https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.0
+
+v0.12.0 is additive on the v0.10.0 / v0.11.0 scoring surface (formulas and T0 names for specialists / sorter are unchanged). New imports:
+
+```python
+from llm_dojo_scoring import get_suite, compare_serving, split_local_api
+from llm_dojo_scoring.serving import score_serving_run
+
+# expected = local run(s), predicted = API-key run(s)
+cmp = get_suite("local_vs_api").score(
+    {"provider": "ollama", "model": "qwen3:8b", "quantization": "q4_k_m",
+     "ttft_seconds": 0.4, "e2e_latency_seconds": 2.4, "completion_tokens": 50},
+    {"provider": "openrouter", "model": "qwen/qwen3-8b",
+     "ttft_seconds": 0.15, "e2e_latency_seconds": 0.9, "completion_tokens": 50},
+)
+assert cmp["metrics"]["ttft_seconds"]["local"] == 0.4
+assert cmp["metrics"]["gpu_utilization"]["api"] is None  # local-only
+
+# Partition an experiment log, then pair on task + prompt + fingerprint
+local, api, unknown = split_local_api(records)
+```
+
+Serving T0 (`ttft_seconds`, `tokens_per_second`) applies only to `local_vs_api`.
+Sorter headlines stay `accuracy` + `f1_macro`. TTFT is `None` unless a
+first-token timestamp or explicit `ttft_seconds` is recorded.
+
+Do not push pin PRs to llm-mailroom / llm-entity-extraction / The-Mailroom /
+local-mailroom-sandbox from this package PR — consumers bump when they choose.
 
 ## 4. Verification
 

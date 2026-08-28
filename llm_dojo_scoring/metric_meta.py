@@ -384,6 +384,105 @@ METRIC_META: dict[str, dict[str, str]] = {
         "None when overall_score is None. Requires two dicts.",
         "optional",
     ),
+    # ----- T0/T1 local vs API serving -----
+    "ttft_seconds": _m(
+        "Time to first token: t_first_token − t_request_start (vLLM / NVIDIA NIM "
+        "/ OpenAI streaming). serving.score_serving_run.",
+        "None unless first-token timestamp or explicit ttft_seconds is recorded. "
+        "Never inferred from e2e / n_tokens.",
+        "none",
+    ),
+    "tokens_per_second": _m(
+        "Decode throughput: completion_tokens / e2e_latency (vLLM tokens/s convention).",
+        "None when e2e ≤ 0 or completion_tokens missing.",
+        "none",
+    ),
+    "tpot_seconds": _m(
+        "Time per output token after the first: (e2e − ttft) / (completion_tokens − 1) "
+        "(NVIDIA NIM TPOT / inter-token latency).",
+        "None when TTFT missing, completion_tokens ≤ 1, or e2e < ttft.",
+        "none",
+    ),
+    "e2e_latency_seconds": _m(
+        "End-to-end wall-clock from request start to last token (or recorded latency).",
+        "None when neither duration nor start/end timestamps are present.",
+        "none",
+    ),
+    "ttft_p50": _m(
+        "Median TTFT over per-request observations (linear interpolation percentile).",
+        "None when no request has TTFT.",
+        "none",
+    ),
+    "ttft_p95": _m(
+        "95th-percentile TTFT over per-request observations.",
+        "None when no request has TTFT.",
+        "none",
+    ),
+    "e2e_p50": _m(
+        "Median end-to-end latency over per-request observations.",
+        "None when no request has e2e.",
+        "none",
+    ),
+    "e2e_p95": _m(
+        "95th-percentile end-to-end latency over per-request observations.",
+        "None when no request has e2e.",
+        "none",
+    ),
+    "output_tokens_per_second": _m(
+        "Decode-only throughput: completion_tokens / (e2e − ttft).",
+        "None when TTFT missing or e2e ≤ ttft.",
+        "none",
+    ),
+    "prompt_tokens_per_second": _m(
+        "Prefill throughput: prompt_tokens / ttft.",
+        "None when TTFT missing or prompt_tokens missing.",
+        "none",
+    ),
+    "requests_per_second": _m(
+        "n_requests / summed e2e window (sequential serving throughput).",
+        "None when no e2e observations.",
+        "none",
+    ),
+    "docs_per_second": _m(
+        "n_docs / summed e2e window (documents processed per second).",
+        "None when no e2e observations or n_docs is 0.",
+        "none",
+    ),
+    "gpu_utilization": _m(
+        "Local GPU SM utilization in [0,1] from nvidia-smi / vLLM. Values >1 treated as percent.",
+        "None on API-key providers and when the local run did not record utilization.",
+        "none",
+    ),
+    "kv_cache_utilization": _m(
+        "vLLM KV-cache / prefix-cache occupancy in [0,1].",
+        "None on API-key providers and when the local engine did not expose cache stats.",
+        "none",
+    ),
+    "gpu_memory_used_gb": _m(
+        "Local GPU memory used (GiB).",
+        "None on API-key providers and when memory was not recorded.",
+        "none",
+    ),
+    "queue_time_seconds": _m(
+        "Scheduler wait before generation (vLLM waiting_time / queue_time).",
+        "None when the engine did not record queue wait.",
+        "none",
+    ),
+    "error_rate": _m(
+        "Share of serving requests flagged error/failed.",
+        "0.0 when n_requests > 0 and none failed. None when there are no requests.",
+        "none",
+    ),
+    "prompt_tokens": _m(
+        "Sum of prompt/input tokens over observations (OpenAI usage.prompt_tokens).",
+        "None when no observation recorded prompt tokens.",
+        "none",
+    ),
+    "completion_tokens": _m(
+        "Sum of completion/output tokens over observations (OpenAI usage.completion_tokens).",
+        "None when no observation recorded completion tokens.",
+        "none",
+    ),
     # ----- T1 emitter-only mailroom aliases -----
     "schema_valid": dict(_EMITTER),
     "parse_error": dict(_EMITTER),

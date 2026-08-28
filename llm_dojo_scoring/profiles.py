@@ -19,8 +19,8 @@ the default profile table covers every pipeline agent: sorter, seven
 specialists (five live + two retired), reporter, judge, boss,
 pdf_transcriber, image_extractor, archivist, intake clerk (pre-sorter
 text prep), audit_agent, the review/audit lanes (sorter_reviewer,
-per-specialist auditors, arbiter), and the insurance_claims_auditor
-companion.
+per-specialist auditors, arbiter), the insurance_claims_auditor
+companion, and the local_vs_api serving comparison.
 """
 
 from __future__ import annotations
@@ -132,6 +132,7 @@ def _bundle_for_tasks(tasks: Iterable[str]) -> str | None:
         "store": "cost",
         "orchestrate": "reporter",
         "summarize": "reporter",
+        "compare": "serving",
     }
     for t in tasks:
         if t in table:
@@ -315,6 +316,25 @@ DEFAULT_PROFILES: dict[str, AgentProfile] = {
             ("verify", "review"),
             "audit",
             ground_truth=False,
+        ),
+        _p(
+            "local_vs_api",
+            "Local vs API Serving Comparison",
+            ("compare",),
+            "serving",
+            ground_truth=False,
+            extras={
+                "serving_kinds": ["local", "api"],
+                "identity_fields": [
+                    "model",
+                    "quantization",
+                    "dtype",
+                    "max_model_len",
+                    "gpu",
+                    "provider",
+                    "profile",
+                ],
+            },
         ),
     )
 }

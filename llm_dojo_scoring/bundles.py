@@ -21,6 +21,7 @@ audit                audit agent (disagreement/resolution)
 reporter             aggregators (derived-only)
 transcription        pdf_transcriber, image_extractor
 intake               intake clerk (pre-sorter text prep)
+serving              local vs API serving comparison
 ===================  =====================================================
 """
 
@@ -259,6 +260,49 @@ BUILTIN_BUNDLES: dict[str, Bundle] = {
                     "intake_collapsed_blanks",
                 ),
             },
+        ),
+        Bundle(
+            name="serving",
+            description="Local vs API serving comparison — TTFT, throughput, utilization, identity",
+            metric_names=(
+                "ttft_seconds",
+                "tokens_per_second",
+                "tpot_seconds",
+                "e2e_latency_seconds",
+                "ttft_p50",
+                "ttft_p95",
+                "e2e_p50",
+                "e2e_p95",
+                "output_tokens_per_second",
+                "prompt_tokens_per_second",
+                "requests_per_second",
+                "docs_per_second",
+                "gpu_utilization",
+                "kv_cache_utilization",
+                "gpu_memory_used_gb",
+                "queue_time_seconds",
+                "error_rate",
+                "prompt_tokens",
+                "completion_tokens",
+                "total_tokens",
+                "estimated_cost_usd",
+                "cost_per_document",
+                "serving_kind",
+                "quantization",
+                "gpu_name",
+                "max_model_len",
+                "model",
+                "provider",
+                "dtype",
+                "gpu_count",
+                "tensor_parallel",
+                "serving_profile",
+                "prompt_version",
+                "model_slug",
+                "base_url_host",
+                "n_requests",
+                "n_docs",
+            ),
         ),
     )
 }
