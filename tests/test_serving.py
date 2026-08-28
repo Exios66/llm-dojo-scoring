@@ -268,3 +268,110 @@ def test_kind_field_is_not_used_for_serving_kind():
     assert classify_serving_kind({"kind": "local", "provider": "mystery"}) == "unknown"
     assert classify_serving_kind({"serving_kind": "local"}) == "local"
     assert classify_serving_kind({"serving": {"kind": "api"}}) == "api"
+
+
+def test_scoring_table_includes_missing_elements_as_none():
+    from llm_dojo_scoring.serving import SERVING_METRIC_NAMES, serving_table_rows
+
+    out = compare_serving(
+        {
+            "provider": "ollama",
+            "model": "qwen3:8b",
+            "quantization": "q4_k_m",
+            "ttft_seconds": 0.4,
+            "e2e_latency_seconds": 2.4,
+            "prompt_tokens": 100,
+            "completion_tokens": 50,
+            "gpu_utilization": 0.65,
+        },
+        {
+            "provider": "openrouter",
+            "model": "qwen/qwen3.7-flash",
+            "ttft_seconds": 0.15,
+            "e2e_latency_seconds": 0.9,
+            "prompt_tokens": 100,
+            "completion_tokens": 50,
+        },
+    )
+    rows = {r["metric"]: r for r in out["table"]}
+    assert set(rows) == set(SERVING_METRIC_NAMES)
+    assert rows["ttft_seconds"]["status"] == "compared"
+    assert rows["gpu_utilization"]["status"] == "local_only"
+    assert rows["gpu_utilization"]["api"] is None
+    assert rows["queue_time_seconds"]["status"] == "missing"
+    assert rows["queue_time_seconds"]["local"] is None
+    assert rows["queue_time_seconds"]["api"] is None
+    assert serving_table_rows(out)[0]["metric"] == "ttft_seconds"
+
+
+def test_scorecard_and_cost_calculations():
+    from llm_dojo_scoring.cost import estimate_cost
+    from llm_dojo_scoring.serving import serving_card_markdown
+
+    local = {
+        "provider": "ollama",
+        "model": "qwen3:8b",
+        "quantization": "q4_k_m",
+        "ttft_seconds": 0.4,
+        "e2e_latency_seconds": 2.4,
+        "prompt_tokens": 100,
+        "completion_tokens": 50,
+        "n": 1,
+    }
+    api = {
+        "provider": "openrouter",
+        "model": "qwen/qwen3.7-flash",
+        "ttft_seconds": 0.15,
+        "e2e_latency_seconds": 0.9,
+        "prompt_tokens": 100,
+        "completion_tokens": 50,
+        "n": 1,
+    }
+    out = compare_serving(local, api)
+    card = out["scorecard"]
+    assert card["agent"] == "local_vs_api"
+    assert "ttft_seconds" in card["headlines"]
+    assert "estimated_cost_usd" in card["dashboard"]
+    assert card["identity"]["local"]["quantization"] == "q4_k_m"
+    assert card["cost"]["local"]["estimated_cost_usd"] is None
+    assert "price table" in (card["cost"]["local"]["honest_gap"] or "")
+    expected_api = estimate_cost(100, 50, "qwen/qwen3.7-flash")
+    assert card["cost"]["api"]["estimated_cost_usd"] == pytest.approx(expected_api)
+    assert card["cost"]["api"]["price_per_million_prompt"] == pytest.approx(0.03)
+    assert card["cost"]["api"]["formula"]
+    assert card["cost"]["delta"]["estimated_cost_usd"]["local"] is None
+    assert "queue_time_seconds" in card["missing"]
+    md = out["markdown"]
+    assert "| metric | tier |" in md
+    assert "## Cost calculations" in md
+    assert "## Missing elements" in md
+    assert serving_card_markdown(out).startswith("# local vs API serving scorecard")
+    suite = get_suite("local_vs_api").score(local, api)
+    assert "scorecard" in suite and "table" in suite and "cost" in suite
+
+
+def test_emit_serving_scorecard_separates_local_and_api_runs():
+    from llm_dojo_scoring.emitter import Emitter
+    from llm_dojo_scoring.serving import emit_serving_scorecard
+
+    em = Emitter(sinks=[])
+    cmp = compare_serving(
+        {
+            "provider": "vllm",
+            "ttft_seconds": 0.4,
+            "e2e_latency_seconds": 2.0,
+            "completion_tokens": 40,
+        },
+        {
+            "provider": "openrouter",
+            "ttft_seconds": 0.1,
+            "e2e_latency_seconds": 0.8,
+            "completion_tokens": 40,
+        },
+    )
+    emit_serving_scorecard(cmp, run_id="exp1", emitter=em)
+    local_card = em.get_scorecard("local_vs_api", run_id="exp1:local", min_tier=1)
+    api_card = em.get_scorecard("local_vs_api", run_id="exp1:api", min_tier=1)
+    assert local_card["ttft_seconds"] == pytest.approx(0.4)
+    assert api_card["ttft_seconds"] == pytest.approx(0.1)
+    assert "gpu_utilization" not in api_card

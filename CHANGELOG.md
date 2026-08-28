@@ -5,6 +5,34 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-08-28
+
+### Added
+
+- **Serving scoring table + scorecard.** `compare_serving` / `get_suite("local_vs_api").score`
+  now return `table` (every T0/T1 serving metric, including missing elements as
+  `None`), `scorecard` (T0 headlines, T0+T1 dashboard, identity, cost
+  calculations, `missing` list), `cost` (token × OpenRouter price-table
+  breakdown per side), and `markdown`.
+- **`serving_table_rows` / `serving_table_markdown` / `serving_scorecard` /
+  `serving_cost_card` / `serving_card_markdown` / `emit_serving_scorecard`.**
+  Emitter writes local and API values as separate runs (`run_id:local` /
+  `run_id:api`) so `get_scorecard("local_vs_api")` does not average the two sides.
+- Remaining serving T1 names documented in [`docs/SCORING.md`](docs/SCORING.md).
+
+Honesty: missing metrics stay `None` (status `missing` / `local_only`);
+local Ollama cost stays `None` without a price table.
+
+### Changed
+
+- Package version **0.12.1**. Consumer pin:
+
+  ```
+  llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.1
+  ```
+
+Scoring formulas from v0.12.0 / v0.11.0 / v0.10.0 are unchanged.
+
 ## [0.12.0] - 2026-08-28
 
 ### Added
