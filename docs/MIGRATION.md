@@ -9,7 +9,7 @@ scorers, and reporting scripts keep working with minimal edits.
 
 ```bash
 # in llm-entity-extraction / llm-mailroom — pin the published tag
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.0"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.1"
 # or from a local checkout
 pip install -e /path/to/llm-dojo-scoring
 ```
@@ -17,10 +17,10 @@ pip install -e /path/to/llm-dojo-scoring
 `pyproject.toml` / `requirements.txt`:
 
 ```
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.0
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.1
 ```
 
-Do not pin a merge SHA. Release notes: https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.0
+Do not pin a merge SHA. Release notes: https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.1
 
 ## 2. Import swap table
 
@@ -362,6 +362,33 @@ first-token timestamp or explicit `ttft_seconds` is recorded.
 
 Do not push pin PRs to llm-mailroom / llm-entity-extraction / The-Mailroom /
 local-mailroom-sandbox from this package PR — consumers bump when they choose.
+
+## 3g. Pinning the v0.12.1 release (serving table + scorecard)
+
+Dependents pin the published GitHub Release tag — not a merge SHA:
+
+```
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.1
+```
+
+https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.1
+
+v0.12.1 is additive on v0.12.0. `compare_serving` now returns a scoring **table**
+(every T0/T1 serving metric, missing elements as `None`) and a **scorecard**
+with identity + token × price-table cost calculations:
+
+```python
+from llm_dojo_scoring import get_suite
+from llm_dojo_scoring.serving import emit_serving_scorecard
+
+cmp = get_suite("local_vs_api").score(local_records, api_records)
+assert {r["metric"] for r in cmp["table"]}  # includes queue_time_seconds even when None
+assert cmp["scorecard"]["cost"]["local"]["estimated_cost_usd"] is None  # Ollama slug
+assert cmp["markdown"].startswith("# local vs API serving scorecard")
+emit_serving_scorecard(cmp, run_id="exp_1")
+```
+
+Do not push pin PRs to dependents from this package PR.
 
 ## 4. Verification
 

@@ -23,7 +23,7 @@ from typing import Any, Iterable, Mapping, Sequence
 from urllib.parse import urlparse
 
 from .bootstrap import bootstrap_ci, delta_significance
-from .cost import estimate_cost
+from .cost import estimate_cost, price_for
 
 __all__ = [
     "LOCAL_PROVIDERS",
@@ -41,6 +41,12 @@ __all__ = [
     "split_local_api",
     "pair_comparable_runs",
     "CANONICAL_SERVING_KEYS",
+    "serving_table_rows",
+    "serving_table_markdown",
+    "serving_cost_card",
+    "serving_scorecard",
+    "serving_card_markdown",
+    "emit_serving_scorecard",
 ]
 
 LOCAL_PROVIDERS = frozenset(
@@ -667,6 +673,358 @@ def _delta_map(local: Mapping[str, Any], api: Mapping[str, Any]) -> dict[str, An
     return out
 
 
+_LOCAL_ONLY_METRICS = frozenset(
+    {"gpu_utilization", "kv_cache_utilization", "gpu_memory_used_gb"}
+)
+_HEADLINE_NAMES = ("ttft_seconds", "tokens_per_second")
+_COST_NAMES = ("estimated_cost_usd", "cost_per_document", "prompt_tokens", "completion_tokens", "total_tokens")
+
+
+def _identity_dict(agg: Mapping[str, Any] | None) -> dict[str, Any]:
+    ident = (agg or {}).get("identity") or {}
+    if isinstance(ident, list):
+        ident = ident[0] if ident else {}
+    return dict(ident) if isinstance(ident, Mapping) else {}
+
+
+def _metric_status(local: float | None, api: float | None, name: str) -> str:
+    if local is None and api is None:
+        return "missing"
+    if api is None:
+        return "local_only" if name in _LOCAL_ONLY_METRICS or local is not None else "missing"
+    if local is None:
+        return "api_only"
+    return "compared"
+
+
+def _metric_note(name: str, status: str, gaps: Sequence[str]) -> str | None:
+    if status == "missing":
+        if name == "ttft_seconds":
+            return "TTFT not recorded — not inferred from e2e/n_tokens"
+        if name in _LOCAL_ONLY_METRICS:
+            return "not recorded on either side"
+        if name in _COST_NAMES:
+            return "tokens/cost not recorded"
+        return "not recorded"
+    if status == "local_only" and name in _LOCAL_ONLY_METRICS:
+        return "API-key providers cannot supply GPU/KV/VRAM"
+    if status == "local_only" and name in _COST_NAMES:
+        return "API cost/tokens not recorded"
+    if name == "estimated_cost_usd":
+        for gap in gaps:
+            if "estimated_cost_usd" in gap:
+                return gap
+    return None
+
+
+def serving_table_rows(
+    comparison: Mapping[str, Any],
+    *,
+    include_missing: bool = True,
+) -> list[dict[str, Any]]:
+    """One row per serving metric, including missing elements as ``None``.
+
+    ``status`` is ``compared`` | ``local_only`` | ``api_only`` | ``missing``.
+    Rows are never zero-filled.
+    """
+    from .registry import load_registry
+
+    left = comparison.get("local") or {}
+    right = comparison.get("api") or {}
+    gaps = list(comparison.get("honest_gaps") or [])
+    try:
+        reg = load_registry()
+    except Exception:
+        reg = None
+    rows: list[dict[str, Any]] = []
+    for name in SERVING_METRIC_NAMES:
+        local_v = _as_float(left.get(name)) if isinstance(left, Mapping) else None
+        api_v = _as_float(right.get(name)) if isinstance(right, Mapping) else None
+        status = _metric_status(local_v, api_v, name)
+        if status == "missing" and not include_missing:
+            continue
+        delta = None if local_v is None or api_v is None else round(local_v - api_v, 6)
+        ratio = None
+        if local_v is not None and api_v is not None and api_v != 0:
+            ratio = round(local_v / api_v, 6)
+        tier = None
+        units = None
+        if reg is not None and name in getattr(reg, "metrics", {}):
+            m = reg.get(name)
+            tier = int(m.tier)
+            units = m.units
+        rows.append(
+            {
+                "metric": name,
+                "tier": tier,
+                "units": units,
+                "local": local_v,
+                "api": api_v,
+                "delta_local_minus_api": delta,
+                "ratio_local_over_api": ratio,
+                "status": status,
+                "note": _metric_note(name, status, gaps),
+            }
+        )
+    return rows
+
+
+def _cell(value: Any) -> str:
+    if value is None:
+        return "None"
+    if isinstance(value, float):
+        if value != value:  # NaN
+            return "None"
+        text = f"{value:.6g}"
+        return text
+    return str(value)
+
+
+def serving_table_markdown(
+    comparison: Mapping[str, Any],
+    *,
+    include_missing: bool = True,
+) -> str:
+    """Markdown scoring table: every comparable metric plus missing elements."""
+    rows = serving_table_rows(comparison, include_missing=include_missing)
+    lines = [
+        "| metric | tier | local | api | Δ local−api | ratio | status | note |",
+        "|---|---:|---:|---:|---:|---:|---|---|",
+    ]
+    for row in rows:
+        tier = "" if row["tier"] is None else str(row["tier"])
+        note = row["note"] or ""
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    f"`{row['metric']}`",
+                    tier,
+                    _cell(row["local"]),
+                    _cell(row["api"]),
+                    _cell(row["delta_local_minus_api"]),
+                    _cell(row["ratio_local_over_api"]),
+                    row["status"],
+                    note.replace("|", "/"),
+                ]
+            )
+            + " |"
+        )
+    return "\n".join(lines)
+
+
+def serving_cost_card(agg: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Token × price-table cost breakdown. ``None`` when the slug has no price."""
+    agg = agg or {}
+    ident = _identity_dict(agg)
+    model = ident.get("model")
+    prices = price_for(model)
+    prompt = agg.get("prompt_tokens")
+    completion = agg.get("completion_tokens")
+    recorded = _as_float(agg.get("estimated_cost_usd"))
+    computed = estimate_cost(prompt, completion, model)
+    cost = recorded if recorded is not None else computed
+    formula = None
+    if prices is not None and prompt is not None and completion is not None:
+        formula = (
+            f"({int(prompt)} × {prices[0]}/1e6) + ({int(completion)} × {prices[1]}/1e6)"
+        )
+    gap = None
+    if prices is None:
+        gap = "no OpenRouter price table for this model slug (do not fabricate electricity)"
+    elif prompt is None and completion is None:
+        gap = "token counts not recorded"
+    n_docs = agg.get("n_docs")
+    cost_per = agg.get("cost_per_document")
+    if cost_per is None and cost is not None and n_docs:
+        cost_per = round(cost / n_docs, 8)
+    return {
+        "model": model,
+        "serving_kind": ident.get("serving_kind"),
+        "provider": ident.get("provider"),
+        "quantization": ident.get("quantization"),
+        "prompt_tokens": prompt,
+        "completion_tokens": completion,
+        "total_tokens": agg.get("total_tokens"),
+        "n_docs": n_docs,
+        "price_per_million_prompt": prices[0] if prices else None,
+        "price_per_million_completion": prices[1] if prices else None,
+        "formula": formula,
+        "estimated_cost_usd": cost,
+        "cost_per_document": cost_per,
+        "honest_gap": gap,
+    }
+
+
+def _cost_delta(local_cost: Mapping[str, Any], api_cost: Mapping[str, Any]) -> dict[str, Any]:
+    a = _as_float(local_cost.get("estimated_cost_usd"))
+    b = _as_float(api_cost.get("estimated_cost_usd"))
+    pa = _as_float(local_cost.get("cost_per_document"))
+    pb = _as_float(api_cost.get("cost_per_document"))
+    return {
+        "estimated_cost_usd": {
+            "local": a,
+            "api": b,
+            "delta_local_minus_api": None if a is None or b is None else round(a - b, 6),
+        },
+        "cost_per_document": {
+            "local": pa,
+            "api": pb,
+            "delta_local_minus_api": None if pa is None or pb is None else round(pa - pb, 8),
+        },
+    }
+
+
+def serving_scorecard(comparison: Mapping[str, Any]) -> dict[str, Any]:
+    """Dashboard scorecard for a local vs API comparison.
+
+    T0 headlines, T0+T1 dashboard (including cost), identity tags, cost
+    calculations, and an explicit ``missing`` list of unrecorded metrics.
+    """
+    rows = serving_table_rows(comparison, include_missing=True)
+    by_name = {r["metric"]: r for r in rows}
+    headlines = {n: by_name[n] for n in _HEADLINE_NAMES if n in by_name}
+    dashboard = {
+        r["metric"]: r
+        for r in rows
+        if r.get("tier") is None or int(r["tier"]) <= 1
+    }
+    local_cost = serving_cost_card(comparison.get("local") or {})
+    api_cost = serving_cost_card(comparison.get("api") or {})
+    missing = [r["metric"] for r in rows if r["status"] == "missing"]
+    return {
+        "agent": "local_vs_api",
+        "headlines": headlines,
+        "dashboard": dashboard,
+        "identity": {
+            "local": _identity_dict(comparison.get("local") or {}),
+            "api": _identity_dict(comparison.get("api") or {}),
+        },
+        "cost": {
+            "local": local_cost,
+            "api": api_cost,
+            "delta": _cost_delta(local_cost, api_cost),
+        },
+        "quality": comparison.get("quality"),
+        "honest_gaps": list(comparison.get("honest_gaps") or []),
+        "missing": missing,
+        "n_requests": {
+            "local": (comparison.get("local") or {}).get("n_requests"),
+            "api": (comparison.get("api") or {}).get("n_requests"),
+        },
+    }
+
+
+def serving_card_markdown(comparison: Mapping[str, Any]) -> str:
+    """Markdown scoring card: identity, T0, full metric table, cost, gaps."""
+    card = serving_scorecard(comparison)
+    loc = card["identity"]["local"]
+    api = card["identity"]["api"]
+    lines = [
+        "# local vs API serving scorecard",
+        "",
+        "## Identity",
+        "",
+        "| field | local | api |",
+        "|---|---|---|",
+    ]
+    fields = (
+        "serving_kind",
+        "provider",
+        "model",
+        "quantization",
+        "dtype",
+        "gpu",
+        "max_model_len",
+        "profile",
+        "prompt_version",
+        "task",
+    )
+    for field_name in fields:
+        lv = loc.get(field_name)
+        av = api.get(field_name)
+        if lv is None and av is None:
+            continue
+        lines.append(f"| `{field_name}` | {_cell(lv)} | {_cell(av)} |")
+    lines.extend(["", "## Headlines (T0)", ""])
+    for name, row in card["headlines"].items():
+        lines.append(
+            f"- `{name}`: local={_cell(row['local'])} · api={_cell(row['api'])} · "
+            f"Δ={_cell(row['delta_local_minus_api'])} ({row['status']})"
+        )
+    lines.extend(["", "## Scoring table", "", serving_table_markdown(comparison), ""])
+    lc, ac = card["cost"]["local"], card["cost"]["api"]
+    lines.extend(
+        [
+            "## Cost calculations",
+            "",
+            "| side | model | prompt tok | completion tok | $/1M in | $/1M out | formula | estimated USD | per doc | note |",
+            "|---|---|---:|---:|---:|---:|---|---:|---:|---|",
+        ]
+    )
+    for side, block in (("local", lc), ("api", ac)):
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    side,
+                    _cell(block.get("model")),
+                    _cell(block.get("prompt_tokens")),
+                    _cell(block.get("completion_tokens")),
+                    _cell(block.get("price_per_million_prompt")),
+                    _cell(block.get("price_per_million_completion")),
+                    (block.get("formula") or "None").replace("|", "/"),
+                    _cell(block.get("estimated_cost_usd")),
+                    _cell(block.get("cost_per_document")),
+                    (block.get("honest_gap") or "").replace("|", "/"),
+                ]
+            )
+            + " |"
+        )
+    if card["honest_gaps"]:
+        lines.extend(["", "## Honest gaps", ""])
+        for gap in card["honest_gaps"]:
+            lines.append(f"- {gap}")
+    if card["missing"]:
+        lines.extend(["", "## Missing elements", ""])
+        lines.append(
+            "Recorded as `None` (not 0.0): " + ", ".join(f"`{n}`" for n in card["missing"])
+        )
+    return "\n".join(lines) + "\n"
+
+
+def emit_serving_scorecard(
+    comparison: Mapping[str, Any],
+    *,
+    run_id: str | None = None,
+    emitter: Any | None = None,
+) -> dict[str, Any]:
+    """Persist local and API T0/T1 values as separate scorecard runs.
+
+    Local values go to ``run_id:local``; API values to ``run_id:api``.
+    Missing values are not emitted (never stored as 0.0).
+    """
+    from .emitter import get_emitter
+
+    em = emitter or get_emitter()
+    card = serving_scorecard(comparison)
+    for side in ("local", "api"):
+        sid = f"{run_id}:{side}" if run_id else side
+        for name, row in card["dashboard"].items():
+            value = row.get(side)
+            if not isinstance(value, (int, float)) or isinstance(value, bool):
+                continue
+            em.emit_score(
+                "local_vs_api",
+                doc_id=side,
+                metric_name=name,
+                value=float(value),
+                run_id=sid,
+                metadata={"side": side, "status": row.get("status")},
+            )
+    return card
+
+
 def compare_serving(
     local: Mapping[str, Any] | ServingRun | Sequence[Any],
     api: Mapping[str, Any] | ServingRun | Sequence[Any],
@@ -677,6 +1035,10 @@ def compare_serving(
 
     ``delta_local_minus_api`` is signed: negative TTFT means local is faster.
     GPU/KV metrics stay ``None`` on the API side rather than being zero-filled.
+
+    Also returns ``table`` (every T0/T1 metric including missing ``None``
+    rows), ``scorecard`` (headlines + dashboard + identity + cost),
+    ``cost`` (token × price-table breakdown), and ``markdown``.
     """
     local_runs: Sequence[Any] = (
         local if isinstance(local, Sequence) and not isinstance(local, (str, bytes, Mapping, ServingRun))
@@ -738,7 +1100,7 @@ def compare_serving(
         if gap not in gaps:
             gaps.append(gap)
 
-    return {
+    payload = {
         "local": left,
         "api": right,
         "metrics": _delta_map(left, right),
@@ -747,6 +1109,11 @@ def compare_serving(
         "e2e_delta": delta_significance(api_e2e, local_e2e),
         "honest_gaps": gaps,
     }
+    payload["table"] = serving_table_rows(payload)
+    payload["scorecard"] = serving_scorecard(payload)
+    payload["cost"] = payload["scorecard"]["cost"]
+    payload["markdown"] = serving_card_markdown(payload)
+    return payload
 
 
 def split_local_api(

@@ -1,4 +1,4 @@
-# Scoring (v0.12.0)
+# Scoring (v0.12.1)
 
 Canonical scoring reference for `llm-dojo-scoring`. The metric **source of truth**
 is [`llm_dojo_scoring/registry.py`](../llm_dojo_scoring/registry.py) `DEFAULT_METRICS_YAML`
@@ -267,6 +267,29 @@ Formulas (vLLM / NVIDIA NIM / OpenAI streaming conventions):
 - GPU util values `> 1` are treated as percent and stored in `[0, 1]`
 
 Canonical record keys: `llm_dojo_scoring.serving.CANONICAL_SERVING_KEYS`.
+
+### Scoring table and scorecard
+
+`compare_serving` (and `get_suite("local_vs_api").score`) now return a full
+**scoring table** (every T0/T1 serving metric, including missing elements as
+`None`) and a **scorecard** with identity + cost calculations:
+
+```python
+from llm_dojo_scoring import get_suite
+from llm_dojo_scoring.serving import serving_card_markdown, emit_serving_scorecard
+
+cmp = get_suite("local_vs_api").score(local_records, api_records)
+cmp["table"]       # list of {metric, tier, local, api, delta, ratio, status, note}
+cmp["scorecard"]   # headlines, dashboard, identity, cost, missing, honest_gaps
+cmp["cost"]        # token × price-table breakdown per side
+print(cmp["markdown"])
+emit_serving_scorecard(cmp, run_id="exp_1")  # local → exp_1:local, api → exp_1:api
+```
+
+`status` is `compared` | `local_only` | `api_only` | `missing`. GPU/KV/VRAM
+are `local_only`. Metrics neither side recorded appear under **Missing
+elements** as `None`, never `0.0`. Cost uses `cost.estimate_cost` against the
+OpenRouter price table; Ollama tags without a table entry stay `None`.
 
 ## T0 / T1 metric catalog
 
@@ -1049,5 +1072,145 @@ Local GPU SM utilization in [0,1]. None on API-key runs
 - **units:** `float[0,1]` · **aggregation:** `mean`
 - **citation:** Local GPU SM utilization in [0,1] from nvidia-smi / vLLM. Values >1 treated as percent.
 - **inclusion:** None on API-key providers and when the local run did not record utilization.
+
+### `kv_cache_utilization` (T1)
+
+vLLM KV-cache / prefix-cache occupancy in [0,1]. None on API-key runs
+
+- **source:** `serving.score_serving_run`
+- **ground_truth:** `none`
+- **units:** `float[0,1]` · **aggregation:** `mean`
+- **citation:** vLLM KV-cache / prefix-cache occupancy in [0,1].
+- **inclusion:** None on API-key providers and when the local engine did not expose cache stats.
+
+### `gpu_memory_used_gb` (T1)
+
+Local GPU memory used (GiB). None on API-key runs
+
+- **source:** `serving.score_serving_run`
+- **ground_truth:** `none`
+- **units:** `GB` · **aggregation:** `mean`
+- **citation:** Local GPU memory used (GiB).
+- **inclusion:** None on API-key providers and when memory was not recorded.
+
+### `ttft_p50` (T1)
+
+Median TTFT over per-request observations
+
+- **source:** `serving.aggregate_serving`
+- **ground_truth:** `none`
+- **units:** `seconds` · **aggregation:** `none`
+- **citation:** Median TTFT over per-request observations (linear interpolation percentile).
+- **inclusion:** None when no request has TTFT.
+
+### `ttft_p95` (T1)
+
+95th-percentile TTFT over per-request observations
+
+- **source:** `serving.aggregate_serving`
+- **ground_truth:** `none`
+- **units:** `seconds` · **aggregation:** `none`
+- **citation:** 95th-percentile TTFT over per-request observations.
+- **inclusion:** None when no request has TTFT.
+
+### `e2e_p50` (T1)
+
+Median end-to-end latency over per-request observations
+
+- **source:** `serving.aggregate_serving`
+- **ground_truth:** `none`
+- **units:** `seconds` · **aggregation:** `none`
+- **citation:** Median end-to-end latency over per-request observations.
+- **inclusion:** None when no request has e2e.
+
+### `e2e_p95` (T1)
+
+95th-percentile end-to-end latency over per-request observations
+
+- **source:** `serving.aggregate_serving`
+- **ground_truth:** `none`
+- **units:** `seconds` · **aggregation:** `none`
+- **citation:** 95th-percentile end-to-end latency over per-request observations.
+- **inclusion:** None when no request has e2e.
+
+### `output_tokens_per_second` (T1)
+
+Decode-only throughput: completion_tokens / (e2e − ttft)
+
+- **source:** `serving.score_serving_run`
+- **ground_truth:** `none`
+- **units:** `tokens/s` · **aggregation:** `mean`
+- **citation:** Decode-only throughput: completion_tokens / (e2e − ttft).
+- **inclusion:** None when TTFT missing or e2e ≤ ttft.
+
+### `prompt_tokens_per_second` (T1)
+
+Prefill throughput: prompt_tokens / ttft
+
+- **source:** `serving.score_serving_run`
+- **ground_truth:** `none`
+- **units:** `tokens/s` · **aggregation:** `mean`
+- **citation:** Prefill throughput: prompt_tokens / ttft.
+- **inclusion:** None when TTFT missing or prompt_tokens missing.
+
+### `requests_per_second` (T1)
+
+n_requests / summed e2e window (sequential serving throughput)
+
+- **source:** `serving.aggregate_serving`
+- **ground_truth:** `none`
+- **units:** `req/s` · **aggregation:** `mean`
+- **citation:** n_requests / summed e2e window (sequential serving throughput).
+- **inclusion:** None when no e2e observations.
+
+### `docs_per_second` (T1)
+
+n_docs / summed e2e window
+
+- **source:** `serving.aggregate_serving`
+- **ground_truth:** `none`
+- **units:** `docs/s` · **aggregation:** `mean`
+- **citation:** n_docs / summed e2e window (documents processed per second).
+- **inclusion:** None when no e2e observations or n_docs is 0.
+
+### `queue_time_seconds` (T1)
+
+Scheduler wait before generation (vLLM waiting_time / queue_time)
+
+- **source:** `serving.score_serving_run`
+- **ground_truth:** `none`
+- **units:** `seconds` · **aggregation:** `mean`
+- **citation:** Scheduler wait before generation (vLLM waiting_time / queue_time).
+- **inclusion:** None when the engine did not record queue wait.
+
+### `error_rate` (T1)
+
+Share of serving requests flagged error/failed
+
+- **source:** `serving.aggregate_serving`
+- **ground_truth:** `none`
+- **units:** `float[0,1]` · **aggregation:** `mean`
+- **citation:** Share of serving requests flagged error/failed.
+- **inclusion:** 0.0 when n_requests > 0 and none failed. None when there are no requests.
+
+### `prompt_tokens` (T1)
+
+Sum of prompt/input tokens over observations
+
+- **source:** `serving.score_serving_run`
+- **ground_truth:** `none`
+- **units:** `count` · **aggregation:** `sum`
+- **citation:** Sum of prompt/input tokens over observations (OpenAI usage.prompt_tokens).
+- **inclusion:** None when no observation recorded prompt tokens.
+
+### `completion_tokens` (T1)
+
+Sum of completion/output tokens over observations
+
+- **source:** `serving.score_serving_run`
+- **ground_truth:** `none`
+- **units:** `count` · **aggregation:** `sum`
+- **citation:** Sum of completion/output tokens over observations (OpenAI usage.completion_tokens).
+- **inclusion:** None when no observation recorded completion tokens.
 
 

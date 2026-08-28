@@ -13,18 +13,18 @@ artifacts (`Sorter_Experiment_Results.xlsx`, `Sorter_Model_Sweep_Results.xlsx`,
 
 ## Install
 
-Published release: [v0.12.0](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.0).
+Published release: [v0.12.1](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.1).
 Dependents pin the **tag**, not a floating SHA.
 
 ```bash
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.0"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.1"
 pip install -e .                # from a local checkout
 ```
 
 In **llm-entity-extraction** / **llm-mailroom** `pyproject.toml`:
 
 ```
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.0
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.1
 ```
 
 ```python
@@ -311,6 +311,8 @@ api_run = {"provider": "openrouter", "model": "qwen/qwen3-8b",
            "ttft_seconds": 0.15, "e2e_latency_seconds": 0.9, "completion_tokens": 50}
 cmp = dojo.get_suite("local_vs_api").score(local_run, api_run)
 assert cmp["metrics"]["ttft_seconds"]["delta_local_minus_api"] is not None
+assert cmp["scorecard"]["cost"]["local"]["estimated_cost_usd"] is None  # no price table
+assert any(r["status"] == "missing" for r in cmp["table"])
 assert "ttft_seconds" in dojo.headline_metrics("local_vs_api")
 assert "ttft_seconds" not in dojo.headline_metrics("sorter")
 raw = "A hyphen-\nated  line"
