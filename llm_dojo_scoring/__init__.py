@@ -10,7 +10,7 @@ scoring code (``src/field_scoring.py``, ``src/metrics.py``, ``src/bootstrap.py``
 
 from __future__ import annotations
 
-__version__ = "0.12.0"
+__version__ = "0.12.1"
 
 from . import (
     bundles,
@@ -199,8 +199,14 @@ from .serving import (
     ServingRun,
     classify_serving_kind,
     compare_serving,
+    emit_serving_scorecard,
     pair_comparable_runs,
     score_serving_run,
+    serving_card_markdown,
+    serving_cost_card,
+    serving_scorecard,
+    serving_table_markdown,
+    serving_table_rows,
     split_local_api,
 )
 
@@ -254,5 +260,7 @@ __all__ = [
     "apply_intake", "deterministic_normalize", "looks_messy", "score_intake",
     "CANONICAL_SERVING_KEYS", "ServingIdentity", "ServingObservation",
     "ServingRun", "classify_serving_kind", "compare_serving",
-    "pair_comparable_runs", "score_serving_run", "split_local_api",
+    "emit_serving_scorecard", "pair_comparable_runs", "score_serving_run",
+    "serving_card_markdown", "serving_cost_card", "serving_scorecard",
+    "serving_table_markdown", "serving_table_rows", "split_local_api",
 ]
