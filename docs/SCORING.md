@@ -88,10 +88,14 @@ Typed field scores (the soft mean) use:
 
 ## Field maps (`DEFAULT_FIELD_TYPES`)
 
-Copied from `llm_dojo_scoring.suites.DEFAULT_FIELD_TYPES` (mailroom
-`config/taxonomy.yaml` mirror). Override with `field_types=` on `suite.score()`.
+Copied from `llm_dojo_scoring.suites.DEFAULT_FIELD_TYPES` — mailroom v0.6.0
+`config/taxonomy.yaml` / `EXTRACTION_SCHEMAS` mirror (pared checklists +
+semantic trio). Open-ended `key_obligations` / `termination_clauses` /
+`key_provisions` / long `key_points` are **not** on the live board; use
+`LEGACY_FULL_EXTRACTION_FIELD_TYPES` (or `field_types=`) only for historical
+free-text dumps. Override with `field_types=` on `suite.score()`.
 
-### `contract` (13 fields)
+### `contract` (11 fields)
 
 | Field | Type |
 |---|---|
@@ -99,9 +103,7 @@ Copied from `llm_dojo_scoring.suites.DEFAULT_FIELD_TYPES` (mailroom
 | `parties` | `entity_list:name` |
 | `effective_date` | `date` |
 | `term_length` | `free_text` |
-| `termination_clauses` | `entity_list:free_text` |
 | `governing_law` | `name` |
-| `key_obligations` | `entity_list:free_text` |
 | `contract_value` | `money` |
 | `renewal_terms` | `free_text` |
 | `cuad_family` | `name` |
@@ -109,17 +111,19 @@ Copied from `llm_dojo_scoring.suites.DEFAULT_FIELD_TYPES` (mailroom
 | `cuad_clauses` | `entity_list:free_text` |
 | `maud_clauses` | `entity_list:free_text` |
 
-### `corporate_record` (7 fields)
+### `corporate_record` (9 fields)
 
 | Field | Type |
 |---|---|
 | `entity_name` | `name` |
 | `record_type` | `name` |
 | `effective_date` | `date` |
-| `key_provisions` | `entity_list:free_text` |
 | `signatories` | `entity_list:name` |
 | `jurisdiction` | `name` |
 | `filing_number` | `id` |
+| `intent` | `name` |
+| `subject_matter` | `free_text` |
+| `keywords` | `entity_list:name` |
 
 ### `due_diligence` (7 fields)
 
@@ -133,7 +137,7 @@ Copied from `llm_dojo_scoring.suites.DEFAULT_FIELD_TYPES` (mailroom
 | `document_date` | `date` |
 | `prepared_by` | `name` |
 
-### `correspondence` (10 fields)
+### `correspondence` (11 fields)
 
 | Field | Type |
 |---|---|
@@ -142,11 +146,12 @@ Copied from `llm_dojo_scoring.suites.DEFAULT_FIELD_TYPES` (mailroom
 | `additional_recipients` | `entity_list` |
 | `communication_type` | `name` |
 | `communication_date` | `date` |
-| `key_points` | `entity_list` |
 | `demand_amount` | `money` |
 | `action_items` | `entity_list` |
 | `urgency` | `name` |
-| `referenced_communications` | `entity_list` |
+| `intent` | `name` |
+| `subject_matter` | `free_text` |
+| `keywords` | `entity_list:name` |
 
 ### `compliance_filing` (8 fields)
 
@@ -177,7 +182,7 @@ Copied from `llm_dojo_scoring.suites.DEFAULT_FIELD_TYPES` (mailroom
 | `citations` | `entity_list:id` |
 | `authored_by` | `name` |
 
-### `insurance_claim` (13 fields)
+### `insurance_claim` (17 fields)
 
 | Field | Type |
 |---|---|
@@ -194,8 +199,12 @@ Copied from `llm_dojo_scoring.suites.DEFAULT_FIELD_TYPES` (mailroom
 | `coverage_determination` | `name` |
 | `denial_reasons` | `entity_list:free_text` |
 | `supporting_documents` | `entity_list` |
+| `intent` | `name` |
+| `subject_matter` | `free_text` |
+| `keywords` | `entity_list:name` |
+| `claim_checklist` | `entity_list:free_text` |
 
-### `merger_agreement` (13 fields)
+### `merger_agreement` (11 fields)
 
 | Field | Type |
 |---|---|
@@ -203,9 +212,7 @@ Copied from `llm_dojo_scoring.suites.DEFAULT_FIELD_TYPES` (mailroom
 | `parties` | `entity_list:name` |
 | `effective_date` | `date` |
 | `term_length` | `free_text` |
-| `termination_clauses` | `entity_list:free_text` |
 | `governing_law` | `name` |
-| `key_obligations` | `entity_list:free_text` |
 | `contract_value` | `money` |
 | `renewal_terms` | `free_text` |
 | `cuad_family` | `name` |

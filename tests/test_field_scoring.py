@@ -123,16 +123,29 @@ def test_verify_list_items():
 
 def test_score_category_presence():
     expectations = {
-        "Anti-Assignment": {"expected": True, "answer": "shall not assign", "field": "key_obligations"},
-        "Non-Existent": {"expected": False, "answer": "", "field": "key_obligations"},
+        "Anti-Assignment": {"expected": True, "answer": "shall not assign", "field": "cuad_clauses"},
+        "Non-Existent": {"expected": False, "answer": "", "field": "cuad_clauses"},
     }
-    field_types = {"key_obligations": "entity_list:free_text"}
+    field_types = {"cuad_clauses": "entity_list:free_text"}
     score, detail = fs.score_category_presence(
-        {"key_obligations": ["party shall not assign any rights"]},
+        {"cuad_clauses": ["Anti-Assignment: party shall not assign any rights"]},
         expectations, field_types,
     )
     assert score == 1.0
     assert detail["Non-Existent"]["expected"] is False
+
+
+def test_score_category_presence_defaults_field_to_cuad_clauses():
+    expectations = {
+        "Anti-Assignment": {"expected": True, "answer": "shall not assign"},
+    }
+    score, detail = fs.score_category_presence(
+        {"cuad_clauses": ["shall not assign any rights"]},
+        expectations,
+        {"cuad_clauses": "entity_list:free_text"},
+    )
+    assert score == 1.0
+    assert detail["Anti-Assignment"]["field"] == "cuad_clauses"
 
 
 def test_disaggregate_clause_spans():
@@ -170,11 +183,11 @@ def test_score_category_presence_disaggregated():
         "this Agreement may be terminated by either party upon ninety (90) days written notice",
     ])
     expectations = {
-        "Anti-Assignment": {"expected": True, "answer": anti_assignment, "field": "key_obligations"},
+        "Anti-Assignment": {"expected": True, "answer": anti_assignment, "field": "cuad_clauses"},
     }
-    field_types = {"key_obligations": "entity_list:free_text"}
+    field_types = {"cuad_clauses": "entity_list:free_text"}
     score, detail = fs.score_category_presence(
-        {"key_obligations": [merged]}, expectations, field_types,
+        {"cuad_clauses": [merged]}, expectations, field_types,
     )
     assert score == 1.0
     assert detail["Anti-Assignment"]["matched"] is True
@@ -183,13 +196,13 @@ def test_score_category_presence_disaggregated():
 def test_score_category_presence_routed_entries():
     """Issue #21 fix #2/#3: a reasoning-trace entry tagged with the canonical
     category name routes its evidence straight to the category evaluator even
-    when the umbrella key_obligations item does not cover the label."""
+    when the checklist item does not cover the label."""
     anti_assignment = (
         "NEITHER PARTY SHALL, WITHOUT THE PRIOR WRITTEN CONSENT OF THE OTHER "
         "PARTY, ASSIGN THIS AGREEMENT"
     )
     predicted = {
-        "key_obligations": ["an unrelated exclusivity provision"],
+        "cuad_clauses": ["an unrelated exclusivity provision"],
         "reasoning": {
             "entries": [
                 {"field": "Anti-Assignment", "evidence": anti_assignment,
@@ -198,10 +211,10 @@ def test_score_category_presence_routed_entries():
         },
     }
     expectations = {
-        "Anti-Assignment": {"expected": True, "answer": anti_assignment, "field": "key_obligations"},
+        "Anti-Assignment": {"expected": True, "answer": anti_assignment, "field": "cuad_clauses"},
     }
     score, detail = fs.score_category_presence(
-        predicted, expectations, {"key_obligations": "entity_list:free_text"},
+        predicted, expectations, {"cuad_clauses": "entity_list:free_text"},
     )
     assert score == 1.0
     assert detail["Anti-Assignment"]["matched"] is True
