@@ -280,10 +280,22 @@ class FieldScoringSettings:
     embedding_rescue_below: float = 0.7
     presence_embedding_threshold: float = 0.7
     partial_gt_fields: set[str] = field(
-        default_factory=lambda: {"parties", "key_obligations", "termination_clauses"}
+        default_factory=lambda: {
+            "parties",
+            "keywords",
+            "cuad_clauses",
+            "maud_clauses",
+            "claim_checklist",
+            "action_items",
+        }
     )
     containment_fields: set[str] = field(
-        default_factory=lambda: {"governing_law", "term_length", "renewal_terms"}
+        default_factory=lambda: {
+            "governing_law",
+            "term_length",
+            "renewal_terms",
+            "subject_matter",
+        }
     )
     verification_enabled: bool = True
     verification_token_coverage: float = 0.7

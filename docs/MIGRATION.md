@@ -9,7 +9,7 @@ scorers, and reporting scripts keep working with minimal edits.
 
 ```bash
 # in llm-entity-extraction / llm-mailroom — pin the published tag
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.2"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.13.0"
 # or from a local checkout
 pip install -e /path/to/llm-dojo-scoring
 ```
@@ -17,10 +17,10 @@ pip install -e /path/to/llm-dojo-scoring
 `pyproject.toml` / `requirements.txt`:
 
 ```
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.2
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.13.0
 ```
 
-Do not pin a merge SHA. Release notes: https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.2
+Do not pin a merge SHA. Release notes: https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.13.0
 
 ## 2. Import swap table
 
@@ -419,6 +419,48 @@ pip install "llm-dojo-scoring[embeddings,tracing] @ git+https://github.com/Exios
 Public import surface for those consumers is covered by
 `tests/test_consumer_compat.py` (network-free). Scoring formulas are unchanged
 from 0.12.1. Do not push pin PRs to dependents from this package PR.
+
+## 3i. Pinning the v0.13.0 release (pared extraction content)
+
+Dependents pin the published GitHub Release tag — not a merge SHA:
+
+```
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.13.0
+```
+
+https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.13.0
+
+v0.13.0 aligns dojo's default field maps with mailroom **v0.6.0** pared
+extraction (checklists + semantic trio instead of open-ended free-text
+obligation dumps):
+
+| Live class | Board scores | Retired from defaults |
+|---|---|---|
+| `contract` / `merger_agreement` | key entities + `cuad_clauses` / `maud_clauses` | `key_obligations`, `termination_clauses` |
+| `corporate_record` | key entities + `intent` / `subject_matter` / `keywords` | `key_provisions` |
+| `correspondence` | key entities + semantic trio (capped `action_items`) | `key_points`, `referenced_communications` |
+| `insurance_claim` | key entities + semantic trio + `claim_checklist` | — |
+| `compliance_filing` | slim key entities (capped `key_requirements`) | — |
+
+```python
+from llm_dojo_scoring import get_suite, LEGACY_FULL_EXTRACTION_FIELD_TYPES
+
+# Live board (default)
+out = get_suite("contracts_specialist").score(
+    expected, predicted,
+    presence_expectations=presence,  # → extraction_category_presence
+)
+
+# Historical free-text obligation dumps only
+out = get_suite("contracts_specialist").score(
+    expected, predicted,
+    field_types=LEGACY_FULL_EXTRACTION_FIELD_TYPES["contract"],
+)
+```
+
+Typed-field formulas are unchanged. Prompt-catalog archives may still mention
+`key_obligations` for lineage; scoring defaults do not. Do not push pin PRs to
+dependents from this package PR.
 
 ## 4. Verification
 

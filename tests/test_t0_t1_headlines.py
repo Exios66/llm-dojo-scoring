@@ -75,19 +75,19 @@ def test_extraction_binary_metrics_miss_is_fn_not_soft_mean():
 
 
 def test_extraction_binary_metrics_partial_list_is_fn_plus_unmatched_fp():
-    field_map = DEFAULT_FIELD_TYPES["correspondence"]
+    field_map = DEFAULT_FIELD_TYPES["insurance_claim"]
     expected = {
-        "sender": "Alice",
-        "key_points": ["renew the policy", "send the invoice"],
+        "insurer": "Acme",
+        "denial_reasons": ["pre-existing condition", "missing paperwork"],
     }
     predicted = {
-        "sender": "Alice",
-        "key_points": ["renew the policy", "unrelated extra bullet"],
+        "insurer": "Acme",
+        "denial_reasons": ["pre-existing condition", "unrelated extra bullet"],
     }
     out = extraction_binary_metrics(
-        expected, predicted, field_map=field_map, doc_class="correspondence"
+        expected, predicted, field_map=field_map, doc_class="insurance_claim"
     )
-    # sender TP; key_points not exact → FN; unmatched predicted item → FP
+    # insurer TP; denial_reasons not exact → FN; unmatched predicted item → FP
     assert out["tp"] == 1
     assert out["fn"] == 1
     assert out["fp"] >= 1

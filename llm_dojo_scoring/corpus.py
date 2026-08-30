@@ -231,18 +231,16 @@ CORPUS_DIFFERENTIATORS: dict[str, tuple[str, ...]] = {
 }
 
 #: Extraction-schema fields each specialist suite must score, aligned to
-#: mailroom ``EXTRACTION_SCHEMAS`` + entity-extraction ``field_types``.
-#: ``document_name`` is on the contracts / merger schema (CUAD Document Name)
-#: even though mailroom taxonomy.yaml omitted it.
+#: mailroom v0.6.0 ``EXTRACTION_SCHEMAS`` + taxonomy ``field_types`` (pared
+#: checklists + semantic trio; no open-ended key_obligations dumps).
+#: ``document_name`` is on the contracts / merger schema (CUAD Document Name).
 CORPUS_EXTRACTION_FIELDS: dict[str, tuple[str, ...]] = {
     "contract": (
         "document_name",
         "parties",
         "effective_date",
         "term_length",
-        "termination_clauses",
         "governing_law",
-        "key_obligations",
         "contract_value",
         "renewal_terms",
         "cuad_family",
@@ -255,9 +253,7 @@ CORPUS_EXTRACTION_FIELDS: dict[str, tuple[str, ...]] = {
         "parties",
         "effective_date",
         "term_length",
-        "termination_clauses",
         "governing_law",
-        "key_obligations",
         "contract_value",
         "renewal_terms",
         "cuad_family",
@@ -269,10 +265,12 @@ CORPUS_EXTRACTION_FIELDS: dict[str, tuple[str, ...]] = {
         "entity_name",
         "record_type",
         "effective_date",
-        "key_provisions",
         "signatories",
         "jurisdiction",
         "filing_number",
+        "intent",
+        "subject_matter",
+        "keywords",
     ),
     "due_diligence": (
         "target_entity",
@@ -289,11 +287,12 @@ CORPUS_EXTRACTION_FIELDS: dict[str, tuple[str, ...]] = {
         "additional_recipients",
         "communication_type",
         "communication_date",
-        "key_points",
         "demand_amount",
         "action_items",
         "urgency",
-        "referenced_communications",
+        "intent",
+        "subject_matter",
+        "keywords",
     ),
     "compliance_filing": (
         "filing_type",
@@ -332,6 +331,10 @@ CORPUS_EXTRACTION_FIELDS: dict[str, tuple[str, ...]] = {
         "coverage_determination",
         "denial_reasons",
         "supporting_documents",
+        "intent",
+        "subject_matter",
+        "keywords",
+        "claim_checklist",
     ),
 }
 

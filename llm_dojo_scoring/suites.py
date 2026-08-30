@@ -42,6 +42,7 @@ __all__ = [
     "ScoringSuite",
     "DEFAULT_SUITES",
     "DEFAULT_FIELD_TYPES",
+    "LEGACY_FULL_EXTRACTION_FIELD_TYPES",
     "SPECIALIST_DOC_TYPES",
     "DOC_TYPE_ALIASES",
     "get_suite",
@@ -71,17 +72,19 @@ DOC_TYPE_ALIASES: dict[str, str] = {
 }
 
 #: Default field→scoring-type maps, mirrored from llm-mailroom
-#: ``config/taxonomy.yaml`` so consumers can score without shipping a
-#: taxonomy file. Override by passing ``field_types=`` to ``score()``.
+#: ``config/taxonomy.yaml`` / ``EXTRACTION_SCHEMAS`` (v0.6.0 pared product).
+#: Open-ended ``key_obligations`` / ``termination_clauses`` / ``key_provisions``
+#: / long ``key_points`` are retired from the live board — score CUAD/MAUD/
+#: insurance checklists + the semantic trio instead. Override with
+#: ``field_types=`` on ``score()``, or use
+#: :data:`LEGACY_FULL_EXTRACTION_FIELD_TYPES` for historical free-text dumps.
 DEFAULT_FIELD_TYPES: dict[str, dict[str, str]] = {
     "contract": {
         "document_name": "name",
         "parties": "entity_list:name",
         "effective_date": "date",
         "term_length": "free_text",
-        "termination_clauses": "entity_list:free_text",
         "governing_law": "name",
-        "key_obligations": "entity_list:free_text",
         "contract_value": "money",
         "renewal_terms": "free_text",
         "cuad_family": "name",
@@ -93,10 +96,12 @@ DEFAULT_FIELD_TYPES: dict[str, dict[str, str]] = {
         "entity_name": "name",
         "record_type": "name",
         "effective_date": "date",
-        "key_provisions": "entity_list:free_text",
         "signatories": "entity_list:name",
         "jurisdiction": "name",
         "filing_number": "id",
+        "intent": "name",
+        "subject_matter": "free_text",
+        "keywords": "entity_list:name",
     },
     "due_diligence": {
         "target_entity": "name",
@@ -113,11 +118,12 @@ DEFAULT_FIELD_TYPES: dict[str, dict[str, str]] = {
         "additional_recipients": "entity_list",
         "communication_type": "name",
         "communication_date": "date",
-        "key_points": "entity_list",
         "demand_amount": "money",
         "action_items": "entity_list",
         "urgency": "name",
-        "referenced_communications": "entity_list",
+        "intent": "name",
+        "subject_matter": "free_text",
+        "keywords": "entity_list:name",
     },
     "compliance_filing": {
         "filing_type": "name",
@@ -156,6 +162,44 @@ DEFAULT_FIELD_TYPES: dict[str, dict[str, str]] = {
         "coverage_determination": "name",
         "denial_reasons": "entity_list:free_text",
         "supporting_documents": "entity_list",
+        "intent": "name",
+        "subject_matter": "free_text",
+        "keywords": "entity_list:name",
+        "claim_checklist": "entity_list:free_text",
+    },
+    "merger_agreement": {
+        "document_name": "name",
+        "parties": "entity_list:name",
+        "effective_date": "date",
+        "term_length": "free_text",
+        "governing_law": "name",
+        "contract_value": "money",
+        "renewal_terms": "free_text",
+        "cuad_family": "name",
+        "merger_consideration": "name",
+        "cuad_clauses": "entity_list:free_text",
+        "maud_clauses": "entity_list:free_text",
+    },
+}
+
+#: Pre-v0.6.0 mailroom field maps that still score open-ended free-text
+#: obligation dumps. Use only for historical rescoring — live board numbers
+#: should use :data:`DEFAULT_FIELD_TYPES`.
+LEGACY_FULL_EXTRACTION_FIELD_TYPES: dict[str, dict[str, str]] = {
+    "contract": {
+        "document_name": "name",
+        "parties": "entity_list:name",
+        "effective_date": "date",
+        "term_length": "free_text",
+        "termination_clauses": "entity_list:free_text",
+        "governing_law": "name",
+        "key_obligations": "entity_list:free_text",
+        "contract_value": "money",
+        "renewal_terms": "free_text",
+        "cuad_family": "name",
+        "merger_consideration": "name",
+        "cuad_clauses": "entity_list:free_text",
+        "maud_clauses": "entity_list:free_text",
     },
     "merger_agreement": {
         "document_name": "name",
@@ -171,6 +215,27 @@ DEFAULT_FIELD_TYPES: dict[str, dict[str, str]] = {
         "merger_consideration": "name",
         "cuad_clauses": "entity_list:free_text",
         "maud_clauses": "entity_list:free_text",
+    },
+    "corporate_record": {
+        "entity_name": "name",
+        "record_type": "name",
+        "effective_date": "date",
+        "key_provisions": "entity_list:free_text",
+        "signatories": "entity_list:name",
+        "jurisdiction": "name",
+        "filing_number": "id",
+    },
+    "correspondence": {
+        "sender": "name",
+        "recipient": "name",
+        "additional_recipients": "entity_list",
+        "communication_type": "name",
+        "communication_date": "date",
+        "key_points": "entity_list",
+        "demand_amount": "money",
+        "action_items": "entity_list",
+        "urgency": "name",
+        "referenced_communications": "entity_list",
     },
 }
 
@@ -686,6 +751,42 @@ class ScoringSuite:
             maud_result = score_maud_extraction(maud_e, maud_p)
             if maud_result.get("n_questions"):
                 extras.update(maud_result)
+
+        # CUAD / claim checklist presence (mailroom v0.6.0 board path). Pass
+        # presence_expectations= from Hub GT; default field is cuad_clauses.
+        presence = kwargs.get("presence_expectations")
+        if presence:
+            from .field_scoring import score_category_presence
+
+            pred_rows: list = []
+            if peeled_pred:
+                pred_rows = [p for p in peeled_pred if isinstance(p, dict)]
+            elif isinstance(predicted, dict):
+                pred_rows = [predicted]
+            elif isinstance(predicted, list):
+                pred_rows = [p for p in predicted if isinstance(p, dict)]
+            if isinstance(presence, list):
+                pairs = [
+                    (pred, pe)
+                    for pred, pe in zip(pred_rows, presence)
+                    if isinstance(pe, dict) and pe
+                ]
+            else:
+                pairs = [(pred, presence) for pred in pred_rows]
+            presence_scores: list[float] = []
+            presence_detail = None
+            for pred, pe in pairs:
+                score, detail = score_category_presence(pred, pe, ftypes)
+                presence_scores.append(float(score))
+                presence_detail = detail
+            if presence_scores:
+                extras["extraction_category_presence"] = (
+                    round(sum(presence_scores) / len(presence_scores), 4)
+                    if len(presence_scores) > 1
+                    else presence_scores[0]
+                )
+                if len(presence_scores) == 1 and presence_detail is not None:
+                    extras["extraction_category_presence_detail"] = presence_detail
 
         is_batch = isinstance(extraction, list)
         prf_payload: dict[str, Any] = {}
