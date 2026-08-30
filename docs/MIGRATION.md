@@ -9,7 +9,7 @@ scorers, and reporting scripts keep working with minimal edits.
 
 ```bash
 # in llm-entity-extraction / llm-mailroom — pin the published tag
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.1"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.2"
 # or from a local checkout
 pip install -e /path/to/llm-dojo-scoring
 ```
@@ -17,10 +17,10 @@ pip install -e /path/to/llm-dojo-scoring
 `pyproject.toml` / `requirements.txt`:
 
 ```
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.1
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.2
 ```
 
-Do not pin a merge SHA. Release notes: https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.1
+Do not pin a merge SHA. Release notes: https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.2
 
 ## 2. Import swap table
 
@@ -389,6 +389,36 @@ emit_serving_scorecard(cmp, run_id="exp_1")
 ```
 
 Do not push pin PRs to dependents from this package PR.
+
+## 3h. Pinning the v0.12.2 release (core dependency alignment)
+
+Dependents pin the published GitHub Release tag — not a merge SHA:
+
+```
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.2
+```
+
+https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.2
+
+v0.12.2 aligns dojo's declared dependencies with the core consumers:
+
+| Consumer | Recommended pin | Notes |
+|---|---|---|
+| `llm-mailroom` | `llm-dojo-scoring[tracing] @ …@v0.12.2` | `jellyfish` is now core; `tracing` matches Langfuse / Phoenix |
+| `llm-entity-extraction` | `llm-dojo-scoring[embeddings,tracing] @ …@v0.12.2` | `embeddings` pulls `openai` + `sentence-transformers` for rescue |
+| `local-mailroom-sandbox` | `…@v0.12.2` (via mailroom) | Keep sandbox + mailroom on the same tag |
+
+```bash
+# mailroom-style
+pip install "llm-dojo-scoring[tracing] @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.2"
+
+# entity-extraction-style
+pip install "llm-dojo-scoring[embeddings,tracing] @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.2"
+```
+
+Public import surface for those consumers is covered by
+`tests/test_consumer_compat.py` (network-free). Scoring formulas are unchanged
+from 0.12.1. Do not push pin PRs to dependents from this package PR.
 
 ## 4. Verification
 

@@ -5,6 +5,43 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-08-30
+
+### Changed
+
+- **Core dependency alignment with consumer packages** (`llm-mailroom`,
+  `llm-entity-extraction`, `local-mailroom-sandbox`):
+  - **`jellyfish>=1.0` is now a core dependency** (was optional-only).
+    Mailroom already requires it for Jaro–Winkler name scoring; shipping it
+    in dojo core stops silent `difflib` fallback when consumers install dojo
+    alone.
+  - **`embeddings` extra** now also includes `openai>=1.30` (alongside
+    `sentence-transformers`) so the OpenAI embedding rescue path matches
+    consumer `openai` pins.
+  - New **`tracing` extra**: `langfuse`, `arize-phoenix`, `python-dotenv`,
+    `opentelemetry-sdk`, `opentelemetry-exporter-otlp-proto-http` — mirrors
+    mailroom / entity optional tracing stacks.
+  - New **`all` extra**: `embeddings` + `tracing` + `dev`.
+  - The standalone `jellyfish` extra remains as a no-op alias for older
+    install lines.
+- Package version **0.12.2**. Consumer pin:
+
+  ```
+  llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.2
+  ```
+
+  Recommended extras: `llm-dojo-scoring[tracing]` (mailroom) /
+  `llm-dojo-scoring[embeddings,tracing]` (entity-extraction).
+
+Scoring formulas from v0.12.1 / v0.12.0 / v0.11.0 / v0.10.0 are unchanged.
+
+### Added
+
+- `tests/test_consumer_compat.py` — network-free contract tests that pin the
+  mailroom / entity / sandbox import surface, SCORE_CONFIGS names, and
+  serving table/scorecard fields against this package.
+- `docs/MIGRATION.md` §3h — consumer pin matrix and recommended extras.
+
 ## [0.12.1] - 2026-08-28
 
 ### Added

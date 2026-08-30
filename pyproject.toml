@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-dojo-scoring"
-version = "0.12.1"
+version = "0.12.2"
 description = "Dedicated scoring, error-analysis, visualization, and interpretation suite for LLM document pipelines (llm-entity-extraction / llm-mailroom)"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -18,12 +18,34 @@ dependencies = [
     "matplotlib>=3.9.0",
     "scipy>=1.10.0",
     "structlog>=24.0",
+    # Core with llm-mailroom: name-field Jaro–Winkler (field_scoring). Without
+    # it matching silently falls back to difflib — keep mailroom scoring parity.
+    "jellyfish>=1.0",
 ]
 
 [project.optional-dependencies]
-embeddings = ["sentence-transformers>=3.0"]
+# Local / remote embedding rescue in field_scoring (sentence-transformers +
+# OpenAI text-embedding-3-small). Matches mailroom[embeddings] / entity[embeddings].
+embeddings = [
+    "sentence-transformers>=3.0",
+    "openai>=1.30",
+]
+# Backward-compatible alias — jellyfish is now a core dependency.
 jellyfish = ["jellyfish>=1.0"]
+# dojo-sync / LangfuseSink / PhoenixClient. Matches mailroom core tracing +
+# entity[tracing] (langfuse floor is >=2.50; mailroom uses >=2.50, entity >=3).
+tracing = [
+    "langfuse>=2.50",
+    "arize-phoenix>=4.0",
+    "python-dotenv>=1.0",
+    "opentelemetry-sdk>=1.20",
+    "opentelemetry-exporter-otlp-proto-http>=1.20",
+]
 dev = ["pytest>=8.0", "pytest-mock>=3.14"]
+# Install surface used by the full mailroom + entity scoring path locally.
+all = [
+    "llm-dojo-scoring[embeddings,tracing,dev]",
+]
 
 [project.scripts]
 dojo-analyze = "llm_dojo_scoring.cli:analyze_main"
