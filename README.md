@@ -13,18 +13,30 @@ artifacts (`Sorter_Experiment_Results.xlsx`, `Sorter_Model_Sweep_Results.xlsx`,
 
 ## Install
 
-Published release: [v0.12.1](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.1).
+Published release: [v0.12.2](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.2).
 Dependents pin the **tag**, not a floating SHA.
 
 ```bash
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.1"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.2"
 pip install -e .                # from a local checkout
+```
+
+`jellyfish` ships in **core** from 0.12.2 (aligned with mailroom). Optional extras:
+
+```bash
+pip install -e ".[embeddings]"   # sentence-transformers + openai (embedding rescue)
+pip install -e ".[tracing]"      # langfuse + phoenix + dotenv + OTLP
+pip install -e ".[jellyfish]"    # no-op alias; jellyfish is already core
+pip install -e ".[dev]"          # pytest
+pip install -e ".[all]"          # embeddings + tracing + dev
 ```
 
 In **llm-entity-extraction** / **llm-mailroom** `pyproject.toml`:
 
 ```
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.1
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.2
+# mailroom:     llm-dojo-scoring[tracing] @ git+...@v0.12.2
+# entity:       llm-dojo-scoring[embeddings,tracing] @ git+...@v0.12.2
 ```
 
 ```python
