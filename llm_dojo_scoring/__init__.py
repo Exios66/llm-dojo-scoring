@@ -10,7 +10,7 @@ scoring code (``src/field_scoring.py``, ``src/metrics.py``, ``src/bootstrap.py``
 
 from __future__ import annotations
 
-__version__ = "0.12.2"
+__version__ = "0.13.0"
 
 from . import (
     bundles,
@@ -175,6 +175,7 @@ from .suites import (
     DEFAULT_FIELD_TYPES,
     DEFAULT_SUITES,
     DOC_TYPE_ALIASES,
+    LEGACY_FULL_EXTRACTION_FIELD_TYPES,
     SPECIALIST_DOC_TYPES,
     ScoringSuite,
     get_suite,
@@ -246,6 +247,7 @@ __all__ = [
     "MetricTier", "Registry", "ALLOWED_GROUND_TRUTH",
     "PromptRecord", "get_prompt", "list_prompts",
     "ScoringSuite", "DEFAULT_SUITES", "DEFAULT_FIELD_TYPES",
+    "LEGACY_FULL_EXTRACTION_FIELD_TYPES",
     "DOC_TYPE_ALIASES", "SPECIALIST_DOC_TYPES",
     "get_suite", "list_suites", "score_suite", "suite_for_doc_type",
     "CORPUS_DOC_TYPES", "DOC_TYPE_SUBCLASSES",

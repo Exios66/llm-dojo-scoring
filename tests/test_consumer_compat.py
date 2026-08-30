@@ -20,6 +20,8 @@ _TOP_LEVEL = (
     "LangfuseSink",
     "LocalManifestSink",
     "ScoreRecord",
+    "DEFAULT_FIELD_TYPES",
+    "LEGACY_FULL_EXTRACTION_FIELD_TYPES",
     "accuracy",
     "bootstrap_ci",
     "classify_serving_kind",
@@ -97,6 +99,11 @@ _MODULE_ATTRS: dict[str, tuple[str, ...]] = {
         "emit_serving_scorecard",
         "pair_comparable_runs",
         "serving_scorecard",
+    ),
+    "suites": (
+        "DEFAULT_FIELD_TYPES",
+        "LEGACY_FULL_EXTRACTION_FIELD_TYPES",
+        "get_suite",
     ),
     "tasks": ("contracteval_metrics", "contracteval_score", "get_jaccard"),
 }

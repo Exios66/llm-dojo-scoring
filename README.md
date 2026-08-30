@@ -13,11 +13,11 @@ artifacts (`Sorter_Experiment_Results.xlsx`, `Sorter_Model_Sweep_Results.xlsx`,
 
 ## Install
 
-Published release: [v0.12.2](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.2).
+Published release: [v0.13.0](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.13.0).
 Dependents pin the **tag**, not a floating SHA.
 
 ```bash
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.2"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.13.0"
 pip install -e .                # from a local checkout
 ```
 
@@ -34,9 +34,9 @@ pip install -e ".[all]"          # embeddings + tracing + dev
 In **llm-entity-extraction** / **llm-mailroom** `pyproject.toml`:
 
 ```
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.2
-# mailroom:     llm-dojo-scoring[tracing] @ git+...@v0.12.2
-# entity:       llm-dojo-scoring[embeddings,tracing] @ git+...@v0.12.2
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.13.0
+# mailroom:     llm-dojo-scoring[tracing] @ git+...@v0.13.0
+# entity:       llm-dojo-scoring[embeddings,tracing] @ git+...@v0.13.0
 ```
 
 ```python

@@ -9,8 +9,9 @@ Aggregates per-row composites into run-level diagnostics:
 
 List quality (over entity_list_scores, raw not GT-coverage):
   - ``entity_list_{precision,recall,raw_f1}`` per-field macro means
-  - ``list_{precision,recall,f1}``      macro mean over ``key_obligations``
-  - ``list_micro_{precision,recall,f1}`` span-summed over ``key_obligations``
+  - ``list_{precision,recall,f1}``      macro mean over the primary checklist
+    field (``cuad_clauses`` → ``claim_checklist`` → legacy ``key_obligations``)
+  - ``list_micro_{precision,recall,f1}`` span-summed over all entity_list fields
 
 Regression error:
   - ``date_mae_days`` / ``date_median_ae_days`` / ``date_r2``
@@ -255,11 +256,20 @@ def extraction_diagnostics(rows: list[dict], field_types: dict[str, str],
     metrics["entity_list_precision"] = _field_bucket(precision)
     metrics["entity_list_recall"] = _field_bucket(recall)
     metrics["entity_list_raw_f1"] = _field_bucket(raw_f1)
-    ko = "key_obligations"
-    if precision.get(ko):
-        metrics["list_precision"] = _mean(precision[ko])
-        metrics["list_recall"] = _mean(recall[ko])
-        metrics["list_f1"] = _mean(raw_f1[ko])
+    # Prefer pared checklists (mailroom v0.6.0); fall back to legacy dumps.
+    list_headline_field = next(
+        (
+            name
+            for name in ("cuad_clauses", "claim_checklist", "key_obligations", "keywords")
+            if precision.get(name)
+        ),
+        None,
+    )
+    if list_headline_field:
+        metrics["list_precision"] = _mean(precision[list_headline_field])
+        metrics["list_recall"] = _mean(recall[list_headline_field])
+        metrics["list_f1"] = _mean(raw_f1[list_headline_field])
+        metrics["list_headline_field"] = list_headline_field
     if micro["n_pred"] or micro["n_exp"]:
         micro_p = micro["matched"] / micro["n_pred"] if micro["n_pred"] else 0.0
         micro_r = micro["matched"] / micro["n_exp"] if micro["n_exp"] else 0.0
