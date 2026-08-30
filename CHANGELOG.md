@@ -5,6 +5,43 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-08-30
+
+### Changed
+
+- **Pared extraction field maps** aligned to llm-mailroom **v0.6.0**
+  (`EXTRACTION_SCHEMAS` / `taxonomy.yaml` field_types):
+  - **Retired from live `DEFAULT_FIELD_TYPES`:** open-ended
+    `key_obligations`, `termination_clauses`, `key_provisions`, long
+    `key_points`, `referenced_communications`.
+  - **Contracts / mergers:** key entities + `cuad_clauses` / `maud_clauses`
+    checklists (11 fields).
+  - **Corporate / correspondence / insurance:** semantic trio
+    (`intent` / `subject_matter` / `keywords`); insurance also has
+    `claim_checklist`.
+  - Default `partial_gt_fields` / `containment_fields` match mailroom
+    (checklists + `subject_matter`; no obligation dumps).
+  - Diagnostics `list_*` headlines prefer `cuad_clauses` →
+    `claim_checklist` → legacy `key_obligations`.
+  - `score_category_presence` default field is `cuad_clauses`.
+- Package version **0.13.0**. Consumer pin:
+
+  ```
+  llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.13.0
+  ```
+
+  Typed-field scoring formulas are unchanged; only which fields enter the
+  soft overall mean / field-micro board changed.
+
+### Added
+
+- `LEGACY_FULL_EXTRACTION_FIELD_TYPES` — pre-v0.6.0 maps that still score
+  free-text obligation dumps (historical rescoring only).
+- `suite.score(..., presence_expectations=...)` wires
+  `extraction_category_presence` the same way Enron/MAUD extras are peeled.
+- `tests/test_pared_extraction.py` + `docs/MIGRATION.md` §3i.
+- `docs/SCORING.md` field-map tables updated to the pared schema.
+
 ## [0.12.2] - 2026-08-30
 
 ### Changed

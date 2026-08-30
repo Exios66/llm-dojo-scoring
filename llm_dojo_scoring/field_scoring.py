@@ -827,7 +827,7 @@ def _presence_candidates(predicted: dict, category: str, field: str) -> list[str
     Prefers spans routed explicitly by the extractor's reasoning trace
     (``reasoning.entries[]`` whose ``field`` is the canonical CUAD category
     name — issue #21 retag), falling back to the disaggregated items of the
-    category's mapped field (e.g. ``key_obligations``)."""
+    category's mapped field (e.g. ``cuad_clauses``)."""
     entries = (predicted.get("reasoning") or {}).get("entries") or []
     routed = [
         str(e.get("evidence") or e.get("section_ref") or "")
@@ -879,7 +879,7 @@ def score_category_presence(predicted: dict | None, presence_expectations: dict,
     expected_true = 0
     detail: dict[str, dict] = {}
     for category, expectation in sorted((presence_expectations or {}).items()):
-        field = expectation.get("field") or "key_obligations"
+        field = expectation.get("field") or "cuad_clauses"
         if not expectation.get("expected"):
             detail[category] = {"expected": False, "matched": None, "field": field}
             continue
