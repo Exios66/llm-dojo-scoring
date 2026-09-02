@@ -14,7 +14,7 @@ WER/CER now ship as real scorers. New scorers land in the matching key —
 the registry is the modular extension point.
 
 Doc-type → dataset grounding (published merge:
-Lucius-Morningstar/docclass-merged, 1,210 GT rows):
+Lucius-Morningstar/mailroom-corpus, 1,210 GT rows):
 
 ==================  =====================================================
 doc type            corpus / benchmark grounding

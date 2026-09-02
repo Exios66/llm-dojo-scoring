@@ -1,6 +1,6 @@
 """Corpus alignment — suites match docclass-merged schemas/subclasses/fields.
 
-Pinned to Lucius-Morningstar/docclass-merged ground_truth (1,210 rows).
+Pinned to Lucius-Morningstar/mailroom-corpus ground_truth (1,210 rows).
 Network-free: catalogs are in-repo constants derived from that publish.
 """
 

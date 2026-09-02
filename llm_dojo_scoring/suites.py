@@ -362,7 +362,7 @@ _HONEST_GAPS: dict[str, str] = {
         "HONEST GAP: due_diligence was RETIRED from the live llm-mailroom "
         "pipeline (v0.5.0 / PR #21). The sorter emits unknown (human review) "
         "instead of extracting. This suite remains for historical traces; "
-        "zero rows in Lucius-Morningstar/docclass-merged."
+        "zero rows in Lucius-Morningstar/mailroom-corpus."
     ),
     "court_opinions_specialist": (
         "HONEST GAP: court_opinion was RETIRED from the live llm-mailroom "
