@@ -239,7 +239,7 @@ organizational layer consumers emit through:
   per-question extraction, WER/CER, local vs API serving); honest-gap notes record the rest.
   Each specialist suite binds the extraction fields, subclass catalog,
   and GT differentiators for its document class from **`corpus`** (pinned to
-  `Lucius-Morningstar/docclass-merged`). `get_suite("merger_agreement")`
+  `Lucius-Morningstar/mailroom-corpus`). `get_suite("merger_agreement")`
   shares the contracts specialist but rebinds the MAUD consideration
   catalog — it does not inherit CUAD families.
 - **`corpus`** — published-merge alignment: native vs corpus-present
