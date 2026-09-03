@@ -230,7 +230,7 @@ HONEST GAP: CMS DE-SynPUF ground truth in the published merge is homogeneous —
 
 ### `due_diligence_specialist`
 
-HONEST GAP: due_diligence was RETIRED from the live llm-mailroom pipeline (v0.5.0 / PR #21). The sorter emits unknown (human review) instead of extracting. This suite remains for historical traces; zero rows in Lucius-Morningstar/docclass-merged.
+HONEST GAP: due_diligence was RETIRED from the live llm-mailroom pipeline (v0.5.0 / PR #21). The sorter emits unknown (human review) instead of extracting. This suite remains for historical traces; zero rows in Lucius-Morningstar/mailroom-corpus.
 
 ### `court_opinions_specialist`
 
@@ -242,7 +242,7 @@ HONEST GAP: no *external* extraction benchmark (CUAD/MAUD-grade coverage is not 
 
 ### `compliance_specialist`
 
-HONEST GAP: compliance_filing has zero rows in Lucius-Morningstar/docclass-merged. Hub SEC form-body inventory (10-K, 10-Q, 8-K, …) is the live subclass catalog; suite scores typed-extraction plus that inventory (no corpus-backed rows yet).
+HONEST GAP: compliance_filing has zero rows in Lucius-Morningstar/mailroom-corpus. Hub SEC form-body inventory (10-K, 10-Q, 8-K, …) is the live subclass catalog; suite scores typed-extraction plus that inventory (no corpus-backed rows yet).
 
 ### `local_vs_api`
 
