@@ -1,27 +1,32 @@
-# llm-dojo-scoring
+<div align="center">
 
-Dedicated **scoring, error-analysis, visualization, and interpretation** suite
-for LLM document pipelines — a single importable library that replaces the
-project-local scoring code spread across the `llm-entity-extraction` and
-`llm-mailroom` repositories.
+# ⚖️ llm-dojo-scoring
 
-Import it into those projects and the exact same scoring definitions run
-everywhere: inside eval runners, Braintrust-scorer lookups, post-hoc manifest
-re-scoring, Excel report export, and offline analysis of the resulting
-artifacts (`Sorter_Experiment_Results.xlsx`, `Sorter_Model_Sweep_Results.xlsx`,
-`Sorter_Experiment_Codebook.csv`, …).
+**The deterministic, field-type-aware scoring engine for the LLM-Mailroom constellation — one importable library replacing project-local scoring across llm-entity-extraction and llm-mailroom.**
+
+Scoring · Error analysis · Visualization · Interpretation
+
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Release](https://img.shields.io/badge/release-v0.13.0-2EA043)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.13.0)
+[![Tests](https://img.shields.io/badge/pytest-passing-brightgreen)](tests/)
+
+</div>
+
+---
 
 ## Install
 
-Published release: [v0.13.0](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.13.0).
-Dependents pin the **tag**, not a floating SHA.
+<div align="center">
 
 ```bash
 pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.13.0"
 pip install -e .                # from a local checkout
 ```
 
-`jellyfish` ships in **core** from 0.12.2 (aligned with mailroom). Optional extras:
+</div>
+
+<details>
+<summary>Optional extras</summary>
 
 ```bash
 pip install -e ".[embeddings]"   # sentence-transformers + openai (embedding rescue)
@@ -31,6 +36,8 @@ pip install -e ".[dev]"          # pytest
 pip install -e ".[all]"          # embeddings + tracing + dev
 ```
 
+</details>
+
 In **llm-entity-extraction** / **llm-mailroom** `pyproject.toml`:
 
 ```
@@ -39,42 +46,35 @@ llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.13.0
 # entity:       llm-dojo-scoring[embeddings,tracing] @ git+...@v0.13.0
 ```
 
+## Quickstart
+
+<div align="center">
+
 ```python
 from llm_dojo_scoring import score_extraction, bootstrap_ci, tokens_summary
 from llm_dojo_scoring import get_suite, apply_intake, score_task, compare_serving
 from llm_dojo_scoring.prompts import get_prompt
 ```
 
-## Quickstart
+</div>
 
-Analyze a downloaded results workbook (one row per run) into a Markdown
-report + plots:
+### Analyze a workbook
 
 ```bash
 dojo-analyze Sorter_Experiment_Results.xlsx --target 0.94 --min-n 100
 # -> Sorter_Experiment_Results.xlsx.report.md  (+ *_plots/*.png)
 ```
 
-Regenerate the canonical workbooks + codebooks from an experiment log:
+### Regenerate workbooks from experiment log
 
 ```bash
 dojo-export --task sorter --log reports/experiment_log.jsonl --outdir .
 dojo-export --task all --sweep --log reports/experiment_log.jsonl
 ```
 
-## Live sync from Langfuse / Phoenix
-
-The eval runners trace every per-document classification to the `llm-dojo`
-Langfuse project (`sessionId` = experiment name, structured output + per-row
-scores). `dojo-sync` re-reads those traces and reconstructs the reference
-workbook directly — no manual export needed:
+### Live sync from Langfuse / Phoenix
 
 ```bash
-# Credentials: env vars, or a langfuse.env / .env file
-export LANGFUSE_PUBLIC_KEY=pk-lf-...
-export LANGFUSE_SECRET_KEY=sk-lf-...
-export LANGFUSE_HOST=https://us.cloud.langfuse.com
-
 # Sync ALL subtype-classification runs
 dojo-sync --task subtype_classification --outdir reports/live
 
@@ -86,33 +86,52 @@ dojo-sync --task subtype_classification \
 dojo-sync --check-phoenix
 ```
 
-`dojo-analyze` also accepts a live source directly:
+## Module Map
 
-```bash
-dojo-analyze "langfuse:subtype_classification" --max-items 2000
-```
+<div align="center">
 
-Library API:
+| Module | What it does |
+|:---|:---|
+| `field_scoring` | Field-type-aware deterministic extraction scoring (date/money/id/name/free_text/entity_list) |
+| `classification` | Label normalization, exact match, per-class P/R/F1/F2, macro-PRF, confusion matrices |
+| `extraction_metrics` | Field-micro extraction P/R/F1/F2 over (field, value) events |
+| `claims_consistency` | Insurance `determination_consistency` and `amount_exactness` |
+| `failure_modes` | Failure-mode taxonomy + `classify_failure`, per-subtype accuracy |
+| `bootstrap` | Bootstrap CIs, two-sample delta significance, Wilson intervals |
+| `cost` | Price lookup, cost estimation, usage aggregation |
+| `diagnostics` | Run-level diagnostics: date/duration/money MAE+R², span drift, field error decomposition |
+| `experiment` | JSONL record append/load, dotted-path access, git snapshot |
+| `tasks` | Task-aware scoring across the full document hierarchy (MAUD, LegalBench, chained, etc.) |
+| `suites` | Dedicated scoring suite per pipeline agent — the API consumers should call |
+| `registry` | Metric definitions registry: every score name → tier (T0 HEADLINE → T3 LOG) |
+| `bundles` | Eleven pre-built task bundles (classification, extraction, cost, factuality, etc.) |
+| `profiles` | 26 agent profiles — each agent's scoring identity |
+| `emitter` | Unified score emitter: JSONL manifest sink + inert Langfuse sink |
+| `langfuse_sync` | Pull live experiment traces into run records + reference workbook |
+| `phoenix_sync` | Local Phoenix/OTLP sink probe + span reader |
 
-```python
-from llm_dojo_scoring import langfuse_sync as lf
+</div>
 
-records = lf.fetch_run_records(lf.LangfuseClient(), task=lf.SORTER_TRACE,
-                               session_filter="qwen3.7-flash_sorter_v13_subtype_langfuse")
-frame = lf.records_to_sorter_frame(records)   # -> normalize_results_frame -> analyze
-```
+## Task Coverage
 
-Notes:
+`score_task(task, expected, predicted, ...)` is the single entry point for every classification task:
 
-- Langfuse list endpoints rate-limit aggressively (~15 req/min on `/traces`);
-  the client backs off on 429 (`Retry-After`) automatically. A full 4,000-trace
-  sync takes a few minutes; syncing one session is ~11 requests.
-- The local Phoenix sink (`http://localhost:6006`) is read through
-  `llm_dojo_scoring.phoenix_sync` (uses the `arize-phoenix` client when the
-  sink is running); when it is down the suite reports a clear status instead
-  of failing (`dojo-sync --check-phoenix`).
+<div align="center">
 
-Or use the library directly:
+| Task key | What it scores | Headline metrics |
+|:---|:---|:---|
+| `subtype` / `doc_class` / `multiclass` | CUAD 25-family subtype, primary doc-class, generic multi-class | exact match + CI, macro accuracy, per-class, confusion |
+| `docclass` / `maud_docclass` | Hierarchical doc_type + second-level subclass | doc_type accuracy + macro P/R/F1/F2, subclass accuracy |
+| `maud_question` / `maud_extraction` | MAUD consideration answers + 22 Hub questions | exact match + CI, per-class, macro |
+| `enron_topic` / `enron_sentiment` | Enron correspondence topics & sentiment | accuracy, macro-F1, per-class |
+| `legalbench` | LegalBench binary Yes/No | exact match + CI, per-class, binary P/R/F1 |
+| `chained` | Composite sorter→extractor runs | sorter exact + extractor overall, weighted composite |
+| `contracteval` | ContractEval clause-mapping benchmark | F2, Jaccard, no-related rate, per-category |
+| `transcription` / `wer` | PDF→text / OCR hypothesis vs reference | WER, CER, word_accuracy |
+
+</div>
+
+## Library Usage
 
 ```python
 import llm_dojo_scoring as dojo
@@ -121,7 +140,6 @@ import llm_dojo_scoring as dojo
 result = dojo.score_extraction(
     "contract", field_types, predicted, expected, doc_text=text,
 )
-print(result.overall_score, result.ambiguous_fields)
 
 # 2. Bootstrap a CI over per-document scores
 ci = dojo.bootstrap_ci([1.0, 0.0, 1.0, 1.0])
@@ -129,240 +147,27 @@ ci = dojo.bootstrap_ci([1.0, 0.0, 1.0, 1.0])
 # 3. Aggregate tokens/cost
 summary = dojo.tokens_summary(usage_records, model="qwen/qwen3.7-flash")
 
-# 4. Analyze a workbook artifact
-result = dojo.io.read_workbook("Sorter_Experiment_Results.xlsx")
-frame = dojo.io.normalize_results_frame(result.frame)
-interp = dojo.interpret(frame, target=0.94)
-print(dojo.render_notes(interp))
-```
+# 4. Dedicated suite: the import mailroom projects should use
+suite = dojo.get_suite("insurance_claims_specialist")
+result = suite.score(expected_fields, predicted_fields)
 
-## Module map
-
-| Module | Replaces (in llm-entity-extraction / llm-mailroom) | What it does |
-|---|---|---|
-| `field_scoring` | `src/field_scoring.py` | Field-type-aware deterministic extraction scoring (`score_extraction`, scalar/list scorers, factuality audit, category presence) |
-| `classification` | `src/scorers.py` | Label normalization, exact match, per-class P/R/F1/F2, macro-PRF, confusion matrices, binary P/R/F1/F2 |
-| `extraction_metrics` | — (new) | Field-micro extraction P/R/F1/F2 over (field, value) events — additive to the soft `extraction_overall_score` mean |
-| `claims_consistency` | — (new) | Insurance `determination_consistency` and `amount_exactness` |
-| `failure_modes` | `scripts/eval/run_subtype_eval.py` | Failure-mode taxonomy + `classify_failure`, per-subtype accuracy, confusion builders |
-| `equivalences` | `agents/sorter_agent.py` (constants) | Subtype/doc-subclass normalization + equivalence helpers |
-| `bootstrap` | `src/bootstrap.py` | Bootstrap CIs, two-sample delta significance, Wilson intervals |
-| `cost` | `src/cost_models.py` + `experiment_log.tokens_summary` | Price lookup, cost estimation, usage aggregation |
-| `diagnostics` | `src/metrics.py` | Run-level diagnostics: date/duration/money MAE+R², span drift, field error decomposition |
-| `experiment` | `src/experiment_log.py` (core) | JSONL record append/load, dotted-path access, git snapshot |
-| `export` | `scripts/reporting/export_experiment_results.py`, `export_sweep_results.py` | Reference-format Excel workbooks + codebooks |
-| `io` | — (new) | Load Excel/CSV/JSONL artifacts, parse experiment names, normalized analysis frames |
-| `error_analysis` | — (new) | Best run, group summaries, trend, per-subtype hotspots, failure drivers, regression alerts |
-| `interpret` | — (new) | Verdicts: champion, significance, version/model leaderboards, reliability, recommendations |
-| `visualize` | — (new) | matplotlib plots: CI bars, prompt-version bars, subtype heatmap, failure stacks, cost scatter |
-| `report` | — (new) | Full Markdown report builder |
-| `registry` | — (new) | Metric definitions registry: every score name → tier (**T0 HEADLINE** / **T1 CORE** / **T2 DEEP** / **T3 LOG**), units, aggregation, applicable agents; YAML-backed (`LLM_DOJO_SCORING_REGISTRY`) |
-| `bundles` | — (new) | Eleven pre-built **task** bundles (classification, extraction, extraction_open, cost, factuality, laziness_detection, audit, reporter, transcription, intake, serving), fail-fast validated against the registry |
-| `profiles` | — (new) | **26 agent profiles** — each agent's scoring identity (task-derived bundle resolution, fallback bundle, ground-truth flag); YAML overlay via `LLM_DOJO_SCORING_PROFILES` |
-| `suites` | — (new) | **Dedicated scoring suite per pipeline agent** — importable `get_suite` / `score_suite` with field-type maps, doc-type aliases, and honest-gap notes; the API mailroom consumers should call. `list_suites(live_only=True)` hides retired court/DD specialists |
-| `doc_bundles` | — (new) | **Document-type-aware bundles** for the eight processed document classes; remaining honest gaps: retired court/DD, zero-row compliance, corporate_record with no *external* extraction benchmark, CMS GT homogeneity (all-approved) |
-| `mailroom` | — (new) | Live LLM-Mailroom / The-Mailroom contract: five extract classes, `unknown`, merger extract alias, Hub inventories, Langfuse observation types, 35-char score alias, exact vs aligned HF accuracy |
-| `content_scoring` | — (new) | Enron `content_topic` / `sentiment_label` accuracy + macro-F1; MAUD per-question extraction over the 22 Hub keys |
-| `asr` | — (new) | WER / CER / word-accuracy for PDF transcription and OCR |
-| `intake` | — (new) | Pre-sorter clerk: NFC / hyphen unwrap / whitespace prep; deterministic gold, LLM intake scored against it |
-| `serving` | — (new) | Local vs API-key serving comparison: TTFT, throughput, utilization, identity (model / quantization / GPU) |
-| `emitter` | — (new) | Unified score emitter: `ScoreRecord`, network-free JSONL manifest sink + credential-checked inert-unless-configured Langfuse sink; scorecards & headline comparison |
-| `pruning` | — (new) | Tier-based dashboard filtering: `dashboard_metrics(agent)` (profile bundle ∩ tier cap), `headline_metrics(agent)` (strictly T0), `prune_records` |
-| `langfuse_sync` | — (new) | Pull live experiment traces (Langfuse) into run records + reference workbook — subtype sessions **and** mailroom `document-pipeline` traces (intake span, exact/aligned HF accuracy, `user_id` / `release`) |
-| `phoenix_sync` | — (new) | Local Phoenix/OTLP sink probe + span reader (graceful when down) |
-| `tasks` | — (new) | Task-aware scoring across the additional document hierarchy (MAUD consideration + 22-question extraction, LegalBench, chained runs, multiclass, court opinions, Enron topic/sentiment, WER/CER, intake, `pipeline` HF eval) |
-| `cli` | — (new) | `dojo-analyze`, `dojo-export`, `dojo-sync` commands |
-
-## Task coverage — the additional document hierarchy
-
-`score_task(task, expected, predicted, ...)` is the single entry point for
-every classification task the eval loop produces, generalizing the CUAD
-subtype focus to the full merged taxonomy:
-
-| Task key | What it scores | Headline metrics |
-|---|---|---|
-| `subtype` / `doc_class` / `multiclass` | CUAD 25-family subtype, primary doc-class, generic multi-class | exact match + CI, macro accuracy, per-class, confusion, top confusions |
-| `docclass` / `maud_docclass` | hierarchical doc_type **+** second-level subclass (MAUD consideration type) | doc_type accuracy + macro P/R/F1/F2, subclass accuracy + subclass macro-F1, exact match, per-class P/R/F1 |
-| `maud_question` | MAUD Type-of-Consideration answers (`All Cash` → `all_cash`) | exact match + CI, per-class, macro |
-| `maud_extraction` | MAUD 22 Hub `maud_clause_labels` questions (or `'<Question>: <Answer>'` spans) | per-question exact / valid-class / presence / category |
-| `enron_topic` / `content_topic` | Enron correspondence topics (11 labels) | accuracy, macro-F1, per-class, confusion |
-| `enron_sentiment` / `sentiment` | Enron sentiment (`negative` / `neutral` / `positive`) | accuracy, macro-F1, per-class |
-| `transcription` / `wer` | PDF→text / OCR hypothesis vs reference | WER, CER, word_accuracy |
-| `intake` | Pre-sorter text prep (deterministic clerk gold; LLM intake scored against it) | exact cleaned-text match, token-F1, prep-step completeness, messy/changed |
-| `legalbench` | LegalBench task-mode binary Yes/No | exact match + CI, per-class, binary P/R/F1 |
-| `court_opinion` | court_opinion doc-class classification | exact match + CI, per-class, confusion |
-| `chained` | composite sorter→extractor runs (`chained_composite` / `chained_summary`) | sorter exact + subtype, extractor overall + presence, weighted composite (default 0.25/0.75) |
-| `contracteval` | ContractEval clause-mapping benchmark (arXiv 2508.03080 rubric, `contracteval_metrics` / `contracteval_score`) | confusion accuracy/P/R/F1 + recall-weighted **F2**, token-set **Jaccard** over positive pairs, no-related & false-no-related rates (own + paper's 1,244 denominator), per-category breakdown with `categories=` |
-
-Normalization is task-aware: MAUD consideration answers (`"All Cash"`,
-`"Mixed Cash & Stock (Election)"` → canonical keys) and LegalBench Yes/No
-forms degrade to canonical labels, and consideration-type equivalence
-(`mixed_cash_stock` ↔ `mixed_cash_stock_election`) is honored by the
-equiv metrics. Everything is a deterministic pure function over
-`(predicted, expected)` pairs — offline rescoring and live
-Langfuse/Braintrust scoring can never disagree.
-
-## Unified scoring layer — tiers, bundles, profiles, doc-type bundles
-
-On top of the calculation engine (v0.5.0+) the package ships the
-organizational layer consumers emit through:
-
-- **`registry`** — the single source mapping every metric name to its tier:
-  **T0 HEADLINE** (board-level, one number per agent) → **T1 CORE**
-  ("what broke yesterday?": P/R/F1/F2, rates, cost) → **T2 DEEP** (confusion,
-  failure modes, bootstrap CIs, calibration) → **T3 LOG** (audit trail only).
-  T0/T1 entries carry **citation**, **inclusion**, and **ground_truth**
-  (`required` / `optional` / `structural` / `none`). Full tables:
-  [`docs/SCORING.md`](docs/SCORING.md). The built-in default covers this
-  package's full surface plus all 37 flat llm-mailroom `SCORE_CONFIGS` names,
-  the Langfuse 35-char transport alias (`extraction_verified_precision`), and
-  The-Mailroom judge scores; override via `LLM_DOJO_SCORING_REGISTRY` or an
-  explicit path.
-- **`bundles`** — eleven task bundles (what the agent *does*): classification,
-  extraction, extraction_open, cost, factuality, laziness_detection, audit,
-  reporter, transcription, intake, serving. Every metric must resolve in the registry.
-- **`profiles`** — 26 default **agent profiles**, each one agent's scoring
-  identity: task-derived bundle resolution, a fallback bundle for degraded
-  runs, and a ground-truth flag. Includes the sorter, seven specialists
-  (five live + two retired), judge/boss/reporter/transcribers/archivist/
-  intake clerk, the audit agent, the Lane A/B review set
-  (`sorter_reviewer`, seven per-specialist auditors including
-  `insurance_claims_auditor`, `arbiter`) that never require ground truth,
-  and `local_vs_api` (serving comparison; no ground truth).
-  Overlay with your own YAML via `LLM_DOJO_SCORING_PROFILES`.
-- **`suites`** — one dedicated, importable scoring suite per pipeline agent
-  (and a doc-type alias so `get_suite("insurance_claim")` resolves the
-  specialist). `suite.score(expected, predicted)` routes to the existing
-  calculation (`score_task` / `score_extraction` / audit disagreement /
-  transcription WER/CER + token-F1 / intake prep / `compare_serving`). Type-specific extras ship where real
-  scorers exist (CUAD laziness, LegalBench, Enron topic/sentiment, MAUD
-  per-question extraction, WER/CER, local vs API serving); honest-gap notes record the rest.
-  Each specialist suite binds the extraction fields, subclass catalog,
-  and GT differentiators for its document class from **`corpus`** (pinned to
-  `Lucius-Morningstar/docclass-merged`). `get_suite("merger_agreement")`
-  shares the contracts specialist but rebinds the MAUD consideration
-  catalog — it does not inherit CUAD families.
-- **`corpus`** — published-merge alignment: native vs corpus-present
-  classes, per-type subclass surfaces (CUAD folder labels, MAUD
-  consideration, CMS source table, Enron form, record type), extraction
-  field sets, and `normalize_corpus_subclass` / `suite_schema`.
-- **`mailroom`** — live pipeline contract for LLM-Mailroom / The-Mailroom:
-  five live extract classes, `unknown` routing token, merger extract
-  alias, Hub inventories, Langfuse observation types, score transport
-  aliases, and exact vs aligned HF accuracy.
-- **`doc_bundles`** — the same idea grouped by the KIND of document processed:
-  eight `DOC_TYPE_BUNDLES` (`contract`, `merger_agreement`,
-  `corporate_record`, `due_diligence`, `correspondence`, `compliance_filing`,
-  `court_opinion`, `insurance_claim`). Honesty mandate: type-specific metrics
-  ship ONLY where real scoring logic exists today (contracts get
-  CUAD-grounded laziness/hallucination overrides, merger agreements get
-  MAUD per-question extraction, correspondence gets Enron topic/sentiment,
-  court opinions get LegalBench); types whose scorers are still future work
-  say so in their description instead of inventing numbers. `AgentProfile.resolve_doc_bundle()`
-  degrades to a task bundle with an EXPLICIT `used_fallback=True` marker —
-  never a silent default.
-- **`emitter`** — one fan-out point for score records: registry-validated
-  `emit_score` → sinks (`LocalManifestSink` JSONL always available;
-  `LangfuseSink` inert unless credentials resolve), then aggregated
-  `get_scorecard(agent, run_id, min_tier=...)` and T0-only
-  `compare_headlines`.
-- **`pruning`** — what a dashboard panel shows: profile-bundle ∩ tier cap.
-- **`prompts`** — importable catalog of production + latest docclass-merged
-  templates (`get_prompt("sorter")`, `get_prompt("sorter", family="docclass")`).
-  Intake / archivist / `local_vs_api` / proposed auditors are honest non-LLM
-  entries (`text=""`).
-  Metric names stay in metadata, not in model-visible text. See
-  [`docs/PROMPTS.md`](docs/PROMPTS.md).
-
-```python
-import llm_dojo_scoring as dojo
-
-# 1. Registry: every score name -> tier / units / aggregation / agents
-reg = dojo.load_registry()
-reg.names_for(max_tier=1, agent="sorter")        # T0+T1 slice for one agent
-
-# 2. Dedicated suite: the import mailroom projects should use
-suite = dojo.get_suite("insurance_claims_specialist")          # 26 defaults
-result = suite.score(expected_fields, predicted_fields)       # field-type-aware
-assert suite.name == dojo.get_suite("insurance_claim").name   # doc-type alias
-
-# 2b. Agent profiles: the scoring identity of each pipeline agent
-profile = dojo.get_profile("insurance_claims_specialist")
-bundle = profile.resolve_bundle()                             # validated vs registry
-
-# 3. Doc-type bundles: metrics grouped by the kind of document
-doc_bundle, used_fallback = profile.resolve_doc_bundle("insurance_claim")
-assert not used_fallback          # explicit honesty marker — never a silent default
-
-# 4. Emit through sinks; query scorecards
+# 5. Emit through sinks; query scorecards
 emitter = dojo.Emitter(sinks=[
-    dojo.LocalManifestSink("reports/scores_manifest.jsonl"),   # network-free
-    dojo.LangfuseSink(),                                       # inert w/o creds
+    dojo.LocalManifestSink("reports/scores_manifest.jsonl"),
+    dojo.LangfuseSink(),
 ])
 emitter.emit_score("sorter", "doc_17", "accuracy", 0.93, run_id="exp_42")
-card = emitter.get_scorecard("sorter", "exp_42", min_tier=1)   # dashboard view
-
-# 5. Tier-based pruning
-dojo.dashboard_metrics("contracts_specialist")   # profile bundle ∩ T0+T1
-dojo.headline_metrics("judge")                   # strictly T0
-
-# 6. Prompt catalog — production vs docclass family
-from llm_dojo_scoring.prompts import get_prompt
-system = get_prompt("contracts_specialist", family="docclass").text
-assert get_prompt("intake").kind == "deterministic"
-
-# 7. v0.10.0 extras — specialist F1/F2 headlines, insurance consistency
-assert "extraction_f1" in dojo.headline_metrics("contracts_specialist")
-assert "extraction_f2" in dojo.headline_metrics("insurance_claims_specialist")
-assert "content_topic_f1_macro" in dojo.headline_metrics("correspondence_specialist")
-
-# 8. v0.12.0 — local vs API serving comparison (TTFT, throughput, utilization)
-local_run = {"provider": "ollama", "model": "qwen3:8b", "quantization": "q4_k_m",
-             "ttft_seconds": 0.4, "e2e_latency_seconds": 2.4, "completion_tokens": 50}
-api_run = {"provider": "openrouter", "model": "qwen/qwen3-8b",
-           "ttft_seconds": 0.15, "e2e_latency_seconds": 0.9, "completion_tokens": 50}
-cmp = dojo.get_suite("local_vs_api").score(local_run, api_run)
-assert cmp["metrics"]["ttft_seconds"]["delta_local_minus_api"] is not None
-assert cmp["scorecard"]["cost"]["local"]["estimated_cost_usd"] is None  # no price table
-assert any(r["status"] == "missing" for r in cmp["table"])
-assert "ttft_seconds" in dojo.headline_metrics("local_vs_api")
-assert "ttft_seconds" not in dojo.headline_metrics("sorter")
-raw = "A hyphen-\nated  line"
-cleaned, _stats = dojo.apply_intake(raw)
-intake = dojo.get_suite("intake").score(raw, cleaned)
-live = dojo.list_suites(live_only=True)            # hides retired court/DD
 ```
 
 ## Configuration
 
-All thresholds, equivalence sets, subtype lists, cost tables, and failure-mode
-definitions live in one `Settings` object (`llm_dojo_scoring.config`):
+All thresholds, equivalence sets, subtype lists, cost tables, and failure-mode definitions live in one `Settings` object:
 
 ```python
 from llm_dojo_scoring import configure, load_settings
 
-configure(field_scoring__bipartite_match_threshold=0.7)   # inline override
-settings = load_settings("config/taxonomy.yaml")          # or a YAML file
-```
-
-```yaml
-# config/taxonomy.yaml (subset)
-field_scoring:
-  ambiguous_band: [0.5, 0.85]
-  bipartite_match_threshold: 0.6
-  embedding_enabled: false
-  partial_gt_fields: [parties, key_obligations, termination_clauses]
-  containment_fields: [governing_law, term_length, renewal_terms]
-  factuality_verification:
-    enabled: true
-    token_coverage: 0.7
-subtype_equivalences:
-  - [reseller, distributor]
-  - [maintenance, license]
-  - [development, license]
-  - [affiliate, joint_venture]
-cost_models:
-  qwen/qwen3.7-flash: [0.03, 0.13]
+configure(field_scoring__bipartite_match_threshold=0.7)
+settings = load_settings("config/taxonomy.yaml")
 ```
 
 Set `LLM_DOJO_SCORING_CONFIG` to a YAML path for the process-wide override.
@@ -374,20 +179,33 @@ pip install -e ".[dev]"
 python -m pytest
 ```
 
-## Migration
+## CLI Reference
 
-See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap for
-`llm-entity-extraction` / `llm-mailroom`. Scoring tables:
-[`docs/SCORING.md`](docs/SCORING.md). Prompt catalog:
-[`docs/PROMPTS.md`](docs/PROMPTS.md).
-
-## CLI reference
+<div align="center">
 
 ```
 dojo-analyze INPUT [-o REPORT.md] [--plots DIR] [--metric COL] [--target 0.94]
                   [--min-n N] [--cost-column COL] [--task T] [--max-items N]
-                  [--no-plots]        # INPUT may be xlsx | jsonl | langfuse:<name>
 dojo-export  [--task sorter|extraction|all] [--sweep] [--log LOG] [--outdir DIR]
 dojo-sync    [--task TRACE_NAME] [--session NAME] [--max-items N]
              [--env-file FILE] [--outdir DIR] [--no-workbook] [--check-phoenix]
 ```
+
+</div>
+
+## Migration
+
+See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md). Prompt catalog: [`docs/PROMPTS.md`](docs/PROMPTS.md).
+
+---
+
+<div align="center">
+
+**[llm-mailroom](https://github.com/Exios66/llm-mailroom)** ·
+**[llm-entity-extraction](https://github.com/Exios66/llm-entity-extraction)** ·
+**[llm-mailroom](https://github.com/Exios66/llm-mailroom)** ·
+**[The-Mailroom](https://github.com/Exios66/The-Mailroom)**
+
+<sub>Built by the governed evaluation family under <a href="https://github.com/Exios66">@Exios66</a> · 2026</sub>
+
+</div>

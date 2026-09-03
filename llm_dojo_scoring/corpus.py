@@ -1,7 +1,7 @@
 """docclass-merged corpus alignment — schemas, subclasses, differentiators.
 
 Grounded in the published Hugging Face dataset
-``Lucius-Morningstar/docclass-merged`` (default + ``ground_truth`` configs;
+``Lucius-Morningstar/mailroom-corpus`` (default + ``ground_truth`` configs;
 1,210 rows: 1,081 train / 129 test as of the v0.8.1 alignment pass).
 
 This module is the single source mapping each mailroom document class to:
@@ -50,7 +50,7 @@ __all__ = [
 ]
 
 #: Hugging Face dataset id this module is pinned to.
-CORPUS_ID = "Lucius-Morningstar/docclass-merged"
+CORPUS_ID = "Lucius-Morningstar/mailroom-corpus"
 
 #: Doc types that have at least one ground-truth row in the published merge.
 CORPUS_DOC_TYPES: tuple[str, ...] = (
