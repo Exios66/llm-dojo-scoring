@@ -120,7 +120,7 @@ PIPELINE_TRACE = "document-pipeline"
 #: Graph node → Langfuse observation type (llm-mailroom ``tracing.py``).
 NODE_OBSERVATION_TYPES: dict[str, str] = {
     "document-pipeline": "chain",
-    "ingest-document": "span",
+    "intake-document": "span",
     "normalize-intake": "span",
     "extract-image-text": "retriever",
     "transcribe-pdf": "retriever",
