@@ -106,13 +106,18 @@ DOC_TYPE_SUBCLASSES: dict[str, tuple[str, ...]] = {
         "meeting_request",
         "press_release",
     ),
-    # CMS DE-SynPUF *source table* subclass. Mailroom ``claim_type`` now
-    # also accepts these Hub tokens plus legacy FNOL product lines.
+    # Insurance claim-document subclass: CMS DE-SynPUF *source table* tokens
+    # (carrier/inpatient/outpatient/pde) PLUS the v8 synthetic LOB lines
+    # (property = GNOTHEIA FNOL bundles, auto = BDR motor decision letters;
+    # HUB-028/HUB-041). Mailroom ``claim_type`` also accepts these Hub tokens
+    # plus legacy FNOL product lines.
     "insurance_claim": (
         "carrier",
         "inpatient",
         "outpatient",
         "pde",
+        "property",
+        "auto",
     ),
     "due_diligence": (),
     "compliance_filing": (
@@ -189,10 +194,12 @@ CORPUS_SUBCLASS_SURFACES: dict[str, tuple[str, ...]] = {
         "press_release",
     ),
     "insurance_claim": (
+        "auto",
         "carrier",
         "inpatient",
         "outpatient",
         "pde",
+        "property",
     ),
 }
 

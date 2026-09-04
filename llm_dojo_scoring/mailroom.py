@@ -179,6 +179,8 @@ HUB_SUBCLASS_INVENTORIES: dict[str, tuple[str, ...]] = {
         "inpatient",
         "outpatient",
         "carrier",
+        "property",
+        "auto",
     ),
     "compliance_filing": (
         "10-K",
