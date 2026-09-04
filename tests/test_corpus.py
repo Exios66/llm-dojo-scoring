@@ -54,7 +54,7 @@ def test_maud_consideration_and_insurance_source_table_are_distinct():
         "mixed_cash_stock_election"
     )
     assert subclass_equivalent("merger_agreement", "mixed_cash_stock", "mixed_cash_stock_election")
-    for src in ("carrier", "inpatient", "outpatient", "pde"):
+    for src in ("carrier", "inpatient", "outpatient", "pde", "property", "auto"):
         assert normalize_corpus_subclass("insurance_claim", src) == src
     # product-line claim_type is NOT a subclass
     assert normalize_corpus_subclass("insurance_claim", "health") == "other"
@@ -129,7 +129,7 @@ def test_insurance_gt_fields_are_on_the_suite():
         assert field in suite.field_types
     assert suite.field_types["claimed_amount"] == "money"
     assert suite.field_types["date_of_loss"] == "date"
-    assert suite.subclasses == ("carrier", "inpatient", "outpatient", "pde")
+    assert suite.subclasses == ("carrier", "inpatient", "outpatient", "pde", "property", "auto")
 
 
 def test_contract_suite_has_cuad_clause_surface_and_document_name():
