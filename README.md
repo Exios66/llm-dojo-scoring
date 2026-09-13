@@ -7,7 +7,8 @@
 Scoring · Error analysis · Visualization · Interpretation
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Release](https://img.shields.io/badge/release-v0.13.0-2EA043)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.13.0)
+[![Release](https://img.shields.io/badge/release-v0.13.0-2EA043)](https://github.com/LLM-Mailroom-Services/Digital-Mailroom/releases/tag/v0.13.0)
+[![Contributor](https://img.shields.io/badge/contributor-Exios66-blue)](https://github.com/Exios66)
 [![Tests](https://img.shields.io/badge/pytest-passing-brightgreen)](tests/)
 
 </div>
@@ -201,9 +202,9 @@ See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring 
 
 <div align="center">
 
-**[llm-mailroom](https://github.com/Exios66/llm-mailroom)** ·
+**[llm-mailroom](https://github.com/LLM-Mailroom-Services/Digital-Mailroom)** ·
 **[llm-entity-extraction](https://github.com/Exios66/llm-entity-extraction)** ·
-**[llm-mailroom](https://github.com/Exios66/llm-mailroom)** ·
+**[llm-mailroom](https://github.com/LLM-Mailroom-Services/Digital-Mailroom)** ·
 **[The-Mailroom](https://github.com/Exios66/The-Mailroom)**
 
 <sub>Built by the governed evaluation family under <a href="https://github.com/Exios66">@Exios66</a> · 2026</sub>

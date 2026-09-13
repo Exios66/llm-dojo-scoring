@@ -362,7 +362,7 @@ _HONEST_GAPS: dict[str, str] = {
         "HONEST GAP: due_diligence was RETIRED from the live llm-mailroom "
         "pipeline (v0.5.0 / PR #21). The sorter emits unknown (human review) "
         "instead of extracting. This suite remains for historical traces; "
-        "zero rows in Lucius-Morningstar/mailroom-corpus."
+        "zero rows in Lucius-Morningstar/mailroom-dataset."
     ),
     "court_opinions_specialist": (
         "HONEST GAP: court_opinion was RETIRED from the live llm-mailroom "
@@ -378,7 +378,7 @@ _HONEST_GAPS: dict[str, str] = {
     ),
     "compliance_specialist": (
         "HONEST GAP: compliance_filing has zero rows in Lucius-Morningstar/"
-        "docclass-merged. Hub SEC form-body inventory (10-K, 10-Q, 8-K, …) "
+        "mailroom-dataset. Hub SEC form-body inventory (10-K, 10-Q, 8-K, …) "
         "is the live subclass catalog; suite scores typed-extraction plus "
         "that inventory (no corpus-backed rows yet)."
     ),
@@ -473,7 +473,7 @@ class ScoringSuite:
     subclasses: tuple[str, ...] = ()
     #: Corpus GT columns that differentiate this document class.
     differentiators: tuple[str, ...] = ()
-    #: True when the published docclass-merged corpus has rows of this type.
+    #: True when the published mailroom-dataset corpus has rows of this type.
     in_corpus: bool = False
     #: True when the live llm-mailroom pipeline no longer dispatches this agent.
     retired: bool = False

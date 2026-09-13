@@ -5,6 +5,29 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-09-13
+
+### Changed
+
+- **Corpus identity migrated to `Lucius-Morningstar/mailroom-dataset`**
+  (v1, canonically **v9** of the mailroom corpus family, 3,302 rows; issue
+  hub #18). `CORPUS_ID` in `llm_dojo_scoring/corpus.py` now points at
+  `mailroom-dataset` — the old `docclass-merged` repo is deleted, and the
+  frozen v8 `mailroom-corpus` remains only as lineage baseline. Module
+  titles/docstrings aligned (`mailroom-dataset corpus alignment`).
+- **v9 GT surface:** `doc_bundles.py` headline grounding count updated to
+  3,302 GT rows; `suites.py` docclass-family prose aligned; insurance
+  subclass vocabulary notes the v8/v9 synthetic LOB lines (`property` /
+  `auto`, HUB-028/HUB-041) alongside the CMS DE-SynPUF source tokens.
+- **Docs sweep:** README/SCORING/tests module docstrings updated to the
+  `mailroom-dataset` identity (historical `docclass-merged` prompt-family
+  identifiers retained as product names).
+- Package version **0.14.0**. Consumer pin:
+
+  ```
+  llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.14.0
+  ```
+
 ## [0.13.0] - 2026-08-30
 
 ### Changed
