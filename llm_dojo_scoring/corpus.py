@@ -1,4 +1,4 @@
-"""docclass-merged corpus alignment — schemas, subclasses, differentiators.
+"""mailroom-dataset corpus alignment — schemas, subclasses, differentiators.
 
 Grounded in the published Hugging Face dataset
 ``Lucius-Morningstar/mailroom-dataset`` (default + ``ground_truth`` configs;
@@ -137,7 +137,7 @@ DOC_TYPE_SUBCLASSES: dict[str, tuple[str, ...]] = {
     "court_opinion": (),
 }
 
-#: Observed subclass *surfaces* in docclass-merged ``ground_truth.expected_subclass``.
+#: Observed subclass *surfaces* in mailroom-dataset ``ground_truth.expected_subclass``.
 #: Used by tests to pin corpus coverage; normalizers must resolve every value
 #: to a key in :data:`DOC_TYPE_SUBCLASSES` (or ``other`` only when the
 #: surface is the canonical other-bucket).

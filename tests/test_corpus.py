@@ -1,4 +1,4 @@
-"""Corpus alignment — suites match docclass-merged schemas/subclasses/fields.
+"""Corpus alignment — suites match mailroom-dataset schemas/subclasses/fields.
 
 Pinned to Lucius-Morningstar/mailroom-dataset ground_truth (1,210 rows).
 Network-free: catalogs are in-repo constants derived from that publish.
