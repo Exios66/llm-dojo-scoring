@@ -16,7 +16,7 @@ scorers, and reporting scripts keep working with minimal edits.
 
 ```bash
 # in llm-entity-extraction / llm-mailroom — pin the published tag
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.14.0"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.15.0"
 # or from a local checkout
 pip install -e /path/to/llm-dojo-scoring
 ```
@@ -24,10 +24,10 @@ pip install -e /path/to/llm-dojo-scoring
 `pyproject.toml` / `requirements.txt`:
 
 ```
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.14.0
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.15.0
 ```
 
-Do not pin a merge SHA. Release notes: https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.14.0
+Do not pin a merge SHA. Release notes: https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.15.0
 
 ## 2. Import swap table
 
