@@ -67,10 +67,17 @@ def sorter_frame() -> pd.DataFrame:
 
 @pytest.fixture
 def real_artifacts() -> dict:
-    """Paths to the downloaded reference artifacts (skipped when absent)."""
+    """Paths to the downloaded reference artifacts (skipped when absent).
+
+    hub#60: the base dir is env-overridable (MAILROOM_REFERENCE_BASE) and
+    otherwise defaults to the home Downloads dir — never a hardcoded
+    username. The skip triggers on artifact ABSENCE, not directory presence.
+    """
     import os
 
-    base = "/Users/luciusjmorningstar/Downloads"
+    base = os.environ.get("MAILROOM_REFERENCE_BASE") or os.path.join(
+        os.path.expanduser("~"), "Downloads"
+    )
     paths = {
         "results": os.path.join(base, "Sorter_Experiment_Results.xlsx"),
         "sweep": os.path.join(base, "Sorter_Model_Sweep_Results.xlsx"),
