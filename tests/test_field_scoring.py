@@ -85,6 +85,62 @@ def test_entity_list_partial_gt_role_words():
     assert score.score == 1.0  # recall
 
 
+def test_entity_list_partial_gt_precision_capped_at_1():
+    # hub#38: role-word credits are bounded — an all-role-word expected list
+    # vs a single named party must never inflate precision beyond 1.0.
+    score = fs.score_entity_list(
+        "name", ["ACME Corp"], ["Seller", "Buyer"], partial_gt=True
+    )
+    assert score.precision <= 1.0
+    assert score.recall <= 1.0
+
+
+def test_entity_list_partial_gt_contained_items_credit_capped():
+    # hub#38: contained-label credits are bounded — a 1-item prediction whose
+    # tokens contain an expected 3-6-token label gets the credit, but the
+    # composite may not exceed min(n_pred, n_exp).
+    score = fs.score_entity_list(
+        "clause",
+        ["indemnification obligations of the seller"],
+        ["indemnification obligations", "obligations of the seller"],
+        partial_gt=True,
+    )
+    assert score.precision <= 1.0
+    assert score.recall <= 1.0
+
+
+def test_entity_list_partial_gt_mixed_case_bounded():
+    # hub#38: mixed role-word + real-entity expected list vs a single
+    # predicted entity — matched starts at the Hungarian hit, gets role
+    # credits, then clamps to min(n_pred, n_exp) = 1.
+    score = fs.score_entity_list(
+        "name", ["ACME Corp"], ["Seller", "ACME Corp", "Buyer"], partial_gt=True
+    )
+    assert score.matched <= 1
+    assert score.precision == 1.0
+    assert score.recall == pytest.approx(1 / 3)
+
+
+def test_entity_list_partial_gt_property_precision_recall_bounded():
+    # hub#38: for random (pred, exp) pairs with partial_gt, precision and
+    # recall stay within [0, 1].
+    import random
+
+    pool = [
+        "Seller", "Buyer", "Shipper", "Receiver", "Party A",
+        "ACME Corp", "Acme Corp", "Shipper Co.", "Big Corp", "Consignee",
+        "indemnification obligations", "confidentiality", "termination",
+    ]
+    rng = random.Random(1337)
+    for _ in range(100):
+        n_pred, n_exp = rng.randint(1, 4), rng.randint(1, 4)
+        pred = [rng.choice(pool) for _ in range(n_pred)]
+        exp = [rng.choice(pool) for _ in range(n_exp)]
+        score = fs.score_entity_list("name", pred, exp, partial_gt=True)
+        assert 0.0 <= score.precision <= 1.0
+        assert 0.0 <= score.recall <= 1.0
+
+
 def test_entity_list_to_dict():
     d = fs.score_entity_list("name", ["A"], ["A"]).to_dict()
     assert d["n_predicted"] == 1

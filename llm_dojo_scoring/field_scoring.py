@@ -615,6 +615,13 @@ def score_entity_list(element_type: str, pred, exp, embedding=None,
     if contained_items:
         matched += contained_items
 
+    # Role-word/contained credits are a BOUNDED credit, not an unbounded
+    # additive bonus: nothing tracks which distinct predicted items were
+    # consumed, so without the clamp an all-role-word expected list vs a
+    # single named party yields precision 2/1 = 2.0 (hub#38). The composite
+    # may never exceed the smaller of the two list sizes.
+    matched = min(matched, n_pred, n_exp)
+
     precision = matched / n_pred
     recall = matched / n_exp
     f1 = 2 * precision * recall / (precision + recall) if matched else 0.0
