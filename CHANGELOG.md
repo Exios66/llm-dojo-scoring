@@ -5,6 +5,42 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-09-14
+
+### Added
+
+- **`configure_from_taxonomy(taxonomy)` — the single taxonomy→settings wiring
+  path** (hub #62). Consuming projects (llm-mailroom, llm-entity-extraction,
+  agent-mailroom) load their own `taxonomy.yaml` and pass the parsed dict
+  here; the package applies the `field_scoring:` block (including the new
+  `type_bands` overrides and `factuality_verification`), equivalence sets,
+  cost models, doc-class field-type maps, and display labels in ONE place.
+  Honors the `LLM_DOJO_SCORING_CONFIG` env-file escape hatch (external file
+  wins wholesale). Before, each consumer re-implemented the coercion
+  (`_apply_taxonomy_settings` / `apply_taxonomy_settings` in three copies).
+- **Mailroom glue promoted into the package** — `get_type_bands()`,
+  `field_is_ambiguous(field_type, score)`, and `warm_embedding_model()`
+  (off-document-path embedding preload, O-10) now live in
+  `llm_dojo_scoring.field_scoring` instead of per-package shims.
+- **`get_field_types(doc_class)` auto-resolves** from the taxonomy wired via
+  `configure_from_taxonomy()` (captured in `Settings.doc_class_field_types`)
+  — no need to pass the taxonomy on every call.
+- **`FieldScoringSettings.type_bands`** — per-field-type ambiguous-band
+  overrides (`"always"` / `"never"` / `(low, high)`), populated by
+  `configure_from_taxonomy()`.
+- New top-level re-exports so dependants can `from llm_dojo_scoring import
+  ...` instead of deep submodule imports: `get_type_bands`,
+  `field_is_ambiguous`, `warm_embedding_model`, `configure_from_taxonomy`,
+  `get_field_types`, `normalize_text`, `parse_date`, `parse_money`,
+  `score_category_presence`, `peel_non_extraction_fields`, `get_jaccard`,
+  `INTAKE_SPAN_KEYS`.
+
+### Changed
+
+- Package version **0.15.0**. Consumers upgrade their pin to
+  `llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.15.0`
+  and can drop their local field-scoring shims.
+
 ## [0.14.0] - 2026-09-13
 
 ### Changed

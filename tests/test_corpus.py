@@ -62,8 +62,17 @@ def test_maud_consideration_and_insurance_source_table_are_distinct():
 
 
 def test_correspondence_and_corporate_record_subclasses():
+    # The correspondence enum mirrors the eval-environment labeler verbatim
+    # (Enron-Evaluation-Environment/scripts/correspondence_subclasses.py
+    # SUBCLASS_KEYS). Keep the two in sync — this pins the full 10-key set.
+    assert tuple(DOC_TYPE_SUBCLASSES["correspondence"]) == (
+        "email", "memo", "letter", "notice", "demand", "attorney_demand",
+        "press_release", "meeting_request", "voicemail", "other",
+    )
     assert normalize_corpus_subclass("correspondence", "attorney_demand") == "attorney_demand"
     assert normalize_corpus_subclass("correspondence", "press_release") == "press_release"
+    assert normalize_corpus_subclass("correspondence", "voicemail") == "voicemail"
+    assert normalize_corpus_subclass("correspondence", "other") == "other"
     assert normalize_corpus_subclass("corporate_record", "articles_of_incorporation") == (
         "articles_of_incorporation"
     )

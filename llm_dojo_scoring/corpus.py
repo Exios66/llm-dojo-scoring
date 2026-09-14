@@ -96,16 +96,22 @@ DOC_TYPE_SUBCLASSES: dict[str, tuple[str, ...]] = {
         "officer_certificate",
         "other",
     ),
-    # Enron-derived communication form (KANBAN-079 GT enrichment).
+    # Enron-derived communication form (KANBAN-079 GT enrichment). Mirrors
+    # the eval-environment labeler enum verbatim
+    # (Enron-Evaluation-Environment/scripts/correspondence_subclasses.py
+    # SUBCLASS_KEYS — 10 keys incl. voicemail + the other-bucket; keep in
+    # sync when the labeler changes).
     "correspondence": (
         "email",
-        "letter",
         "memo",
+        "letter",
         "notice",
         "demand",
         "attorney_demand",
-        "meeting_request",
         "press_release",
+        "meeting_request",
+        "voicemail",
+        "other",
     ),
     # Insurance claim-document subclass: CMS DE-SynPUF *source table* tokens
     # (carrier/inpatient/outpatient/pde) PLUS the v8 synthetic LOB lines
@@ -193,6 +199,8 @@ CORPUS_SUBCLASS_SURFACES: dict[str, tuple[str, ...]] = {
         "memo",
         "notice",
         "press_release",
+        "voicemail",
+        "other",
     ),
     "insurance_claim": (
         "auto",
