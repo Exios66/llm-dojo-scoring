@@ -279,6 +279,14 @@ class FieldScoringSettings:
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     embedding_rescue_below: float = 0.7
     presence_embedding_threshold: float = 0.7
+    # Per-field-type ambiguous-band overrides. Values are one of:
+    #   ("always",)   -> every field of that type escalates to the LLM judge
+    #   ("never",)    -> no field of that type ever escalates
+    #   (low, high)   -> half-open band check (low <= score < high)
+    # Populated by configure_from_taxonomy() from the taxonomy.yaml
+    # ``field_scoring.type_bands`` block; empty by default (global
+    # ``ambiguous_band`` applies to every field type).
+    type_bands: dict[str, tuple] = field(default_factory=dict)
     partial_gt_fields: set[str] = field(
         default_factory=lambda: {
             "parties",
@@ -322,6 +330,11 @@ class Settings:
     cost_models: dict[str, tuple[float, float]] = field(
         default_factory=lambda: dict(DEFAULT_COST_MODELS)
     )
+    # Doc-class -> {field: scoring-type} mapping, captured from the wired
+    # taxonomy's ``doc_classes`` blocks by configure_from_taxonomy(). Lets
+    # field_scoring.get_field_types(doc_class) resolve WITHOUT the caller
+    # passing its taxonomy every time (the consuming project wires once).
+    doc_class_field_types: dict[str, dict[str, str]] = field(default_factory=dict)
     model_display: dict[str, str] = field(
         default_factory=lambda: dict(DEFAULT_MODEL_DISPLAY)
     )
@@ -401,6 +414,9 @@ def _apply_dict(settings: Settings, data: dict[str, Any]) -> None:
         if "token_coverage" in fv:
             fs_settings.verification_token_coverage = float(fv["token_coverage"])
 
+    if "type_bands" in fs:
+        fs_settings.type_bands = _coerce_type_bands(fs["type_bands"])
+
     if "subtype_equivalences" in data:
         settings.subtype_equivalences = [
             frozenset(str(x) for x in cls) for cls in (data["subtype_equivalences"] or [])
@@ -422,6 +438,17 @@ def _apply_dict(settings: Settings, data: dict[str, Any]) -> None:
     display = data.get("model_display") or {}
     for model, label in display.items():
         settings.model_display[str(model)] = str(label)
+
+    # Doc-class field-type maps (for auto-resolving get_field_types).
+    doc_class_field_types: dict[str, dict[str, str]] = {}
+    for cls in data.get("doc_classes") or []:
+        key = cls.get("key") if isinstance(cls, dict) else None
+        if key:
+            doc_class_field_types[str(key)] = {
+                str(f): str(t) for f, t in (cls.get("field_types") or {}).items()
+            }
+    if doc_class_field_types:
+        settings.doc_class_field_types.update(doc_class_field_types)
 
 
 @lru_cache(maxsize=1)
@@ -455,6 +482,24 @@ def get_settings() -> Settings:
     return load_settings()
 
 
+def _coerce_type_bands(raw: dict) -> dict[str, tuple]:
+    """Coerce a ``type_bands`` mapping to canonical ``{type: tuple}`` form.
+
+    YAML values arrive as one of: ``"always"``, ``"never"``, or a 2-element
+    list ``[low, high]``. The canonical form is a tuple so callers can match
+    on ``("always",)`` / ``("never",)`` without string ambiguity.
+    """
+    out: dict[str, tuple] = {}
+    for k, v in (raw or {}).items():
+        if v == "always":
+            out[str(k)] = ("always",)
+        elif v == "never":
+            out[str(k)] = ("never",)
+        elif isinstance(v, (list, tuple)) and len(v) == 2:
+            out[str(k)] = (float(v[0]), float(v[1]))
+    return out
+
+
 def configure(**overrides: Any) -> Settings:
     """Inline override path: ``configure(field_scoring__bipartite_match_threshold=0.7)``.
 
@@ -472,4 +517,43 @@ def configure(**overrides: Any) -> Settings:
                 raise AttributeError(f"unknown setting {key}")
         else:
             setattr(settings, key, value)
+    return settings
+
+
+def configure_from_taxonomy(taxonomy: dict | None) -> Settings:
+    """Wire a repo taxonomy dict into the package settings (single wiring path).
+
+    This is the ONE place the taxonomy→settings mapping lives: consuming
+    projects (llm-mailroom, llm-entity-extraction, agent-mailroom) load their
+    own ``taxonomy.yaml`` and pass the parsed dict here — they no longer
+    re-implement the field-scoring coercion or the equivalence/cost mapping.
+
+    Handles the same blocks ``_apply_dict`` reads: ``field_scoring:``
+    (including the ``type_bands`` overrides and ``factuality_verification``),
+    ``subtype_equivalences``, ``doc_subclass_equivalences``,
+    ``contract_subtypes``, ``subtype_aliases``, ``per_subtype``,
+    ``cost_models``, ``model_display``.
+
+    Honors ``LLM_DOJO_SCORING_CONFIG``: when it points at an existing YAML
+    file, that file wins wholesale (loaded fresh) and ``taxonomy`` is ignored
+    — matching the pre-existing escape-hatch contract. Callers that need
+    secrets loaded first (e.g. entity-extraction's env files) must do that
+    before calling this.
+
+    Returns the process-wide settings object (lru-cached, now wired).
+    """
+    env_path = os.environ.get(_ENV_CONFIG_PATH, "")
+    if env_path.strip() and Path(env_path).exists():
+        # External config file wins wholesale (escape hatch).
+        load_settings.cache_clear()
+        return load_settings(Path(env_path))
+
+    if not taxonomy:
+        return get_settings()
+
+    # Mutate the cached settings object in place (same mechanism configure()
+    # uses), so every downstream get_settings()/field_scoring getter observes
+    # the wired values for the rest of the process.
+    settings = get_settings()
+    _apply_dict(settings, taxonomy)
     return settings

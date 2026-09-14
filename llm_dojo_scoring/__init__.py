@@ -15,7 +15,7 @@ from importlib import metadata
 try:
     __version__ = metadata.version("llm-dojo-scoring")
 except metadata.PackageNotFoundError:
-    __version__ = "0.14.0"
+    __version__ = "0.15.0"
 
 from . import (
     bundles,
@@ -83,9 +83,17 @@ from .failure_modes import (
 from .field_scoring import (
     EntityListScore,
     ExtractionScoreResult,
+    field_is_ambiguous,
+    get_field_types,
+    get_type_bands,
+    normalize_text,
+    parse_date,
+    parse_money,
+    score_category_presence,
     score_extraction,
     score_field,
     score_entity_list,
+    warm_embedding_model,
 )
 from .extraction_metrics import (
     extraction_binary_metrics,
@@ -101,6 +109,7 @@ from .config import (
     Settings,
     clear_settings_cache,
     configure,
+    configure_from_taxonomy,
     get_settings,
     load_settings,
 )
@@ -108,6 +117,7 @@ from .tasks import (
     chained_composite,
     chained_summary,
     court_opinion_score,
+    get_jaccard,
     legalbench_score,
     maud_docclass_score,
     maud_extraction_score,
@@ -123,12 +133,14 @@ from .asr import (
     word_error_rate,
 )
 from .content_scoring import (
+    peel_non_extraction_fields,
     score_content_topic,
     score_correspondence_content,
     score_maud_extraction,
     score_sentiment,
 )
 from .intake import (
+    INTAKE_SPAN_KEYS,
     apply_intake,
     deterministic_normalize,
     looks_messy,
@@ -232,13 +244,16 @@ __all__ = [
     "classify_docclass_failure", "classify_failure", "per_subtype_accuracy",
     "summarize_failures",
     "EntityListScore", "ExtractionScoreResult", "score_extraction",
-    "score_field", "score_entity_list",
+    "score_field", "score_entity_list", "field_is_ambiguous",
+    "get_field_types", "get_type_bands", "warm_embedding_model",
+    "normalize_text", "parse_date", "parse_money", "score_category_presence",
     "extraction_binary_metrics", "mean_entity_list_f1", "merge_extraction_counts",
     "amount_exactness", "determination_consistency", "score_claims_extras",
-    "Settings", "clear_settings_cache", "configure", "get_settings",
+    "Settings", "clear_settings_cache", "configure", "configure_from_taxonomy",
+    "get_settings",
     "load_settings",
     "chained_composite", "chained_summary", "court_opinion_score",
-    "legalbench_score", "maud_docclass_score", "maud_extraction_score",
+    "get_jaccard", "legalbench_score", "maud_docclass_score", "maud_extraction_score",
     "maud_question_score",
     "multiclass_score", "normalize_task_answer", "score_task", "task_kind",
     "BUILTIN_BUNDLES", "Bundle", "bundle_metric_names", "get_bundle",
@@ -263,8 +278,10 @@ __all__ = [
     "resolve_extract_class", "score_aligned_classification",
     "word_error_rate", "character_error_rate", "score_transcription",
     "score_content_topic", "score_sentiment",
+    "peel_non_extraction_fields",
     "score_correspondence_content", "score_maud_extraction",
     "apply_intake", "deterministic_normalize", "looks_messy", "score_intake",
+    "INTAKE_SPAN_KEYS",
     "CANONICAL_SERVING_KEYS", "ServingIdentity", "ServingObservation",
     "ServingRun", "classify_serving_kind", "compare_serving",
     "emit_serving_scorecard", "pair_comparable_runs", "score_serving_run",
