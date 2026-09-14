@@ -79,6 +79,73 @@ def embedding_enabled() -> bool:
     return get_settings().field_scoring.embedding_enabled
 
 
+def get_type_bands() -> dict[str, tuple]:
+    """Per-field-type ambiguous-band overrides from the configured taxonomy.
+
+    Values are canonical tuples:
+      ``("always",)`` — every field of that type escalates to the LLM judge
+      ``("never",)``  — no field of that type ever escalates (the
+                        deterministic score is decisive both ways)
+      ``(low, high)`` — half-open band check (``low <= score < high``)
+
+    Populated by ``configure_from_taxonomy()``; empty (fall back to the
+    global ``ambiguous_band``) when no taxonomy was wired.
+    """
+    return dict(get_settings().field_scoring.type_bands)
+
+
+def field_is_ambiguous(field_type: str, score: float) -> bool:
+    """Is this field score in the (possibly type-specific) ambiguous band?
+
+    Checks the configured ``type_bands`` first (matching on the exact field
+    type or its ``namespace:name`` prefix), then falls back to the global
+    ``ambiguous_band``. Band check is half-open (``low <= score < high``): a
+    perfect score of 1.0 is never ambiguous, and a score exactly at the low
+    cutoff still escalates (fail-safe toward the judge).
+    """
+    bands = get_type_bands()
+    band = bands.get(field_type) or bands.get(field_type.split(":", 1)[0])
+    if band == ("always",):
+        return True
+    if band == ("never",):
+        return False
+    if band is not None:
+        low, high = band
+        return low <= score < high
+    low, high = get_ambiguous_band()
+    return low <= score < high
+
+
+def warm_embedding_model(blocking: bool = False) -> None:
+    """Load the embedding model OFF the document path (O-10).
+
+    The first grounded run that needs a name/free-text embedding used to
+    trigger a synchronous multi-minute SentenceTransformer download inside run
+    finalization. This kicks the load into a background thread at process
+    start instead. Failures are logged; scoring keeps the string-only score.
+
+    No-op when embedding scoring is disabled (``embedding_enabled()`` false).
+    """
+    import logging
+    import threading
+
+    if not embedding_enabled():
+        return
+
+    log = logging.getLogger(__name__)
+
+    def _run() -> None:
+        try:
+            _get_embedding()
+        except Exception as exc:  # scoring degrades to string-only
+            log.warning("embedding model warmup failed: %s", exc)
+
+    if blocking:
+        _run()
+    else:
+        threading.Thread(target=_run, daemon=True, name="embedding-warmup").start()
+
+
 def get_partial_gt_fields() -> set[str]:
     """Field names whose CUAD-style ground truth is a PARTIAL sample of the
     document's content (QA-answer snippets), not an exhaustive list. For these
@@ -615,6 +682,13 @@ def score_entity_list(element_type: str, pred, exp, embedding=None,
     if contained_items:
         matched += contained_items
 
+    # Role-word/contained credits are a BOUNDED credit, not an unbounded
+    # additive bonus: nothing tracks which distinct predicted items were
+    # consumed, so without the clamp an all-role-word expected list vs a
+    # single named party yields precision 2/1 = 2.0 (hub#38). The composite
+    # may never exceed the smaller of the two list sizes.
+    matched = min(matched, n_pred, n_exp)
+
     precision = matched / n_pred
     recall = matched / n_exp
     f1 = 2 * precision * recall / (precision + recall) if matched else 0.0
@@ -1050,19 +1124,29 @@ def _heuristic_field_type(field_name: str, value) -> str:
 
 
 def get_field_types(doc_class: str, taxonomy: dict | None = None) -> dict[str, str]:
-    """Field->scoring-type mapping for a doc class from a taxonomy dict
-    (``{"doc_classes": [{"key", "field_types", ...}]}``) — pass the caller's
-    own taxonomy; returns {} when the class is absent. Kept as a compatibility
-    helper so the consuming project can wire its taxonomy straight through."""
-    if not taxonomy:
-        return {}
+    """Field->scoring-type mapping for a doc class.
+
+    Resolution order:
+    1. Explicit ``taxonomy`` dict (``{"doc_classes": [{"key", "field_types"}]}``)
+       when passed — the caller's own taxonomy wins.
+    2. The wired taxonomy captured by ``configure_from_taxonomy()``
+       (``Settings.doc_class_field_types``) when the consuming project wired
+       once at import.
+    3. ``{}`` when neither is available (no taxonomy configured).
+
+    Returns {} when the class is absent. ``EXTRACT_CLASS_ALIASES`` is applied
+    so aliases resolve to their canonical class.
+    """
     from .mailroom import EXTRACT_CLASS_ALIASES
 
     resolved = EXTRACT_CLASS_ALIASES.get(doc_class, doc_class)
-    for cls in taxonomy.get("doc_classes", []):
-        if cls.get("key") == doc_class or cls.get("key") == resolved:
-            return dict(cls.get("field_types") or {})
-    return {}
+    if taxonomy:
+        for cls in taxonomy.get("doc_classes", []):
+            if cls.get("key") == doc_class or cls.get("key") == resolved:
+                return dict(cls.get("field_types") or {})
+        return {}
+    wired = get_settings().doc_class_field_types
+    return dict(wired.get(resolved) or wired.get(doc_class) or {})
 
 
 @dataclass
