@@ -193,7 +193,7 @@ def load_langfuse_config(env_file: str | Path | None = None) -> LangfuseConfig:
         except ValueError:
             return None
 
-    base_url = get("LANGFUSE_HOST") or get("LANGFUSE_BASE_URL", DEFAULT_BASE_URL)
+    base_url = get("LANGFUSE_BASE_URL") or get("LANGFUSE_HOST", DEFAULT_BASE_URL)
     environment = (
         get("LANGFUSE_ENVIRONMENT")
         or get("OBSERVABILITY_ENVIRONMENT")

@@ -1,4 +1,4 @@
-version: 0.12.0
+version: 0.15.0
 description: Importable prompt catalog for llm-dojo-scoring. LLM bodies are production + latest
   docclass-merged keys. Metric names live in entry metadata (metrics_bundle / doc_bundle),
   never as eval targets in the model-visible template.
