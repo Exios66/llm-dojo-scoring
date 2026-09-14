@@ -1,4 +1,4 @@
-# Scoring (v0.12.1)
+# Scoring (v0.14.0)
 
 Canonical scoring reference for `llm-dojo-scoring`. The metric **source of truth**
 is [`llm_dojo_scoring/registry.py`](../llm_dojo_scoring/registry.py) `DEFAULT_METRICS_YAML`
