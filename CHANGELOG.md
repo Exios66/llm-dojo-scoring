@@ -269,10 +269,10 @@ Scoring formulas and T0 names from v0.10.0 are unchanged.
 - Insurance honest-gap text shrinks from “scorer pending” to GT homogeneity.
 - Corporate-records honest gap keeps “no *external* extraction benchmark”
   (39-row GT is enough for field-micro; do not claim CUAD/MAUD-grade coverage).
-- Package version **0.10.0**. Consumer pin:
+- Package version **0.15.0**. Consumer pin:
 
   ```
-  llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.10.0
+  llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.15.0
   ```
 
 Single-doc `get_suite(<specialist>).score(dict, dict)` still returns
@@ -337,7 +337,11 @@ Single-doc `get_suite(<specialist>).score(dict, dict)` still returns
 - Insurance `claim_type` enum includes CMS source-table tokens
   (`pde`/`inpatient`/`outpatient`/`carrier`) plus legacy FNOL lines.
   `adjuster` null matches empty (CMS rows).
-- Package version **0.9.0**.
+- Package version **0.9.0**. Consumer pin:
+
+  ```
+  llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.9.0
+  ```
 
 Honesty mandate unchanged for remaining gaps: insurance
 determination-consistency, retired court/DD, zero-row compliance, and
