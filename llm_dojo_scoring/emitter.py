@@ -21,6 +21,7 @@ Typical consumer (llm-entity-extraction ``src/score_emitter.py``)::
 from __future__ import annotations
 
 import json
+import logging
 import os
 import time
 from dataclasses import dataclass, field
@@ -29,6 +30,22 @@ from statistics import fmean
 from typing import Any, Iterable, Protocol
 
 from .registry import MetricTier, Registry, load_registry
+
+_log = logging.getLogger("llm_dojo_scoring.emitter")
+
+# Live-or-loud (DMR-061): a configured sink's failures are COUNTED and logged,
+# never silently dropped — the "inert-unless-configured" layer must stay loud
+# once configured.
+SINK_EMIT_FAILURES = 0
+SINK_FLUSH_FAILURES = 0
+
+
+def sink_failure_counts() -> dict[str, int]:
+    """Test/seam view: how many score emissions / flushes were lost to sinks."""
+    return {
+        "emit_failures": SINK_EMIT_FAILURES,
+        "flush_failures": SINK_FLUSH_FAILURES,
+    }
 
 
 def _wire_score_name(name: str) -> str:
@@ -161,15 +178,32 @@ class LangfuseSink:
                 data_type=record.metadata.get("data_type", "NUMERIC"),
                 comment=record.metadata.get("comment"),
             )
-        except Exception:  # pragma: no cover - backend hiccups never fatal
-            return
+        except Exception as exc:  # never fatal — but never silent either (DMR-061)
+            global SINK_EMIT_FAILURES
+            SINK_EMIT_FAILURES += 1
+            _log.error(
+                "LangfuseSink.emit FAILED for metric %r value=%r (trace_id=%r) — "
+                "this score record is LOST to the sink; %d emit failure(s) so far",
+                record.metric,
+                record.value,
+                record.metadata.get("trace_id"),
+                SINK_EMIT_FAILURES,
+                exc_info=exc,
+            )
 
     def flush(self) -> None:
         if self.available and self._client is not None:
             try:
                 self._client.flush()
-            except Exception:  # pragma: no cover
-                return
+            except Exception as exc:  # never fatal — but never silent either (DMR-061)
+                global SINK_FLUSH_FAILURES
+                SINK_FLUSH_FAILURES += 1
+                _log.error(
+                    "LangfuseSink.flush FAILED — buffered score records may be "
+                    "lost; %d flush failure(s) so far",
+                    SINK_FLUSH_FAILURES,
+                    exc_info=exc,
+                )
 
 
 def _aggregate(values: list[Any], mode: str) -> Any:
