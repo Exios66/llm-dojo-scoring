@@ -198,6 +198,28 @@ dojo-sync    [--task TRACE_NAME] [--session NAME] [--max-items N]
 
 See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md). Prompt catalog: [`docs/PROMPTS.md`](docs/PROMPTS.md).
 
+## Releases & monorepo sync
+
+This package is the shared scoring engine consumed by llm-mailroom,
+llm-entity-extraction, and the sandbox — version bumps are cross-package
+events.
+
+- **Monorepo home**: this repo is `packages/llm-dojo-scoring` inside the
+  [Digital-Mailroom](https://github.com/LLM-Mailroom-Services/Digital-Mailroom)
+  monorepo (dev source of truth). Changes flow to the standalone repo
+  (`Exios66/llm-dojo-scoring`) ONLY via `scripts/sync_packages.py push`
+  (monorepo root) — never hand-edit the mirror.
+- **Release-time pin law**: cutting a release means bumping the version here
+  AND updating every consuming pin — llm-mailroom / llm-entity-extraction /
+  sandbox `pyproject.toml` git pins and the sandbox vendor snapshot.
+  The dojo pin is bumped ONLY at release time of this package, via
+  `packages/llm-mailroom/src/scripts/bump_dojo_scoring.py` — never delete a
+  pin line. After the bump, run the release-train sweep
+  (`sync_packages.py push --all --patch`) and refresh the sandbox vendor
+  tree (`scripts/sync_vendor.py`). Full law: root `AGENTS.md` §Sub-package
+  sync + `docs/wiki/Releases.md` + `docs/TESTING.md` (a dojo change is tier
+  3 — the changed package + every dependant).
+
 ---
 
 <div align="center">
