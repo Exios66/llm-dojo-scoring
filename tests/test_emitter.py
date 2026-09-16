@@ -158,3 +158,49 @@ def test_register_metric_adhoc(tmp_path):
     em.emit_score("boss", "d1", "custom_kpi", 3.0)
     card = em.get_scorecard("boss", min_tier=0)
     assert card["custom_kpi"] == 3.0
+
+
+# ---- DMR-061: sink failures are counted + logged, never silent -----------
+
+def test_langfuse_sink_emit_failure_is_counted_and_loud(caplog):
+    """A configured Langfuse sink that fails to emit must COUNT the loss and
+    log at ERROR — the 'inert-unless-configured' layer stays loud once
+    configured."""
+
+    class _BrokenClient:
+        def score(self, **kwargs):
+            raise RuntimeError("sink down")
+
+        def flush(self):
+            return None
+
+    from llm_dojo_scoring.emitter import SINK_EMIT_FAILURES, sink_failure_counts
+
+    before = sink_failure_counts()["emit_failures"]
+    sink = LangfuseSink(client=_BrokenClient())
+    with caplog.at_level("ERROR", logger="llm_dojo_scoring.emitter"):
+        sink.emit(ScoreRecord(agent="x", metric="f1_macro", value=0.9, metadata={"trace_id": "t1"}))
+    after = sink_failure_counts()["emit_failures"]
+    assert after == before + 1
+    assert any("LOST to the sink" in r.getMessage() for r in caplog.records)
+
+
+def test_langfuse_sink_flush_failure_is_counted_and_loud(caplog):
+    """A failed flush must count + log — buffered scores lost silently."""
+
+    class _BrokenClient:
+        def score(self, **kwargs):
+            return None
+
+        def flush(self):
+            raise RuntimeError("flush down")
+
+    from llm_dojo_scoring.emitter import sink_failure_counts
+
+    before = sink_failure_counts()["flush_failures"]
+    sink = LangfuseSink(client=_BrokenClient())
+    with caplog.at_level("ERROR", logger="llm_dojo_scoring.emitter"):
+        sink.flush()
+    after = sink_failure_counts()["flush_failures"]
+    assert after == before + 1
+    assert any("flush FAILED" in r.getMessage() for r in caplog.records)
