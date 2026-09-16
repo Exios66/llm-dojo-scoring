@@ -7,7 +7,7 @@
 Scoring · Error analysis · Visualization · Interpretation
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Release](https://img.shields.io/badge/release-v0.15.0-2EA043)](https://github.com/LLM-Mailroom-Services/Digital-Mailroom/releases/tag/v0.15.0)
+[![Release](https://img.shields.io/badge/release-v0.15.0-2EA043)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.15.0)
 [![Contributor](https://img.shields.io/badge/contributor-Exios66-blue)](https://github.com/Exios66)
 [![Tests](https://img.shields.io/badge/pytest-passing-brightgreen)](tests/)
 
