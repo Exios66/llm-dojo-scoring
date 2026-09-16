@@ -96,11 +96,14 @@ DOC_TYPE_SUBCLASSES: dict[str, tuple[str, ...]] = {
         "officer_certificate",
         "other",
     ),
-    # Enron-derived communication form (KANBAN-079 GT enrichment). Mirrors
-    # the eval-environment labeler enum verbatim
-    # (Enron-Evaluation-Environment/scripts/correspondence_subclasses.py
-    # SUBCLASS_KEYS — 10 keys incl. voicemail + the other-bucket; keep in
-    # sync when the labeler changes).
+    # Communication form, aligned to the CURRENT dataset GT: mailroom-dataset
+    # v9 ``ground_truth.expected_subclass`` (tip 46a4d3c2) carries exactly
+    # these 8 tokens + the other-bucket. The v8-era `voicemail` key from the
+    # Enron eval-environment labeler enum is NOT in the v9 GT vocabulary and
+    # was removed here (DMR-071 adjudication 2026-09-16: the dataset pin is
+    # the source of truth). The labeler keeps its voicemail key locally —
+    # text-only Enron corpora make it 0% by construction — so the two enums
+    # intentionally differ by that one labeler-local key.
     "correspondence": (
         "email",
         "memo",
@@ -110,7 +113,6 @@ DOC_TYPE_SUBCLASSES: dict[str, tuple[str, ...]] = {
         "attorney_demand",
         "press_release",
         "meeting_request",
-        "voicemail",
         "other",
     ),
     # Insurance claim-document subclass: CMS DE-SynPUF *source table* tokens
@@ -185,10 +187,15 @@ CORPUS_SUBCLASS_SURFACES: dict[str, tuple[str, ...]] = {
     ),
     "corporate_record": (
         "articles_of_incorporation",
+        "board_resolution",
         "bylaws",
+        "charter_amendment",
+        "indenture",
+        "officer_certificate",
         "other",
         "powers_of_attorney",
         "rights_instrument",
+        "subsidiary_list",
     ),
     "correspondence": (
         "attorney_demand",
@@ -199,8 +206,6 @@ CORPUS_SUBCLASS_SURFACES: dict[str, tuple[str, ...]] = {
         "memo",
         "notice",
         "press_release",
-        "voicemail",
-        "other",
     ),
     "insurance_claim": (
         "auto",

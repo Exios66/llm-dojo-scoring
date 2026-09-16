@@ -62,21 +62,33 @@ def test_maud_consideration_and_insurance_source_table_are_distinct():
 
 
 def test_correspondence_and_corporate_record_subclasses():
-    # The correspondence enum mirrors the eval-environment labeler verbatim
-    # (Enron-Evaluation-Environment/scripts/correspondence_subclasses.py
-    # SUBCLASS_KEYS). Keep the two in sync — this pins the full 10-key set.
+    # Aligned to the CURRENT dataset GT: mailroom-dataset v9
+    # (ground_truth.expected_subclass, tip 46a4d3c2) carries exactly these 8
+    # correspondence tokens + the other-bucket. The v8-era `voicemail` key
+    # (Enron labeler enum) is not in the v9 GT vocabulary and left the catalog
+    # (DMR-071: the dataset pin is the source of truth) — it now normalizes
+    # to the sanctioned `other` fallback.
     assert tuple(DOC_TYPE_SUBCLASSES["correspondence"]) == (
         "email", "memo", "letter", "notice", "demand", "attorney_demand",
-        "press_release", "meeting_request", "voicemail", "other",
+        "press_release", "meeting_request", "other",
     )
     assert normalize_corpus_subclass("correspondence", "attorney_demand") == "attorney_demand"
     assert normalize_corpus_subclass("correspondence", "press_release") == "press_release"
-    assert normalize_corpus_subclass("correspondence", "voicemail") == "voicemail"
+    assert normalize_corpus_subclass("correspondence", "voicemail") == "other"
     assert normalize_corpus_subclass("correspondence", "other") == "other"
     assert normalize_corpus_subclass("corporate_record", "articles_of_incorporation") == (
         "articles_of_incorporation"
     )
     assert normalize_corpus_subclass("corporate_record", "rights_instrument") == "rights_instrument"
+    # v9 GT re-pin: the observed corporate_record surfaces carry the full
+    # 10-token vocabulary (5 v8-era tokens + 5 record types the v9 corpus added).
+    assert tuple(CORPUS_SUBCLASS_SURFACES["corporate_record"]) == (
+        "articles_of_incorporation", "board_resolution", "bylaws",
+        "charter_amendment", "indenture", "officer_certificate", "other",
+        "powers_of_attorney", "rights_instrument", "subsidiary_list",
+    )
+    for src_token in CORPUS_SUBCLASS_SURFACES["corporate_record"]:
+        assert normalize_corpus_subclass("corporate_record", src_token) != "other" or src_token == "other"
 
 
 def test_specialist_suite_fields_match_corpus_extraction_schema():
