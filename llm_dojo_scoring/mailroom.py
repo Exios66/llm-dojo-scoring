@@ -159,10 +159,15 @@ GROUND_TRUTH_KEYS: tuple[str, ...] = (
 HUB_SUBCLASS_INVENTORIES: dict[str, tuple[str, ...]] = {
     "corporate_record": (
         "articles_of_incorporation",
+        "board_resolution",
         "bylaws",
+        "charter_amendment",
+        "indenture",
+        "officer_certificate",
+        "other",
         "powers_of_attorney",
         "rights_instrument",
-        "other",
+        "subsidiary_list",
     ),
     "correspondence": (
         "email",
