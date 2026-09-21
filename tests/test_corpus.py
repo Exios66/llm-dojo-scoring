@@ -1,6 +1,8 @@
 """Corpus alignment — suites match mailroom-dataset schemas/subclasses/fields.
 
-Pinned to Lucius-Morningstar/mailroom-dataset ground_truth (1,210 rows).
+Pinned to Lucius-Morningstar/mailroom-dataset ground_truth (3,302 rows at
+v9 tip 46a4d3c2: 2,979 train / 323 test; the v9 successor of the frozen v8
+mailroom-corpus baseline).
 Network-free: catalogs are in-repo constants derived from that publish.
 """
 
