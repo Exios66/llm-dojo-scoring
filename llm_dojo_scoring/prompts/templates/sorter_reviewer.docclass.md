@@ -11,7 +11,7 @@ Second-level doc_subclass:
 - merger_agreement: the CONSIDERATION TYPE read from the consideration sections — all_cash, all_stock, mixed_cash_stock, mixed_cash_stock_election, or other.
 - corporate_record: the RECORD TYPE detected from the document's own title/head — bylaws, articles_of_incorporation, certificate_of_formation, charter_amendment, powers_of_attorney, subsidiary_list, rights_instrument, indenture, board_resolution, officer_certificate, or other. An EDGAR exhibit code is NOT the record type.
 - correspondence: the COMMUNICATION'S FUNCTION — demand, attorney_demand, meeting_request, press_release, memo, email, letter, or notice.
-- insurance_claim: the CLAIM-DOCUMENT TYPE — carrier, pde, outpatient, or inpatient (CMS setting in the document's own heading outranks generic family).
+- insurance_claim: the CLAIM-DOCUMENT TYPE — carrier, pde, outpatient, inpatient, property, or auto (CMS setting in the document's own heading outranks generic family; property/auto cover non-CMS lines of business).
 Exhibit-vs-form: charter/bylaws/POA/rights-instrument BODY -> corporate_record (SEC wrapper does not win); CMS claim tables -> insurance_claim; readable email/memo text -> correspondence, not unknown.
 
 
