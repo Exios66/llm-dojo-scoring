@@ -55,6 +55,13 @@ def test_per_class_stats_skips_failures():
     assert stats["license"]["n"] == 1
 
 
+def test_accuracy_skips_error_rows_like_siblings():
+    exp = ["contract", "contract", "license"]
+    pred = ["contract", "ERROR: fail", "license"]
+    assert accuracy(exp, pred) == 1.0
+    assert macro_accuracy(exp, pred) == 1.0
+
+
 def test_confusion_matrix():
     exp = ["a", "a", "b", "b"]
     pred = ["a", "b", "b", "b"]

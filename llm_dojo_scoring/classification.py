@@ -71,9 +71,17 @@ def accuracy(expected: list, predicted: list) -> float:
     """Overall exact-match accuracy over paired predictions."""
     if not expected:
         return 0.0
-    hits = sum(1 for e, p in zip(expected, predicted)
-               if normalize_label(p) == normalize_label(e))
-    return round(hits / len(expected), 4)
+    pairs: list[tuple] = []
+    for e, p in zip(expected, predicted):
+        if str(p).startswith(ERROR_PREFIX):
+            continue
+        pairs.append((e, p))
+    if not pairs:
+        return 0.0
+    hits = sum(
+        1 for e, p in pairs if normalize_label(p) == normalize_label(e)
+    )
+    return round(hits / len(pairs), 4)
 
 
 def fbeta(precision: float, recall: float, *, beta: float = 1.0) -> float:
