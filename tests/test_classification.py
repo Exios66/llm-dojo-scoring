@@ -23,7 +23,8 @@ def test_normalize_label_json():
 
 def test_normalize_label_regex_fallback():
     assert normalize_label("This is a contract agreement") == "contract"
-    assert normalize_label("court opinion") == "court_opinion"
+    assert normalize_label("Contract Amendment to a Merger Agreement") == "merger_agreement"
+    assert normalize_label("court opinion") == "court opinion"
     assert normalize_label("insurance claim") == "insurance_claim"
     assert normalize_label("nonsense") == "nonsense"
 
@@ -94,3 +95,21 @@ def test_macro_prf_unweighted_mean():
 def test_class_distribution():
     counts = class_distribution(["contract", "Contract", "license"])
     assert counts == {"contract": 2, "license": 1}
+
+
+def test_confusion_matrix_extends_explicit_labels_with_observed():
+    exp = ["a", "a", "c"]
+    pred = ["a", "b", "c"]
+    matrix, labels = confusion_matrix(exp, pred, labels=["a", "b"])
+    assert "c" in labels
+    assert matrix[labels.index("a")][labels.index("b")] == 1
+
+
+def test_macro_prf_normalize_false_not_all_zero():
+    from llm_dojo_scoring.classification import macro_prf
+
+    exp = ["yes", "no", "yes"]
+    pred = ["yes", "yes", "no"]
+    out = macro_prf(exp, pred, normalize=False)
+    assert out["n_classes"] == 2
+    assert out["f1_macro"] > 0.0

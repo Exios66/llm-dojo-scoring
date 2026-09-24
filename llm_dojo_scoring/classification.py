@@ -13,25 +13,31 @@ import json
 import re
 from collections import Counter, defaultdict
 
+from llm_dojo_scoring.config import RETIRED_DOC_CLASS_KEYS
+
 ERROR_PREFIX = "ERROR: "  # task output sentinel for failed rows
 
 # Default doc-class keys + regexes for label normalization (the
-# llm-entity-extraction / llm-mailroom taxonomy).
+# llm-entity-extraction / llm-mailroom taxonomy). Most-specific keys first
+# so broad patterns (e.g. ``contract``) do not win over ``merger_agreement``.
 _DEFAULT_CLASSES_RE: dict[str, re.Pattern[str]] = {
-    "contract": re.compile(r"\bcontract\b"),
+    "merger_agreement": re.compile(r"\bmerger[_ ]?agreement\b"),
     "corporate_record": re.compile(r"\bcorporate[_ ]?record\b"),
-    "due_diligence": re.compile(r"\bdue[_ ]?diligence\b"),
     "correspondence": re.compile(r"\bcorrespondence\b"),
     "compliance_filing": re.compile(r"\bcompliance[_ ]?filing\b"),
-    "court_opinion": re.compile(r"\bcourt[_ ]?opinion\b"),
     "insurance_claim": re.compile(r"\binsurance[_ ]?claim\b"),
-    "merger_agreement": re.compile(r"\bmerger[_ ]?agreement\b"),
+    "contract": re.compile(r"\bcontract\b"),
 }
+
+
+def _default_valid_classes() -> dict[str, re.Pattern[str]]:
+    retired = set(RETIRED_DOC_CLASS_KEYS)
+    return {k: v for k, v in _DEFAULT_CLASSES_RE.items() if k not in retired}
 
 
 def normalize_label(value, valid: dict[str, re.Pattern[str]] | None = None) -> str:
     """Coerce an LLM output into a class key (best effort)."""
-    valid = valid or _DEFAULT_CLASSES_RE
+    valid = valid or _default_valid_classes()
     if value is None:
         return ""
     text = str(value).strip().lower()
@@ -138,6 +144,10 @@ def confusion_matrix(expected: list, predicted: list,
     ]
     if labels is None:
         labels = sorted({e for e, _ in pairs} | {p for _, p in pairs})
+    else:
+        labels = list(labels)
+        extra = sorted(({e for e, _ in pairs} | {p for _, p in pairs}) - set(labels))
+        labels.extend(extra)
     index = {label: i for i, label in enumerate(labels)}
     matrix = [[0] * len(labels) for _ in labels]
     for e, p in pairs:
@@ -216,12 +226,28 @@ def macro_prf(expected: list, predicted: list, *, normalize: bool = True) -> dic
         return empty
     exp = [e for e, _ in pairs]
     pred = [p for _, p in pairs]
-    per_class = per_class_stats(exp, pred) if not normalize else per_class_stats(
-        # already normalized; per_class_stats normalizes again (idempotent)
-        exp, pred,
-    )
-    # Restrict to labels that appeared in expected.
-    per_class = {k: v for k, v in per_class.items() if k in set(labels)}
+    if normalize:
+        per_class = per_class_stats(exp, pred)
+        per_class = {k: v for k, v in per_class.items() if k in set(labels)}
+    else:
+        per_class = {}
+        for cls in labels:
+            n = sum(1 for e, _ in pairs if e == cls)
+            correct = sum(1 for e, p in pairs if e == cls and p == cls)
+            tp = correct
+            fp = sum(1 for e, p in pairs if e != cls and p == cls)
+            fn = sum(1 for e, p in pairs if e == cls and p != cls)
+            precision = round(tp / (tp + fp), 4) if tp + fp else 0.0
+            recall = round(tp / (tp + fn), 4) if tp + fn else 0.0
+            per_class[cls] = {
+                "n": n,
+                "correct": correct,
+                "accuracy": round(correct / n, 4) if n else 0.0,
+                "precision": precision,
+                "recall": recall,
+                "f1": fbeta(precision, recall, beta=1.0),
+                "f2": fbeta(precision, recall, beta=2.0),
+            }
     n_cls = len(per_class)
     if not n_cls:
         return empty
