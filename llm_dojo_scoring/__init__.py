@@ -15,7 +15,7 @@ from importlib import metadata
 try:
     __version__ = metadata.version("llm-dojo-scoring")
 except metadata.PackageNotFoundError:
-    __version__ = "0.15.0"
+    __version__ = "0.16.0"
 
 from . import (
     bundles,

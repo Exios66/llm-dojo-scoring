@@ -498,4 +498,10 @@ METRIC_META: dict[str, dict[str, str]] = {
     "mailroom-pipeline-judge": dict(_EMITTER),
     "mailroom-pipeline-quality": dict(_EMITTER),
     "extraction_hallucination_rate": dict(_EMITTER),
+    # ----- #106 BERT fast path (mailroom intake gate) -----
+    "bert_pass": dict(_EMITTER),
+    "bert_sorter_agreement": dict(_EMITTER),
+    "bert_fail_soft": dict(_EMITTER),
+    "bert_elapsed_ms": dict(_EMITTER),
+    "fast_path_est_cost_usd": dict(_EMITTER),
 }
