@@ -133,6 +133,12 @@ _MAILROOM_SCORE_NAMES = (
     "intake_collapsed_blanks",
     "ttft_seconds",
     "tokens_per_second",
+    # #106 BERT fast path (mailroom-only; source null / ground_truth none)
+    "bert_pass",
+    "bert_sorter_agreement",
+    "bert_fail_soft",
+    "bert_elapsed_ms",
+    "fast_path_est_cost_usd",
 )
 
 

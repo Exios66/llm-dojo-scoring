@@ -209,94 +209,94 @@ prompts:
   priming: []
 - agent: sorter
   family: docclass
-  version: sorter_docclass_v7
+  version: sorter_mailroom_v0
   kind: llm
   metrics_bundle: classification
   doc_bundle: null
   source_repo: llm-entity-extraction
-  source_key: sorter_docclass_v7
+  source_key: sorter_mailroom_v0
   template: sorter.docclass.md
   priming: []
 - agent: contracts_specialist
   family: docclass
-  version: contracts_specialist_docclass_v1
+  version: contracts_specialist_mailroom_prompts_v0
   kind: llm
   metrics_bundle: extraction
   doc_bundle: contract
   source_repo: llm-entity-extraction
-  source_key: contracts_specialist_docclass_v1
+  source_key: contracts_specialist_mailroom_prompts_v0
   template: contracts_specialist.docclass.md
   priming:
   - colloquial_precision
   - colloquial_completeness
 - agent: corporate_records_specialist
   family: docclass
-  version: corporate_records_specialist_docclass_v1
+  version: corporate_records_specialist_mailroom_prompts_v0
   kind: llm
   metrics_bundle: extraction
   doc_bundle: corporate_record
   source_repo: llm-entity-extraction
-  source_key: corporate_records_specialist_docclass_v1
+  source_key: corporate_records_specialist_mailroom_prompts_v0
   template: corporate_records_specialist.docclass.md
   priming: []
 - agent: due_diligence_specialist
   family: docclass
-  version: due_diligence_specialist_docclass_v1
+  version: due_diligence_specialist_mailroom_prompts_v0
   kind: llm
   metrics_bundle: extraction
   doc_bundle: due_diligence
   source_repo: llm-entity-extraction
-  source_key: due_diligence_specialist_docclass_v1
+  source_key: due_diligence_specialist_mailroom_prompts_v0
   template: due_diligence_specialist.docclass.md
   priming: []
 - agent: correspondence_specialist
   family: docclass
-  version: correspondence_specialist_docclass_v1
+  version: correspondence_specialist_mailroom_prompts_v0
   kind: llm
   metrics_bundle: extraction
   doc_bundle: correspondence
   source_repo: llm-entity-extraction
-  source_key: correspondence_specialist_docclass_v1
+  source_key: correspondence_specialist_mailroom_prompts_v0
   template: correspondence_specialist.docclass.md
   priming: []
 - agent: compliance_specialist
   family: docclass
-  version: compliance_specialist_docclass_v1
+  version: compliance_specialist_mailroom_prompts_v0
   kind: llm
   metrics_bundle: extraction
   doc_bundle: compliance_filing
   source_repo: llm-entity-extraction
-  source_key: compliance_specialist_docclass_v1
+  source_key: compliance_specialist_mailroom_prompts_v0
   template: compliance_specialist.docclass.md
   priming: []
 - agent: court_opinions_specialist
   family: docclass
-  version: court_opinions_specialist_docclass_v1
+  version: court_opinions_specialist_mailroom_prompts_v0
   kind: llm
   metrics_bundle: extraction
   doc_bundle: court_opinion
   source_repo: llm-entity-extraction
-  source_key: court_opinions_specialist_docclass_v1
+  source_key: court_opinions_specialist_mailroom_prompts_v0
   template: court_opinions_specialist.docclass.md
   priming: []
 - agent: insurance_claims_specialist
   family: docclass
-  version: insurance_claims_specialist_docclass_v1
+  version: insurance_claims_specialist_mailroom_prompts_v0
   kind: llm
   metrics_bundle: extraction
   doc_bundle: insurance_claim
   source_repo: llm-entity-extraction
-  source_key: insurance_claims_specialist_docclass_v1
+  source_key: insurance_claims_specialist_mailroom_prompts_v0
   template: insurance_claims_specialist.docclass.md
   priming: []
 - agent: sorter_reviewer
   family: docclass
-  version: reviewer_docclass_v1
+  version: reviewer_docclass_v2
   kind: llm
   metrics_bundle: classification
   doc_bundle: null
   source_repo: llm-entity-extraction
-  source_key: reviewer_docclass_v1
+  source_key: reviewer_docclass_v2
   template: sorter_reviewer.docclass.md
   priming: []
 - agent: arbiter

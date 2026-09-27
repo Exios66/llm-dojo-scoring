@@ -2,8 +2,9 @@
 
 Grounded in the published Hugging Face dataset
 ``Lucius-Morningstar/mailroom-dataset`` (default + ``ground_truth`` configs;
-1,210 rows: 1,081 train / 129 test as of the v0.8.1 alignment pass —
-the v9 successor of the frozen v8 ``mailroom-corpus`` baseline).
+3,302 rows: 2,979 train / 323 test at the v9 GT-closure revision
+``46a4d3c2`` — the v9 successor of the frozen v8 ``mailroom-corpus``
+baseline).
 
 This module is the single source mapping each mailroom document class to:
 
@@ -454,7 +455,8 @@ CORRESPONDENCE_TOPICS: tuple[str, ...] = (
     "travel_logistics",
 )
 
-#: Enron ``sentiment_label`` catalog (110/110 correspondence rows populated).
+#: Enron ``sentiment_label`` catalog (1,000/1,000 correspondence rows populated
+#: at the v9 pin ``46a4d3c2``: neutral 566 / positive 254 / negative 180).
 CORRESPONDENCE_SENTIMENT_LABELS: tuple[str, ...] = (
     "negative",
     "neutral",
