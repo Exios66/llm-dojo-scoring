@@ -38,7 +38,7 @@ def test_get_prompt_production_and_docclass():
     assert "extraction_f1" not in sorter.text
     docclass = get_prompt("sorter", family="docclass")
     assert docclass.family == "docclass"
-    assert docclass.version == "sorter_docclass_v7"
+    assert docclass.version == "sorter_mailroom_v0"
     assert docclass.text != sorter.text
 
 

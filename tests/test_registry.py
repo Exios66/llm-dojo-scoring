@@ -128,6 +128,9 @@ def test_mailroom_score_configs_preserved_as_aliases():
         "guardrail_triggered", "classification_confidence",
         "extraction_confidence", "judge_notes", "llm_call_count",
         "completeness", "success_rate", "classification_correct",
+        # #106 BERT fast path (registered, not computed in this package)
+        "bert_pass", "bert_sorter_agreement", "bert_fail_soft",
+        "bert_elapsed_ms", "fast_path_est_cost_usd",
     ]
     for name in preserved:
         assert name in reg.metrics, name
@@ -172,6 +175,12 @@ _EMITTER_ONLY = {
     "mailroom-pipeline-judge",
     "mailroom-pipeline-quality",
     "extraction_hallucination_rate",
+    # #106 BERT fast path — emitted by llm-mailroom intake, not dojo scorers
+    "bert_pass",
+    "bert_sorter_agreement",
+    "bert_fail_soft",
+    "bert_elapsed_ms",
+    "fast_path_est_cost_usd",
 }
 
 
