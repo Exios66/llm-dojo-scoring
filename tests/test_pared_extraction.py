@@ -44,7 +44,12 @@ def test_default_field_types_match_corpus_and_mailroom_pared_schema():
     assert "subject_matter" in DEFAULT_FIELD_TYPES["corporate_record"]
     assert "keywords" in DEFAULT_FIELD_TYPES["insurance_claim"]
     assert "claim_checklist" in DEFAULT_FIELD_TYPES["insurance_claim"]
-    assert DEFAULT_FIELD_TYPES["contract"] == DEFAULT_FIELD_TYPES["merger_agreement"]
+    # MergerAgreementExtraction (llm-mailroom 0.7.1): no CUAD inventory,
+    # adds effective_time + the semantic trio.
+    merger = DEFAULT_FIELD_TYPES["merger_agreement"]
+    assert set(merger) == set(CORPUS_EXTRACTION_FIELDS["merger_agreement"])
+    assert {"effective_time", "intent", "subject_matter", "keywords"} <= set(merger)
+    assert not {"cuad_clauses", "cuad_family", "contract_value"} & set(merger)
 
 
 def test_legacy_full_map_keeps_key_obligations_for_historical_rescoring():

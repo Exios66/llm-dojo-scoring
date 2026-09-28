@@ -7,6 +7,7 @@ requirement in the scoring path).
 
 from __future__ import annotations
 
+import math
 import random
 from typing import Any, Optional
 
@@ -16,7 +17,8 @@ DEFAULT_SEED = 42
 
 
 def _clean(values: list[Any]) -> list[float]:
-    """Coerce a per-document score list to floats, dropping None/non-numeric."""
+    """Coerce a per-document score list to floats, dropping None, non-numeric
+    and non-finite values (one NaN used to turn the whole CI into NaN)."""
     out: list[float] = []
     for v in values:
         if v is None:
@@ -25,18 +27,29 @@ def _clean(values: list[Any]) -> list[float]:
             out.append(1.0 if v else 0.0)
             continue
         try:
-            out.append(float(v))
+            f = float(v)
         except (TypeError, ValueError):
             continue
+        if math.isfinite(f):
+            out.append(f)
     return out
 
 
-def _resample_means(values: list[float], n_boot: int, seed: int, rng: random.Random) -> list[float]:
+def _resample_means(values: list[float], n_boot: int, rng: random.Random) -> list[float]:
     n = len(values)
     return [
         sum(values[i] for i in (rng.randrange(n) for _ in range(n))) / n
         for _ in range(n_boot)
     ]
+
+
+def _percentile_indices(n_boot: int, alpha: float) -> tuple[int, int]:
+    """Symmetric nearest-rank indices for the (alpha/2, 1-alpha/2) quantiles.
+
+    The old ``round()`` form used banker's rounding, which put the two tails
+    at different distances from the ends for small ``n_boot``."""
+    lo = max(0, math.ceil((alpha / 2) * n_boot) - 1)
+    return lo, max(lo, n_boot - 1 - lo)
 
 
 def bootstrap_ci(
@@ -56,10 +69,9 @@ def bootstrap_ci(
     if len(values) < 2:
         return None
     rng = random.Random(seed)
-    means = _resample_means(values, n_boot, seed, rng)
+    means = _resample_means(values, n_boot, rng)
     means.sort()
-    lo_idx = max(0, int(round((alpha / 2) * n_boot)) - 1)
-    hi_idx = min(n_boot - 1, int(round((1 - alpha / 2) * n_boot)) - 1)
+    lo_idx, hi_idx = _percentile_indices(n_boot, alpha)
     lo = round(means[lo_idx], 4)
     hi = round(means[hi_idx], 4)
     return {
@@ -80,16 +92,36 @@ def delta_significance(
     n_boot: int = DEFAULT_N_BOOT,
     alpha: float = DEFAULT_ALPHA,
     seed: int = DEFAULT_SEED,
+    paired: bool = False,
 ) -> Optional[dict[str, Any]]:
-    """Two-sample bootstrap on the mean difference (B - A).
+    """Bootstrap on the mean difference (B - A).
+
+    ``paired=True`` is for two systems scored on the SAME documents in the
+    same order (the usual model/prompt A/B): it resamples documents jointly,
+    so per-document difficulty cancels. The default two-sample form treats
+    the lists as independent samples. For paired resampling both sides must
+    have the same length and rows with a missing value on either side are
+    dropped together.
 
     Returns ``{"delta", "ci_lo", "ci_hi", "significant", "n_a", "n_b",
     "seed", "n_boot", "method"}`` — ``significant`` is True when the 95% CI
     on the difference excludes zero. ``None`` when either side has fewer than
     2 usable values (the delta is then unmeasurable, not "insignificant").
     """
-    a = _clean(values_a)
-    b = _clean(values_b)
+    if paired:
+        values_a, values_b = list(values_a), list(values_b)
+        if len(values_a) != len(values_b):
+            raise ValueError("paired delta needs equal-length score lists")
+        pairs = [
+            (ca[0], cb[0])
+            for ca, cb in ((_clean([x]), _clean([y])) for x, y in zip(values_a, values_b))
+            if ca and cb
+        ]
+        a = [x for x, _ in pairs]
+        b = [y for _, y in pairs]
+    else:
+        a = _clean(values_a)
+        b = _clean(values_b)
     if len(a) < 2 or len(b) < 2:
         return None
     rng = random.Random(seed)
@@ -100,9 +132,12 @@ def delta_significance(
         n = len(values)
         return sum(values[rng.randrange(n)] for _ in range(n)) / n
 
-    diffs = sorted(_sample_mean(b) - _sample_mean(a) for _ in range(n_boot))
-    lo_idx = max(0, int(round((alpha / 2) * n_boot)) - 1)
-    hi_idx = min(n_boot - 1, int(round((1 - alpha / 2) * n_boot)) - 1)
+    if paired:
+        d = [y - x for x, y in zip(a, b)]
+        diffs = sorted(_resample_means(d, n_boot, rng))
+    else:
+        diffs = sorted(_sample_mean(b) - _sample_mean(a) for _ in range(n_boot))
+    lo_idx, hi_idx = _percentile_indices(n_boot, alpha)
     lo = diffs[lo_idx]
     hi = diffs[hi_idx]
     return {
@@ -114,7 +149,7 @@ def delta_significance(
         "n_b": len(b),
         "seed": seed,
         "n_boot": n_boot,
-        "method": "two-sample-percentile-bootstrap",
+        "method": "paired-percentile-bootstrap" if paired else "two-sample-percentile-bootstrap",
     }
 
 

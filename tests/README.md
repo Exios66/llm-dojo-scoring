@@ -11,8 +11,9 @@
 ## Running Tests
 
 ```bash
-cd packages/llm-dojo-scoring
-uv run pytest tests/
+pip install -e ".[dev]"
+python -m pytest tests/ -q
+# inside the Digital-Mailroom monorepo: uv run pytest packages/llm-dojo-scoring/tests
 ```
 
 ## Test Structure

@@ -150,8 +150,11 @@ def _cli_analyze(argv: list[str]) -> int:
     if metric != args.metric:
         print(f"[dojo-analyze] metric '{args.metric}' not found — using '{metric}'", file=sys.stderr)
 
-    out = args.out or (path + ".report.md")
-    plots_dir = args.plots or (path + "_plots")
+    # "langfuse:<trace>" is a source spec, not a filename: a ":" in the
+    # output name breaks on Windows and in most shells' globbing.
+    stem = path.replace("langfuse:", "langfuse-", 1).replace(":", "-")
+    out = args.out or (stem + ".report.md")
+    plots_dir = args.plots or (stem + "_plots")
 
     plot_paths: dict[str, str] | None = None
     if not args.no_plots:

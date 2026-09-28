@@ -116,8 +116,11 @@ def test_specialist_suites_bind_corpus_subclasses_and_differentiators():
 def test_merger_agreement_rebinds_maud_not_cuad():
     merger = get_suite("merger_agreement")
     contract = get_suite("contracts_specialist")
-    assert merger.name == "contracts_specialist"
+    # llm-mailroom 0.7.1: merger has its own specialist + schema.
+    assert merger.name == "merger_agreement_specialist"
     assert merger.doc_type == "merger_agreement"
+    assert "cuad_clauses" not in merger.field_types
+    assert "effective_time" in merger.field_types
     assert contract.doc_type == "contract"
     assert "all_cash" in merger.subclasses
     assert "license" in contract.subclasses

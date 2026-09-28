@@ -33,10 +33,12 @@ All thresholds and field sets come from :mod:`llm_dojo_scoring.config`
 
 from __future__ import annotations
 
+import datetime
 import os
 import re
 import threading
-from collections import Counter
+import unicodedata
+from collections import Counter, OrderedDict
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 from typing import Any, Optional
@@ -184,25 +186,44 @@ _CORPORATE_SUFFIXES = {
     "HOLDINGS", "TRUST",
 }
 _PUNCT_RE = re.compile(r"[,.;:'\"()\[\]{}!?@#$%^&*+=|\\/<>~`_-]")
+# Typographic punctuation folded to ASCII before matching ("O’Brien" is
+# "O'Brien"; an en dash is a hyphen).
+_TYPOGRAPHIC = str.maketrans({
+    "\u2018": "'", "\u2019": "'", "\u201a": "'", "\u201b": "'",
+    "\u201c": '"', "\u201d": '"', "\u201e": '"', "\u2032": "'",
+    "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",
+    "\u2014": "-", "\u2212": "-", "\u00a0": " ",
+})
 _ORDINAL_RE = re.compile(r"(\d)(st|nd|rd|th)\b", re.IGNORECASE)
 _WS_RE = re.compile(r"\s+")
 
 
-def normalize_text(text) -> str:
-    """Uppercase, strip punctuation, drop corporate suffixes, collapse
-    whitespace. The canonical form used by exact and fuzzy matching."""
+def _fold(text) -> str:
+    """NFKC + typographic-punctuation folding; ``None`` is the empty string
+    (never the literal word "None", which used to match a predicted "None")."""
+    if text is None:
+        return ""
     if not isinstance(text, str):
         text = str(text)
-    tokens = _PUNCT_RE.sub(" ", text.upper()).split()
-    tokens = [t for t in tokens if t not in _CORPORATE_SUFFIXES]
-    return " ".join(tokens)
+    return unicodedata.normalize("NFKC", text).translate(_TYPOGRAPHIC)
+
+
+def normalize_text(text) -> str:
+    """Uppercase, strip punctuation, drop corporate suffixes, collapse
+    whitespace. The canonical form used by exact and fuzzy matching.
+
+    Suffix words are only dropped when something else remains: a value that
+    IS a suffix-like token ("CO", "PA", "SA" as a jurisdiction) keeps it —
+    stripping both sides to "" used to score "CO" vs "PA" as a perfect match.
+    """
+    tokens = _PUNCT_RE.sub(" ", _fold(text).upper()).split()
+    kept = [t for t in tokens if t not in _CORPORATE_SUFFIXES]
+    return " ".join(kept if kept else tokens)
 
 
 def _tokenize(text: str) -> list[str]:
     """Lowercase, punctuation-stripped tokens (for F1-style matching)."""
-    if not isinstance(text, str):
-        text = str(text)
-    return _PUNCT_RE.sub(" ", text.lower()).split()
+    return _PUNCT_RE.sub(" ", _fold(text).lower()).split()
 
 
 # Function words excluded from CONTAINMENT token sets only. Clause labels
@@ -214,6 +235,9 @@ _CONTAINMENT_STOPWORDS = {
     "hereunder", "shall", "any", "all", "this", "that", "these", "those",
     "from", "between", "into", "upon", "under", "over",
 }
+
+
+_STOPWORDS_LC = {w.lower() for w in _CONTAINMENT_STOPWORDS}
 
 
 def _containment_tokens(text: str) -> set[str]:
@@ -230,18 +254,26 @@ def _seq_ratio(a: str, b: str) -> float:
 
 
 def _token_set_ratio(a: str, b: str) -> float:
-    """Token-set ratio (rapidfuzz-style) over space-joined sorted tokens."""
+    """Symmetric token-set similarity.
+
+    ``max(ratio(t1, t2), jaccard)`` where ``t1`` / ``t2`` are the shared
+    tokens followed by each side's remainder (sorted). Unlike rapidfuzz's
+    ``token_set_ratio`` a strict token SUBSET is not a perfect match: "John"
+    vs "John Smith" scores 0.57, not 1.0. Argument order never changes the
+    result.
+    """
     ta, tb = set(_tokenize(a)), set(_tokenize(b))
     if not ta and not tb:
         return 1.0
     if not ta or not tb:
         return 0.0
-    inter = ta & tb
-    if inter == ta and inter == tb:
+    if ta == tb:
         return 1.0
-    base = _seq_ratio(" ".join(sorted(inter)), " ".join(sorted(ta)))
-    diff = _seq_ratio(" ".join(sorted(ta - tb)), " ".join(sorted(tb - ta)))
-    return max(base, diff)
+    inter = sorted(ta & tb)
+    t1 = " ".join(inter + sorted(ta - tb))
+    t2 = " ".join(inter + sorted(tb - ta))
+    jaccard = len(ta & tb) / len(ta | tb)
+    return max(_seq_ratio(t1, t2), jaccard)
 
 
 def _token_f1(pred: str, exp: str) -> float:
@@ -267,16 +299,18 @@ _MONTH_NAMES = ["january", "february", "march", "april", "may", "june",
                 "july", "august", "september", "october", "november", "december"]
 
 
-def _parse_date(text) -> Optional[Any]:
-    """Parse to a canonical datetime.date, or None when unparseable.
+# Two fixed parse defaults: components that come back different between them
+# were NOT stated in the text. The first is also the canonical fill value, so
+# a partial date parses the same on every day of the year (dateutil fills
+# missing parts from *today* when no default is given).
+_DATE_DEFAULT_A = datetime.datetime(1900, 1, 1)
+_DATE_DEFAULT_B = datetime.datetime(1904, 2, 2)
 
-    Handles the forms that appear in CUAD ground truth: ISO, mm/dd/yyyy,
-    "March 3, 2024", ordinal prose ("10th day of January 2000"), and stray
-    trailing artifacts like "1st day of April, 2007 (".
-    """
+
+def _clean_date_text(text) -> Optional[str]:
     if not isinstance(text, str):
         return None
-    s = _WS_RE.sub(" ", text.strip())
+    s = _WS_RE.sub(" ", _fold(text).strip())
     if not s:
         return None
     s = _ORDINAL_RE.sub(r"\1", s)
@@ -291,13 +325,54 @@ def _parse_date(text) -> Optional[Any]:
         month, day, year = day_of_month.group(2), day_of_month.group(1), day_of_month.group(3)
         s = f"{month} {day}, {year}" if year else f"{month} {day}"
     s = re.sub(r"[(\[\{,]+$", "", s).strip()
-    try:
-        from dateutil import parser
+    return s or None
 
-        dt = parser.parse(s)
-        return dt.date()
-    except (ValueError, OverflowError):
+
+def _parse_date_with(s: str, default) -> Optional[Any]:
+    from dateutil import parser
+
+    try:
+        return parser.parse(s, default=default).date()
+    except (ValueError, OverflowError, TypeError):
         return None
+
+
+def _parse_date(text) -> Optional[Any]:
+    """Parse to a canonical datetime.date, or None when unparseable.
+
+    Handles the forms that appear in CUAD ground truth: ISO, mm/dd/yyyy,
+    "March 3, 2024", ordinal prose ("10th day of January 2000"), and stray
+    trailing artifacts like "1st day of April, 2007 (". Components the text
+    does not state are filled from a fixed default (see
+    :func:`_date_precision`), never from today's date.
+    """
+    s = _clean_date_text(text)
+    if s is None:
+        return None
+    return _parse_date_with(s, _DATE_DEFAULT_A)
+
+
+def _date_precision(text) -> Optional[str]:
+    """Which components ``text`` actually states: ``"day"`` (full date),
+    ``"month"`` (month + year), ``"year"`` (year only), ``"monthday"`` (no
+    year), or None when unparseable."""
+    s = _clean_date_text(text)
+    if s is None:
+        return None
+    a = _parse_date_with(s, _DATE_DEFAULT_A)
+    if a is None:
+        return None
+    b = _parse_date_with(s, _DATE_DEFAULT_B)
+    if b is None:
+        return "day"
+    year_set, month_set, day_set = a.year == b.year, a.month == b.month, a.day == b.day
+    if not year_set:
+        return "monthday" if month_set else None
+    if month_set and day_set:
+        return "day"
+    if month_set:
+        return "month"
+    return "year"
 
 
 def parse_date(text) -> Optional[Any]:
@@ -306,29 +381,71 @@ def parse_date(text) -> Optional[Any]:
     return _parse_date(text)
 
 
-def _parse_money(text) -> Optional[float]:
-    """Strip currency symbols/commas, expand K/M/B suffixes, parse to float."""
+_CURRENCY_SYMBOLS = {"$": "USD", "US$": "USD", "€": "EUR", "£": "GBP", "¥": "JPY"}
+_CURRENCY_WORDS = {
+    "USD": "USD", "US": "USD", "DOLLAR": "USD", "DOLLARS": "USD",
+    "EUR": "EUR", "EURO": "EUR", "EUROS": "EUR",
+    "GBP": "GBP", "POUND": "GBP", "POUNDS": "GBP", "JPY": "JPY", "YEN": "JPY",
+    "CAD": "CAD", "AUD": "AUD", "CHF": "CHF",
+}
+_MONEY_SCALES = {
+    "K": 1e3, "THOUSAND": 1e3, "M": 1e6, "MM": 1e6, "MN": 1e6, "MILLION": 1e6,
+    "B": 1e9, "BN": 1e9, "BILLION": 1e9, "T": 1e12, "TRILLION": 1e12,
+}
+_MONEY_RE = re.compile(
+    r"^(?P<neg>-)?(?P<num>\d+(?:\.\d+)?|\.\d+)\s*(?P<scale>[A-Z]+)?$"
+)
+
+
+def _money_parts(text) -> tuple[Optional[float], Optional[str]]:
+    """``(amount, currency)`` for a money value; currency is an ISO-ish code
+    when stated, else None. Amount is None when the text is not a plain
+    amount (prose falls back to fuzzy matching)."""
+    if isinstance(text, bool):
+        return None, None
     if isinstance(text, (int, float)):
-        return float(text)
+        value = float(text)
+        return (value if value == value else None), None
     if not isinstance(text, str):
-        return None
-    s = text.strip().upper().replace(",", "").replace("$", "").replace("€", "").replace("£", "")
-    multiplier = 1.0
-    for suffix, m in (("M", 1e6), ("K", 1e3), ("B", 1e9)):
-        if s.endswith(suffix):
-            multiplier = m
-            s = s[:-1].rstrip()
-            break
-    for tail in (" USD", " DOLLARS", " EUROS"):
-        if s.endswith(tail):
-            s = s[: -len(tail)].rstrip()
-            break
+        return None, None
+    s = _fold(text).strip().upper().replace(",", "")
     if not s:
-        return None
-    try:
-        return float(s) * multiplier
-    except ValueError:
-        return None
+        return None, None
+    negative = False
+    if s.startswith("(") and s.endswith(")"):
+        negative, s = True, s[1:-1].strip()
+    currency = None
+    for sym in sorted(_CURRENCY_SYMBOLS, key=len, reverse=True):
+        if sym in s:
+            currency = _CURRENCY_SYMBOLS[sym]
+            s = s.replace(sym, " ")
+            break
+    words = s.split()
+    kept = []
+    for word in words:
+        code = _CURRENCY_WORDS.get(word.rstrip("."))
+        if code and (currency is None or currency == code):
+            currency = code
+            continue
+        kept.append(word)
+    s = " ".join(kept).strip()
+    m = _MONEY_RE.match(s.replace(" ", "")) if s else None
+    if not m:
+        return None, currency
+    scale = m.group("scale")
+    if scale and scale not in _MONEY_SCALES:
+        return None, currency
+    value = float(m.group("num")) * (_MONEY_SCALES[scale] if scale else 1.0)
+    if negative or m.group("neg"):
+        value = -value
+    return value, currency
+
+
+def _parse_money(text) -> Optional[float]:
+    """Parse a money value to a float: currency symbols/codes, thousands
+    separators, K/M/B and word scales ("$1.5 million", "5M USD"), and
+    accounting negatives "(1,000)". ``bool`` is not money."""
+    return _money_parts(text)[0]
 
 
 def parse_money(text) -> Optional[float]:
@@ -337,9 +454,16 @@ def parse_money(text) -> Optional[float]:
     return _parse_money(text)
 
 
+def _normalize_id(value) -> str:
+    """IDs compare on alphanumerics only: case, whitespace and punctuation
+    are formatting ("AB 123" == "AB-123" == "ab123"). Corporate-suffix
+    stripping does not apply to identifiers."""
+    return re.sub(r"[^0-9A-Z]", "", _fold(value).upper())
+
+
 def score_id_field(pred, exp, embedding=None) -> float:
     """Normalize (upper, strip punctuation/whitespace), then exact match."""
-    np_, ne = normalize_text(pred), normalize_text(exp)
+    np_, ne = _normalize_id(pred), _normalize_id(exp)
     if not np_ and not ne:
         return 1.0
     if not np_ or not ne:
@@ -350,8 +474,10 @@ def score_id_field(pred, exp, embedding=None) -> float:
 def score_money_field(pred, exp, embedding=None) -> float:
     """Numeric parse + tolerance compare; unparseable prose falls back to
     fuzzy string matching instead of scoring 0."""
-    pa, ea = _parse_money(pred), _parse_money(exp)
+    (pa, pc), (ea, ec) = _money_parts(pred), _money_parts(exp)
     if pa is not None and ea is not None:
+        if pc and ec and pc != ec:
+            return 0.0  # "€100" is not "$100"
         # One-cent absolute tolerance. Legal amounts are exact: "$250,001"
         # vs "$250,000" is a different value, not rounding noise.
         return 1.0 if abs(pa - ea) <= 0.01 else 0.0
@@ -391,6 +517,16 @@ def _with_embedding_rescue(string_score: float, pred, exp, embedding) -> float:
     return max(string_score, float(sim))
 
 
+def _is_contiguous_subphrase(pred_norm: str, exp_norm: str) -> bool:
+    """True when the prediction is >= 2 content words appearing, in order and
+    contiguously, inside the expected text."""
+    pt, et = _tokenize(pred_norm), _tokenize(exp_norm)
+    if len([t for t in pt if t not in _STOPWORDS_LC]) < 2:
+        return False
+    n = len(pt)
+    return any(et[i:i + n] == pt for i in range(len(et) - n + 1))
+
+
 def score_name_field(pred, exp, embedding=None) -> float:
     """Normalized fuzzy matching: containment first, then max of Jaro-Winkler
     (only when the names share a token) and token-set ratio, with embedding
@@ -400,11 +536,25 @@ def score_name_field(pred, exp, embedding=None) -> float:
         return 1.0
     if not np_ or not ne:
         return 0.0
-    if set(_tokenize(ne)) and set(_tokenize(ne)) <= set(_tokenize(np_)):
+    tp, te = set(_tokenize(np_)), set(_tokenize(ne))
+    if te and te <= tp:
+        return 1.0
+    if tp < te and _is_contiguous_subphrase(np_, ne):
         return 1.0
     base = _token_set_ratio(np_, ne)
-    if set(_tokenize(np_)) & set(_tokenize(ne)):
+    if tp & te:
         base = max(base, _jaro_winkler(np_, ne))
+    if tp < te:
+        # The prediction is a strict token subset of the gold ("John" for
+        # "John Smith", "Bank" for "Bank of America"): cap by how much of the
+        # gold's content it covers, so a truncated name lands in the judge's
+        # ambiguous band instead of scoring as correct. Jaro-Winkler's prefix
+        # bonus otherwise rated these 0.8-0.9. A multi-word contiguous
+        # sub-phrase ("Franchise Agreement" inside a CUAD document-name span
+        # that also names the parties) keeps its full score.
+        content_e = te - _STOPWORDS_LC or te
+        coverage = len((tp - _STOPWORDS_LC) & content_e) / len(content_e)
+        base = min(base, 0.5 + 0.5 * coverage)
     return _with_embedding_rescue(base, pred, exp, embedding)
 
 
@@ -461,6 +611,27 @@ def score_date_field(pred, exp, embedding=None) -> float:
         return 1.0
     dp, de = _parse_date(pred), _parse_date(exp)
     if dp is not None and de is not None:
+        pp, pe = _date_precision(pred), _date_precision(exp)
+        if pp == pe == "day" and dp == de:
+            return 1.0
+        # Compare only what BOTH sides state. A prediction that agrees with
+        # everything a coarser gold label states ("March 2024" gold,
+        # "March 15, 2024" predicted) is correct; a prediction coarser than
+        # the gold earns partial credit below.
+        if pe in ("month", "year") or pp in ("month", "year"):
+            same_year = dp.year == de.year
+            same_month = dp.month == de.month
+            if pe == "year" and same_year:
+                return 1.0
+            if pe == "month" and pp in ("day", "month") and same_year and same_month:
+                return 1.0
+            if pp == "month" and pe == "day" and same_year and same_month:
+                return 0.67
+            if pp == "year" and same_year:
+                return 0.33
+            return 0.0
+        if pp == "monthday" or pe == "monthday":
+            return 0.67 if (dp.month, dp.day) == (de.month, de.day) else 0.0
         if dp == de:
             return 1.0
         shared = sum(1 for a, b in ((dp.year, de.year), (dp.month, de.month)) if a == b)
@@ -596,6 +767,9 @@ def _element_similarity(element_type: str, item: str, exp: str, embedding=None) 
     return base
 
 
+_WARNED_GREEDY = False
+
+
 def score_entity_list(element_type: str, pred, exp, embedding=None,
                       partial_gt: bool = False) -> EntityListScore:
     """Pairwise similarity matrix + Hungarian assignment (scipy), thresholded,
@@ -612,7 +786,9 @@ def score_entity_list(element_type: str, pred, exp, embedding=None,
     if not pred_items:
         return EntityListScore("", 0.0, 0.0, 0.0, 0, 0, len(exp_items), partial_gt)
     if not exp_items:
-        return EntityListScore("", 1.0, 0.0, 0.0, 0, len(pred_items), 0, partial_gt)
+        # Predictions against an empty gold list are all unsupported:
+        # precision 0 (it used to report 1.0).
+        return EntityListScore("", 0.0, 0.0, 0.0, 0, len(pred_items), 0, partial_gt)
 
     scorer = _element_scorer(element_type)
     threshold = get_bipartite_match_threshold()
@@ -657,12 +833,19 @@ def score_entity_list(element_type: str, pred, exp, embedding=None,
             sim = np.array([
                 [_element_similarity(element_type, p, e, embedding) for e in real_exp]
                 for p in pred_items
-            ])
-            row_idx, col_idx = linear_sum_assignment(1.0 - sim)
+            ], dtype=float)
+            # Zero out sub-threshold pairs BEFORE the assignment: maximizing
+            # raw similarity could trade one real match (1.0) for two
+            # sub-threshold ones (0.59 + 0.59) and then count zero matches.
+            sim[sim < threshold] = 0.0
+            row_idx, col_idx = linear_sum_assignment(-sim)
             matched = sum(1 for r, c in zip(row_idx, col_idx) if sim[r, c] >= threshold)
         except Exception:
             # scipy unavailable/failed: greedy one-to-one assignment fallback.
-            logger.warning("bipartite_matching_failed", fallback="greedy", exc_info=True)
+            global _WARNED_GREEDY
+            if not _WARNED_GREEDY:
+                _WARNED_GREEDY = True
+                logger.warning("bipartite_matching_failed", fallback="greedy", exc_info=True)
             matched = 0
             assigned_exp = set()
             for p_item in pred_items:
@@ -902,11 +1085,14 @@ def _presence_candidates(predicted: dict, category: str, field: str) -> list[str
     (``reasoning.entries[]`` whose ``field`` is the canonical CUAD category
     name — issue #21 retag), falling back to the disaggregated items of the
     category's mapped field (e.g. ``cuad_clauses``)."""
-    entries = (predicted.get("reasoning") or {}).get("entries") or []
+    reasoning = predicted.get("reasoning")
+    entries = reasoning.get("entries") if isinstance(reasoning, dict) else None
+    if not isinstance(entries, list):
+        entries = []
     routed = [
         str(e.get("evidence") or e.get("section_ref") or "")
         for e in entries
-        if str(e.get("field") or "").strip() == category
+        if isinstance(e, dict) and str(e.get("field") or "").strip() == category
     ]
     if routed:
         return [r for r in routed if r.strip()]
@@ -978,6 +1164,18 @@ _REMOTE_EMBEDDING_MODEL = "openai/text-embedding-3-small"
 _OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 
+_VECTOR_CACHE_MAX = 4096
+
+
+def remote_embeddings_allowed() -> bool:
+    """Remote (OpenRouter) embeddings send document text off-host, so they
+    are opt-in: ``LLM_DOJO_REMOTE_EMBEDDINGS=1``. Having ``OPENROUTER_API_KEY``
+    set is not consent (the pipeline always has one)."""
+    return os.environ.get("LLM_DOJO_REMOTE_EMBEDDINGS", "").strip().lower() in (
+        "1", "true", "yes", "on",
+    )
+
+
 class _EmbeddingMatcher:
     """Lazy singleton embedding cache. similarity() returns None whenever no
     embedder is available — callers then keep the string-only score."""
@@ -995,22 +1193,31 @@ class _EmbeddingMatcher:
     def __init__(self) -> None:
         self._model = None
         self._model_loaded = False
+        self._load_lock = threading.Lock()
         self._client = None
-        self._vectors: dict[str, object] = {}
+        self._backend: Optional[str] = None
+        self._vectors: "OrderedDict[str, object]" = OrderedDict()
+        self._vectors_lock = threading.Lock()
 
     def _load_local(self) -> None:
+        # The flag flips only AFTER the load finishes (under a lock), so a
+        # scoring thread racing warm_embedding_model() waits for the model
+        # instead of falling through to the remote embedder mid-load.
         if self._model_loaded:
             return
-        self._model_loaded = True
-        try:
-            from sentence_transformers import SentenceTransformer
+        with self._load_lock:
+            if self._model_loaded:
+                return
+            try:
+                from sentence_transformers import SentenceTransformer
 
-            self._model = SentenceTransformer(get_embedding_model())
-        except Exception:
-            self._model = None
+                self._model = SentenceTransformer(get_embedding_model())
+            except Exception:
+                self._model = None
+            self._model_loaded = True
 
     def _load_remote(self) -> None:
-        if self._client is not None:
+        if self._client is not None or not remote_embeddings_allowed():
             return
         api_key = os.environ.get("OPENROUTER_API_KEY")
         if not api_key:
@@ -1020,7 +1227,7 @@ class _EmbeddingMatcher:
 
             self._client = OpenAI(
                 base_url=os.environ.get("OPENROUTER_BASE_URL", _OPENROUTER_BASE_URL),
-                api_key=api_key, timeout=120,
+                api_key=api_key, timeout=30,
             )
         except Exception:
             self._client = None
@@ -1029,17 +1236,40 @@ class _EmbeddingMatcher:
         import numpy as np
 
         if self._model is not None:
+            backend = "local"
             vector = self._model.encode([text], normalize_embeddings=True)[0]
         else:
             self._load_remote()
             if self._client is None:
                 return None
+            backend = "remote"
             resp = self._client.embeddings.create(
                 model=_REMOTE_EMBEDDING_MODEL, input=[text]
             )
             vector = np.asarray(resp.data[0].embedding, dtype=np.float64)
             norm = float(np.linalg.norm(vector))
             vector = vector / norm if norm else vector
+        if self._backend != backend:
+            # Never compare vectors from two embedders (different dimensions
+            # and spaces): drop the cache when the backend changes.
+            with self._vectors_lock:
+                self._vectors.clear()
+            self._backend = backend
+        return vector
+
+    def _vector(self, text: str):
+        with self._vectors_lock:
+            cached = self._vectors.get(text)
+            if cached is not None:
+                self._vectors.move_to_end(text)
+                return cached
+        vector = self._embed(text)
+        if vector is None:
+            return None
+        with self._vectors_lock:
+            self._vectors[text] = vector
+            while len(self._vectors) > _VECTOR_CACHE_MAX:
+                self._vectors.popitem(last=False)
         return vector
 
     def similarity(self, a: str, b: str) -> Optional[float]:
@@ -1049,18 +1279,12 @@ class _EmbeddingMatcher:
             self._load_local()  # idempotent; sets self._model if available
             import numpy as np
 
-            va = self._vectors.get(a)
+            va = self._vector(a)
             if va is None:
-                va = self._embed(a)
-                if va is None:
-                    return None
-                self._vectors[a] = va
-            vb = self._vectors.get(b)
-            if vb is None:
-                vb = self._embed(b)
-                if vb is None:
-                    return None
-                self._vectors[b] = vb
+                return None
+            vb = self._vector(b)
+            if vb is None or np.shape(va) != np.shape(vb):
+                return None
             sim = float(np.dot(va, vb))
             return min(1.0, max(0.0, sim))
         except Exception:
@@ -1149,6 +1373,63 @@ def get_field_types(doc_class: str, taxonomy: dict | None = None) -> dict[str, s
     return dict(wired.get(resolved) or wired.get(doc_class) or {})
 
 
+# ---------------------------------------------------------------------------
+# Row-level ground-truth presence (mailroom-dataset v9.1 ``gt_presence``)
+# ---------------------------------------------------------------------------
+
+PRESENCE_POPULATED = "populated"
+PRESENCE_NOT_APPLICABLE = "not_applicable"
+PRESENCE_DOCUMENTED_ABSENCE = "schema_documented_absence"
+PRESENCE_PENDING = "pending_annotation"
+PRESENCE_CODES = frozenset({
+    PRESENCE_POPULATED, PRESENCE_NOT_APPLICABLE,
+    PRESENCE_DOCUMENTED_ABSENCE, PRESENCE_PENDING,
+})
+
+
+def parse_gt_presence(value) -> dict[str, str]:
+    """Normalize a v9.1 ``gt_presence`` value (dict or JSON string) to
+    ``{field: code}``. Unknown shapes yield ``{}`` (no presence info)."""
+    if isinstance(value, str):
+        import json
+
+        try:
+            value = json.loads(value) if value.strip() else {}
+        except ValueError:
+            return {}
+    if not isinstance(value, dict):
+        return {}
+    return {str(k): str(v) for k, v in value.items() if isinstance(v, str)}
+
+
+def _is_empty_value(value) -> bool:
+    """Empty ground truth / prediction: None, blank strings, empty
+    containers, and NaN."""
+    if value is None:
+        return True
+    if isinstance(value, float) and value != value:
+        return True
+    if isinstance(value, str):
+        return not value.strip()
+    if isinstance(value, (list, tuple, set, dict)):
+        return len(value) == 0
+    return False
+
+
+def field_is_scored(key: str, exp_value, gt_presence: dict[str, str] | None = None) -> bool:
+    """Does this expected field count as a requirement?
+
+    Fields the v9.1 presence map marks ``not_applicable``,
+    ``schema_documented_absence`` or ``pending_annotation`` are not scored,
+    and neither are empty expectations (``None``, ``""``, ``[]``, ``{}``,
+    NaN) — an empty gold list used to score a correct empty answer 0.0.
+    """
+    code = (gt_presence or {}).get(key)
+    if code is not None and code != PRESENCE_POPULATED:
+        return False
+    return not _is_empty_value(exp_value)
+
+
 @dataclass
 class ExtractionScoreResult:
     doc_class: str
@@ -1192,11 +1473,15 @@ def score_extraction(
     predicted: dict | None,
     expected: dict | None,
     doc_text: str | None = None,
+    gt_presence: dict | str | None = None,
 ) -> ExtractionScoreResult:
     """Score one extraction deterministically.
 
-    - Only expected fields with a non-null/non-empty value count toward the
-      overall score (null expectations are not requirements).
+    - Only expected fields with a non-empty value count toward the overall
+      score (null / empty expectations are not requirements).
+    - ``gt_presence`` (v9.1 row-level presence codes, dict or JSON string):
+      fields not marked ``populated`` are skipped — see
+      :func:`field_is_scored`.
     - ``overall_score`` is the mean of the per-field scores (None when no
       field is scored).
     - ``ambiguous_fields`` collects fields landing in the ambiguous band —
@@ -1207,7 +1492,6 @@ def score_extraction(
     """
     predicted = predicted or {}
     expected = expected or {}
-    band_low, band_high = get_ambiguous_band()
     partial_gt_fields = get_partial_gt_fields()
     containment_fields = get_containment_fields()
     needs_embedding = any(
@@ -1221,10 +1505,12 @@ def score_extraction(
     entity_list_scores: dict[str, EntityListScore] = {}
     entity_list_audit: dict[str, dict] = {}
 
+    presence = parse_gt_presence(gt_presence)
     for key, exp_value in expected.items():
-        if exp_value is None or exp_value == "":
+        if not field_is_scored(key, exp_value, presence):
             continue
         field_type = field_types.get(key) or _heuristic_field_type(key, exp_value)
+        declared_type = field_type
         pred_value = predicted.get(key)
         if pred_value is None:
             # A null answer satisfies a null-expectation date (blank-template
@@ -1248,7 +1534,10 @@ def score_extraction(
                 score = result
         score = round(score, 4)
         field_scores[key] = score
-        if band_low <= score <= band_high:
+        # Same gate the judge escalation uses everywhere: per-type bands
+        # (``always`` / ``never`` / custom) first, then the global band,
+        # half-open. It used to ignore type_bands and use a closed interval.
+        if field_is_ambiguous(declared_type, score):
             ambiguous.append(key)
 
     if verification_enabled() and doc_text:

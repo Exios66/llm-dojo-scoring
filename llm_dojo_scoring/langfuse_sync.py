@@ -103,6 +103,7 @@ DEFAULT_BASE_URL = "https://us.cloud.langfuse.com"
 DEFAULT_PROJECT = "llm-dojo"
 DEFAULT_ENVIRONMENT = "llm-dojo"
 _DEFAULT_PAGE_SIZE = 50
+_REQUEST_BUDGET_S = 120.0
 
 
 # ---------------------------------------------------------------------------
@@ -151,10 +152,12 @@ def _load_dotenv(path: Path) -> None:
 
 
 def _discover_env_file() -> Path | None:
+    """The project's own env file only. ``~/.env`` is NOT searched: loading a
+    home-directory .env pulled every unrelated secret on the machine into
+    ``os.environ`` (it is still honoured when passed explicitly)."""
     cwd = Path.cwd()
     for name in _ENV_FILES:
-        candidates = [cwd / name, cwd / "config" / name, Path.home() / name]
-        for candidate in candidates:
+        for candidate in (cwd / name, cwd / "config" / name):
             if candidate.exists():
                 return candidate
     return None
@@ -254,10 +257,16 @@ class LangfuseClient:
                 {k: v for k, v in params.items() if v is not None}, doseq=True
             )
         self._throttle()
+        # Bound the TOTAL time spent on one request: 8 retries x 90 s timeout
+        # plus exponential sleeps could stall a sync for ~20 minutes.
+        deadline = time.monotonic() + _REQUEST_BUDGET_S
         for attempt in range(self.max_retries + 1):
             req = urllib.request.Request(url, headers={"Authorization": self._auth})
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise RuntimeError(f"Langfuse request budget exhausted for {path}")
             try:
-                with urllib.request.urlopen(req, timeout=90) as resp:
+                with urllib.request.urlopen(req, timeout=min(30.0, remaining)) as resp:
                     return json.loads(resp.read().decode("utf-8"))
             except urllib.error.HTTPError as exc:
                 body = exc.read().decode("utf-8", errors="replace")[:500]
@@ -272,16 +281,17 @@ class LangfuseClient:
                             retry_after = int(json.loads(body).get("details", {}).get("retryAfterSeconds", 0))
                         except (json.JSONDecodeError, TypeError, ValueError):
                             retry_after = 2 ** attempt
-                    wait = max(retry_after, 1) + (0.25 * attempt)
-                    if attempt >= self.max_retries:
+                    wait = min(max(retry_after, 1) + (0.25 * attempt), 30.0)
+                    if attempt >= self.max_retries or time.monotonic() + wait > deadline:
                         raise RuntimeError(f"Langfuse rate-limited (429) for {path} after retries") from exc
                     time.sleep(wait)
                     continue
                 raise RuntimeError(f"Langfuse API {exc.code} for {path}: {body}") from exc
             except (urllib.error.URLError, TimeoutError) as exc:
-                if attempt >= self.max_retries:
+                wait = min(2 ** attempt, 10)
+                if attempt >= self.max_retries or time.monotonic() + wait > deadline:
                     raise RuntimeError(f"Langfuse network error for {path}: {exc}") from exc
-                time.sleep(2 ** attempt)
+                time.sleep(wait)
         raise RuntimeError(f"Langfuse request failed for {path}")  # pragma: no cover
 
     # -- paginated accessors -------------------------------------------------
@@ -314,7 +324,7 @@ class LangfuseClient:
         return self.fetch_all("/api/public/traces", params, max_items=max_items)
 
     def get_trace(self, trace_id: str) -> dict:
-        return self._request(f"/api/public/traces/{trace_id}")
+        return self._request(f"/api/public/traces/{urllib.parse.quote(str(trace_id), safe='')}")
 
     def list_scores(self, trace_id: str | None = None, name: str | None = None,
                     max_items: int | None = None) -> list[dict]:
@@ -353,8 +363,12 @@ def _row_from_pipeline_trace(trace: dict) -> dict | None:
     gt = inp.get("ground_truth") if isinstance(inp.get("ground_truth"), dict) else {}
     identity = trace_identity(trace)
 
+    # The doc-TYPE ground truth only: ``expected_subclass`` is a different
+    # dimension and must never stand in for a missing class label.
     expected = None
     for key in GROUND_TRUTH_KEYS:
+        if key == "expected_subclass":
+            continue
         expected = gt.get(key) or meta.get(key) or inp.get(key)
         if expected:
             break
@@ -421,6 +435,8 @@ def row_from_trace(trace: dict, task: str = SORTER_TRACE) -> dict | None:
     ):
         return None
     inp = trace.get("input") or {}
+    if not isinstance(inp, dict):
+        inp = {}  # string trace inputs used to crash every .get() below
     identity = None
     try:
         from .mailroom import trace_identity
@@ -491,12 +507,9 @@ def aggregate_run(session: str, rows: list[dict], task: str = SORTER_TRACE,
         expected = [r.get("expected") for r in rows]
         predicted = [r.get("predicted") for r in rows]
         aligned = score_aligned_classification(expected, predicted)
-        n_sub = sum(
-            1
-            for r in rows
-            if r.get("expected_subclass") not in (None, "")
-            and r.get("predicted_subclass") not in (None, "")
-        )
+        # Denominator: every row with a subclass label — a row the pipeline
+        # never gave a subclass is a miss, not "not scored".
+        n_sub = sum(1 for r in rows if r.get("expected_subclass") not in (None, ""))
         n_sub_ok = sum(
             1
             for r in rows
@@ -513,7 +526,9 @@ def aggregate_run(session: str, rows: list[dict], task: str = SORTER_TRACE,
             "prompt_versions": {"pipeline": prompt_version} if prompt_version else {},
             "timestamp": trace_ts or datetime.now(timezone.utc).isoformat(),
             "n_rows": n,
-            "n_ok": aligned["n_aligned"],
+            # Headline "ok" is EXACT: merger_agreement predicted for a
+            # contract (or vice versa) is a wrong class since 0.7.1.
+            "n_ok": aligned["n_exact"],
             "user_id": next((r.get("user_id") for r in rows if r.get("user_id")), None),
             "release": next((r.get("release") for r in rows if r.get("release")), None),
             "environment": next((r.get("environment") for r in rows if r.get("environment")), None),
@@ -635,9 +650,12 @@ def fetch_run_records(client: LangfuseClient, task: str = SORTER_TRACE,
         if row is None:
             continue
         rows.append((session, row))
-        if not ts_by_session.get(session) or trace.get("timestamp", "") < ts_by_session[session]:
-            ts_by_session[session] = trace.get("timestamp", "")
+        ts = str(trace.get("timestamp") or "")
+        if ts and (not ts_by_session.get(session) or ts < ts_by_session[session]):
+            ts_by_session[session] = ts
         inp = trace.get("input") or {}
+        if not isinstance(inp, dict):
+            inp = {}
         model_by_session.setdefault(session, inp.get("model"))
         prompt_by_session.setdefault(session, inp.get("prompt_version"))
     grouped = group_rows_by_session(rows)

@@ -34,12 +34,17 @@ def _md_table(frame: pd.DataFrame, max_rows: int = 40) -> str:
         cells = []
         for c in cols:
             v = row.get(c)
-            if isinstance(v, float):
-                cells.append(f"{v:.4f}".rstrip("0").rstrip("."))
-            elif v is None or v != v:
+            try:
+                missing = v is None or bool(pd.isna(v))
+            except (TypeError, ValueError):
+                missing = False  # list/array cells: pd.isna is elementwise
+            if missing:
                 cells.append("")
+            elif isinstance(v, float):
+                cells.append(f"{v:.4f}".rstrip("0").rstrip("."))
             else:
-                cells.append(str(v))
+                # A literal "|" would split the Markdown cell.
+                cells.append(str(v).replace("|", "\\|").replace("\n", " "))
         lines.append("| " + " | ".join(cells) + " |")
     if len(head) < len(frame):
         lines.append(f"_... and {len(frame) - len(head)} more rows_")
@@ -70,7 +75,7 @@ def build_report(frame: pd.DataFrame, *, path: Optional[str] = None,
     # -- verdicts ------------------------------------------------------------
     lines.append("## Verdicts")
     lines.append("")
-    lines.append(interp.render_notes(interpretation))
+    lines.append(interp.render_notes(interpretation, markdown=True))
     lines.append("")
 
     # -- champion table -------------------------------------------------------

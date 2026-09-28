@@ -33,9 +33,16 @@ def normalize_subtype(value, settings=None) -> str:
     if key in aliases:
         return aliases[key]
     # "License Agreement" -> "license"; "Non-Compete" -> non_compete_no_solicit.
+    # Match the whole label (singular/plural-insensitive), a label prefix of
+    # >= 6 chars ("licenseagr…"), or a longer key that starts with the whole
+    # label. The old 8-char label-prefix test mapped unrelated CUAD clauses
+    # ("Affiliate License-Licensee") onto the first family sharing a prefix.
+    kn = key.rstrip("s")
     for subtype in s.contract_subtypes:
-        norm_label = _ALIAS_KEY_RE.sub("", subtype["label"].lower())
-        if key == norm_label or key.startswith(norm_label[:8]):
+        ln = _ALIAS_KEY_RE.sub("", subtype["label"].lower()).rstrip("s")
+        if not ln:
+            continue
+        if kn == ln or kn.startswith(ln) or (len(kn) >= 6 and ln.startswith(kn)):
             return subtype["key"]
     return SUBTYPE_UNKNOWN
 

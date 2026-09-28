@@ -162,6 +162,13 @@ DEFAULT_PROFILES: dict[str, AgentProfile] = {
             doc_bundle="contract",
         ),
         _p(
+            "merger_agreement_specialist",
+            "Merger Agreement Extraction (MAUD)",
+            ("extract",),
+            "extraction",
+            doc_bundle="merger_agreement",
+        ),
+        _p(
             "corporate_records_specialist",
             "Corporate Records Extraction",
             ("extract",),

@@ -41,8 +41,8 @@ def estimate_cost(
     if prices is None:
         return None
     try:
-        prompt = int(prompt_tokens or 0)
-        completion = int(completion_tokens or 0)
+        prompt = _as_int(prompt_tokens)
+        completion = _as_int(completion_tokens)
     except (TypeError, ValueError):
         return None
     if prompt + completion <= 0:
@@ -81,6 +81,18 @@ def estimate_for_record(record: dict) -> dict[str, Any]:
     }
 
 
+def _as_int(value) -> int:
+    """Token counts arrive as ints, floats or numeric strings ("12.5" used to
+    raise ValueError and abort the whole summary)."""
+    if value is None or isinstance(value, bool):
+        return 0
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return 0
+    return int(f) if f == f and f not in (float("inf"), float("-inf")) else 0
+
+
 def tokens_summary(usage_records: list[dict], model: str | None = None) -> dict:
     """Aggregate per-row usage dicts into one tokens/cost summary.
 
@@ -95,11 +107,11 @@ def tokens_summary(usage_records: list[dict], model: str | None = None) -> dict:
     for usage in usage_records or []:
         if not isinstance(usage, dict) or not usage:
             continue
-        prompt += int(usage.get("prompt_tokens") or 0)
-        completion += int(usage.get("completion_tokens") or 0)
-        total += int(usage.get("total_tokens") or 0)
+        prompt += _as_int(usage.get("prompt_tokens"))
+        completion += _as_int(usage.get("completion_tokens"))
+        total += _as_int(usage.get("total_tokens"))
         cost = usage.get("cost")
-        if isinstance(cost, (int, float)):
+        if isinstance(cost, (int, float)) and not isinstance(cost, bool) and cost == cost:
             cost_values.append(float(cost))
         rows += 1
     cost_estimated = None
@@ -109,7 +121,10 @@ def tokens_summary(usage_records: list[dict], model: str | None = None) -> dict:
         "prompt_tokens": prompt,
         "completion_tokens": completion,
         "total_tokens": total,
+        # ``cost_usd`` is the MEAN per row (kept for export compatibility);
+        # ``cost_total_usd`` is the run total.
         "cost_usd": round(sum(cost_values) / len(cost_values), 6) if cost_values else 0.0,
+        "cost_mean_usd": round(sum(cost_values) / len(cost_values), 6) if cost_values else 0.0,
         "cost_total_usd": round(sum(cost_values), 6),
         "cost_estimated_usd": cost_estimated,
         "rows_with_usage": rows,

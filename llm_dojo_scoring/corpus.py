@@ -2,9 +2,13 @@
 
 Grounded in the published Hugging Face dataset
 ``Lucius-Morningstar/mailroom-dataset`` (default + ``ground_truth`` configs;
-3,302 rows: 2,979 train / 323 test at the v9 GT-closure revision
-``46a4d3c2`` — the v9 successor of the frozen v8 ``mailroom-corpus``
-baseline).
+3,302 rows: 2,979 train / 323 test at the **v9.1** quality revision
+``ed7576b6`` — :data:`CORPUS_REVISION`; the v9 GT-closure tip ``46a4d3c2``
+it supersedes carried the same row set). v9.1 publishes row-level
+``gt_fields.gt_presence`` codes (see
+:func:`llm_dojo_scoring.field_scoring.field_is_scored`) and
+``gt_fields.context_window_band``, and strips the blind aggregate counts
+(``clause_count`` / ``maud_label_count``).
 
 This module is the single source mapping each mailroom document class to:
 
@@ -33,6 +37,9 @@ from .equivalences import (
 
 __all__ = [
     "CORPUS_ID",
+    "CORPUS_REVISION",
+    "CORPUS_REVISION_SHA",
+    "CONTEXT_WINDOW_BANDS",
     "CORPUS_DOC_TYPES",
     "CORPUS_ABSENT_DOC_TYPES",
     "NATIVE_DOC_TYPES",
@@ -53,6 +60,16 @@ __all__ = [
 
 #: Hugging Face dataset id this module is pinned to.
 CORPUS_ID = "Lucius-Morningstar/mailroom-dataset"
+
+#: Constellation revision pin (llm-mailroom ``FULL_CORPUS_REVISION``, sandbox
+#: ``FAMILY_HF_REVISION``). Prefer :data:`CORPUS_REVISION_SHA`: the Hub tag
+#: has drifted from the content pin before (mailroom-issues hf_cache
+#: MANIFEST).
+CORPUS_REVISION = "v9.1"
+CORPUS_REVISION_SHA = "ed7576b676343e0b402ec5412cded301e629bdee"
+
+#: ``gt_fields.context_window_band`` values published by v9.1.
+CONTEXT_WINDOW_BANDS: tuple[str, ...] = ("<=4k", "<=16k", "<=32k", ">32k")
 
 #: Doc types that have at least one ground-truth row in the published merge.
 CORPUS_DOC_TYPES: tuple[str, ...] = (
@@ -98,7 +115,7 @@ DOC_TYPE_SUBCLASSES: dict[str, tuple[str, ...]] = {
         "other",
     ),
     # Communication form, aligned to the CURRENT dataset GT: mailroom-dataset
-    # v9 ``ground_truth.expected_subclass`` (tip 46a4d3c2) carries exactly
+    # v9/v9.1 ``ground_truth.expected_subclass`` (v9.1 ed7576b6) carries exactly
     # these 8 tokens + the other-bucket. The v8-era `voicemail` key from the
     # Enron eval-environment labeler enum is NOT in the v9 GT vocabulary and
     # was removed here (DMR-071 adjudication 2026-09-16: the dataset pin is
@@ -253,7 +270,7 @@ CORPUS_DIFFERENTIATORS: dict[str, tuple[str, ...]] = {
 }
 
 #: Extraction-schema fields each specialist suite must score, aligned to
-#: mailroom v0.6.0 ``EXTRACTION_SCHEMAS`` + taxonomy ``field_types`` (pared
+#: llm-mailroom 0.7.1 ``EXTRACTION_SCHEMAS`` + taxonomy ``field_types`` (pared
 #: checklists + semantic trio; no open-ended key_obligations dumps).
 #: ``document_name`` is on the contracts / merger schema (CUAD Document Name).
 CORPUS_EXTRACTION_FIELDS: dict[str, tuple[str, ...]] = {
@@ -274,14 +291,13 @@ CORPUS_EXTRACTION_FIELDS: dict[str, tuple[str, ...]] = {
         "document_name",
         "parties",
         "effective_date",
-        "term_length",
+        "effective_time",
         "governing_law",
-        "contract_value",
-        "renewal_terms",
-        "cuad_family",
         "merger_consideration",
-        "cuad_clauses",
         "maud_clauses",
+        "intent",
+        "subject_matter",
+        "keywords",
     ),
     "corporate_record": (
         "entity_name",
@@ -465,8 +481,8 @@ CORRESPONDENCE_SENTIMENT_LABELS: tuple[str, ...] = (
 
 #: Specialist ``claim_type`` extraction enum — Hub CMS tokens first, then
 #: legacy FNOL product lines. Orthogonal to the subclass dimension only in
-#: the published merge (all 400 rows use CMS tables as ``expected_subclass``
-#: and ``claim_type=health``); mailroom now accepts CMS tokens on
+#: the published merge (CMS source tables plus the property / auto lines as
+#: ``expected_subclass``); mailroom now accepts CMS tokens on
 #: ``claim_type`` as well (``doc_inventories.INSURANCE_CLAIM_TYPES``).
 INSURANCE_CLAIM_TYPES: tuple[str, ...] = (
     "pde",

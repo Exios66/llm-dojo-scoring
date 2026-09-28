@@ -65,51 +65,57 @@ __all__ = [
 #: Live taxonomy classes that dispatch to a specialist (llm-mailroom v0.5+).
 LIVE_DOC_TYPES: tuple[str, ...] = (
     "contract",
+    "merger_agreement",
     "corporate_record",
     "correspondence",
-    "compliance_filing",
     "insurance_claim",
 )
 
-#: Retired from the live pipeline (PR #21). Sorter emits ``unknown``;
-#: scoring suites remain for historical traces / LegalBench.
+#: Retired from the live pipeline (court_opinion / due_diligence in PR #21;
+#: compliance_filing removed upstream by llm-mailroom 0.7.1). Sorter emits
+#: ``unknown``; scoring suites remain for historical traces / LegalBench.
 RETIRED_DOC_TYPES: tuple[str, ...] = (
     "court_opinion",
     "due_diligence",
+    "compliance_filing",
 )
 
 #: Routing token — not a taxonomy class and not a specialist.
 UNKNOWN_DOC_TYPE = "unknown"
 
-#: Sorter / HF labels that extract through a live specialist without a
-#: new taxonomy row. ``state["doc_type"]`` stays the alias so exact HF
-#: accuracy can still score 1.0 when the model emits ``merger_agreement``.
-EXTRACT_CLASS_ALIASES: dict[str, str] = {
+#: Labels that extract through another class's specialist without their own
+#: taxonomy row. Empty since llm-mailroom 0.7.1: ``merger_agreement`` has its
+#: own specialist and schema and is no longer scored with the contract map.
+EXTRACT_CLASS_ALIASES: dict[str, str] = {}
+
+#: The HF "aligned" doc-type view used ONLY by the ``aligned_accuracy``
+#: metric (a coarse contract-family view kept for trend continuity). Headline
+#: accuracy and every per-class field map use the exact label.
+HF_ALIGNED_ALIASES: dict[str, str] = {
     "merger_agreement": "contract",
 }
 
 #: Labels the sorter / Lane A reviewer may emit.
-SORTER_LABEL_SET: tuple[str, ...] = LIVE_DOC_TYPES + (
-    UNKNOWN_DOC_TYPE,
-    "merger_agreement",
-)
+SORTER_LABEL_SET: tuple[str, ...] = LIVE_DOC_TYPES + (UNKNOWN_DOC_TYPE,)
 
 LIVE_SPECIALISTS: tuple[str, ...] = (
     "contracts_specialist",
+    "merger_agreement_specialist",
     "corporate_records_specialist",
     "correspondence_specialist",
-    "compliance_specialist",
     "insurance_claims_specialist",
 )
 
 RETIRED_SPECIALISTS: tuple[str, ...] = (
     "court_opinions_specialist",
     "due_diligence_specialist",
+    "compliance_specialist",
 )
 
 RETIRED_AUDITORS: tuple[str, ...] = (
     "court_opinions_auditor",
     "due_diligence_auditor",
+    "compliance_auditor",
 )
 
 INTAKE_AGENT = "intake"
@@ -187,22 +193,21 @@ HUB_SUBCLASS_INVENTORIES: dict[str, tuple[str, ...]] = {
         "property",
         "auto",
     ),
-    "compliance_filing": (
-        "10-K",
-        "10-Q",
-        "8-K",
-        "S-1",
-        "DEF 14A",
-        "13D",
-        "13G",
-        "Form 4",
-        "20-F",
-        "6-K",
+    "merger_agreement": (
+        "all_cash",
+        "all_stock",
+        "mixed_cash_stock",
+        "mixed_cash_stock_election",
         "other",
     ),
 }
 
-COMPLIANCE_FILING_TYPES: tuple[str, ...] = HUB_SUBCLASS_INVENTORIES["compliance_filing"]
+#: Retired class (llm-mailroom 0.7.1): kept for scoring historical traces
+#: only — it is no longer a Hub inventory.
+COMPLIANCE_FILING_TYPES: tuple[str, ...] = (
+    "10-K", "10-Q", "8-K", "S-1", "DEF 14A", "13D", "13G", "Form 4",
+    "20-F", "6-K", "other",
+)
 
 #: Extraction ``claim_type`` enum: CMS source tables first, then legacy FNOL.
 INSURANCE_CLAIM_EXTRACT_TYPES: tuple[str, ...] = (
@@ -269,9 +274,10 @@ def canonical_score_name(name: str) -> str:
 
 
 def align_doc_type(value: Any) -> str:
-    """HF aligned label: ``merger_agreement`` ≡ ``contract``."""
+    """HF aligned label for the ``aligned_accuracy`` metric only:
+    ``merger_agreement`` ≡ ``contract``."""
     key = str(value or "").strip().lower()
-    return EXTRACT_CLASS_ALIASES.get(key, key)
+    return HF_ALIGNED_ALIASES.get(key, key)
 
 
 def score_aligned_classification(

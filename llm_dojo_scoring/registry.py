@@ -66,6 +66,7 @@ __all__ = [
 # All specialists the registry still scores (live + retired historical).
 SPECIALIST_AGENTS: tuple[str, ...] = (
     "contracts_specialist",
+    "merger_agreement_specialist",
     "corporate_records_specialist",
     "due_diligence_specialist",
     "correspondence_specialist",
@@ -73,13 +74,14 @@ SPECIALIST_AGENTS: tuple[str, ...] = (
     "court_opinions_specialist",
     "insurance_claims_specialist",
 )
-#: Live llm-mailroom extraction roster (v0.5+). Retired specialists stay
-#: in SPECIALIST_AGENTS so historical traces still validate.
+#: Live llm-mailroom extraction roster (0.7.1 @959bb0b). Retired specialists
+#: (court_opinions / due_diligence / compliance) stay in SPECIALIST_AGENTS so
+#: historical traces still validate.
 LIVE_SPECIALIST_AGENTS: tuple[str, ...] = (
     "contracts_specialist",
+    "merger_agreement_specialist",
     "corporate_records_specialist",
     "correspondence_specialist",
-    "compliance_specialist",
     "insurance_claims_specialist",
 )
 

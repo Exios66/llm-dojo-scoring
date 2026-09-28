@@ -301,14 +301,27 @@ def interpret(frame, metric: str = ea.DEFAULT_METRIC,
     return interp
 
 
-def render_notes(interp: Interpretation) -> str:
-    """Plain-text rendering of an interpretation (CLI / report use)."""
+def render_notes(interp: Interpretation, *, markdown: bool = False) -> str:
+    """Render an interpretation as plain text (CLI) or Markdown (reports).
+
+    The plain form keeps the ``[i]`` / ``[!]`` / ``[!!]`` markers with the
+    detail indented beneath. The Markdown form is a bullet list with the
+    detail on its own continuation line — the plain form pasted into Markdown
+    collapsed every note into one paragraph (and 4-space details became code).
+    """
+    markers = {"info": "[i]", "warning": "[!]", "critical": "[!!]"}
     lines = []
     for note in interp.notes:
-        marker = {"info": "[i]", "warning": "[!]", "critical": "[!!]"}[note.severity]
-        lines.append(f"{marker} {note.headline}")
-        if note.detail:
-            lines.append(f"    {note.detail}")
+        marker = markers[note.severity]
+        if markdown:
+            label = {"info": "Note", "warning": "Warning", "critical": "Critical"}[note.severity]
+            lines.append(f"- **{label} {marker}** {note.headline}")
+            if note.detail:
+                lines.append(f"  <br>{note.detail}")
+        else:
+            lines.append(f"{marker} {note.headline}")
+            if note.detail:
+                lines.append(f"    {note.detail}")
     return "\n".join(lines)
 
 

@@ -171,7 +171,10 @@ class LangfuseSink:
         if not self.available or self._client is None:
             return
         try:
-            self._client.score(
+            # Langfuse >= 3 renamed ``score`` to ``create_score``; calling the
+            # old name on the v3/v4 client failed every emit.
+            create = getattr(self._client, "create_score", None) or getattr(self._client, "score")
+            create(
                 trace_id=record.metadata.get("trace_id"),
                 name=_wire_score_name(record.metric),
                 value=record.value,
@@ -181,11 +184,12 @@ class LangfuseSink:
         except Exception as exc:  # never fatal — but never silent either (DMR-061)
             global SINK_EMIT_FAILURES
             SINK_EMIT_FAILURES += 1
+            # The value is deliberately NOT logged: string metrics can carry
+            # document content.
             _log.error(
-                "LangfuseSink.emit FAILED for metric %r value=%r (trace_id=%r) — "
+                "LangfuseSink.emit FAILED for metric %r (trace_id=%r) — "
                 "this score record is LOST to the sink; %d emit failure(s) so far",
                 record.metric,
-                record.value,
                 record.metadata.get("trace_id"),
                 SINK_EMIT_FAILURES,
                 exc_info=exc,
@@ -209,7 +213,10 @@ class LangfuseSink:
 def _aggregate(values: list[Any], mode: str) -> Any:
     if not values:
         return None
-    numeric = [v for v in values if isinstance(v, (int, float))]
+    numeric = [
+        v for v in values
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and v == v
+    ]
     if mode == "sum":
         return float(sum(numeric)) if numeric else None
     if mode == "none":
@@ -228,7 +235,14 @@ class Emitter:
         registry: Registry | None = None,
     ) -> None:
         self.sinks: list[ScoreSink] = list(sinks) if sinks is not None else [LocalManifestSink()]
-        self.registry = registry or load_registry()
+        # A private copy: ad-hoc register_metric() calls must not leak into
+        # the process-wide cached registry every other consumer shares.
+        if registry is None:
+            import copy
+
+            registry = copy.copy(load_registry())
+            registry.metrics = dict(registry.metrics)
+        self.registry = registry
         self._records: list[ScoreRecord] = []
 
     # -- emitting ------------------------------------------------------------

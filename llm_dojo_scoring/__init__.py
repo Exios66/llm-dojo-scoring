@@ -15,7 +15,7 @@ from importlib import metadata
 try:
     __version__ = metadata.version("llm-dojo-scoring")
 except metadata.PackageNotFoundError:
-    __version__ = "0.16.0"
+    __version__ = "0.17.0"
 
 from . import (
     bundles,
@@ -36,23 +36,39 @@ from . import (
     cost,
     diagnostics,
     equivalences,
-    error_analysis,
-    experiment,
-    export,
     extraction_metrics,
     failure_modes,
     field_scoring,
     intake,
-    io,
-    interpret,
-    langfuse_sync,
-    phoenix_sync,
     prompts,
-    report,
     serving,
     tasks,
-    visualize,
 )
+
+# pandas / matplotlib heavy modules load on first attribute access (PEP 562):
+# ``import llm_dojo_scoring`` used to pull in matplotlib.pyplot + pandas
+# (~1 s) for every consumer, including the mailroom API and watcher.
+_LAZY_SUBMODULES = frozenset({
+    "error_analysis",
+    "export",
+    "interpret",
+    "io",
+    "langfuse_sync",
+    "report",
+    "visualize",
+    "phoenix_sync",
+    "experiment",
+})
+
+
+def __getattr__(name: str):
+    if name in _LAZY_SUBMODULES:
+        import importlib
+
+        module = importlib.import_module(f".{name}", __name__)
+        globals()[name] = module
+        return module
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 # Convenience re-exports (the most common entry points).
 from .bootstrap import bootstrap_ci, delta_significance, wilson_ci

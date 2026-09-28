@@ -47,6 +47,21 @@ def _chars(value: Any) -> list[str]:
 
 def _levenshtein(ref: Sequence[str], hyp: Sequence[str]) -> int:
     """Classic Wagner–Fischer edit distance (insert / delete / substitute)."""
+    # Trim the shared prefix/suffix first (typical transcripts differ in a
+    # few places), then keep the inner loop over the shorter sequence. Still
+    # O(n*m) in the worst case, but near-identical long transcripts drop from
+    # ~1e10 steps to a handful.
+    ref, hyp = list(ref), list(hyp)
+    start = 0
+    while start < len(ref) and start < len(hyp) and ref[start] == hyp[start]:
+        start += 1
+    end_r, end_h = len(ref), len(hyp)
+    while end_r > start and end_h > start and ref[end_r - 1] == hyp[end_h - 1]:
+        end_r -= 1
+        end_h -= 1
+    ref, hyp = ref[start:end_r], hyp[start:end_h]
+    if len(hyp) > len(ref):
+        ref, hyp = hyp, ref  # edit distance is symmetric
     n, m = len(ref), len(hyp)
     if n == 0:
         return m

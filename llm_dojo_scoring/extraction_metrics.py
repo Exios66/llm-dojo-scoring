@@ -10,8 +10,14 @@ Confusion model
 * **TP**: that field's typed score is ``>= 1.0`` (exact / list F1 of 1.0).
   Partial list matches are **not** TP; they stay in ``extraction_overall_score``.
 * **FN**: expected field scored ``< 1.0``.
-* **FP**: predicted extra keys not in expected, **or** unmatched predicted
-  items on an ``entity_list`` field (``EntityListScore.unmatched_predicted``).
+* **FP**: a scalar field predicted with a WRONG value (it is both a miss and
+  a false assertion), unmatched predicted items on an ``entity_list`` field
+  (``EntityListScore.unmatched_predicted``), and predicted content fields the
+  ground truth does not expect. Metadata keys (``reasoning``, ``confidence``,
+  ``_private``, ...) are never FPs.
+* ``gt_presence`` (v9.1): ``not_applicable`` / ``pending_annotation`` fields
+  are ignored entirely; a ``schema_documented_absence`` field is not an
+  expected event, but a populated prediction for it is an FP.
 
 Then ``P = TP/(TP+FP)``, ``R = TP/(TP+FN)``, ``F1 = 2PR/(P+R)``,
 ``F2 = 5PR/(4P+R)`` — the same F-beta formula as ContractEval in
@@ -23,17 +29,26 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from .classification import fbeta
-from .field_scoring import ExtractionScoreResult, score_extraction
+from .field_scoring import (
+    PRESENCE_DOCUMENTED_ABSENCE,
+    PRESENCE_POPULATED,
+    ExtractionScoreResult,
+    _is_empty_value,
+    field_is_scored,
+    parse_gt_presence,
+    score_extraction,
+)
 
-_EMPTY = (None, "", [], {})
+# Keys a structured extraction carries that are not extracted content.
+METADATA_KEYS = frozenset({
+    "reasoning", "confidence", "notes", "explanation", "rationale",
+    "doc_type", "doc_subclass", "contract_subtype", "extraction_confidence",
+    "classification_confidence", "evidence", "citations", "warnings",
+})
 
 
 def _is_empty(value: Any) -> bool:
-    if value in _EMPTY:
-        return True
-    if isinstance(value, str) and not value.strip():
-        return True
-    return False
+    return _is_empty_value(value)
 
 
 def _public_prf(
@@ -84,6 +99,7 @@ def extraction_binary_metrics(
     doc_class: str = "extraction",
     result: ExtractionScoreResult | None = None,
     doc_text: str | None = None,
+    gt_presence: Mapping[str, Any] | str | None = None,
 ) -> dict[str, Any]:
     """Run-level (or single-doc) field-micro P/R/F1/F2.
 
@@ -94,32 +110,47 @@ def extraction_binary_metrics(
     expected = dict(expected or {})
     predicted = dict(predicted or {})
     types = dict(field_map or field_types or {})
+    presence = parse_gt_presence(gt_presence)
     if result is None:
         result = score_extraction(
-            doc_class, types, predicted, expected, doc_text=doc_text
+            doc_class, types, predicted, expected, doc_text=doc_text,
+            gt_presence=presence,
         )
 
     tp = 0
     fn = 0
     fp = 0
     expected_events = 0
+    scored_keys: set[str] = set()
 
     for name, exp_val in expected.items():
-        if _is_empty(exp_val):
+        if not field_is_scored(name, exp_val, presence):
             continue
+        scored_keys.add(name)
         expected_events += 1
         score = float(result.field_scores.get(name, 0.0))
+        list_score = result.entity_list_scores.get(name)
         if score >= 1.0:
             tp += 1
         else:
             fn += 1
-        list_score = result.entity_list_scores.get(name)
+            if list_score is None and not _is_empty(predicted.get(name)):
+                fp += 1  # wrong scalar value: a false assertion too
         if list_score is not None:
             fp += int(list_score.unmatched_predicted)
 
+    def _counts_as_content(key: str) -> bool:
+        return key not in METADATA_KEYS and not key.startswith("_")
+
     for key, value in predicted.items():
-        if key not in expected and not _is_empty(value):
-            fp += 1
+        if key in scored_keys or _is_empty(value) or not _counts_as_content(key):
+            continue
+        code = presence.get(key)
+        if code is not None and code not in (PRESENCE_POPULATED, PRESENCE_DOCUMENTED_ABSENCE):
+            continue  # not applicable / pending: no ground truth either way
+        if key in expected and not _is_empty(expected.get(key)) and code is None:
+            continue
+        fp += 1
 
     precision = round(tp / (tp + fp), 4) if (tp + fp) else 0.0
     recall = round(tp / (tp + fn), 4) if (tp + fn) else 0.0

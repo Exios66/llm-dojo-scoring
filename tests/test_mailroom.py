@@ -31,24 +31,28 @@ from llm_dojo_scoring.tasks import score_task
 
 
 def test_live_roster_is_five_specialists():
+    # llm-mailroom 0.7.1 @959bb0b: merger_agreement is live with its own
+    # specialist; compliance_filing is retired.
     assert LIVE_DOC_TYPES == (
         "contract",
+        "merger_agreement",
         "corporate_record",
         "correspondence",
-        "compliance_filing",
         "insurance_claim",
     )
     assert set(LIVE_SPECIALISTS) == set(LIVE_SPECIALIST_AGENTS)
     assert len(LIVE_SPECIALISTS) == 5
-    assert set(RETIRED_DOC_TYPES) == {"court_opinion", "due_diligence"}
+    assert "merger_agreement_specialist" in LIVE_SPECIALISTS
+    assert set(RETIRED_DOC_TYPES) == {"court_opinion", "due_diligence", "compliance_filing"}
     assert UNKNOWN_DOC_TYPE in SORTER_LABEL_SET
     assert "merger_agreement" in SORTER_LABEL_SET
-    assert "merger_agreement" not in LIVE_DOC_TYPES
+    assert "compliance_filing" not in SORTER_LABEL_SET
 
 
 def test_extract_alias_and_retired_never_extract():
-    assert EXTRACT_CLASS_ALIASES["merger_agreement"] == "contract"
-    assert resolve_extract_class("merger_agreement") == "contract"
+    assert "merger_agreement" not in EXTRACT_CLASS_ALIASES
+    assert resolve_extract_class("merger_agreement") == "merger_agreement"
+    assert resolve_extract_class("compliance_filing") is None
     assert resolve_extract_class("contract") == "contract"
     assert resolve_extract_class("unknown") is None
     assert resolve_extract_class("court_opinion") is None

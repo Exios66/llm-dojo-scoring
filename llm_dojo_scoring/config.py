@@ -155,19 +155,21 @@ DOCCLASS_FAILURE_MODES: dict[str, dict[str, str]] = {
 # ---------------------------------------------------------------------------
 
 # Full historical + live class set the scorer still understands.
-# Live pipeline (llm-mailroom v0.5+) extracts five of these; court_opinion
-# and due_diligence are RETIRED (sorter emits ``unknown``); merger_agreement
-# is an extract alias of contract. See :mod:`llm_dojo_scoring.mailroom`.
+# Live pipeline (llm-mailroom 0.7.1 @959bb0b) extracts five of these —
+# merger_agreement is a first-class class with its own specialist and
+# MergerAgreementExtraction schema. court_opinion, due_diligence and
+# compliance_filing are RETIRED (sorter emits ``unknown``); their suites stay
+# for historical traces. See :mod:`llm_dojo_scoring.mailroom`.
 DOC_CLASS_KEYS: list[str] = [
     "contract", "corporate_record", "due_diligence", "correspondence",
     "compliance_filing", "court_opinion", "insurance_claim",
     "merger_agreement",
 ]
 LIVE_DOC_CLASS_KEYS: list[str] = [
-    "contract", "corporate_record", "correspondence",
-    "compliance_filing", "insurance_claim",
+    "contract", "merger_agreement", "corporate_record", "correspondence",
+    "insurance_claim",
 ]
-RETIRED_DOC_CLASS_KEYS: list[str] = ["court_opinion", "due_diligence"]
+RETIRED_DOC_CLASS_KEYS: list[str] = ["court_opinion", "due_diligence", "compliance_filing"]
 
 # MAUD merger-agreement consideration-type subclass (expert GT dimension —
 # `Type of Consideration`). Keys are the canonical snake_case form used by the
@@ -253,7 +255,12 @@ TASK_KINDS: dict[str, str] = {
 # Cost models (per-1M token USD, input / output) — OpenRouter list prices
 # ---------------------------------------------------------------------------
 
+# Mirrors llm-mailroom ``src/config/taxonomy.yaml`` ``cost_models`` (0.7.1
+# @959bb0b). Every live agent — the judge included — runs qwen3.7-flash;
+# gmail_triage uses the free router.
 DEFAULT_COST_MODELS: dict[str, tuple[float, float]] = {
+    "openrouter/free": (0.0, 0.0),
+    "z-ai/glm-5.2:free": (0.0, 0.0),
     "qwen/qwen3.7-flash": (0.03, 0.13),
     "deepseek/deepseek-v4-flash": (0.05, 0.25),
     "deepseek/deepseek-v4-pro": (0.435, 0.87),
@@ -261,10 +268,31 @@ DEFAULT_COST_MODELS: dict[str, tuple[float, float]] = {
 
 # Model slug -> display name (matches the reference workbooks).
 DEFAULT_MODEL_DISPLAY: dict[str, str] = {
+    "openrouter/free": "OpenRouter Free Router",
+    "z-ai/glm-5.2:free": "GLM 5.2 (free)",
     "qwen/qwen3.7-flash": "Qwen 3.7-Flash",
     "deepseek/deepseek-v4-flash": "DeepSeek V4 Flash",
     "deepseek/deepseek-v4-pro": "DeepSeek V4 Pro",
 }
+
+
+def coerce_cost_model(prices: Any) -> tuple[float, float] | None:
+    """``(input, output)`` USD per 1M tokens from either the dojo's
+    ``[in, out]`` list form or llm-mailroom's taxonomy form
+    ``{input_per_million, output_per_million}`` (which used to be dropped
+    silently, so its models had no price)."""
+    try:
+        if isinstance(prices, dict):
+            inp = prices.get("input_per_million", prices.get("input"))
+            out = prices.get("output_per_million", prices.get("output"))
+            if inp is None or out is None:
+                return None
+            return float(inp), float(out)
+        if isinstance(prices, (list, tuple)) and len(prices) == 2:
+            return float(prices[0]), float(prices[1])
+    except (TypeError, ValueError):
+        return None
+    return None
 
 # ---------------------------------------------------------------------------
 # Settings
@@ -433,8 +461,9 @@ def _apply_dict(settings: Settings, data: dict[str, Any]) -> None:
         settings.per_subtype = [str(k) for k in (data["per_subtype"] or [])]
     cost = data.get("cost_models") or {}
     for model, prices in cost.items():
-        if isinstance(prices, (list, tuple)) and len(prices) == 2:
-            settings.cost_models[str(model)] = (float(prices[0]), float(prices[1]))
+        coerced = coerce_cost_model(prices)
+        if coerced is not None:
+            settings.cost_models[str(model)] = coerced
     display = data.get("model_display") or {}
     for model, label in display.items():
         settings.model_display[str(model)] = str(label)
@@ -452,16 +481,29 @@ def _apply_dict(settings: Settings, data: dict[str, Any]) -> None:
 
 
 @lru_cache(maxsize=1)
-def load_settings(path: str | Path | None = None) -> Settings:
-    """Load settings from a YAML file (or env-overridden path); falls back to
-    pure defaults when no file is given or found. Cached for the env/default
-    resolution — explicit ``path`` calls read fresh (tests / hot-reload)."""
-    if path is not None and str(path).strip():
-        return _load_from_path(Path(path))
+def _default_settings() -> Settings:
     env_path = os.environ.get(_ENV_CONFIG_PATH, "")
     if env_path.strip() and Path(env_path).exists():
         return _load_from_path(Path(env_path))
     return Settings()
+
+
+def load_settings(path: str | Path | None = None) -> Settings:
+    """Load settings from a YAML file (or env-overridden path); falls back to
+    pure defaults when no file is given or found.
+
+    Only the env/default resolution is cached (it is the process-wide
+    object :func:`get_settings` returns). An explicit ``path`` always reads
+    fresh and never touches that cache — it used to share one lru slot, so a
+    single explicit-path call evicted the process settings and silently
+    discarded any ``configure_from_taxonomy`` wiring.
+    """
+    if path is not None and str(path).strip():
+        return _load_from_path(Path(path))
+    return _default_settings()
+
+
+load_settings.cache_clear = _default_settings.cache_clear  # type: ignore[attr-defined]
 
 
 def _load_from_path(path: Path) -> Settings:
@@ -516,6 +558,8 @@ def configure(**overrides: Any) -> Settings:
             else:
                 raise AttributeError(f"unknown setting {key}")
         else:
+            if not hasattr(settings, key):
+                raise AttributeError(f"unknown setting {key}")
             setattr(settings, key, value)
     return settings
 
@@ -544,9 +588,10 @@ def configure_from_taxonomy(taxonomy: dict | None) -> Settings:
     """
     env_path = os.environ.get(_ENV_CONFIG_PATH, "")
     if env_path.strip() and Path(env_path).exists():
-        # External config file wins wholesale (escape hatch).
+        # External config file wins wholesale (escape hatch): reload the
+        # process-wide object from it so get_settings() returns the same one.
         load_settings.cache_clear()
-        return load_settings(Path(env_path))
+        return get_settings()
 
     if not taxonomy:
         return get_settings()

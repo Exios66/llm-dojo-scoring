@@ -113,6 +113,8 @@ def test_default_profiles():
         "intake",
         # v0.12.0: local vs API serving comparison
         "local_vs_api",
+        # v0.17.0: dedicated MAUD specialist (llm-mailroom 0.7.1)
+        "merger_agreement_specialist",
     }
     assert set(list_profiles()) == expected
 

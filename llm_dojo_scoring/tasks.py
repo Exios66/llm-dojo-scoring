@@ -45,6 +45,9 @@ from .equivalences import equivalent_doc_subclasses, normalize_doc_subclass
 _ALIAS_RE = re.compile(r"[^a-z0-9]+")
 
 
+#: Raw subclass values that mean the catalog's other-bucket.
+_OTHER_SPELLINGS = frozenset({"other", "others", "misc", "miscellaneous", "other_type"})
+
 def _fold(value: Any) -> str:
     """Lowercase, non-alphanumerics -> single spaces (for fuzzy matching)."""
     return _ALIAS_RE.sub(" ", str(value).strip().lower()).strip()
@@ -360,17 +363,32 @@ def score_task(
             sub_ok_equiv = []
             sub_exp_norm = []
             sub_pred_norm = []
+            def _recognized(doc_type, raw, norm) -> bool:
+                # Anything outside the catalog normalizes to "other"; only a
+                # value that actually SAYS other counts as the other-bucket.
+                # Two unrelated garbage strings used to match as "other".
+                if norm != "other":
+                    return True
+                return str(raw or "").strip().lower() in _OTHER_SPELLINGS
+
             for e, p, doc_type in zip(expected_subclass, predicted_subclass, doc_exp):
                 # Scope the subclass catalog to the *expected* doc type so a
                 # CUAD family is not forced through the MAUD consideration
                 # normalizer (the pre-0.8.1 bug on the merged corpus).
                 en = normalize_corpus_subclass(doc_type, e)
                 pn = normalize_corpus_subclass(doc_type, p)
+                if not _recognized(doc_type, p, pn):
+                    pn = "__unrecognized__"
+                if not _recognized(doc_type, e, en):
+                    en = "__unlabeled__"
                 sub_exp_norm.append(en)
                 sub_pred_norm.append(pn)
-                sub_ok.append(1.0 if en == pn else 0.0)
+                sub_ok.append(1.0 if en == pn and not en.startswith("__") else 0.0)
+                sentinel = en.startswith("__") or pn.startswith("__")
                 sub_ok_equiv.append(
-                    1.0 if (en == pn or subclass_equivalent(doc_type, en, pn)) else 0.0
+                    1.0 if (en == pn and not sentinel) or (
+                        not sentinel and subclass_equivalent(doc_type, en, pn)
+                    ) else 0.0
                 )
             exact = [1.0 if (de == dp and se == sp)
                      else 0.0 for de, dp, se, sp in
