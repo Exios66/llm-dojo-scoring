@@ -12,16 +12,12 @@
 
 | Example | Description |
 |:---|:---|
-| `basic_scoring.py` | Basic field-type scoring |
-| `entity_list_scoring.py` | Entity list scoring with bipartite matching |
-| `regression_diagnostics.py` | MAE/R² regression diagnostics |
-| `factuality_audit.py` | Factuality audit with hallucination counts |
+| `analyze_sorter_results.py` | Load a sorter results workbook, interpret it, and write the Markdown report + plots |
 
 ## Usage
 
 ```bash
-cd packages/llm-dojo-scoring
-python examples/basic_scoring.py
+python examples/analyze_sorter_results.py --help
 ```
 
 ## Related Files

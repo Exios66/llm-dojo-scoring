@@ -16,7 +16,7 @@ scorers, and reporting scripts keep working with minimal edits.
 
 ```bash
 # in llm-entity-extraction / llm-mailroom — pin the published tag
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.16.0"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.17.0"
 # or from a local checkout
 pip install -e /path/to/llm-dojo-scoring
 ```
@@ -24,10 +24,10 @@ pip install -e /path/to/llm-dojo-scoring
 `pyproject.toml` / `requirements.txt`:
 
 ```
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.16.0
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.17.0
 ```
 
-Do not pin a merge SHA. Release notes: https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.16.0
+Do not pin a merge SHA. Release notes: https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.17.0
 
 ## 2. Import swap table
 
@@ -468,6 +468,74 @@ out = get_suite("contracts_specialist").score(
 Typed-field formulas are unchanged. Prompt-catalog archives may still mention
 `key_obligations` for lineage; scoring defaults do not. Do not push pin PRs to
 dependents from this package PR.
+
+## 3j. Pinning the v0.17.0 release (scoring-semantics fixes + llm-mailroom 0.7.1 sync)
+
+```
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.17.0
+```
+
+**Scores shift in 0.17.0.** Each change below fixes a wrong-but-plausible
+score, so a 0.16 → 0.17 comparison on the same traces is not like-for-like.
+Re-score the baseline with 0.17.0 before comparing prompt or model versions.
+
+| Case | 0.16.0 | 0.17.0 | Why |
+| --- | ---: | ---: | --- |
+| `name`: "John" vs gold "John Smith" | 1.0 | 0.75 | a strict token subset is a truncated name, not a match |
+| `name`: "Bank" vs "Bank of America" | 1.0 | 0.75 | same |
+| `name`: "CO" vs "PA" | 1.0 | 0.0 | suffix stripping blanked both sides |
+| `name`: "O’Brien" vs "O'Brien" | 0.714 | 1.0 | typographic quotes folded |
+| `name`: "None" vs `None` | 1.0 | 0.0 | `None` was the literal word "None" |
+| `date`: "March 15, 2024" vs gold "March 2024" | 0.67* | 1.0 | partial dates filled from *today*; now only stated parts compare |
+| `money`: "5M USD" vs 5000000 | 0.154 | 1.0 | suffix + currency code parsing |
+| `money`: "$1.5 million" vs 1500000 | 0.222 | 1.0 | word scales |
+| `money`: "€100" vs "$100" | 1.0 | 0.0 | currency mismatch |
+| `id`: "AB 123" vs "AB123" | 0.0 | 1.0 | IDs compare alphanumerics only |
+| `entity_list`: ["A","B"] vs [] — precision | 1.0 | 0.0 | predictions against empty gold are unsupported |
+| overall: gold `denial_reasons=[]`, field omitted | 0.5 | 1.0 | empty gold containers are not requirements |
+| binary precision: perfect extraction + `reasoning`/`confidence` keys | 0.333 | 1.0 | metadata keys are never FPs |
+
+\* 0.16 scored this 1.0 only when the run happened on the 15th of a month.
+
+Also changed:
+
+- **Judge gate:** `ambiguous_fields` now honours per-type `type_bands`
+  (`always` / `never` / custom), as the rest of the escalation path does.
+- **Entity lists:** sub-threshold pairs are zeroed before the Hungarian
+  assignment, so two 0.59 pairs no longer displace a 1.0 match.
+- **Binary P/R/F1:** a wrong scalar value is an FN *and* an FP.
+- **Headline pipeline accuracy is exact.** `n_ok` in Langfuse-synced run
+  records counts exact matches. `aligned_accuracy` (merger ≡ contract) is
+  still reported, as a coarse trend line only.
+- **Subclass accuracy:** unrecognized values never match as "other". The
+  Langfuse run aggregate counts every row with a gold subclass in the
+  denominator.
+
+Consumer steps:
+
+1. Bump the pin above (llm-mailroom `pyproject.toml`, agent-mailroom).
+2. **`merger_agreement` is its own class.** `get_suite("merger_agreement")`
+   returns `merger_agreement_specialist`, scoring the
+   `MergerAgreementExtraction` fields (no CUAD inventory).
+   `EXTRACT_CLASS_ALIASES` is now empty; the aligned metric reads
+   `mailroom.HF_ALIGNED_ALIASES`.
+3. **`compliance_filing` is retired** (`RETIRED_DOC_TYPES`), like
+   `court_opinion` / `due_diligence`: suites remain for historical traces,
+   and it is no longer in `LIVE_DOC_TYPES` / `SORTER_LABEL_SET`.
+4. **Pass v9.1 presence codes:** `score_extraction(..., gt_presence=row_gt["gt_presence"])`
+   and the same kwarg on `extraction_binary_metrics` (dict or JSON string).
+   `corpus.CORPUS_REVISION` = `"v9.1"`, `CORPUS_REVISION_SHA` = `ed7576b…`.
+5. **Paired A/B:** `delta_significance(a, b, paired=True)` when both systems
+   scored the same documents in the same order.
+6. **Remote embeddings are opt-in:** set `LLM_DOJO_REMOTE_EMBEDDINGS=1` to
+   let the embedding rescue call OpenRouter. `OPENROUTER_API_KEY` alone no
+   longer sends document text off-host.
+7. `LangfuseSink` works with Langfuse ≥ 3 (`create_score`).
+   `import llm_dojo_scoring` no longer loads pandas / matplotlib: `visualize`,
+   `report`, `export`, `interpret`, `io`, `langfuse_sync`, `phoenix_sync`,
+   `error_analysis` and `experiment` load on first attribute access.
+8. `configure(unknown_key=...)` now raises `AttributeError`, and
+   `load_settings(path)` no longer evicts the process-wide settings.
 
 ## 4. Verification
 

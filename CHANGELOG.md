@@ -5,6 +5,104 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-09-28
+
+Constellation sync to llm-mailroom 0.7.1 @959bb0b and mailroom-dataset v9.1,
+plus a full scoring audit. **Scores shift**, so re-score baselines before
+comparing. The before/after table is in `docs/MIGRATION.md` § 3j.
+
+### Added
+
+- **v9.1 `gt_presence`**: `score_extraction` / `extraction_binary_metrics`
+  take `gt_presence=` (dict or JSON). Fields that are not `populated` are
+  not requirements, and a populated prediction for a
+  `schema_documented_absence` field is an FP. Also new: `parse_gt_presence`,
+  `field_is_scored`, and `corpus.CORPUS_REVISION` / `CORPUS_REVISION_SHA` /
+  `CONTEXT_WINDOW_BANDS`.
+- **`merger_agreement_specialist`**: profile, suite (MAUD extras), registry
+  agent, and production prompt (verbatim from llm-mailroom).
+- `delta_significance(paired=True)`, `coerce_cost_model`,
+  `visualize.plot_confusion_matrix`, `visualize.plot_field_accuracy`,
+  `render_notes(markdown=True)`, and `cost_mean_usd` on `tokens_summary`.
+
+### Changed
+
+- `merger_agreement` is a live class with its own
+  `MergerAgreementExtraction` field map. `compliance_filing` /
+  `compliance_specialist` / `compliance_auditor` are retired, with suites
+  kept for history. Headline pipeline accuracy is exact.
+- The model registry mirrors llm-mailroom `cost_models` (`openrouter/free`,
+  `z-ai/glm-5.2:free`), and taxonomy dict-form prices now parse.
+- The production prompt catalog is re-synced verbatim from llm-mailroom
+  @959bb0b (`contracts_specialist_v33`, `sorter_v14`), and the sorter no
+  longer lists `compliance_filing`.
+- **Plots redesigned:** a validated colour-blind-safe categorical order, a
+  single-hue sequential ramp (no red/green heatmaps), recessive axes,
+  scale-aware axes, and legends above the plot.
+- `import llm_dojo_scoring` is ~6× faster: pandas / matplotlib modules
+  load lazily.
+- Remote (OpenRouter) embeddings require `LLM_DOJO_REMOTE_EMBEDDINGS=1`.
+
+### Fixed
+
+- **Name scoring:**
+  - subset names scored 1.0
+  - suffix-only values scored 1.0 against each other
+  - typographic quotes weren't folded
+  - `None` matched "None"
+- **Dates:** partial dates depended on the day the run happened.
+- **Money:** "5M USD", "$1.5 million", "(1,000)" and "USD 100" didn't parse;
+  currency was ignored; `True` counted as money.
+- **IDs:** didn't strip spaces or hyphens.
+- **Judge gate:** ignored `type_bands`.
+- **Entity lists:**
+  - the Hungarian assignment could trade a real match for sub-threshold pairs
+  - empty gold gave precision 1.0
+- **Binary P/R/F1:**
+  - `reasoning` / `confidence` counted as FPs
+  - a wrong scalar counted only as an FN
+- **Subclass accuracy:**
+  - garbage values matched as "other"
+  - the Langfuse aggregate used the subclass as the doc-type gold
+  - its subclass denominator was inflated
+- **Bootstrap:** NaN poisoned the CI, and the percentile indices were asymmetric.
+- **CUAD subtypes:** the 8-character label-prefix match mis-mapped them.
+- **Crashes:**
+  - `score_category_presence` on string `reasoning`
+  - `tokens_summary` on "12.5"
+  - batch `score()` given list-vs-dict input
+  - `pd.NA` / pipes in Markdown tables
+- **`LangfuseSink`** failed every emit on Langfuse ≥ 3, and logged metric
+  values.
+- **Metric registry:** `Emitter.register_metric` leaked into the shared
+  registry.
+- **Settings:** an explicit `load_settings(path)` evicted the process
+  settings; `configure()` silently accepted unknown keys.
+- **`langfuse_sync`:**
+  - could stall for ~20 minutes on retries
+  - crashed on string trace inputs
+  - loaded `~/.env`
+  - didn't URL-quote trace ids
+- **Embedding matcher:**
+  - race during warm-up
+  - mixed vector dimensions
+  - unbounded cache
+- **ASR edit distance:** now trims shared affixes.
+- **CLI:** output names contained `:`.
+- **Plots:** the CI plot always drew the Subtype Accuracy whiskers.
+
+### Removed
+
+- `mcp_push_queue_runner.py` (operator scratch script) and
+  `tools/digital-mailroom-feeder-resync/` (a base64 git bundle of another
+  repo).
+
+Consumer pin:
+
+```
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.17.0
+```
+
 ## [0.16.0] - 2026-09-27
 
 ### Added
