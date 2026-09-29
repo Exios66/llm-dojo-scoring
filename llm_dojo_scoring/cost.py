@@ -71,6 +71,9 @@ def estimate_for_record(record: dict) -> dict[str, Any]:
     if cost is not None:
         n_rows = record.get("n_rows") or 0
         per_doc = round(cost / n_rows, 6) if n_rows else None
+    basis = record.get("cost_basis") or record.get("usd_basis") or "busy_window"
+    if basis not in {"busy_window", "billed_incl_cold"}:
+        basis = "busy_window"
     return {
         "cost_estimated_usd": cost,
         "per_doc_usd": per_doc,
@@ -78,6 +81,7 @@ def estimate_for_record(record: dict) -> dict[str, Any]:
         "completion_tokens": completion,
         "model": model,
         "price_source": price_for(model),
+        "cost_basis": basis,
     }
 
 
@@ -105,6 +109,13 @@ def tokens_summary(usage_records: list[dict], model: str | None = None) -> dict:
     cost_estimated = None
     if model:
         cost_estimated = estimate_cost(prompt, completion, model)
+    cost_basis = None
+    for usage in usage_records or []:
+        if isinstance(usage, dict) and usage.get("cost_basis"):
+            cost_basis = usage.get("cost_basis")
+            break
+    if cost_basis is None:
+        cost_basis = "busy_window"
     return {
         "prompt_tokens": prompt,
         "completion_tokens": completion,
@@ -112,6 +123,7 @@ def tokens_summary(usage_records: list[dict], model: str | None = None) -> dict:
         "cost_usd": round(sum(cost_values) / len(cost_values), 6) if cost_values else 0.0,
         "cost_total_usd": round(sum(cost_values), 6),
         "cost_estimated_usd": cost_estimated,
+        "cost_basis": cost_basis,
         "rows_with_usage": rows,
     }
 
