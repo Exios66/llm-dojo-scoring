@@ -28,6 +28,7 @@ from .corpus import (
     MAUD_QUESTION_KEYS,
 )
 from .tasks import normalize_maud_consideration
+from .scorecard_honesty import detect_maud_gt_ambiguity
 
 __all__ = [
     "CORRESPONDENCE_CONTENT_KEYS",
@@ -294,6 +295,8 @@ def _record_from_value(value: Any) -> dict[str, str]:
         if answer is None:
             answer = value.get("value") or value.get("label") or ""
         category = value.get("category") or ""
+        if isinstance(answer, (list, tuple)):
+            return {"answer": list(answer), "category": str(category)}
         return {"answer": str(answer), "category": str(category)}
     return {"answer": "" if value is None else str(value), "category": ""}
 
@@ -398,15 +401,20 @@ def score_maud_extraction(expected: Any, predicted: Any) -> dict:
     n_valid = 0
     n_category = 0
     n_category_ok = 0
+    n_ambiguous = 0
     per_doc: list[dict] = []
 
     for exp_raw, pred_raw in docs:
         exp_labels = parse_maud_labels(exp_raw)
         pred_labels = parse_maud_labels(pred_raw)
+        ambiguous_keys = detect_maud_gt_ambiguity(exp_labels)
         doc_n = 0
         doc_exact = 0
         doc_present = 0
         for question, rec in exp_labels.items():
+            if question in ambiguous_keys:
+                n_ambiguous += 1
+                continue
             stats = question_stats.get(question)
             if stats is None:
                 stats = extra_questions.setdefault(
@@ -473,19 +481,23 @@ def score_maud_extraction(expected: Any, predicted: Any) -> dict:
     return {
         "task": "maud_extraction",
         "kind": "maud_extraction",
-        "maud_question_accuracy": round(n_exact / n_expected, 4) if n_expected else 0.0,
+        "status": "unscorable" if n_expected == 0 and n_ambiguous else "scored",
+        "reason": "gt_ambiguous" if n_expected == 0 and n_ambiguous else None,
+        "maud_question_accuracy": round(n_exact / n_expected, 4) if n_expected else None,
         "maud_question_macro_accuracy": (
             round(sum(question_accuracies) / len(question_accuracies), 4)
-            if question_accuracies else 0.0
+            if question_accuracies else None
         ),
-        "maud_clause_presence": round(n_present / n_expected, 4) if n_expected else 0.0,
-        "maud_valid_class_rate": round(n_valid / n_present, 4) if n_present else 0.0,
+        "maud_clause_presence": round(n_present / n_expected, 4) if n_expected else None,
+        "maud_valid_class_rate": round(n_valid / n_present, 4) if n_present else None,
         "maud_category_accuracy": (
-            round(n_category_ok / n_category, 4) if n_category else 0.0
+            round(n_category_ok / n_category, 4) if n_category else None
         ),
         "n_questions": n_expected,
+        "n_ambiguous": n_ambiguous,
         "n_documents": len(docs),
         "n_present": n_present,
+        "metric_id": "maud.question.micro_accuracy",
         "per_question": per_question,
         "per_document": per_doc,
     }

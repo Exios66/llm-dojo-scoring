@@ -653,9 +653,22 @@ class ScoringSuite:
             merge_extraction_counts,
             prf_bundle_keys,
         )
+        from .scorecard_honesty import (
+            assess_extraction_gt,
+            metric_id_for,
+            score_format_layer,
+            stamp_provenance,
+            unscorable_extraction_result,
+        )
 
         ftypes = field_types or self.field_types
         doc_class = self.doc_type or self.name
+        presence = kwargs.get("presence_expectations")
+        format_scores = score_format_layer(
+            predicted=predicted if not isinstance(predicted, str) else None,
+            predicted_raw=predicted if isinstance(predicted, str) else kwargs.get("predicted_raw"),
+            required_keys=list(ftypes.keys()) if ftypes else None,
+        )
         extras: dict[str, Any] = {}
         peeled_exp: list = []
         peeled_pred: list = []
@@ -676,6 +689,35 @@ class ScoringSuite:
         sent_p = kwargs.get("predicted_sentiment")
         maud_e = kwargs.get("expected_maud")
         maud_p = kwargs.get("predicted_maud")
+
+        gt_target = expected
+        if isinstance(expected, list) and len(expected) == 1:
+            gt_target = expected[0]
+        assessment = assess_extraction_gt(
+            gt_target,
+            ftypes,
+            doc_class=doc_class,
+            presence_expectations=presence,
+        )
+        if not assessment.scorable and not isinstance(expected, list) and assessment.reason == "gt_no_extractable_fields":
+            return stamp_provenance(
+                unscorable_extraction_result(
+                    assessment,
+                    doc_class=doc_class,
+                    metric_id=metric_id_for(
+                        "extraction_overall_score", doc_class=doc_class
+                    ),
+                ),
+                metric_id=metric_id_for(
+                    "extraction_overall_score", doc_class=doc_class
+                ),
+                prompt_id=kwargs.get("prompt_id"),
+                dataset_revision=kwargs.get("dataset_revision"),
+                split=kwargs.get("split"),
+                draw_seed=kwargs.get("draw_seed"),
+                serving_kind=kwargs.get("serving_kind"),
+                model_id=kwargs.get("model_id"),
+            )
 
         if isinstance(expected, list) and isinstance(predicted, list):
             texts: Iterable[str | None]
@@ -754,7 +796,6 @@ class ScoringSuite:
 
         # CUAD / claim checklist presence (mailroom v0.6.0 board path). Pass
         # presence_expectations= from Hub GT; default field is cuad_clauses.
-        presence = kwargs.get("presence_expectations")
         if presence:
             from .field_scoring import score_category_presence
 
@@ -831,13 +872,58 @@ class ScoringSuite:
         if not extras and not is_batch:
             return extraction
         if not extras and is_batch:
-            return {"extraction": extraction, **prf_payload}
+            return stamp_provenance(
+                {
+                    "extraction": extraction,
+                    **prf_payload,
+                    "metric_id": metric_id_for(
+                        "extraction_overall_score", doc_class=doc_class
+                    ),
+                },
+                metric_id=metric_id_for(
+                    "extraction_overall_score", doc_class=doc_class
+                ),
+                prompt_id=kwargs.get("prompt_id"),
+                dataset_revision=kwargs.get("dataset_revision"),
+                split=kwargs.get("split"),
+                draw_seed=kwargs.get("draw_seed"),
+                serving_kind=kwargs.get("serving_kind"),
+                model_id=kwargs.get("model_id"),
+            )
         filtered = {
             k: v for k, v in extras.items()
             if k not in {"task", "kind", "topic", "sentiment", "per_question",
                          "per_document"}
         }
-        return {"extraction": extraction, **prf_payload, **filtered, "detail": extras}
+        mid = metric_id_for(
+            "extraction_category_presence" if presence else "extraction_overall_score",
+            doc_class=doc_class,
+            presence_mode=bool(presence),
+        )
+        if doc_class == "insurance_claim":
+            from .scorecard_honesty import check_schema_promotion_gate
+
+            filtered["schema_promotion_gate"] = check_schema_promotion_gate(
+                format_scores.get("schema_valid")
+            )
+        payload = {
+            "extraction": extraction,
+            **prf_payload,
+            **filtered,
+            **format_scores,
+            "detail": extras,
+            "metric_id": mid,
+        }
+        return stamp_provenance(
+            payload,
+            metric_id=mid,
+            prompt_id=kwargs.get("prompt_id"),
+            dataset_revision=kwargs.get("dataset_revision"),
+            split=kwargs.get("split"),
+            draw_seed=kwargs.get("draw_seed"),
+            serving_kind=kwargs.get("serving_kind"),
+            model_id=kwargs.get("model_id"),
+        )
 
     def _score_audit(
         self,

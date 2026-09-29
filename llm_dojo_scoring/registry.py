@@ -489,11 +489,22 @@ metrics:
     notes: "mailroom alias: extraction_overall_verified_precision"
   schema_valid:
     tier: 1
-    description: "Output parsed to the expected schema (quick health check — promoted per pruning plan)"
+    description: "Output parsed to the expected schema (T1 headline gate — v0.18)"
     applicable_agents: [ALL]
-    notes: "mailroom SCORE_CONFIGS name preserved; not computed in this package"
-    source: null
-    ground_truth: none
+    source: "scorecard_honesty.score_format_layer"
+    ground_truth: structural
+  parse_ok:
+    tier: 1
+    description: "Prediction parsed as JSON / structured output without prose wrapper"
+    applicable_agents: [ALL]
+    source: "scorecard_honesty.score_format_layer"
+    ground_truth: structural
+  schema_adherence:
+    tier: 1
+    description: "Required schema keys present after parse (alias of schema_valid when keys match)"
+    applicable_agents: [ALL]
+    source: "scorecard_honesty.score_format_layer"
+    ground_truth: structural
   parse_error:
     tier: 1
     description: "Output failed to parse (quick health check — promoted per pruning plan)"

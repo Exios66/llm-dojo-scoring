@@ -84,6 +84,7 @@ def extraction_binary_metrics(
     doc_class: str = "extraction",
     result: ExtractionScoreResult | None = None,
     doc_text: str | None = None,
+    penalize_spurious_empty: bool = True,
 ) -> dict[str, Any]:
     """Run-level (or single-doc) field-micro P/R/F1/F2.
 
@@ -106,6 +107,8 @@ def extraction_binary_metrics(
 
     for name, exp_val in expected.items():
         if _is_empty(exp_val):
+            if penalize_spurious_empty and not _is_empty(predicted.get(name)):
+                fp += 1
             continue
         expected_events += 1
         score = float(result.field_scores.get(name, 0.0))

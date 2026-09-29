@@ -5,7 +5,36 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
-## [0.16.0] - 2026-09-27
+## [0.18.0] - 2026-09-29
+
+Live-run calibration from hub release gate
+[LLM-Mailroom-Services/mailroom-issues#233](https://github.com/LLM-Mailroom-Services/mailroom-issues/issues/233)
+and Exios66/llm-dojo-scoring #16–#22.
+
+### Added
+
+- **`llm_dojo_scoring.scorecard_honesty`** — fail-closed unscorable GT (#16),
+  distinct `metric_id`s + incomparable comparisons (#17), format layer
+  (`parse_ok` / `schema_valid` / `schema_adherence`) (#18–#20), MAUD
+  `gt_ambiguous` / `n_ambiguous` (#19), run completion + ITT aggregates (#21),
+  provenance stamps + export refusal (#22).
+- **`docs/METRIC_IDS.md`** — doc class → allowed `metric_id` map (#17).
+- **`tests/test_v018_scorecard_honesty.py`** — fixtures locking each failure mode.
+
+### Changed
+
+- **Contracts triage-only Hub GT** → `status: unscorable` (never quality 0.0);
+  aggregates expose `n_scored` / `n_unscorable`; exporters label **unproven**.
+- **`compare_serving`** — sets `incomparable` when local/API `metric_id` differs.
+- **`classify_serving_kind`** — honest **`modal`** kind (removed `modal-vllm` → `local` remap).
+- **`score_maud_extraction`** — skips ambiguous collapsed keys; micro accuracy over clean keys only.
+- **`extraction_binary_metrics`** — spurious fill on empty GT counts as FP (configurable).
+- **`classify_extraction_failure`** — format vs capability taxonomy (#20).
+- **`cost.estimate_for_record` / `tokens_summary`** — stamp `cost_basis`.
+- Registry: **`schema_valid`**, **`parse_ok`**, **`schema_adherence`** computed via
+  `scorecard_honesty.score_format_layer` (T1); insurance schema promotion gate default 0.90.
+- Package version **0.18.0**.
+
 
 ### Added
 
