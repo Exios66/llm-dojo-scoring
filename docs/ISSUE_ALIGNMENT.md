@@ -29,7 +29,7 @@ smallest remaining unit named.
 
 - The PR body says **421 passed**; the merged tree ran **454 passed, 5
   skipped** (the body was stale at submission; the merged commit content
-  equals the PR head). v0.19.0 adds 43 tests → **497 passed, 5 skipped**.
+  equals the PR head). v0.19.0 adds 67 tests → **521 passed, 5 skipped**.
 - The PR's "hash version 2" claim was only true for dojo's own
   round-trip; cross-package canonicalization differed from llm-mailroom.
   Fixed in this release with a parity oracle.

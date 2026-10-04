@@ -740,6 +740,7 @@ class ScoringSuite:
             prf_bundle_keys,
         )
         from .scorecard_honesty import (
+            GtAssessment,
             assess_extraction_gt,
             metric_id_for,
             score_format_layer,
@@ -804,6 +805,7 @@ class ScoringSuite:
                 drop_unmapped=is_hub_metadata,
             )
 
+        scoped_to_empty = False
         if isinstance(expected, list):
             parsed_expected = [_parse_expected_one(item) for item in expected]
             expected = [_scope_expected_one(item) for item in parsed_expected]
@@ -821,6 +823,11 @@ class ScoringSuite:
             if presence is None and carries_presence and isinstance(parsed_one, dict):
                 presence = _gtm.derive_presence_from_gt(parsed_one)
             expected = _scope_expected_one(parsed_one)
+            # Annotation-only Hub rows (e.g. pending CUAD labels) parse as
+            # nonempty but scope to {}; they carry no extractable fields.
+            scoped_to_empty = (
+                isinstance(parsed_one, dict) and bool(parsed_one) and expected == {}
+            )
         if isinstance(predicted, dict):
             predicted = _gtm.normalize_field_values(predicted)
         elif isinstance(predicted, list):
@@ -864,6 +871,8 @@ class ScoringSuite:
             presence_expectations=presence,
             scorable_gt_keys=scorable_gt_keys,
         )
+        if scoped_to_empty and not presence:
+            assessment = GtAssessment("unscorable", "gt_no_extractable_fields")
         if not assessment.scorable and not isinstance(expected, list):
             return stamp_provenance(
                 unscorable_extraction_result(
