@@ -24,6 +24,7 @@ def test_estimate_cost():
 
 
 def test_tokens_summary():
+    """Aggregates usage rows and derives both billed and estimated cost."""
     usage = [
         {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150, "cost": 0.01},
         {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150, "cost": 0.03},
@@ -42,6 +43,7 @@ def test_tokens_summary():
 
 
 def test_estimate_for_record():
+    """Estimates total and per-doc cost for a usage record."""
     record = {
         "model": "qwen/qwen3.7-flash",
         "n_rows": 509,
@@ -54,6 +56,7 @@ def test_estimate_for_record():
 
 
 def test_tokens_summary_requires_single_cost_basis():
+    """Mixed labeled / unlabeled cost_basis rows raise instead of silently picking one."""
     summary = tokens_summary(
         [{"prompt_tokens": 1, "completion_tokens": 0, "total_tokens": 1}]
     )
@@ -68,6 +71,7 @@ def test_tokens_summary_requires_single_cost_basis():
 
 
 def test_resolve_cost_basis_rejects_mixed_labeled_and_unlabeled():
+    """All-unlabeled rows default to busy_window; mixed labeled/unlabeled rows raise."""
     assert resolve_cost_basis([{"prompt_tokens": 1}, {"prompt_tokens": 2}]) == "busy_window"
     assert resolve_cost_basis(
         [{"cost_basis": "billed_incl_cold", "prompt_tokens": 1}]

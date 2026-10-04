@@ -43,6 +43,7 @@ MISSING_CONFIDENCE_VALUES: frozenset[str] = frozenset(
 
 
 def get_trace_knobs() -> TraceKnobSettings:
+    """The process-wide ``trace_knobs`` settings."""
     return get_settings().trace_knobs
 
 
@@ -127,6 +128,7 @@ def parse_reasoning(value: Any) -> dict[str, Any] | None:
 
 
 def _normalize_entry(item: Any) -> dict[str, Any] | None:
+    """Coerce one reasoning entry to ``{field, evidence, section_ref}``, or ``None``."""
     if item is None or item == "":
         return None
     if isinstance(item, str):
@@ -151,6 +153,7 @@ def _fill_missing_confidence(
     *,
     mode: str,
 ) -> float | None:
+    """Fill a missing confidence per ``mode`` (``absent`` / ``assume_1`` / ``assume_0``)."""
     if confidence is not None:
         return confidence
     if mode == "assume_1":

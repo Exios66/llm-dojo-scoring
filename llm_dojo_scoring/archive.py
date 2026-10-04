@@ -260,6 +260,7 @@ def empty_archive_scoring_block() -> dict[str, Any]:
 
 
 def _is_empty(value: Any) -> bool:
+    """True for ``None``, blank strings, and empty collections."""
     if value is None or value == "":
         return True
     if isinstance(value, str) and not value.strip():
@@ -270,6 +271,7 @@ def _is_empty(value: Any) -> bool:
 
 
 def _live_field_types(doc_class: str, field_types: Mapping[str, str] | None) -> dict[str, str]:
+    """Return ``field_types`` as given, else the live default map for ``doc_class``."""
     if field_types:
         return dict(field_types)
     from .suites import DEFAULT_FIELD_TYPES
@@ -286,6 +288,7 @@ def _filter_to_live_map(
     record: Mapping[str, Any] | None,
     field_types: Mapping[str, str],
 ) -> dict[str, Any]:
+    """Drop never-scored / retired keys and anything outside ``field_types``."""
     src = dict(record or {})
     out: dict[str, Any] = {}
     for key, value in src.items():
@@ -475,10 +478,12 @@ def normalize_audit_node(name: str) -> str:
 
 
 def normalize_audit_nodes(nodes: Iterable[str] | None) -> list[str]:
+    """Fold a list of graph / agent / tray names onto the #236 audit node list."""
     return [normalize_audit_node(n) for n in (nodes or ())]
 
 
 def _is_sha256_hex(value: Any) -> bool:
+    """True for a 64-char lowercase sha256 hex digest."""
     return isinstance(value, str) and bool(_SHA256_HEX.match(value))
 
 
@@ -489,6 +494,7 @@ def _merge_audit_detail(
     nodes_visited: Sequence[str] | None = None,
     pipeline_success: bool | None = None,
 ) -> dict[str, Any]:
+    """Overlay ``detail`` (and explicit overrides) onto the empty-detail template."""
     body = empty_audit_detail()
     extras: dict[str, Any] = {}
     for key, value in dict(detail or {}).items():
@@ -591,10 +597,12 @@ def verify_entry_hash(
 
 
 def _revision(code: str, message: str) -> dict[str, str]:
+    """Build one ``{code, message}`` revision item."""
     return {"code": code, "message": message}
 
 
 def _nodes_in_order(visited: Sequence[str], required: Sequence[str]) -> bool:
+    """True when every ``required`` node appears in ``visited``, in order."""
     last = -1
     for name in required:
         try:

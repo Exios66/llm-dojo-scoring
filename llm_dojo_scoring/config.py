@@ -416,6 +416,7 @@ _SCALAR_KEYS = {
 
 
 def _apply_dict(settings: Settings, data: dict[str, Any]) -> None:
+    """Apply a raw config dict's ``field_scoring`` / ``trace_knobs`` / other blocks onto ``settings``."""
     fs = data.get("field_scoring") or {}
     fs_settings = settings.field_scoring
     if "ambiguous_band" in fs and isinstance(fs["ambiguous_band"], (list, tuple)) and len(fs["ambiguous_band"]) == 2:
@@ -514,6 +515,7 @@ def get_settings() -> Settings:
 
 
 def _apply_trace_knobs(knobs: TraceKnobSettings, data: dict[str, Any]) -> None:
+    """Apply a raw ``trace_knobs:`` config dict onto ``knobs`` in place."""
     if "capture_confidence" in data:
         knobs.capture_confidence = bool(data["capture_confidence"])
     if "capture_reasoning" in data:
