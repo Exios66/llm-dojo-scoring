@@ -15,9 +15,11 @@ stringified ``gt_presence`` map::
 * ``not_applicable`` — the class never carries this field;
 * ``schema_documented_absence`` — the field exists in the class schema but
   this document legitimately has none (e.g. ``denial_reasons`` on an
-  approved claim, ``adjuster`` on CMS rows).
+  approved claim, ``adjuster`` on CMS rows);
+* ``pending_annotation`` — the label backfill has not run yet (the current
+  corpus has 91 contract rows with ``cuad_clause_labels`` in this state).
 
-Scoring must treat both absence statuses as **empty**: a model that correctly
+Scoring must treat every absence status as **empty**: a model that correctly
 emits nothing for them is not penalized, and stringified ``"[]"`` / ``"{}"``
 values are empty containers, not required events. Annotation stats
 (``gt_presence``, ``intent_status``, ``token_estimate``, …) are never
@@ -56,9 +58,11 @@ GT_PRESENCE_KEY = "gt_presence"
 #: extraction field).
 CUAD_PRESENCE_KEY = "cuad_clause_labels"
 
-#: ``gt_presence`` statuses that mean "no expected value for this document".
+#: ``gt_presence`` statuses that mean "no expected value for this document":
+#: the field does not apply, is documented absent, or its label backfill has
+#: not run yet (``pending_annotation`` — stale values must never score).
 ABSENT_PRESENCE_STATUSES: frozenset[str] = frozenset(
-    {"not_applicable", "schema_documented_absence"}
+    {"not_applicable", "schema_documented_absence", "pending_annotation"}
 )
 
 #: Metadata fields that are annotation / provenance / presence inputs — never
@@ -195,8 +199,8 @@ def scoring_gt_fields(
       keys plus ``extra_keys`` (content/MAUD differentiators the suite can
       actually score);
     * replaces fields whose ``gt_presence`` status is
-      ``not_applicable`` / ``schema_documented_absence`` with ``""`` so they
-      are never expected events.
+      ``not_applicable`` / ``schema_documented_absence`` /
+      ``pending_annotation`` with ``""`` so they are never expected events.
 
     ``drop_unmapped=False`` keeps the historical behavior for plain field
     dicts (no Hub ``gt_presence``): unmapped keys still reach the heuristic
@@ -265,7 +269,15 @@ def derive_presence_from_gt(
 ) -> dict[str, dict[str, Any]] | None:
     """Presence expectations from a parsed Hub row, or ``None`` when the row
     has no present CUAD category (an all-absent map must not turn an empty row
-    into a scored 1.0)."""
+    into a scored 1.0).
+
+    A ``cuad_clause_labels`` field carrying an absent status — including
+    ``pending_annotation`` — yields ``None`` even when a stale non-empty
+    label value is still attached: the backfill has not run, so nothing may
+    be scored against it.
+    """
+    if gt_presence_map(fields).get(CUAD_PRESENCE_KEY) in ABSENT_PRESENCE_STATUSES:
+        return None
     expectations = presence_expectations_from_cuad_labels(
         (fields or {}).get(CUAD_PRESENCE_KEY), field=field
     )
