@@ -40,6 +40,30 @@ Archive `overall_score` remains the unweighted mean of **nonempty**
 expected fields so a correspondence row with ~18 empty keys cannot inflate
 the mean.
 
+## Specialist suite emission (v0.19)
+
+Every extraction suite emits its class scores on the per-document surface:
+
+- `suite.score_document(expected, predicted)` returns one payload per
+  document: `extraction`, flattened `overall_score`, field-micro
+  P/R/F1/F2, `schema_valid` / `parse_ok` / `schema_adherence`, class extras
+  (content/MAUD, insurance `determination_consistency` / `amount_exactness`
+  and `schema_promotion_gate`), `metric_id`, and `provenance`.
+- Plain batch `score([...])` always carries `schema_valid` / `parse_ok`.
+  The single-document `score(dict)` keeps the historical
+  `ExtractionScoreResult` return unless `detailed=True` is passed.
+- Content-only GT rows are scored on their content metric: correspondence
+  with only `content_topic` / `sentiment_label`, merger with only
+  `maud_clause_labels`. Triage-only contract rows (`contract_subtype` /
+  `doc_type`, no scored field) stay `unscorable`, and a document with no
+  nonempty expected field has `overall_score = None` — never a fabricated
+  zero.
+- Hub `gt_fields` metadata (union field dict + stringified `gt_presence`) is
+  parsed and scoped to the document type's own schema before any of the
+  above: `"[]"` / `"{}"` are empty, `not_applicable` /
+  `schema_documented_absence` are never required events, and annotation
+  stats never reach extraction. See [`GT_METADATA.md`](GT_METADATA.md).
+
 ## Completion, ITT, cost, serving (#21)
 
 `summarize_run_completion` always emits `n_attempted`, `n_completed`,

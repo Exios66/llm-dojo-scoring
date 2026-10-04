@@ -16,6 +16,10 @@ Documentation for the llm-dojo-scoring package, covering:
 - Entity list scoring
 - Archive scoring block (`ARCHIVE_SCORING.md`)
 - Scorecard honesty: MAUD GT, format vs extraction, completion/cost, confidence/reasoning knobs (`SCORECARD_HONESTY.md`)
+- Hub ground-truth metadata: `gt_fields` parsing, `gt_presence`, per-class label scoping (`GT_METADATA.md`)
+- Metric identity by doc class (`METRIC_IDS.md`)
+- Specialist grid reports for local → Modal GPU studies (`GRID_REPORTS.md`)
+- Issue-by-issue alignment status (`ISSUE_ALIGNMENT.md`)
 - Regression diagnostics
 - Factuality audit
 
