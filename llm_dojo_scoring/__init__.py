@@ -52,6 +52,7 @@ from . import (
     report,
     serving,
     tasks,
+    trace_knobs,
     visualize,
 )
 
@@ -118,6 +119,7 @@ from .claims_consistency import (
 )
 from .config import (
     Settings,
+    TraceKnobSettings,
     clear_settings_cache,
     configure,
     configure_from_taxonomy,
@@ -149,6 +151,12 @@ from .content_scoring import (
     score_correspondence_content,
     score_maud_extraction,
     score_sentiment,
+)
+from .trace_knobs import (
+    capture_trace_knobs,
+    confidence_calibration_error,
+    parse_confidence,
+    parse_reasoning,
 )
 from .intake import (
     INTAKE_SPAN_KEYS,
@@ -246,7 +254,7 @@ __all__ = [
     "equivalences", "error_analysis", "experiment", "export", "extraction_metrics", "failure_modes",
     "field_scoring", "io", "interpret", "langfuse_sync", "phoenix_sync",
     "report", "asr", "corpus", "intake", "mailroom", "prompts", "serving",
-    "suites", "tasks", "visualize",
+    "suites", "tasks", "trace_knobs", "visualize",
     "ARCHIVE_HASH_VERSION", "ARCHIVE_SCORING_METHOD",
     "archive_entry_hash", "score_archive_block", "upsert_archive_scoring",
     "bootstrap_ci", "delta_significance", "wilson_ci",
@@ -264,7 +272,7 @@ __all__ = [
     "is_entity_list", "get_ambiguous_band", "FIELD_SCORERS",
     "extraction_binary_metrics", "mean_entity_list_f1", "merge_extraction_counts",
     "amount_exactness", "determination_consistency", "score_claims_extras",
-    "Settings", "clear_settings_cache", "configure", "configure_from_taxonomy",
+    "Settings", "TraceKnobSettings", "clear_settings_cache", "configure", "configure_from_taxonomy",
     "get_settings",
     "load_settings",
     "chained_composite", "chained_summary", "court_opinion_score",
@@ -295,6 +303,8 @@ __all__ = [
     "score_content_topic", "score_sentiment",
     "peel_non_extraction_fields",
     "score_correspondence_content", "score_maud_extraction",
+    "capture_trace_knobs", "confidence_calibration_error",
+    "parse_confidence", "parse_reasoning",
     "apply_intake", "deterministic_normalize", "looks_messy", "score_intake",
     "INTAKE_SPAN_KEYS",
     "CANONICAL_SERVING_KEYS", "ServingIdentity", "ServingObservation",

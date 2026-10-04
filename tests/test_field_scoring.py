@@ -358,6 +358,8 @@ def test_score_extraction_skips_confidence_reasoning_and_empty_lists():
     assert "reasoning" not in result.field_scores
     assert "parties" not in result.field_scores
     assert result.overall_score == 1.0
+    assert result.trace["confidence"] == 0.99
+    assert result.trace["reasoning"]["summary"] == "trace"
 
 
 def test_score_extraction_to_dict_serializable():

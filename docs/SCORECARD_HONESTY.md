@@ -56,3 +56,25 @@ Cost helpers (`estimate_for_record`, `tokens_summary`) always stamp
 `cost_basis`: `busy_window` or `billed_incl_cold`. Mixing both in one
 table raises. `serving_kind` stays `modal` / `api` / `local` — Modal is
 not remapped to local.
+
+## Confidence and reasoning knobs
+
+`confidence` and `reasoning` are model-emitted traces, not extraction
+fields. They never enter `overall_score` or field-micro F1.
+
+`capture_trace_knobs` peels them into a stable `trace` payload (also on
+`ExtractionScoreResult.trace` and the archive scoring block):
+
+| Knob | Default | Effect |
+|---|---|---|
+| `capture_confidence` | true | Store the 0–1 score (or null) |
+| `capture_reasoning` | true | Store `{summary, entries}` |
+| `confidence_min` | null | Gate `below_min` when confidence is under the floor |
+| `confidence_band` | null | Gate `in_band` for `[low, high)` |
+| `reasoning_routes_presence` | true | CUAD presence may use `reasoning.entries` |
+| `compute_calibration_error` | true | `|confidence − overall_score|` |
+| `missing_confidence` | `absent` | `assume_1` / `assume_0` fill gating only |
+
+Sweep with `configure(trace_knobs__confidence_min=0.7)` or a taxonomy
+`trace_knobs:` block. Turning capture off stores nulls; it does not
+score the keys as fields.

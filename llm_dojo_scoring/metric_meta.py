@@ -503,6 +503,14 @@ METRIC_META: dict[str, dict[str, str]] = {
         "inclusion": "T1 diagnostic when schema_valid < 1.0.",
         "ground_truth": "structural",
     },
+    "confidence_calibration_error": {
+        "citation": (
+            "|confidence − correctness| (trace_knobs.confidence_calibration_error). "
+            "Raw confidence is a captured experiment knob, never overall_score."
+        ),
+        "inclusion": "When capture_confidence and compute_calibration_error are on and both values are in [0, 1].",
+        "ground_truth": "none",
+    },
     "parse_error": dict(_EMITTER),
     "success_rate": dict(_EMITTER),
     "completeness": dict(_EMITTER),

@@ -22,6 +22,7 @@ from .field_scoring import (
     score_extraction,
 )
 from .scorecard_honesty import score_format_layer
+from .trace_knobs import capture_trace_knobs, empty_trace_payload
 
 __all__ = [
     "ARCHIVE_HASH_VERSION",
@@ -60,6 +61,7 @@ ARCHIVE_SCORING_KEYS: tuple[str, ...] = (
     "tp",
     "fp",
     "fn",
+    "trace",
 )
 
 #: Live extraction classes that reach the archive (#238).
@@ -122,6 +124,7 @@ def empty_archive_scoring_block() -> dict[str, Any]:
         "tp": None,
         "fp": None,
         "fn": None,
+        "trace": empty_trace_payload(),
     }
 
 
@@ -231,6 +234,11 @@ def score_archive_block(
         block["tp"] = prf.get("tp")
         block["fp"] = prf.get("fp")
         block["fn"] = prf.get("fn")
+    block["trace"] = capture_trace_knobs(
+        predicted,
+        expected=expected,
+        correctness=result.overall_score,
+    )
     return block
 
 

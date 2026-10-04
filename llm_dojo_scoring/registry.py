@@ -1010,6 +1010,7 @@ metrics:
     tier: 2
     description: "|confidence - correctness| calibration gap"
     applicable_agents: [ALL]
+    source: "trace_knobs.confidence_calibration_error"
     notes: "absorbs mailroom classification_confidence + extraction_confidence (raw confidences stay at T3 as inputs)"
   hallucination_rate:
     tier: 2

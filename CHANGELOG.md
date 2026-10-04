@@ -36,6 +36,11 @@ and close remaining honesty gaps in
 - **`canonical_error_class` / `resolve_cost_basis`** — LengthFinish and
   context-overflow histogram buckets; refuse mixed `cost_basis` in one
   table.
+- **`llm_dojo_scoring.trace_knobs`** — capture `confidence` / `reasoning`
+  as experimental knobs (`TraceKnobSettings`: `confidence_min`,
+  `confidence_band`, `reasoning_routes_presence`,
+  `compute_calibration_error`). Filed on `ExtractionScoreResult.trace`
+  and archive `detail.scoring.trace`; never mixed into `overall_score`.
 
 ### Changed
 

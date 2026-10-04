@@ -29,7 +29,7 @@ from .corpus import (
 )
 from .tasks import normalize_maud_consideration
 from .scorecard_honesty import detect_maud_gt_ambiguity
-from .field_scoring import NEVER_SCORED_FIELDS, RETIRED_PROMPT_KEYS
+from .field_scoring import RETIRED_PROMPT_KEYS
 
 __all__ = [
     "CORRESPONDENCE_CONTENT_KEYS",
@@ -63,8 +63,10 @@ CORRESPONDENCE_CONTENT_KEYS: frozenset[str] = frozenset(
 MAUD_LABEL_KEY = "maud_clause_labels"
 
 #: Keys stripped from extraction dicts before :func:`score_extraction`.
+#: ``confidence`` / ``reasoning`` stay on the dict so :mod:`.trace_knobs`
+#: can capture them; :func:`score_extraction` still skips scoring them.
 NON_EXTRACTION_KEYS: frozenset[str] = (
-    CORRESPONDENCE_CONTENT_KEYS | {MAUD_LABEL_KEY} | NEVER_SCORED_FIELDS | RETIRED_PROMPT_KEYS
+    CORRESPONDENCE_CONTENT_KEYS | {MAUD_LABEL_KEY} | RETIRED_PROMPT_KEYS
 )
 
 _ALIAS_RE = re.compile(r"[^a-z0-9]+")

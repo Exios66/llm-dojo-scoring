@@ -28,8 +28,12 @@ block = score_archive_block(
 
 `overall_score` is `score_extraction`: unweighted mean of typed scores on
 expected fields that are non-null and non-empty. No field weights.
-`confidence` and `reasoning` are never scored. Keys not on the live model
-(`key_obligations`, `cuad_family` on a merger, …) are ignored.
+`confidence` and `reasoning` are never scored. They are **captured** on
+`trace` as experimental knobs (`docs/SCORECARD_HONESTY.md`) — sweep
+`confidence_min`, `confidence_band`, and `reasoning_routes_presence` via
+`configure(trace_knobs__…)` or a `trace_knobs:` YAML block. Keys not on
+the live model (`key_obligations`, `cuad_family` on a merger, …) are
+ignored.
 
 Merger is `MergerAgreementExtraction` (`effective_time`, `intent`,
 `subject_matter`, `keywords`; no `cuad_family` / `cuad_clauses`). The
@@ -70,7 +74,14 @@ A second `score_archive_block` on the same `doc_id` **replaces**
   "extraction_f2": null,
   "tp": null,
   "fp": null,
-  "fn": null
+  "fn": null,
+  "trace": {
+    "confidence": 0.91,
+    "reasoning": {"summary": "parties on signature page", "entries": []},
+    "confidence_gate": "pass",
+    "calibration_error": 0.008,
+    "n_reasoning_entries": 0
+  }
 }
 ```
 
@@ -134,7 +145,14 @@ document's `entry_hash` (empty string only for the first row in the DB).
       "extraction_f2": null,
       "tp": null,
       "fp": null,
-      "fn": null
+      "fn": null,
+      "trace": {
+        "confidence": 0.91,
+        "reasoning": {"summary": "parties on signature page", "entries": []},
+        "confidence_gate": "pass",
+        "calibration_error": 0.008,
+        "n_reasoning_entries": 0
+      }
     },
     "report_path": "matters/EXAMPLE/reports/doc_example.json",
     "archive_path": "archive/EXAMPLE/contract/doc_example.pdf",

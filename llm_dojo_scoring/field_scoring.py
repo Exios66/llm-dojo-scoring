@@ -917,15 +917,18 @@ def _presence_candidates(predicted: dict, category: str, field: str) -> list[str
     Prefers spans routed explicitly by the extractor's reasoning trace
     (``reasoning.entries[]`` whose ``field`` is the canonical CUAD category
     name — issue #21 retag), falling back to the disaggregated items of the
-    category's mapped field (e.g. ``cuad_clauses``)."""
-    entries = (predicted.get("reasoning") or {}).get("entries") or []
-    routed = [
-        str(e.get("evidence") or e.get("section_ref") or "")
-        for e in entries
-        if str(e.get("field") or "").strip() == category
-    ]
-    if routed:
-        return [r for r in routed if r.strip()]
+    category's mapped field (e.g. ``cuad_clauses``). Disable routing with
+    ``trace_knobs.reasoning_routes_presence``.
+    """
+    if get_settings().trace_knobs.reasoning_routes_presence:
+        entries = (predicted.get("reasoning") or {}).get("entries") or []
+        routed = [
+            str(e.get("evidence") or e.get("section_ref") or "")
+            for e in entries
+            if str(e.get("field") or "").strip() == category
+        ]
+        if routed:
+            return [r for r in routed if r.strip()]
     return disaggregate_clause_spans(predicted.get(field))
 
 
@@ -1175,6 +1178,8 @@ class ExtractionScoreResult:
     # Factuality audit per list field: {field: audit dict} with
     # verified_precision / hallucination_rate (see audit_list_field).
     entity_list_audit: dict[str, dict] = field(default_factory=dict)
+    #: Captured confidence / reasoning knobs (never in ``field_scores``).
+    trace: dict[str, Any] | None = None
 
     @property
     def needs_judge_review(self) -> bool:
@@ -1199,6 +1204,7 @@ class ExtractionScoreResult:
                 k: v.to_dict() for k, v in self.entity_list_scores.items()
             },
             "entity_list_audit": self.entity_list_audit,
+            "trace": self.trace,
         }
 
 
@@ -1296,6 +1302,8 @@ def score_extraction(
 
     scored = list(field_scores.values())
     overall = round(sum(scored) / len(scored), 4) if scored else None
+    from .trace_knobs import capture_trace_knobs
+
     return ExtractionScoreResult(
         doc_class=doc_class,
         field_scores=field_scores,
@@ -1303,4 +1311,5 @@ def score_extraction(
         ambiguous_fields=ambiguous,
         entity_list_scores=entity_list_scores,
         entity_list_audit=entity_list_audit,
+        trace=capture_trace_knobs(predicted, expected=expected, correctness=overall),
     )

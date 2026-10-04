@@ -36,6 +36,8 @@ def test_empty_block_has_every_archivist_key():
     assert block["field_scores"] == {}
     assert block["extraction_f1"] is None
     assert block["tp"] is None
+    assert block["trace"]["confidence"] is None
+    assert block["trace"]["reasoning"] is None
 
 
 def test_merger_is_not_scored_as_contract():
@@ -79,6 +81,9 @@ def test_score_archive_block_rejects_contract_alias_for_merger():
     assert "cuad_clauses" not in block["field_scores"]
     assert "confidence" not in block["field_scores"]
     assert "reasoning" not in block["field_scores"]
+    assert block["trace"]["confidence"] == 0.99
+    assert block["trace"]["reasoning"]["summary"] == "trace"
+    assert block["trace"]["n_reasoning_entries"] == 0
     assert "effective_time" in block["field_scores"]
     assert block["overall_score"] == 1.0
     assert block["method"] == ARCHIVE_SCORING_METHOD
