@@ -54,8 +54,9 @@ Quality aggregates name the population:
 
 Cost helpers (`estimate_for_record`, `tokens_summary`) always stamp
 `cost_basis`: `busy_window` or `billed_incl_cold`. Mixing both in one
-table raises. `serving_kind` stays `modal` / `api` / `local` — Modal is
-not remapped to local.
+table raises, as does mixing labeled and unlabeled rows. Wholly
+unlabeled inputs keep the default (`busy_window`). `serving_kind` stays
+`modal` / `api` / `local` — Modal is not remapped to local.
 
 ## Confidence and reasoning knobs
 

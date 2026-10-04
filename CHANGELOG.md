@@ -5,6 +5,12 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`resolve_cost_basis`** — reject a table that mixes labeled and
+  unlabeled `cost_basis` / `usd_basis` rows. Wholly unlabeled inputs
+  still stamp the default (`busy_window`).
+
 ### Added
 
 - **`format_audit_entry` / `prepare_archivist_handoff`** — calculate and

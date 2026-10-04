@@ -36,7 +36,11 @@ def resolve_cost_basis(
     *,
     default: str = "busy_window",
 ) -> str:
-    """Single ``busy_window`` | ``billed_incl_cold`` label; never mix silently."""
+    """Single ``busy_window`` | ``billed_incl_cold`` label; never mix silently.
+
+    Wholly unlabeled inputs keep ``default``. A table that mixes labeled
+    rows with unlabeled rows, or two different labels, raises.
+    """
     rows: list[dict]
     if records is None:
         rows = []
@@ -44,27 +48,35 @@ def resolve_cost_basis(
         rows = [records]
     else:
         rows = list(records)
-    found: list[str] = []
+    labeled: list[str] = []
+    n_unlabeled = 0
     for rec in rows:
         if not isinstance(rec, dict):
             continue
         raw = rec.get("cost_basis") or rec.get("usd_basis")
-        if raw:
-            found.append(str(raw))
-    unique = {item for item in found if item}
+        if not raw:
+            n_unlabeled += 1
+            continue
+        basis = str(raw)
+        if basis not in COST_BASIS_VALUES:
+            raise ValueError(
+                f"cost_basis must be one of {sorted(COST_BASIS_VALUES)}, got {basis!r}"
+            )
+        labeled.append(basis)
+    unique = set(labeled)
     if not unique:
         return default
+    if n_unlabeled:
+        raise ValueError(
+            "cost_basis mixed: labeled and unlabeled records; "
+            "never mix a labeled basis with unlabeled rows in one table"
+        )
     if len(unique) > 1:
         raise ValueError(
             "cost_basis mixed "
             f"{sorted(unique)}; never mix busy_window with billed_incl_cold in one table"
         )
-    basis = unique.pop()
-    if basis not in COST_BASIS_VALUES:
-        raise ValueError(
-            f"cost_basis must be one of {sorted(COST_BASIS_VALUES)}, got {basis!r}"
-        )
-    return basis
+    return unique.pop()
 
 
 def estimate_cost(

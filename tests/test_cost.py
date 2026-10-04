@@ -1,6 +1,12 @@
 import pytest
 
-from llm_dojo_scoring.cost import estimate_cost, estimate_for_record, price_for, tokens_summary
+from llm_dojo_scoring.cost import (
+    estimate_cost,
+    estimate_for_record,
+    price_for,
+    resolve_cost_basis,
+    tokens_summary,
+)
 
 
 def test_price_for_known_and_prefix():
@@ -57,5 +63,19 @@ def test_tokens_summary_requires_single_cost_basis():
             [
                 {"cost_basis": "busy_window", "prompt_tokens": 1},
                 {"usd_basis": "billed_incl_cold", "prompt_tokens": 1},
+            ]
+        )
+
+
+def test_resolve_cost_basis_rejects_mixed_labeled_and_unlabeled():
+    assert resolve_cost_basis([{"prompt_tokens": 1}, {"prompt_tokens": 2}]) == "busy_window"
+    assert resolve_cost_basis(
+        [{"cost_basis": "billed_incl_cold", "prompt_tokens": 1}]
+    ) == "billed_incl_cold"
+    with pytest.raises(ValueError, match="labeled and unlabeled"):
+        resolve_cost_basis(
+            [
+                {"cost_basis": "busy_window", "prompt_tokens": 1},
+                {"prompt_tokens": 1},
             ]
         )
