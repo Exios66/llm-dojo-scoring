@@ -103,7 +103,10 @@ from .field_scoring import (
 from .archive import (
     ARCHIVE_HASH_VERSION,
     ARCHIVE_SCORING_METHOD,
+    archivist_sign_off,
     archive_entry_hash,
+    format_audit_entry,
+    prepare_archivist_handoff,
     score_archive_block,
     upsert_archive_scoring,
 )
@@ -256,7 +259,8 @@ __all__ = [
     "report", "asr", "corpus", "intake", "mailroom", "prompts", "serving",
     "suites", "tasks", "trace_knobs", "visualize",
     "ARCHIVE_HASH_VERSION", "ARCHIVE_SCORING_METHOD",
-    "archive_entry_hash", "score_archive_block", "upsert_archive_scoring",
+    "archive_entry_hash", "archivist_sign_off", "format_audit_entry",
+    "prepare_archivist_handoff", "score_archive_block", "upsert_archive_scoring",
     "bootstrap_ci", "delta_significance", "wilson_ci",
     "accuracy", "binary_metrics", "confusion_matrix", "exact_match",
     "fbeta", "macro_accuracy", "macro_prf", "normalize_label", "per_class_stats",

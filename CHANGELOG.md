@@ -5,6 +5,15 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Added
+
+- **`format_audit_entry` / `prepare_archivist_handoff`** — calculate and
+  format the hash-chained `archived` audit row (hash version 2) that is
+  passed to the archivist. The templated row is always handed through;
+  `archivist_sign_off` files it as final only when the hash matches and
+  the pipeline steps for that document need no revision (report → judge
+  → archive; happy-path nodes on a successful job).
+
 ## [0.19.0] - 2026-10-04
 
 Align scoring contracts with

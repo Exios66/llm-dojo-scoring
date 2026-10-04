@@ -52,7 +52,7 @@ llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.15.0
 <div align="center">
 
 ```python
-from llm_dojo_scoring import score_extraction, score_archive_block, bootstrap_ci, tokens_summary
+from llm_dojo_scoring import score_extraction, score_archive_block, format_audit_entry, bootstrap_ci, tokens_summary
 from llm_dojo_scoring import get_suite, apply_intake, score_task, compare_serving
 from llm_dojo_scoring.prompts import get_prompt
 ```

@@ -7,8 +7,11 @@ then archive), [#237](https://github.com/LLM-Mailroom-Services/mailroom-issues/i
 (one block per document from this package).
 
 This package does **not** write the hash-chain audit DB. Call
-`score_archive_block` after the deterministic report exists; the archivist
-files the returned object as `detail.scoring` on the single `archived` row.
+`score_archive_block` after the deterministic report exists, then
+`format_audit_entry` / `prepare_archivist_handoff` to build the hashed
+`archived` row. The archivist validates that template against the
+pipeline steps for the document and signs off when there is nothing to
+revise.
 
 Numbers in the examples below are the **shape**, not a measured run. Do not
 backfill `extraction_f1` / `extraction_f2` from `overall_score`.
@@ -94,8 +97,70 @@ false-positive, and false-negative counts.
 `entry_hash` is SHA-256 of canonical JSON (`sort_keys`, compact separators)
 over `hash_version`, `prev_hash`, `doc_id`, `entry_id`, `matter_id`,
 `actor`, `timestamp`, `event`, `detail`. Use
-`llm_dojo_scoring.archive_entry_hash`. `prev_hash` is the previous
-document's `entry_hash` (empty string only for the first row in the DB).
+`llm_dojo_scoring.format_audit_entry` (which calls
+`archive_entry_hash`). `prev_hash` is the previous document's
+`entry_hash` (empty string only for the first row in the DB).
+
+## Format the audit row and hand it to the archivist
+
+Dojo still does **not** write the hash-chain DB. It formats the same
+row the archivist would append and validates it against the pipeline
+steps for that document. The templated entry is always passed through;
+the archivist files it as final only when there is nothing to revise.
+
+```python
+from llm_dojo_scoring import prepare_archivist_handoff, score_archive_block
+
+block = score_archive_block("contract", predicted, expected)
+handoff = prepare_archivist_handoff(
+    doc_id="doc_example",
+    matter_id="EXAMPLE",
+    entry_id="00000000-0000-4000-8000-000000000001",
+    timestamp="2026-10-02T23:55:00+00:00",
+    prev_hash="a" * 64,
+    seq=6,
+    scoring=block,
+    nodes_visited=[
+        "intake",
+        "sorter",
+        "document_type_specialist",
+        "deterministic_reporter",
+        "deterministic_judge",
+        "archivist",
+    ],
+    pipeline_success=True,
+    detail={
+        "doc_type": "contract",
+        "doc_subclass": "service",
+        "judge_verdict": "complete",
+        "judge_score": block["overall_score"],
+        "report_path": "matters/EXAMPLE/reports/doc_example.json",
+        "archive_path": "archive/EXAMPLE/contract/doc_example.pdf",
+        "file_sha256": "0" * 64,
+    },
+)
+# handoff["entry"] is the hashed row. Pass it to the archivist even when
+# handoff["file_as_final"] is False — that is the template to revise.
+assert handoff["sign_off"]["signed_off"]  # nothing to revise
+```
+
+`format_audit_entry` fills every `detail` key from the template
+(`empty_audit_log_entry`), embeds `scoring`, and writes `entry_hash`.
+Langfuse / specialist names (`intake-document`, `contracts_specialist`,
+`compile-report`, …) fold onto the #236 node list.
+
+`archivist_sign_off` recomputes the hash and checks the pipeline:
+
+- `event=archived`, `actor=archivist`
+- `deterministic_reporter` then `deterministic_judge` then `archivist`
+  (report → judge → archive). Successful jobs also require intake →
+  sorter → document-type specialist before that tail.
+- `judge_verdict`, `judge_score` (when `overall_score` is filed), and
+  the scoring block keys
+- `doc_type`, archive/report paths, `file_sha256`
+
+Sign-off never mutates the hashed row. A failed extraction that still
+reached the reporter uses the same checks with `pipeline_success` false.
 
 ```json
 {
@@ -107,6 +172,7 @@ document's `entry_hash` (empty string only for the first row in the DB).
   "actor": "archivist",
   "timestamp": "2026-10-02T23:55:00+00:00",
   "prev_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "entry_hash": "<sha256 of hash version 2 payload>",
   "detail": {
     "stage": "archived",
     "pipeline_success": true,
