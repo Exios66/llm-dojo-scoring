@@ -204,6 +204,58 @@ def test_correctly_empty_fields_score_one():
     assert result.field_scores["claim_number"] == 1.0
 
 
+@pytest.mark.parametrize(
+    "finish_reason",
+    [
+        None, "", "stop", "completed", "success", "none",
+        "end_turn", "eos", "STOP_SEQUENCE", "tool_calls",
+    ],
+)
+def test_normal_finish_reasons_count_as_completed(finish_reason):
+    completion = summarize_run_completion([{"finish_reason": finish_reason}])
+    assert completion["n_attempted"] == 1
+    assert completion["n_completed"] == 1
+    assert completion["n_errored"] == 0
+    assert completion["completion_rate"] == 1.0
+    assert completion["error_class_histogram"] == {}
+
+
+@pytest.mark.parametrize("finish_reason", ["end_turn", "eos", "STOP_SEQUENCE", "tool_calls"])
+@pytest.mark.parametrize(
+    "error_signal",
+    [
+        {"errored": True},
+        {"status": "error"},
+        {"status": "ERROR_TIMEOUT"},
+        {"error": "ContextWindowOverflowError"},
+        {"error_class": "LengthFinishReasonError"},
+    ],
+)
+def test_normal_finish_reasons_preserve_error_signals(finish_reason, error_signal):
+    completion = summarize_run_completion(
+        [{"finish_reason": finish_reason, **error_signal}]
+    )
+    assert completion["n_completed"] == 0
+    assert completion["n_errored"] == 1
+    assert completion["completion_rate"] == 0.0
+    assert sum(completion["error_class_histogram"].values()) == 1
+
+
+@pytest.mark.parametrize(
+    ("finish_reason", "error_class"),
+    [
+        ("length", "LengthFinish"),
+        ("max_tokens", "LengthFinish"),
+        ("content_filter", "content_filter"),
+    ],
+)
+def test_error_finish_reasons_count_as_errors(finish_reason, error_class):
+    completion = summarize_run_completion([{"finish_reason": finish_reason}])
+    assert completion["n_completed"] == 0
+    assert completion["n_errored"] == 1
+    assert completion["error_class_histogram"] == {error_class: 1}
+
+
 def test_completion_and_cost_basis():
     records = [
         {"status": "ok", "overall_score": 1.0},

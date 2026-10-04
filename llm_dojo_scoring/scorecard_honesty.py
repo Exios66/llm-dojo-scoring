@@ -495,7 +495,10 @@ def summarize_run_completion(
         is_error = bool(rec.get("errored") or status.upper().startswith("ERROR"))
         if not is_error and err:
             token = str(err)
-            is_error = token.lower() not in {"stop", "completed", "success", "none", ""}
+            is_error = token.lower() not in {
+                "stop", "completed", "success", "none", "",
+                "end_turn", "eos", "stop_sequence", "tool_calls",
+            }
         if not is_error:
             continue
         n_errored += 1
