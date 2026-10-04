@@ -135,9 +135,13 @@ def parse_gt_fields(raw: Any) -> dict[str, Any]:
     """Parse one Hub ``gt_fields`` value into a dict with nested JSON parsed.
 
     Accepts a JSON string, a Python dict-repr string (the ``default.metadata``
-    shape), or a mapping. Raises ``TypeError`` / ``ValueError`` on anything
-    else so callers can fail closed (``gt_wrong_schema``) rather than score a
-    malformed row.
+    shape), or a mapping; a blank string returns ``{}``. Return a new dict
+    with string keys and stringified JSON containers parsed at the field
+    level, without recursively normalizing their contents.
+
+    Raise ``TypeError`` for inputs other than strings or mappings, and
+    ``ValueError`` for malformed strings or values that decode to something
+    other than a mapping.
     """
     if isinstance(raw, Mapping):
         obj: Any = dict(raw)
@@ -179,7 +183,11 @@ def gt_presence_map(fields: Mapping[str, Any] | None) -> dict[str, str]:
 
 
 def normalize_field_values(record: Any) -> Any:
-    """Parse stringified JSON containers on every value of a field dict."""
+    """Return a new field dict with string keys and JSON containers parsed.
+
+    Only field values are parsed, without recursively normalizing container
+    contents. Non-mapping inputs are returned unchanged.
+    """
     if not isinstance(record, Mapping):
         return record
     return {str(key): parse_json_container(value) for key, value in record.items()}
@@ -195,9 +203,9 @@ def scoring_gt_fields(
     """Scope Hub metadata to one suite's scorable surface.
 
     * drops annotation keys and ``gt_presence`` itself;
-    * when ``drop_unmapped`` and ``field_types`` is given, keeps only those
-      keys plus ``extra_keys`` (content/MAUD differentiators the suite can
-      actually score);
+    * when ``drop_unmapped`` is true and the union of ``field_types`` keys
+      and ``extra_keys`` is nonempty, keeps only those keys; an empty union
+      leaves unmapped keys intact;
     * replaces fields whose ``gt_presence`` status is
       ``not_applicable`` / ``schema_documented_absence`` /
       ``pending_annotation`` with ``""`` so they are never expected events.
@@ -205,6 +213,7 @@ def scoring_gt_fields(
     ``drop_unmapped=False`` keeps the historical behavior for plain field
     dicts (no Hub ``gt_presence``): unmapped keys still reach the heuristic
     scorer, while annotation stats and stringified values are still handled.
+    Return a new dict; parsing errors from :func:`parse_gt_fields` propagate.
     """
     parsed = parse_gt_fields(fields)
     presence = gt_presence_map(parsed)
@@ -230,12 +239,15 @@ def presence_expectations_from_cuad_labels(
     """Build ``score_category_presence`` expectations from CUAD label spans.
 
     Hub shape: ``{category: [{"start": int, "text": str}, ...]}``. A category
-    with at least one span is ``expected: True`` with the first span's
-    *scorable* text as the answer; empty categories are ``expected: False``
-    (recorded for detail, never scored). Categories whose spans are all
+    with scorable spans is ``expected: True`` with the first text containing
+    an ASCII letter or digit as the answer; empty categories are
+    ``expected: False`` (recorded for detail, never scored). Categories whose spans are all
     placeholders (``"[*]"``, ``"____"``, ``"."`` — no alphanumeric content)
     are omitted: no model can quote an unmatchable clause, so they must not
-    count toward the presence score.
+    count toward the presence score. ``field`` names the prediction field
+    searched for every category. Stringified JSON containers are accepted;
+    a non-mapping label value returns ``{}``, and non-list category spans
+    are treated as empty.
     """
     labels = parse_json_container(labels)
     if not isinstance(labels, Mapping):

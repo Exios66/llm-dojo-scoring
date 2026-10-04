@@ -593,8 +593,12 @@ class ScoringSuite:
           :meth:`score_document`) to get the full per-document payload
           including ``schema_valid`` / ``parse_ok``, field-micro
           P/R/F1/F2, ``metric_id``, and provenance; the default keeps the
-          historical single-document return (``ExtractionScoreResult``)
-          for backward compatibility.
+          single-document ``ExtractionScoreResult`` when no extras are
+          produced. Batches and results with extras return dictionaries.
+          Missing, malformed, or nonempty GT without scorable fields returns
+          an unscorable dictionary for a single document. GT may also be a
+          JSON or Python dict-repr string; Hub metadata is scoped to the
+          suite and stringified field containers are parsed.
         - **classification / review** — :func:`score_task` (default task
           from the suite; override via ``task=``).
         - **audit** — field-type-aware comparison of specialist vs
@@ -657,16 +661,25 @@ class ScoringSuite:
         """Score **one document** and return the full payload for that class.
 
         Extraction suites only. This is the per-document surface consumers
-        should use for archive / comparison work: it always carries
+        should use for archive / comparison work. For scorable document
+        dictionaries, it carries
         ``extraction`` (the :class:`ExtractionScoreResult`), field-micro
-        ``extraction_precision`` / ``recall`` / ``f1`` / ``f2``,
-        ``schema_valid`` / ``parse_ok``, the class extras (content / MAUD /
-        insurance consistency), ``metric_id``, and ``provenance``. It is
+        ``extraction_precision`` / ``extraction_recall`` / ``extraction_f1`` /
+        ``extraction_f2``,
+        ``schema_valid`` / ``parse_ok``, applicable class extras (content /
+        MAUD / insurance consistency), ``metric_id``, and ``provenance``. It is
         ``score(..., detailed=True)`` with a stable name.
 
         ``score_document`` accepts the same keyword arguments as
         :meth:`score` (``doc_text``, ``field_types``, provenance stamps,
-        ``presence_expectations``, content/MAUD kwargs).
+        ``presence_expectations``, content/MAUD kwargs), except ``detailed``,
+        which is supplied internally. Missing, malformed, or nonempty GT
+        without scorable fields returns an unscorable dictionary with a
+        reason and null scores instead of the full extraction payload.
+        Presence-only GT has null field-micro scores and ``overall_score``.
+
+        Raise ``TypeError`` for emit-only or non-extraction suites; errors
+        from :meth:`score` propagate.
         """
         if not self.computable:
             raise TypeError(
@@ -707,6 +720,15 @@ class ScoringSuite:
         detailed: bool = False,
         **kwargs: Any,
     ) -> ExtractionScoreResult | list[ExtractionScoreResult] | dict[str, Any]:
+        """Normalize GT and score extraction, format, and available class extras.
+
+        Return a single ``ExtractionScoreResult`` when there are no extras and
+        ``detailed`` is false; otherwise return a dictionary with provenance.
+        Invalid or nonempty unscorable single-document GT returns an unscorable
+        dictionary. Paired lists are scored only through their shared length;
+        a list of ``doc_text`` values can further limit extraction results.
+        Explicit presence expectations override labels derived from Hub GT.
+        """
         from .content_scoring import (
             peel_non_extraction_fields,
             score_correspondence_content,
@@ -752,6 +774,7 @@ class ScoringSuite:
         carries_presence = "extraction_category_presence" in self.extra_metrics
 
         def _parse_expected_one(value: Any) -> Any:
+            """Parse GT dictionaries or strings, retaining invalid strings for assessment."""
             if isinstance(value, str):
                 try:
                     return _gtm.parse_gt_fields(value)
@@ -762,6 +785,11 @@ class ScoringSuite:
             return value
 
         def _scope_expected_one(value: Any) -> Any:
+            """Remove annotation keys and blank absent fields in a GT dictionary.
+
+            Apply :func:`scoring_gt_fields` to Hub metadata; preserve unmapped
+            keys in plain dictionaries and return non-dict inputs unchanged.
+            """
             if not isinstance(value, dict):
                 return value
             # Hub metadata carries the stringified gt_presence map; plain
