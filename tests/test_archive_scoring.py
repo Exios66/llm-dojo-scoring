@@ -7,6 +7,8 @@ MergerAgreementExtraction, not a contract alias.
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 
 import pytest
 
@@ -19,6 +21,7 @@ from llm_dojo_scoring.archive import (
     LIVE_ARCHIVE_DOC_TYPES,
     archivist_sign_off,
     archive_entry_hash,
+    canonical_json,
     empty_archive_scoring_block,
     empty_audit_log_entry,
     format_audit_entry,
@@ -731,3 +734,50 @@ def test_validate_rejects_unknown_pipeline_nodes():
     )
     codes = {item["code"] for item in validate_audit_entry(entry)}
     assert "unknown_pipeline_node" in codes
+
+
+def test_canonical_json_preserves_mailroom_spacing_escaping_and_default_str():
+    payload = {"z": "café", "a": {"amount": Decimal("12.50"), "ok": True}}
+    assert canonical_json(payload) == (
+        '{"a": {"amount": "12.50", "ok": true}, "z": "caf\\u00e9"}'
+    )
+
+
+@pytest.mark.parametrize("timestamp", [
+    datetime(2026, 10, 2, 23, 55, 1, 123456),
+    datetime(2026, 10, 2, 23, 55, 1, 123456, tzinfo=timezone(timedelta(hours=5, minutes=30))),
+    "2026-10-02T23:55:01.123456Z",
+    0,
+])
+def test_archive_hash_timestamp_variants_match_mailroom(timestamp):
+    kwargs = dict(
+        prev_hash="a" * 64, doc_id="doc-unicode", entry_id="entry-1",
+        matter_id="M", actor="archivist", timestamp=timestamp, event="archived",
+        detail={"name": "café", "amount": Decimal("12.50")},
+    )
+    assert archive_entry_hash(**kwargs) == _mailroom_compute_audit_hash(**kwargs)
+    normalized = timestamp.isoformat() if isinstance(timestamp, datetime) else str(timestamp)
+    assert archive_entry_hash(**kwargs) == archive_entry_hash(**{**kwargs, "timestamp": normalized})
+
+
+def test_archive_hash_ignores_mapping_order_but_detects_nested_content_changes():
+    kwargs = dict(
+        prev_hash="", doc_id="doc-1", entry_id="entry-1", matter_id="M",
+        actor="archivist", timestamp="2026-10-02T23:55:00+00:00", event="archived",
+    )
+    original = {"stage": "archived", "scoring": {"a": 1, "b": 0}}
+    reordered = {"scoring": {"b": 0, "a": 1}, "stage": "archived"}
+    changed = {"stage": "archived", "scoring": {"a": 1, "b": 1}}
+    digest = archive_entry_hash(**kwargs, detail=original)
+    assert digest == archive_entry_hash(**kwargs, detail=reordered)
+    assert digest != archive_entry_hash(**kwargs, detail=changed)
+
+
+@pytest.mark.parametrize("empty", ["[]", "{}", " N/A ", "null"])
+def test_archive_empty_metadata_does_not_create_false_negatives(empty):
+    block = score_archive_block(
+        doc_class="insurance_claim", expected={"claim_number": "CLM-1", "denial_reasons": empty},
+        predicted={"claim_number": "CLM-1"},
+    )
+    assert block["extraction_f1"] == 1.0
+    assert block["fn"] == 0

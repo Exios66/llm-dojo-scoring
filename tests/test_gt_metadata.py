@@ -15,6 +15,7 @@ Fixtures mirror real rows from ``Lucius-Morningstar/mailroom-dataset``
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 
 import pytest
 
@@ -26,7 +27,9 @@ from llm_dojo_scoring.gt_metadata import (
     CUAD_PRESENCE_KEY,
     GT_PRESENCE_KEY,
     derive_presence_from_gt,
+    gt_presence_map,
     is_empty_value,
+    normalize_field_values,
     parse_gt_fields,
     parse_json_container,
     presence_expectations_from_cuad_labels,
@@ -614,3 +617,127 @@ def test_mispassed_label_string_fails_closed_without_crashing():
     assert out["status"] == "unscorable"
     assert out["reason"] == "gt_wrong_schema"
     assert out["overall_score"] is None
+
+
+@pytest.mark.parametrize("raw", ['["field"]', '"contract"', "null", "true", "42"])
+def test_parse_gt_fields_rejects_valid_json_with_wrong_shape(raw):
+    with pytest.raises(ValueError, match="must decode to a mapping"):
+        parse_gt_fields(raw)
+
+
+@pytest.mark.parametrize("raw", [None, [], 0, False])
+def test_parse_gt_fields_rejects_non_mapping_inputs(raw):
+    with pytest.raises(TypeError, match="must be a mapping or string"):
+        parse_gt_fields(raw)
+
+
+@pytest.mark.parametrize("raw", ["[broken]", "{broken}", "[1,]", "{'key': 'value'}", '"quoted"', "true"])
+def test_container_parser_preserves_malformed_containers_and_json_scalars(raw):
+    assert parse_json_container(raw) == raw
+
+
+def test_normalize_field_values_preserves_scalars_and_does_not_mutate_input():
+    record = {1: ' ["Alice", "Bob"] ', "amount": "0", "enabled": False}
+    original = deepcopy(record)
+    assert normalize_field_values(record) == {
+        "1": ["Alice", "Bob"], "amount": "0", "enabled": False,
+    }
+    assert record == original
+
+
+@pytest.mark.parametrize("raw", [None, "not json", "[]", "null", [], 42])
+def test_invalid_presence_map_is_ignored(raw):
+    assert gt_presence_map({GT_PRESENCE_KEY: raw}) == {}
+
+
+@pytest.mark.parametrize("status", sorted(ABSENT_PRESENCE_STATUSES))
+@pytest.mark.parametrize("stringified", [False, True])
+def test_absent_status_suppresses_stale_fields_and_presence_without_mutation(status, stringified):
+    presence = {"governing_law": status, CUAD_PRESENCE_KEY: status}
+    fields = {
+        "governing_law": "Delaware",
+        CUAD_PRESENCE_KEY: {"Governing Law": [{"text": "Delaware law applies."}]},
+        GT_PRESENCE_KEY: json.dumps(presence) if stringified else presence,
+    }
+    original = deepcopy(fields)
+    assert scoring_gt_fields(fields, field_types={"governing_law": "name"}) == {
+        "governing_law": "",
+    }
+    assert derive_presence_from_gt(fields) is None
+    assert fields == original
+
+
+def test_scoping_retains_declared_content_extras_but_never_annotation_fields():
+    fields = {
+        "sender": "Alice", "content_topic": "legal_contracts",
+        "claim_number": "CLM-1", "token_estimate": 200,
+    }
+    assert scoring_gt_fields(
+        fields, field_types={"sender": "name", "token_estimate": "id"},
+        extra_keys=("content_topic", "token_estimate"),
+    ) == {"sender": "Alice", "content_topic": "legal_contracts"}
+    assert scoring_gt_fields(fields, field_types={"sender": "name"}, drop_unmapped=False) == {
+        "sender": "Alice", "content_topic": "legal_contracts", "claim_number": "CLM-1",
+    }
+
+
+def test_presence_uses_first_scorable_span_and_custom_field():
+    labels = {
+        "Governing Law": json.dumps([
+            {"text": "[*]"}, {"start": 4}, "malformed span",
+            {"text": "Delaware law applies."}, {"text": "Later answer."},
+        ]),
+        "Parties": [],
+        "Term": [{"text": "____"}, {"text": "."}],
+    }
+    assert presence_expectations_from_cuad_labels(labels, field="clauses") == {
+        "Governing Law": {"expected": True, "answer": "Delaware law applies.", "field": "clauses"},
+        "Parties": {"expected": False, "answer": "", "field": "clauses"},
+    }
+
+
+def test_pending_labels_become_scorable_when_backfilled():
+    suite = get_suite("contracts_specialist")
+    fields = {
+        "governing_law": "",
+        CUAD_PRESENCE_KEY: {"Governing Law": [{"text": "Delaware law applies."}]},
+        GT_PRESENCE_KEY: {CUAD_PRESENCE_KEY: "pending_annotation"},
+    }
+    prediction = {"cuad_clauses": ["Delaware law applies."]}
+    assert suite.score_document(fields, prediction)["status"] == "unscorable"
+    fields[GT_PRESENCE_KEY][CUAD_PRESENCE_KEY] = "populated"
+    result = suite.score_document(fields, prediction)
+    assert result["extraction_category_presence"] == 1.0
+    assert result["metric_id"] == "cuad.clause_presence.micro_f1"
+    assert result["extraction_f1"] is None
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="Annotation-only GT normalizes to {}, which bypasses the unscorable gate",
+)
+def test_pending_annotation_only_document_is_unscorable():
+    result = get_suite("contracts_specialist").score_document(
+        {
+            CUAD_PRESENCE_KEY: {"Governing Law": [{"text": "Delaware law applies."}]},
+            GT_PRESENCE_KEY: {CUAD_PRESENCE_KEY: "pending_annotation"},
+        },
+        {"cuad_clauses": ["Delaware law applies."]},
+    )
+    assert result.get("status") == "unscorable"
+    assert result["reason"] == "gt_no_extractable_fields"
+
+
+def test_batch_presence_keeps_pending_and_populated_rows_aligned():
+    label = {"Governing Law": [{"text": "Delaware law applies."}]}
+    expected = [
+        {CUAD_PRESENCE_KEY: label, GT_PRESENCE_KEY: {CUAD_PRESENCE_KEY: status}}
+        for status in ("pending_annotation", "populated")
+    ]
+    result = get_suite("contracts_specialist").score(
+        expected, [{"cuad_clauses": []}, {"cuad_clauses": ["Delaware law applies."]}],
+    )
+    assert result["extraction_category_presence"] == 1.0
+    assert len(result["extraction"]) == 2
+    assert result["extraction_f1"] is None
+    assert result["extraction_f2"] is None

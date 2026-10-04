@@ -235,3 +235,60 @@ def test_triage_only_contract_gt_stays_unscorable():
     )
     assert out.get("status") == "unscorable"
     assert out.get("reason") == "gt_no_extractable_fields"
+
+
+@pytest.mark.parametrize("suite_name", ["sorter", "archivist"])
+def test_score_document_rejects_non_extraction_suites(suite_name):
+    with pytest.raises(TypeError, match="extraction"):
+        get_suite(suite_name).score_document({}, {})
+
+
+@pytest.mark.parametrize("expected", [42, False, "[]", '"contract"', "null"])
+def test_score_document_wrong_gt_shape_fails_closed_with_provenance(expected):
+    result = get_suite("contracts_specialist").score_document(
+        expected, {"governing_law": "Delaware"}, dataset_revision="fixture-revision",
+    )
+    assert result["status"] == "unscorable"
+    assert result["reason"] == "gt_wrong_schema"
+    assert result["overall_score"] is None
+    assert result["provenance"]["dataset_revision"] == "fixture-revision"
+
+
+def test_score_document_partial_prediction_reports_distinct_f1_and_f2():
+    suite = get_suite("contracts_specialist")
+    kwargs = {
+        "field_types": {"first_id": "id", "second_id": "id"},
+        "dataset_revision": "fixture-revision", "prompt_id": "fixture-prompt",
+        "split": "test", "draw_seed": 42, "serving_kind": "local",
+        "model_id": "fixture-model",
+    }
+    expected = {"first_id": "A", "second_id": "B"}
+    predicted = {"first_id": "A"}
+    result = suite.score_document(expected, predicted, **kwargs)
+    assert result == suite.score(expected, predicted, detailed=True, **kwargs)
+    assert result["extraction"].field_scores == {"first_id": 1.0, "second_id": 0.0}
+    assert result["overall_score"] == 0.5
+    assert result["extraction_precision"] == 1.0
+    assert result["extraction_recall"] == 0.5
+    assert result["extraction_f1"] == pytest.approx(2 / 3, abs=1e-4)
+    assert result["extraction_f2"] == pytest.approx(5 / 9, abs=1e-4)
+    for key in ("dataset_revision", "prompt_id", "split", "serving_kind", "model_id"):
+        assert result["provenance"][key] == kwargs[key]
+
+
+@pytest.mark.parametrize("predicted_sentiment,accuracy", [("positive", 1.0), ("negative", 0.0)])
+def test_sentiment_only_document_is_scored_without_fabricated_extraction_score(predicted_sentiment, accuracy):
+    result = get_suite("correspondence_specialist").score_document(
+        {"sentiment_label": "positive"}, {"sentiment_label": predicted_sentiment},
+    )
+    assert result.get("status") != "unscorable"
+    assert result["sentiment_accuracy"] == accuracy
+    assert result["overall_score"] is None
+    assert result["extraction"].field_scores == {}
+
+
+@pytest.mark.parametrize("doc_type", ["contract", "corporate_record", "insurance_claim", "merger_agreement"])
+def test_content_metric_ids_are_rejected_outside_correspondence(doc_type):
+    assert not metric_id_allowed("pipeline.enron.sentiment_accuracy", doc_type)
+    assert not metric_id_allowed("pipeline.enron.topic_f1_macro", doc_type)
+    assert not metric_id_allowed("not.a.metric", doc_type)

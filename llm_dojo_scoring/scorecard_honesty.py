@@ -184,7 +184,10 @@ def metric_ids_for_class(doc_class: str) -> tuple[str, ...]:
 
 
 def metric_id_allowed(metric_id: str, doc_class: str) -> bool:
-    """True when ``metric_id`` is on the class's allowed comparison list (#17)."""
+    """True when ``metric_id`` is on the class's allowed comparison list (#17).
+
+    Unknown classes allow only ``pipeline.extraction.overall``.
+    """
     return metric_id in metric_ids_for_class(doc_class)
 
 
@@ -223,6 +226,11 @@ def _has_extractable_gt(
     field_types: Mapping[str, str],
     scorable_gt_keys: Sequence[str] = (),
 ) -> bool:
+    """Return whether GT has a nonempty extraction or suite-declared content value.
+
+    Triage keys are ignored in ``field_types`` but may qualify when explicitly
+    included in ``scorable_gt_keys``.
+    """
     for key in field_types:
         if key in _TRIAGE_GT_KEYS:
             continue
@@ -253,6 +261,11 @@ def assess_extraction_gt(
     those keys is scored on the content metric instead of being suppressed
     as ``gt_no_extractable_fields``. Contracts triage-only rows (subtype /
     doc_type labels with no scorer) remain unscorable.
+
+    Return a ``GtAssessment`` with status and reason: missing or non-dict
+    input is unscorable; an empty dict is scored with reason ``gt_empty``.
+    For a nonempty dict, truthy ``presence_expectations`` permits scoring
+    without extractable fields. This check does not compute any scores.
     """
     if expected is None:
         return GtAssessment("unscorable", "gt_missing")

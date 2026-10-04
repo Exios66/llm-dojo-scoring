@@ -236,3 +236,169 @@ def test_local_serving_kind_is_preserved():
         _DOCUMENTS[:1], [GridExperiment(name="Experiment 3", serving_kind="local")]
     )[0]
     assert row["serving_kind"] == "local"
+
+
+def test_mapping_inputs_coerce_numbers_and_support_document_class_alias():
+    documents = [{
+        "experiment": "E", "doc_class": "Contracts", "score": "0.75",
+        "coverage": "0.5", "ok": True, "latency_seconds": "12",
+        "gpu_seconds": "1800", "completion_tokens": "120",
+    }]
+    experiments = [{
+        "experiment": "E", "gpus": "2", "wall_seconds": "60",
+        "gpu_hourly_usd": "2", "metered_usd": "3", "serving_kind": "modal-vllm",
+    }]
+    card = grid_scorecard(documents=documents, experiments=experiments)
+    row = card["specialists"][0]
+    assert row["specialist"] == "Contracts"
+    assert row["score"] == 0.75
+    assert row["coverage"] == 0.5
+    assert row["p50_latency_seconds"] == 12.0
+    assert row["cost_per_ok_document"] == 1.0
+    assert row["serving_kind"] == "modal"
+    assert card["serving_efficiency"][0]["tokens_per_second_per_gpu"] == 1.0
+    assert card["cost"][0]["metered_per_document"] == 3.0
+
+
+@pytest.mark.parametrize("value", [True, False, "unknown", None])
+def test_invalid_numeric_mapping_values_do_not_fabricate_measurements(value):
+    row = specialist_grid_rows([{
+        "experiment": "E", "specialist": "Contracts", "score": value,
+        "coverage": value, "latency_seconds": value, "gpu_seconds": value,
+    }], [{"name": "E", "gpus": value, "gpu_hourly_usd": 1}])[0]
+    for key in ("score", "coverage", "p50_latency_seconds", "gpu_cost_usd", "gpus"):
+        assert row[key] is None
+    assert row["n_scored"] == 0
+
+
+def test_zero_scores_and_latency_are_measurements_not_missing_values():
+    rows = specialist_grid_rows([
+        GridDocument("E", "Contracts", score=0, coverage=0, latency_seconds=0),
+        GridDocument("E", "Contracts", score=1, coverage=1, latency_seconds=10),
+        GridDocument("E", "Contracts"),
+    ])
+    row = rows[0]
+    assert row["n"] == 3
+    assert row["n_scored"] == 2
+    assert row["score"] == 0.5
+    assert row["coverage"] == 0.5
+    assert row["p50_latency_seconds"] == 5.0
+    assert row["cost_per_ok_document"] is None
+    assert row["serving_kind"] is None
+
+
+def test_all_errored_documents_have_no_cost_per_ok_document():
+    row = specialist_grid_rows(
+        [GridDocument("E", "Contracts", ok=False, error="timeout", gpu_seconds=3600)],
+        [GridExperiment("E", gpu_hourly_usd=2)],
+    )[0]
+    assert row["ok"] == 0
+    assert row["errored"] == 1
+    assert row["error_rate"] == 1.0
+    assert row["gpu_cost_usd"] == 2.0
+    assert row["cost_per_ok_document"] is None
+
+
+@pytest.mark.parametrize("token", ["stop", "completed", "success", "none", "end_turn", "eos"])
+@pytest.mark.parametrize("error_key", ["error", "error_class"])
+def test_success_tokens_are_not_counted_as_errors(token, error_key):
+    docs = [{"experiment": "E", "specialist": "Contracts", "ok": True, error_key: token}]
+    card = grid_scorecard(documents=docs, experiments=[GridExperiment("E")])
+    assert card["specialists"][0]["errored"] == 0
+    assert card["specialists"][0]["ok"] == 1
+    assert card["serving_efficiency"][0]["error_rate"] == 0.0
+
+
+@pytest.mark.parametrize("wall_seconds", [None, 0, -1])
+def test_missing_or_nonpositive_wall_time_withholds_throughput(wall_seconds):
+    row = serving_efficiency_rows(
+        [GridDocument("E", "Contracts", completion_tokens=120)],
+        [GridExperiment("E", gpus=2, wall_seconds=wall_seconds)],
+    )[0]
+    assert row["documents_per_minute"] is None
+    assert row["tokens_per_second_per_gpu"] is None
+
+
+@pytest.mark.parametrize("gpus", [None, 0, -1])
+def test_missing_or_nonpositive_gpu_count_withholds_only_gpu_throughput(gpus):
+    row = serving_efficiency_rows(
+        [GridDocument("E", "Contracts", completion_tokens=120)],
+        [GridExperiment("E", gpus=gpus, wall_seconds=60)],
+    )[0]
+    assert row["documents_per_minute"] == 1.0
+    assert row["tokens_per_second_per_gpu"] is None
+
+
+def test_completion_tokens_take_precedence_over_total_including_zero():
+    docs = [
+        GridDocument("E", "Contracts", completion_tokens=60, total_tokens=600),
+        GridDocument("E", "Contracts", total_tokens=180),
+        GridDocument("E", "Contracts", completion_tokens=0, total_tokens=1000),
+    ]
+    row = serving_efficiency_rows(docs, [GridExperiment("E", gpus=2, wall_seconds=60)])[0]
+    assert row["tokens_per_second_per_gpu"] == 2.0
+
+
+def test_empty_experiment_preserves_billing_without_per_document_estimates():
+    card = grid_scorecard(
+        documents=[], experiments=[GridExperiment("E", wall_seconds=60, gpus=1, metered_usd=2)],
+    )
+    assert card["specialists"] == []
+    row = card["serving_efficiency"][0]
+    assert row["n_documents"] == 0
+    for key in ("error_rate", "documents_per_minute", "tokens_per_second_per_gpu", "gpu_cost_per_document"):
+        assert row[key] is None
+    cost = card["cost"][0]
+    assert cost["metered_usd"] == 2
+    assert cost["metered_per_document"] is None
+    assert cost["busy_share"] is None
+
+
+def test_zero_metered_cost_is_preserved_without_dividing_by_zero():
+    row = session_cost_rows(
+        [GridExperiment("E", gpu_hourly_usd=1, metered_usd=0, billed_usd=0)],
+        [GridDocument("E", "Contracts", gpu_seconds=0)],
+    )[0]
+    assert row["busy_gpu_usd"] == 0.0
+    assert row["metered_per_document"] == 0.0
+    assert row["billed_usd"] == 0
+    assert row["busy_share"] is None
+
+
+def test_scorecard_consumes_generators_once_and_keeps_experiment_order():
+    docs = [GridDocument("B", "Contracts"), GridDocument("A", "Contracts")]
+    experiments = [GridExperiment("A"), GridExperiment("B")]
+    card = grid_scorecard(documents=(d for d in docs), experiments=(e for e in experiments))
+    assert card == grid_scorecard(documents=docs, experiments=experiments)
+    assert [row["experiment"] for row in card["specialists"]] == ["A", "B"]
+
+
+@pytest.mark.parametrize("which", ["documents", "experiments"])
+def test_scorecard_rejects_non_mapping_records(which):
+    kwargs = {"documents": [], "experiments": [], which: [42]}
+    with pytest.raises(TypeError, match="must be Grid"):
+        grid_scorecard(**kwargs)
+
+
+def test_scorecard_rejects_invalid_provenance_serving_kind():
+    with pytest.raises(ValueError, match="provenance serving_kind invalid"):
+        grid_scorecard(documents=[], experiments=[], provenance={"serving_kind": "unknown-provider"})
+
+
+def test_expanded_report_totals_use_pooled_costs_and_document_counts():
+    report = build_grid_report(
+        documents=[
+            GridDocument("A", "Contracts", ok=True, score=1, gpu_seconds=3600),
+            GridDocument("B", "Contracts", ok=True, score=0.5, gpu_seconds=1800),
+            GridDocument("B", "Contracts", ok=True, score=0.5, gpu_seconds=1800),
+        ],
+        experiments=[
+            GridExperiment("A", gpu_hourly_usd=1, metered_usd=2, billed_usd=1),
+            GridExperiment("B", gpu_hourly_usd=1, metered_usd=6, billed_usd=5),
+        ],
+        compact=False, appendix_url="https://example.com/method",
+    )
+    assert "| Contracts (A) | 1.000 | 1/1 | n/a | $1.00 |" in report
+    assert "| Contracts (B) | 0.500 | 2/2 | n/a | $0.50000 |" in report
+    assert "| **Total** | 3 | $2.00 | $8.00 | 25% | $2.67 | $6.00 |" in report
+    assert "[appendix](https://example.com/method)" in report
