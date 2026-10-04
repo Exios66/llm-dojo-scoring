@@ -12,6 +12,7 @@ import pytest
 from llm_dojo_scoring.grid import (
     GridDocument,
     GridExperiment,
+    _is_error,
     build_grid_report,
     grid_scorecard,
     serving_efficiency_rows,
@@ -126,6 +127,23 @@ def test_error_rate_and_ok_count_from_explicit_errors():
     assert e4["errored"] == 1
     assert e4["error_rate"] == 0.5
     assert e4["cost_per_ok_document"] == pytest.approx(0.084444, abs=1e-6)
+
+
+def test_error_class_failure_is_not_masked_by_success_error_token():
+    masked = GridDocument(
+        experiment="Experiment 4",
+        specialist="Contracts",
+        error="stop",
+        error_class="LengthFinishReasonError",
+    )
+    assert _is_error(masked) is True
+    completed = GridDocument(
+        experiment="Experiment 4",
+        specialist="Contracts",
+        error="stop_sequence",
+        error_class="tool_calls",
+    )
+    assert _is_error(completed) is False
 
 
 def test_serving_efficiency_pooled_per_experiment():

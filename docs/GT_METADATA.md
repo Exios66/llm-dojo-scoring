@@ -62,6 +62,7 @@ both splits (3,302 rows) is inside its class's field map or a handled content
 from llm_dojo_scoring import (
     parse_gt_fields,          # JSON string / repr / dict -> dict (nested JSON parsed)
     scoring_gt_fields,        # scope to a suite's field map + extras
+    get_suite,                # suite lookup for per-class field maps
     gt_presence_map,          # the parsed gt_presence status map
     derive_presence_from_gt,  # CUAD labels -> score_category_presence expectations
     is_empty_value,           # None / blank / "null" / "[]" / "{}" / empty collections
