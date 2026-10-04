@@ -44,7 +44,10 @@ def test_default_field_types_match_corpus_and_mailroom_pared_schema():
     assert "subject_matter" in DEFAULT_FIELD_TYPES["corporate_record"]
     assert "keywords" in DEFAULT_FIELD_TYPES["insurance_claim"]
     assert "claim_checklist" in DEFAULT_FIELD_TYPES["insurance_claim"]
-    assert DEFAULT_FIELD_TYPES["contract"] == DEFAULT_FIELD_TYPES["merger_agreement"]
+    assert DEFAULT_FIELD_TYPES["contract"] != DEFAULT_FIELD_TYPES["merger_agreement"]
+    assert "effective_time" in DEFAULT_FIELD_TYPES["merger_agreement"]
+    assert "cuad_family" not in DEFAULT_FIELD_TYPES["merger_agreement"]
+    assert "cuad_clauses" not in DEFAULT_FIELD_TYPES["merger_agreement"]
 
 
 def test_legacy_full_map_keeps_key_obligations_for_historical_rescoring():

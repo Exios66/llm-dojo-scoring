@@ -52,7 +52,7 @@ llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.15.0
 <div align="center">
 
 ```python
-from llm_dojo_scoring import score_extraction, bootstrap_ci, tokens_summary
+from llm_dojo_scoring import score_extraction, score_archive_block, format_audit_entry, bootstrap_ci, tokens_summary
 from llm_dojo_scoring import get_suite, apply_intake, score_task, compare_serving
 from llm_dojo_scoring.prompts import get_prompt
 ```
@@ -196,7 +196,7 @@ dojo-sync    [--task TRACE_NAME] [--session NAME] [--max-items N]
 
 ## Migration
 
-See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md). Prompt catalog: [`docs/PROMPTS.md`](docs/PROMPTS.md).
+See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md), [`docs/ARCHIVE_SCORING.md`](docs/ARCHIVE_SCORING.md), [`docs/SCORECARD_HONESTY.md`](docs/SCORECARD_HONESTY.md). Prompt catalog: [`docs/PROMPTS.md`](docs/PROMPTS.md).
 
 ## Releases & monorepo sync
 

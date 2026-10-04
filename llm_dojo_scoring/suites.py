@@ -55,6 +55,7 @@ __all__ = [
 #: Specialist profile name → native mailroom document class.
 SPECIALIST_DOC_TYPES: dict[str, str] = {
     "contracts_specialist": "contract",
+    "merger_agreement_specialist": "merger_agreement",
     "corporate_records_specialist": "corporate_record",
     "due_diligence_specialist": "due_diligence",
     "correspondence_specialist": "correspondence",
@@ -64,11 +65,10 @@ SPECIALIST_DOC_TYPES: dict[str, str] = {
 }
 
 #: Doc-type lookup aliases (mailroom ``doc_type`` → specialist suite).
-#: ``merger_agreement`` is a MAUD-grounded contract subtype scored by the
-#: contracts specialist with the MAUD consideration catalog rebound.
+#: ``merger_agreement`` is ``MergerAgreementExtraction`` scored by its own
+#: specialist — not an extract alias of ``contract``.
 DOC_TYPE_ALIASES: dict[str, str] = {
     **{doc_type: agent for agent, doc_type in SPECIALIST_DOC_TYPES.items()},
-    "merger_agreement": "contracts_specialist",
 }
 
 #: Default field→scoring-type maps, mirrored from llm-mailroom
@@ -171,14 +171,13 @@ DEFAULT_FIELD_TYPES: dict[str, dict[str, str]] = {
         "document_name": "name",
         "parties": "entity_list:name",
         "effective_date": "date",
-        "term_length": "free_text",
+        "effective_time": "free_text",
         "governing_law": "name",
-        "contract_value": "money",
-        "renewal_terms": "free_text",
-        "cuad_family": "name",
         "merger_consideration": "name",
-        "cuad_clauses": "entity_list:free_text",
         "maud_clauses": "entity_list:free_text",
+        "intent": "name",
+        "subject_matter": "free_text",
+        "keywords": "entity_list:name",
     },
 }
 
@@ -265,6 +264,16 @@ _AGENT_EXTRAS: dict[str, tuple[str, ...]] = {
         "maud_question_macro_accuracy",
         "maud_clause_presence",
         "maud_valid_class_rate",
+    ),
+    "merger_agreement_specialist": (
+        "date_mae_days",
+        "per_field_scores",
+        "hallucination_rate",
+        "maud_question_accuracy",
+        "maud_question_macro_accuracy",
+        "maud_clause_presence",
+        "maud_valid_class_rate",
+        "maud_category_accuracy",
     ),
     "corporate_records_specialist": (
         "date_mae_days",
@@ -377,10 +386,11 @@ _HONEST_GAPS: dict[str, str] = {
         "typed-extraction field-micro P/R/F1/F2 plus that subclass catalog."
     ),
     "compliance_specialist": (
-        "HONEST GAP: compliance_filing has zero rows in Lucius-Morningstar/"
+        "HONEST GAP: compliance_filing was RETIRED from the live llm-mailroom "
+        "extract roster (2026-09-15). Zero rows in Lucius-Morningstar/"
         "mailroom-dataset. Hub SEC form-body inventory (10-K, 10-Q, 8-K, …) "
-        "is the live subclass catalog; suite scores typed-extraction plus "
-        "that inventory (no corpus-backed rows yet)."
+        "stays the historical subclass catalog; this suite remains for "
+        "traces, not archive scoring."
     ),
     "local_vs_api": (
         "HONEST GAP: TTFT is None unless a first-token timestamp or explicit "
@@ -1125,10 +1135,9 @@ def _requested_doc_type(name: str) -> str | None:
 def _rebind_for_doc_type(suite: ScoringSuite, doc_type: str) -> ScoringSuite:
     """Keep the specialist profile but bind this document class's catalogs.
 
-    ``merger_agreement`` shares the contracts specialist (same extraction
-    fields) but has a MAUD consideration subclass — not the CUAD family
-    catalog. Without this rebind, ``get_suite("merger_agreement")`` would
-    silently score CUAD families.
+    ``merger_agreement`` is ``MergerAgreementExtraction`` (no CUAD family
+    or ``cuad_clauses``). Historical callers that rebound the contracts
+    specialist onto the merger class pick up the MAUD catalog here.
     """
     from dataclasses import replace
 
@@ -1167,9 +1176,9 @@ def get_suite(name: str) -> ScoringSuite:
     types (``insurance_claim``), and ``doc:`` prefixes.
 
     Doc-type aliases that share a specialist but have their own subclass
-    catalog (today: ``merger_agreement``) are rebound so ``suite.doc_type``,
-    ``suite.subclasses``, and ``suite.differentiators`` match the requested
-    class — not the specialist's native class.
+    catalog are rebound so ``suite.doc_type``, ``suite.subclasses``, and
+    ``suite.differentiators`` match the requested class — not the
+    specialist's native class.
     """
     suite = DEFAULT_SUITES[_resolve_suite_name(name)]
     requested = _requested_doc_type(name)

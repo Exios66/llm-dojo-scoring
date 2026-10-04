@@ -94,7 +94,8 @@ def test_default_profiles():
     # v0.7.0 (KANBAN-067): + insurance_claims_specialist (23rd mailroom agent;
     # deliberate re-pin — see tests/test_doc_bundles.py for the full surface).
     expected = {
-        "sorter", "contracts_specialist", "corporate_records_specialist",
+        "sorter", "contracts_specialist", "merger_agreement_specialist",
+        "corporate_records_specialist",
         "due_diligence_specialist", "correspondence_specialist",
         "compliance_specialist", "court_opinions_specialist", "reporter",
         "judge", "boss", "pdf_transcriber", "image_extractor", "archivist",

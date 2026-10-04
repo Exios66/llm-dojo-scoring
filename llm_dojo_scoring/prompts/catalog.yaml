@@ -25,6 +25,16 @@ prompts:
   priming:
   - colloquial_precision
   - colloquial_completeness
+- agent: merger_agreement_specialist
+  family: production
+  version: SYSTEM_PROMPT_V0
+  kind: llm
+  metrics_bundle: extraction
+  doc_bundle: merger_agreement
+  source_repo: llm-mailroom
+  source_key: SYSTEM_PROMPT_V0
+  template: merger_agreement_specialist.production.md
+  priming: []
 - agent: corporate_records_specialist
   family: production
   version: SYSTEM_PROMPT
@@ -229,6 +239,16 @@ prompts:
   priming:
   - colloquial_precision
   - colloquial_completeness
+- agent: merger_agreement_specialist
+  family: docclass
+  version: merger_agreement_specialist_mailroom_prompts_v0
+  kind: llm
+  metrics_bundle: extraction
+  doc_bundle: merger_agreement
+  source_repo: llm-mailroom
+  source_key: merger_agreement_specialist_mailroom_prompts_v0
+  template: merger_agreement_specialist.docclass.md
+  priming: []
 - agent: corporate_records_specialist
   family: docclass
   version: corporate_records_specialist_mailroom_prompts_v0

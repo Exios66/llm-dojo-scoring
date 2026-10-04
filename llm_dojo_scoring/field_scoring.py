@@ -47,6 +47,22 @@ from .config import get_settings
 
 logger = structlog.get_logger(__name__)
 
+#: Trace / format artifacts — never enter :func:`score_extraction`
+#: (mailroom-issues #237 / #238).
+NEVER_SCORED_FIELDS: frozenset[str] = frozenset({"confidence", "reasoning"})
+
+#: Prompt-catalog keys retired from live models. Ignored unless the caller
+#: passed them in an explicit ``field_types`` map (historical rescoring).
+RETIRED_PROMPT_KEYS: frozenset[str] = frozenset(
+    {
+        "key_obligations",
+        "termination_clauses",
+        "key_provisions",
+        "key_points",
+        "referenced_communications",
+    }
+)
+
 # ---------------------------------------------------------------------------
 # Configuration accessors (kept for drop-in compatibility with the
 # llm-entity-extraction API — all read the shared settings object)
@@ -901,15 +917,18 @@ def _presence_candidates(predicted: dict, category: str, field: str) -> list[str
     Prefers spans routed explicitly by the extractor's reasoning trace
     (``reasoning.entries[]`` whose ``field`` is the canonical CUAD category
     name — issue #21 retag), falling back to the disaggregated items of the
-    category's mapped field (e.g. ``cuad_clauses``)."""
-    entries = (predicted.get("reasoning") or {}).get("entries") or []
-    routed = [
-        str(e.get("evidence") or e.get("section_ref") or "")
-        for e in entries
-        if str(e.get("field") or "").strip() == category
-    ]
-    if routed:
-        return [r for r in routed if r.strip()]
+    category's mapped field (e.g. ``cuad_clauses``). Disable routing with
+    ``trace_knobs.reasoning_routes_presence``.
+    """
+    if get_settings().trace_knobs.reasoning_routes_presence:
+        entries = (predicted.get("reasoning") or {}).get("entries") or []
+        routed = [
+            str(e.get("evidence") or e.get("section_ref") or "")
+            for e in entries
+            if str(e.get("field") or "").strip() == category
+        ]
+        if routed:
+            return [r for r in routed if r.strip()]
     return disaggregate_clause_spans(predicted.get(field))
 
 
@@ -1134,8 +1153,8 @@ def get_field_types(doc_class: str, taxonomy: dict | None = None) -> dict[str, s
        once at import.
     3. ``{}`` when neither is available (no taxonomy configured).
 
-    Returns {} when the class is absent. ``EXTRACT_CLASS_ALIASES`` is applied
-    so aliases resolve to their canonical class.
+    Returns {} when the class is absent. Extract aliases (currently none)
+    resolve to their canonical class; ``merger_agreement`` is its own map.
     """
     from .mailroom import EXTRACT_CLASS_ALIASES
 
@@ -1159,6 +1178,8 @@ class ExtractionScoreResult:
     # Factuality audit per list field: {field: audit dict} with
     # verified_precision / hallucination_rate (see audit_list_field).
     entity_list_audit: dict[str, dict] = field(default_factory=dict)
+    #: Captured confidence / reasoning knobs (never in ``field_scores``).
+    trace: dict[str, Any] | None = None
 
     @property
     def needs_judge_review(self) -> bool:
@@ -1183,6 +1204,7 @@ class ExtractionScoreResult:
                 k: v.to_dict() for k, v in self.entity_list_scores.items()
             },
             "entity_list_audit": self.entity_list_audit,
+            "trace": self.trace,
         }
 
 
@@ -1222,7 +1244,15 @@ def score_extraction(
     entity_list_audit: dict[str, dict] = {}
 
     for key, exp_value in expected.items():
+        if key in NEVER_SCORED_FIELDS:
+            continue
+        if key in RETIRED_PROMPT_KEYS and key not in field_types:
+            continue
         if exp_value is None or exp_value == "":
+            continue
+        if isinstance(exp_value, str) and not exp_value.strip():
+            continue
+        if isinstance(exp_value, (list, dict, tuple, set)) and len(exp_value) == 0:
             continue
         field_type = field_types.get(key) or _heuristic_field_type(key, exp_value)
         pred_value = predicted.get(key)
@@ -1258,6 +1288,8 @@ def score_extraction(
             pred_value = predicted.get(key)
             if pred_value in (None, "", []) or key in entity_list_audit:
                 continue
+            if key in NEVER_SCORED_FIELDS:
+                continue
             if is_entity_list(field_type):
                 element_type = field_type.split(":", 1)[1] if ":" in field_type else "name"
                 entity_list_audit[key] = audit_list_field(
@@ -1270,6 +1302,8 @@ def score_extraction(
 
     scored = list(field_scores.values())
     overall = round(sum(scored) / len(scored), 4) if scored else None
+    from .trace_knobs import capture_trace_knobs
+
     return ExtractionScoreResult(
         doc_class=doc_class,
         field_scores=field_scores,
@@ -1277,4 +1311,5 @@ def score_extraction(
         ambiguous_fields=ambiguous,
         entity_list_scores=entity_list_scores,
         entity_list_audit=entity_list_audit,
+        trace=capture_trace_knobs(predicted, expected=expected, correctness=overall),
     )

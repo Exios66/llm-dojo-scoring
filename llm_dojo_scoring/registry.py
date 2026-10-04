@@ -66,6 +66,7 @@ __all__ = [
 # All specialists the registry still scores (live + retired historical).
 SPECIALIST_AGENTS: tuple[str, ...] = (
     "contracts_specialist",
+    "merger_agreement_specialist",
     "corporate_records_specialist",
     "due_diligence_specialist",
     "correspondence_specialist",
@@ -73,13 +74,14 @@ SPECIALIST_AGENTS: tuple[str, ...] = (
     "court_opinions_specialist",
     "insurance_claims_specialist",
 )
-#: Live llm-mailroom extraction roster (v0.5+). Retired specialists stay
-#: in SPECIALIST_AGENTS so historical traces still validate.
+#: Live llm-mailroom extraction roster (mailroom-issues #236–#238).
+#: Retired specialists stay in SPECIALIST_AGENTS so historical traces
+#: still validate.
 LIVE_SPECIALIST_AGENTS: tuple[str, ...] = (
     "contracts_specialist",
+    "merger_agreement_specialist",
     "corporate_records_specialist",
     "correspondence_specialist",
-    "compliance_specialist",
     "insurance_claims_specialist",
 )
 
@@ -583,7 +585,7 @@ metrics:
     source: "mailroom.score_aligned_classification"
   aligned_accuracy:
     tier: 1
-    description: "HF pipeline aligned doc-type accuracy (merger_agreement ≡ contract)"
+    description: "HF pipeline aligned doc-type accuracy (extract aliases only; merger_agreement ≠ contract)"
     applicable_agents: [CLASSIFIERS]
     source: "mailroom.score_aligned_classification"
   subclass_accuracy:
@@ -1008,6 +1010,7 @@ metrics:
     tier: 2
     description: "|confidence - correctness| calibration gap"
     applicable_agents: [ALL]
+    source: "trace_knobs.confidence_calibration_error"
     notes: "absorbs mailroom classification_confidence + extraction_confidence (raw confidences stay at T3 as inputs)"
   hallucination_rate:
     tier: 2
