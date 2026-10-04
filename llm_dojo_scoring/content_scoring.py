@@ -7,7 +7,12 @@ corpus differentiators, not specialist extraction-schema fields:
 - correspondence: ``content_topic`` (11 Enron topics) and ``sentiment_label``
   (negative / neutral / positive)
 - merger_agreement: ``maud_clause_labels`` (22 Hub question keys → answer +
-  category), or the specialist ``maud_clauses`` ``'<Question>: <Answer>'`` list
+  category + ``valid_classes``), or the specialist ``maud_clauses``
+  ``'<Question>: <Answer>'`` list
+
+MAUD answers are validated against the question's own class catalog — the
+GT record's ``valid_classes`` when present, otherwise the corpus union in
+:mod:`llm_dojo_scoring.maud` — never "any non-empty text is valid".
 
 All functions are deterministic pure functions over ``(predicted, expected)``
 pairs so offline rescoring and live Langfuse scoring never disagree.
@@ -17,7 +22,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Iterable
+from typing import Any, Iterable, Sequence
 
 from .classification import ERROR_PREFIX, confusion_matrix, top_confusions
 from .config import MAUD_CONSIDERATION_ALIASES, MAUD_CONSIDERATION_TYPES
@@ -27,6 +32,7 @@ from .corpus import (
     MAUD_CLAUSE_CATEGORIES,
     MAUD_QUESTION_KEYS,
 )
+from .maud import canonical_maud_class, is_maud_class
 from .tasks import normalize_maud_consideration
 from .scorecard_honesty import detect_maud_gt_ambiguity
 from .field_scoring import RETIRED_PROMPT_KEYS
@@ -40,6 +46,7 @@ __all__ = [
     "normalize_maud_question_key",
     "normalize_maud_category",
     "normalize_maud_answer",
+    "is_valid_maud_answer",
     "parse_maud_labels",
     "peel_non_extraction_fields",
     "score_content_topic",
@@ -88,12 +95,6 @@ _SENTIMENT_ALIASES: dict[str, str] = {
     "neutral": "neutral",
     "mixed": "neutral",
 }
-
-_YES_NO = {
-    "yes": "yes", "y": "yes", "true": "yes", "1": "yes",
-    "no": "no", "n": "no", "false": "no", "0": "no",
-}
-
 
 def _fold(value: Any) -> str:
     return _ALIAS_RE.sub(" ", str(value or "").strip().lower()).strip()
@@ -148,21 +149,33 @@ def normalize_maud_category(value: Any) -> str:
     return folded.replace(" ", "_") if folded else ""
 
 
-def normalize_maud_answer(question: str, value: Any) -> str:
-    """Task-aware answer fold: consideration type, yes/no, otherwise folded text."""
+def normalize_maud_answer(
+    question: str, value: Any, valid_classes: Sequence[str] | None = None
+) -> str:
+    """Task-aware answer fold: consideration token, else the class surface.
+
+    ``valid_classes`` is the GT record's own catalog when available; the
+    corpus union (:data:`llm_dojo_scoring.maud.MAUD_ANSWER_CLASSES`) is the
+    fallback. Unknown questions fall back to folded text — callers that need
+    validity must use :func:`is_valid_maud_answer`, which fails closed.
+    """
     if value is None:
         return ""
     key = normalize_maud_question_key(question)
     if key == "Type of Consideration":
         return normalize_maud_consideration(value)
-    folded = _fold(value)
-    if folded in _YES_NO:
-        return _YES_NO[folded]
-    return folded
+    return canonical_maud_class(key, value, valid_classes)
 
 
-def is_valid_maud_answer(question: str, value: Any) -> bool:
-    """True when the predicted answer is in the question's known class set."""
+def is_valid_maud_answer(
+    question: str, value: Any, valid_classes: Sequence[str] | None = None
+) -> bool:
+    """True when the answer uses only classes from the question's surface.
+
+    Uses the GT record's own ``valid_classes`` when provided, otherwise the
+    corpus union for one of the 22 Hub questions. Unknown questions without
+    an explicit catalog fail closed (``False``) — never guess.
+    """
     if value is None or str(value).strip() == "":
         return False
     key = normalize_maud_question_key(question)
@@ -171,9 +184,9 @@ def is_valid_maud_answer(question: str, value: Any) -> bool:
         if folded in MAUD_CONSIDERATION_ALIASES:
             return True
         return any(_fold(t) == folded for t in MAUD_CONSIDERATION_TYPES)
-    if folded in _YES_NO:
-        return True
-    return bool(folded)
+    if not valid_classes and key not in MAUD_QUESTION_KEYS:
+        return False
+    return is_maud_class(key, value, valid_classes)
 
 
 def _macro_f1(expected: list[str], predicted: list[str]) -> float:
@@ -300,18 +313,30 @@ def _maybe_json(value: Any) -> Any:
 
 
 def _record_from_value(value: Any) -> dict[str, Any]:
-    """Normalize one question's payload to ``{answer, category}``."""
+    """Normalize one question's payload to ``{answer, category, valid_classes}``.
+
+    ``valid_classes`` (the Hub annotation surface) is preserved so scoring
+    can validate answers against the row's own class catalog — never guess.
+    """
     if isinstance(value, dict):
         answer = value.get("answer")
         if answer is None:
             answer = value.get("value") or value.get("label") or ""
         category = value.get("category") or ""
+        valid = value.get("valid_classes") or ()
+        if isinstance(valid, str):
+            valid = [valid]
+        valid = [str(item) for item in valid if item not in (None, "")]
+        rec: dict[str, Any] = {}
         if isinstance(answer, (list, tuple)):
             items = [item for item in answer if item not in (None, "")]
-            if len(items) == 1:
-                return {"answer": items[0], "category": str(category)}
-            return {"answer": list(items), "category": str(category)}
-        return {"answer": str(answer), "category": str(category)}
+            rec["answer"] = items[0] if len(items) == 1 else list(items)
+        else:
+            rec["answer"] = str(answer)
+        rec["category"] = str(category)
+        if valid:
+            rec["valid_classes"] = valid
+        return rec
     return {"answer": "" if value is None else str(value), "category": ""}
 
 
@@ -348,7 +373,11 @@ def _coalesce_maud_answers(answers: list[Any]) -> Any:
 
 
 def _merge_maud_record(out: dict[str, dict[str, Any]], key: str, rec: dict[str, Any]) -> None:
-    """Same Hub key with distinct answers → list (ambiguous), never last-wins."""
+    """Same Hub key with distinct answers → list (ambiguous), never last-wins.
+
+    ``valid_classes`` from repeated records are unioned so no row-level
+    class surface is dropped.
+    """
     if key not in out:
         out[key] = rec
         return
@@ -364,15 +393,25 @@ def _merge_maud_record(out: dict[str, dict[str, Any]], key: str, rec: dict[str, 
         existing["category"] = rec["category"]
     if rec.get("gt_ambiguous") or rec.get("ambiguous"):
         existing["gt_ambiguous"] = True
+    merged_valid: list[str] = []
+    seen_valid: set[str] = set()
+    for src in (existing.get("valid_classes") or (), rec.get("valid_classes") or ()):
+        for cls in src:
+            if cls not in seen_valid:
+                seen_valid.add(cls)
+                merged_valid.append(cls)
+    if merged_valid:
+        existing["valid_classes"] = merged_valid
 
 
 def parse_maud_labels(value: Any) -> dict[str, dict[str, Any]]:
     """Coerce corpus JSON, specialist spans, or a question→answer map.
 
-    Returns ``{canonical_question: {"answer": str | list, "category": str}}``.
-    Distinct sub-question keys stay distinct. Repeated Hub keys with
-    different answers keep every answer so the scorer can mark
-    ``gt_ambiguous`` instead of silently keeping the last span.
+    Returns ``{canonical_question: {"answer": str | list, "category": str,
+    "valid_classes": list[str] (when present)}}``. Distinct sub-question keys
+    stay distinct. Repeated Hub keys with different answers keep every answer
+    so the scorer can mark ``gt_ambiguous`` instead of silently keeping the
+    last span.
     """
     value = _maybe_json(value)
     if value is None:
@@ -488,18 +527,25 @@ def score_maud_extraction(expected: Any, predicted: Any) -> dict:
             doc_n += 1
             pred_rec = pred_labels.get(question)
             present = pred_rec is not None
+            # The GT record's own catalog is the authority for this row;
+            # the corpus union is only the fallback (see llm_dojo_scoring.maud).
+            gt_classes = rec.get("valid_classes")
             if present:
                 stats["present"] += 1
                 n_present += 1
                 doc_present += 1
                 pred_answer = pred_rec["answer"]
-                if is_valid_maud_answer(question, pred_answer):
+                if is_valid_maud_answer(question, pred_answer, gt_classes):
                     stats["valid"] += 1
                     n_valid += 1
             else:
                 pred_answer = ""
-            exp_answer = normalize_maud_answer(question, rec["answer"])
-            got_answer = normalize_maud_answer(question, pred_answer) if present else ""
+            exp_answer = normalize_maud_answer(question, rec["answer"], gt_classes)
+            got_answer = (
+                normalize_maud_answer(question, pred_answer, gt_classes)
+                if present
+                else ""
+            )
             if present and exp_answer == got_answer:
                 stats["exact"] += 1
                 n_exact += 1
