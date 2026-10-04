@@ -65,8 +65,10 @@ completion, and specialist grid reports.
   events, and annotation stats / other classes' fields never reach extraction
   scoring. `N/A` date placeholders are empty, and CUAD label spans with no
   alphanumeric content (`[*]`, `____`, `.`) are omitted from presence
-  expectations. A mis-passed class-label string fails closed
-  (`gt_wrong_schema`) instead of crashing. Perfect-prediction replay over the
+  expectations. `pending_annotation` (label backfill not yet run) is treated
+  as absent, so stale values on pending fields are never scored. A mis-passed
+  class-label string fails closed (`gt_wrong_schema`) instead of crashing.
+  Perfect-prediction replay over the
   **full corpus** (both splits, 3,302 rows, 19,924 extraction events):
   **0 FN / 0 FP / 0 spurious fills / 0 F1 or presence misses**; 91
   triage-only contract rows stay `unscorable`.
@@ -147,7 +149,7 @@ completion, and specialist grid reports.
 - **`summarize_run_completion`** — LengthFinish histogram; ITT quality
   ≠ completed-only (#21). `classify_serving_kind` keeps Modal as
   `modal` (not in `LOCAL_PROVIDERS`).
-- Package version **0.19.0**; tests: **520 passed, 5 skipped**.
+- Package version **0.19.0**; tests: **521 passed, 5 skipped**.
 
 ## [0.18.0] - 2026-09-29
 

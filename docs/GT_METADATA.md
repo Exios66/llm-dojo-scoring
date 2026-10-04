@@ -21,8 +21,11 @@ before scoring (`ScoringSuite._score_extraction`). It guarantees:
    list compares as a list, so a correct model list is not scored as one
    giant string element.
 2. **Absent fields are never required events.** `gt_presence` values
-   `not_applicable` and `schema_documented_absence` are replaced with `""`
-   (`ABSENT_PRESENCE_STATUSES`). A model that correctly emits nothing for
+   `not_applicable`, `schema_documented_absence`, and `pending_annotation`
+   (label backfill not yet run) are replaced with `""`
+   (`ABSENT_PRESENCE_STATUSES`) — including stale non-empty values attached
+   to a pending field — and no presence expectations are derived from a
+   pending `cuad_clause_labels`. A model that correctly emits nothing for
    them is not penalized; filling one is still a spurious fill (FP), which is
    the honest signal.
 3. **Only the document type's own label set is scored.** When the row carries
@@ -85,7 +88,10 @@ over **both splits** (`ground_truth` test 323 + train 2,979):
 | **total** | **3,302** | **19,924** | **0** | **0** | **0** | **0** | **0** |
 
 - 91 triage-only contract rows (6 test + 85 train) are correctly
-  `unscorable` — never a fabricated 0.0.
+  `unscorable` — never a fabricated 0.0. All 91 carry
+  `cuad_clause_labels: "{}"` with `gt_presence` status `pending_annotation`
+  (the label backfill has not run); they become scorable automatically once
+  the backfill populates the labels.
 - Placeholder GT values are handled: populated `N/A` dates are empty, and
   CUAD spans with no alphanumeric content (`[*]`, `[●]`, `____`, `.`) are
   omitted from presence expectations instead of counting against a model that

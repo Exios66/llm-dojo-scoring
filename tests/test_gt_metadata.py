@@ -6,9 +6,10 @@ Fixtures mirror real rows from ``Lucius-Morningstar/mailroom-dataset``
 
 * stringified ``"[]"`` / ``"{}"`` GT values must be empty, not required
   events (a model that correctly emits nothing is not penalized);
-* fields marked ``not_applicable`` / ``schema_documented_absence`` must never
-  reach extraction scoring — only the class's own schema fields (plus the
-  content differentiators its suite carries) are scored.
+* fields marked ``not_applicable`` / ``schema_documented_absence`` /
+  ``pending_annotation`` must never reach extraction scoring — only the
+  class's own schema fields (plus the content differentiators its suite
+  carries) are scored.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ import pytest
 from llm_dojo_scoring import get_suite
 from llm_dojo_scoring.extraction_metrics import extraction_binary_metrics
 from llm_dojo_scoring.gt_metadata import (
+    ABSENT_PRESENCE_STATUSES,
     ANNOTATION_KEYS,
     CUAD_PRESENCE_KEY,
     GT_PRESENCE_KEY,
@@ -565,6 +567,41 @@ def test_contract_presence_only_row_uses_presence_not_zero_f1():
 def test_contract_zero_populated_row_is_unscorable():
     suite = get_suite("contracts_specialist")
     out = suite.score_document(json.dumps(_CONTRACT_EMPTY_GT), {"cuad_clauses": []})
+    assert out["status"] == "unscorable"
+    assert out["reason"] == "gt_no_extractable_fields"
+    assert out["overall_score"] is None
+
+
+def test_pending_annotation_stale_labels_are_never_scored():
+    """Backfill-not-run status: a stale non-empty label is not a GT event.
+
+    The current corpus has 91 contract rows with ``cuad_clause_labels`` in
+    ``pending_annotation``; a row whose only label is pending must stay
+    unscorable even if a stale placeholder value is still attached.
+    """
+    assert "pending_annotation" in ABSENT_PRESENCE_STATUSES
+    suite = get_suite("contracts_specialist")
+    gt = {
+        "cuad_clause_labels": json.dumps(
+            {"Governing Law": [{"start": 1, "text": "stale placeholder text"}]}
+        ),
+        "gt_presence": json.dumps(
+            {
+                "cuad_clause_labels": "pending_annotation",
+                "governing_law": "pending_annotation",
+                "maud_clause_labels": "not_applicable",
+            }
+        ),
+        "governing_law": "stale governing law value",
+        "maud_clause_labels": "{}",
+    }
+    scoped = scoring_gt_fields(gt, field_types=suite.field_types, drop_unmapped=True)
+    # Annotation/presence inputs never survive scoping; pending schema fields
+    # are blanked even when a stale value is attached.
+    assert "cuad_clause_labels" not in scoped
+    assert scoped["governing_law"] == ""
+    assert derive_presence_from_gt(parse_gt_fields(gt)) is None
+    out = suite.score_document(gt, {"cuad_clauses": []})
     assert out["status"] == "unscorable"
     assert out["reason"] == "gt_no_extractable_fields"
     assert out["overall_score"] is None

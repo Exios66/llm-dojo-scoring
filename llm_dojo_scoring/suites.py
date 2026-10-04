@@ -743,9 +743,10 @@ class ScoringSuite:
         # ``mailroom-dataset`` rows carry the union of every class's fields
         # plus annotation stats and a stringified gt_presence map. Scope the
         # GT to THIS suite's class surface so fields that do not apply to the
-        # document type (empty / not_applicable / schema_documented_absence)
-        # are never required events, and parse the stringified JSON values
-        # ("[]", "{}", '["a", "b"]'). See llm_dojo_scoring.gt_metadata.
+        # document type (empty / not_applicable / schema_documented_absence /
+        # pending_annotation) are never required events, and parse the
+        # stringified JSON values ("[]", "{}", '["a", "b"]'). See
+        # llm_dojo_scoring.gt_metadata.
         from . import gt_metadata as _gtm
 
         carries_presence = "extraction_category_presence" in self.extra_metrics
