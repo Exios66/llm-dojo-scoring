@@ -96,6 +96,11 @@ class GridExperiment:
 
 
 def _num(value: Any) -> float | None:
+    """Coerce a number; return ``None`` for booleans, nulls, or invalid values.
+
+    Conversion ``TypeError`` and ``ValueError`` become ``None``; other
+    conversion errors propagate.
+    """
     if value is None or isinstance(value, bool):
         return None
     try:
@@ -105,6 +110,11 @@ def _num(value: Any) -> float | None:
 
 
 def _int(value: Any) -> int | None:
+    """Coerce an integer, truncating fractional numeric values toward zero.
+
+    Return ``None`` for booleans, nulls, or conversion ``TypeError`` /
+    ``ValueError``; ``OverflowError`` (for example, infinity) propagates.
+    """
     if value is None or isinstance(value, bool):
         return None
     try:
@@ -114,6 +124,13 @@ def _int(value: Any) -> int | None:
 
 
 def _doc(value: GridDocument | Mapping[str, Any]) -> GridDocument:
+    """Normalize a document mapping, or return an existing record unchanged.
+
+    ``doc_class`` is a fallback for a missing or empty ``specialist``.
+    Only boolean ``ok`` values are retained. Numeric conversion failures
+    follow :func:`_num` and :func:`_int`. Raise ``TypeError`` for other
+    input types.
+    """
     if isinstance(value, GridDocument):
         return value
     if not isinstance(value, Mapping):
@@ -136,6 +153,13 @@ def _doc(value: GridDocument | Mapping[str, Any]) -> GridDocument:
 
 
 def _experiment(value: GridExperiment | Mapping[str, Any]) -> GridExperiment:
+    """Normalize experiment fields and serving aliases without mutating input.
+
+    Mappings use ``experiment`` as a fallback name and default an empty
+    serving kind to ``modal``. Raise ``TypeError`` for unsupported input
+    types and ``ValueError`` for kinds outside local, Modal, and API
+    serving. Numeric conversion errors follow :func:`_num` and :func:`_int`.
+    """
     if isinstance(value, GridExperiment):
         kind = normalize_serving_kind_token(value.serving_kind)
         if kind not in _SERVING_KINDS:
@@ -170,7 +194,10 @@ def _experiment(value: GridExperiment | Mapping[str, Any]) -> GridExperiment:
 
 
 def _percentile(values: Sequence[float], p: float) -> float | None:
-    """Linear-interpolation percentile (``p`` in ``[0, 1]``)."""
+    """Linear-interpolation percentile (``p`` in ``[0, 1]``).
+
+    Return ``None`` for no values; otherwise round to six decimal places.
+    """
     vals = sorted(float(v) for v in values)
     if not vals:
         return None
@@ -184,6 +211,11 @@ def _percentile(values: Sequence[float], p: float) -> float | None:
 
 
 def _is_error(doc: GridDocument) -> bool:
+    """Return whether the first truthy error or error-class value marks failure.
+
+    Blank, completion, and no-error tokens return ``False``; ``ok`` is not
+    consulted.
+    """
     if doc.error or doc.error_class:
         token = str(doc.error or doc.error_class or "").strip().lower()
         if token in {"", "stop", "completed", "success", "none", "end_turn", "eos"}:
@@ -193,6 +225,12 @@ def _is_error(doc: GridDocument) -> bool:
 
 
 def _gpu_cost_usd(docs: Iterable[GridDocument], gpu_hourly_usd: float | None) -> float | None:
+    """Price available document GPU seconds at USD per GPU-hour.
+
+    Return the summed cost rounded to six decimals, or ``None`` without a
+    price or any GPU time. Missing times are omitted; GPU count is not
+    applied again.
+    """
     if gpu_hourly_usd is None:
         return None
     seconds = 0.0
@@ -215,7 +253,15 @@ def specialist_grid_rows(
     ``score`` is the mean over scored documents; ``coverage`` the mean over
     documents that carry one. ``p50_latency_seconds`` uses per-document
     latencies. ``cost_per_ok_document`` is busy-window GPU cost / ok count
-    (``None`` when no GPU seconds, no price, or no ok document).
+    (``None`` when no GPU seconds, no price, or no ok document). Available
+    GPU seconds from all documents, including errors, contribute to cost.
+    ``ok`` counts explicit ``True`` values, independently of errors; it is
+    ``None`` when both that count and the error count are zero.
+
+    Raise ``ValueError`` for mixed nonempty metric IDs within a group or an
+    invalid experiment serving kind, and ``TypeError`` for unsupported
+    record types. Numeric conversion errors not handled by :func:`_num`
+    or :func:`_int` propagate.
     """
     exps = {e.name: e for e in (_experiment(x) for x in experiments)}
     docs = [_doc(d) for d in documents]
@@ -277,7 +323,14 @@ def serving_efficiency_rows(
 
     ``documents_per_minute`` needs the experiment's busy ``wall_seconds``;
     ``tokens_per_second_per_gpu`` uses completion tokens (falling back to
-    total) over ``wall_seconds × gpus``. Missing inputs stay ``None``.
+    total) over ``wall_seconds × gpus``. Missing token counts contribute
+    zero; a zero token total or nonpositive wall time / GPU count yields
+    ``None`` for token throughput. Available GPU seconds determine cost,
+    divided by all documents, including errors. Emit a row for each supplied
+    experiment, even when no documents match it.
+
+    Raise ``TypeError`` for unsupported record types and ``ValueError`` for
+    an invalid serving kind. Unhandled numeric conversion errors propagate.
     """
     docs = [_doc(d) for d in documents]
     out: list[dict[str, Any]] = []
@@ -330,6 +383,13 @@ def session_cost_rows(
 
     ``busy_gpu_usd`` is recomputed from per-document GPU seconds; the metered
     session is only what the billing report provides — never an estimate.
+    Costs are in USD. ``busy_share`` is a fraction, or ``None`` if busy cost
+    is missing or metered cost is missing or nonpositive. Per-document cost
+    divides metered cost by all matching documents; no documents yields
+    ``None``. ``billed_usd`` is passed through separately.
+
+    Raise ``TypeError`` for unsupported record types and ``ValueError`` for
+    an invalid serving kind. Unhandled numeric conversion errors propagate.
     """
     docs = [_doc(d) for d in documents]
     out: list[dict[str, Any]] = []
@@ -374,7 +434,16 @@ def grid_scorecard(
     figures: Mapping[str, str] | None = None,
     appendix_url: str | None = None,
 ) -> dict[str, Any]:
-    """Structured scorecard (JSON-friendly) for the grid report."""
+    """Structured scorecard (JSON-friendly) for the grid report.
+
+    Include experiment metadata, specialist quality, serving efficiency,
+    session costs, and copies of the supplied report annotations. ``figures``
+    maps captions to image paths or URLs; no figures are loaded or written.
+
+    Propagate record validation and numeric conversion errors from the row
+    builders, including ``ValueError`` for mixed metric IDs. Also raise
+    ``ValueError`` for an invalid nonempty provenance serving kind.
+    """
     exp_list = [_experiment(e) for e in experiments]
     doc_list = [_doc(d) for d in documents]
     specialists = specialist_grid_rows(doc_list, exp_list)
@@ -415,24 +484,34 @@ def grid_scorecard(
 
 
 def _fmt_usd(value: float | None) -> str:
+    """Format USD with five decimals below $1 in magnitude, otherwise two.
+
+    Return ``"n/a"`` for ``None``.
+    """
     if value is None:
         return "n/a"
     return f"${value:.5f}" if abs(value) < 1 else f"${value:.2f}"
 
 
 def _fmt_num(value: float | None, digits: int = 2) -> str:
+    """Format a number to ``digits`` decimal places, or ``"n/a"`` for ``None``."""
     if value is None:
         return "n/a"
     return f"{value:.{digits}f}"
 
 
 def _fmt_pct(value: float | None, digits: int = 1) -> str:
+    """Format a fraction as a percentage, or ``"n/a"`` for ``None``."""
     if value is None:
         return "n/a"
     return f"{value * 100:.{digits}f}%"
 
 
 def _fmt_score(row: Mapping[str, Any]) -> str:
+    """Format a score to three decimals with optional coverage as a percentage.
+
+    Return ``"n/a"`` when the score is absent, even if coverage is present.
+    """
     score = row.get("score")
     if score is None:
         return "n/a"
@@ -443,18 +522,21 @@ def _fmt_score(row: Mapping[str, Any]) -> str:
 
 
 def _fmt_ok(row: Mapping[str, Any]) -> str:
+    """Format the ok count over n, using ``n/a`` when ok and errors are absent."""
     if row.get("ok") is None and not row.get("errored"):
         return f"n/a / {row.get('n')}"
     return f"{row.get('ok') or 0}/{row.get('n')}"
 
 
 def _fmt_busy_share(value: float | None) -> str:
+    """Format a fractional busy share as a whole percentage, or ``"n/a"``."""
     if value is None:
         return "n/a"
     return f"{value * 100:.0f}%"
 
 
 def _md(header: Sequence[str], rows: Iterable[Sequence[str]]) -> list[str]:
+    """Return Markdown table lines without escaping cell text."""
     lines = [
         "| " + " | ".join(header) + " |",
         "|" + "|".join(["---"] * len(header)) + "|",
@@ -507,6 +589,10 @@ def build_grid_report(
     specialist, and busy-window vs metered session cost. ``compact=True``
     joins each specialist's cells across experiments with ``·`` (the L4
     layout); ``compact=False`` emits one row per experiment × specialist.
+    Missing values render as ``n/a``; each total cost requires that cost for
+    every session. ``figures`` maps captions to image paths or URLs, which
+    are embedded as links. Return the report text without writing files.
+    Validation and conversion errors from :func:`grid_scorecard` propagate.
     """
     card = grid_scorecard(
         documents=documents,

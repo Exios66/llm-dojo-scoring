@@ -570,6 +570,10 @@ class EntityListScore:
 
 
 def _as_list(value) -> list:
+    """Parse a JSON container, then return a list or wrap a non-list value.
+
+    ``None`` becomes ``[]``; existing lists are returned unchanged.
+    """
     value = parse_json_container(value)
     if value is None:
         return []
@@ -1231,14 +1235,20 @@ def score_extraction(
     """Score one extraction deterministically.
 
     - Only expected fields with a non-null/non-empty value count toward the
-      overall score (null expectations are not requirements).
+      overall score (null expectations are not requirements). Stringified
+      JSON containers are parsed on both sides; empty containers and
+      case-insensitive ``null`` / ``none`` / ``n/a`` / ``n.a.`` expectations
+      are skipped. Trace and annotation keys are never scored; retired
+      prompt keys require an explicit entry in ``field_types``.
     - ``overall_score`` is the mean of the per-field scores (None when no
       field is scored).
     - ``ambiguous_fields`` collects fields landing in the ambiguous band —
       the signal that escalates to the LLM judge.
     - List fields also produce ``entity_list_scores`` with precision/recall.
-    - When ``doc_text`` is provided, EVERY field the model populated produces
-      an ``entity_list_audit`` entry (the factuality guard).
+    - When verification is enabled and ``doc_text`` is nonempty, populated
+      fields in ``field_types`` produce ``entity_list_audit`` entries,
+      including scalar fields and fields absent from GT. Trace and
+      annotation keys are excluded.
     """
     predicted = predicted or {}
     expected = expected or {}
