@@ -338,6 +338,7 @@ def test_score_extraction_entity_list_scores_and_audit():
 
 
 def test_score_extraction_skips_confidence_reasoning_and_empty_lists():
+    """``confidence`` / ``reasoning`` and matching empty lists never score as fields."""
     result = fs.score_extraction(
         "contract",
         FIELD_TYPES,

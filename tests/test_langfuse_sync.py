@@ -259,6 +259,7 @@ def test_row_from_trace_pipeline_includes_intake_span():
 
 
 def test_row_from_trace_pipeline_merger_is_not_contract():
+    """A merger-agreement ground truth classified as contract is neither exact nor aligned."""
     trace = {
         "id": "m",
         "name": "document-pipeline",
@@ -272,6 +273,7 @@ def test_row_from_trace_pipeline_merger_is_not_contract():
 
 
 def test_aggregate_run_pipeline():
+    """Aggregates per-row pipeline exact/aligned/subclass accuracy across a run."""
     rows = [
         {"expected": "merger_agreement", "predicted": "contract",
          "exact_ok": False, "aligned_ok": False,

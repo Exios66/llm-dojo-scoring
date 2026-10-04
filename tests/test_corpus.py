@@ -114,6 +114,7 @@ def test_specialist_suites_bind_corpus_subclasses_and_differentiators():
 
 
 def test_merger_agreement_rebinds_maud_not_cuad():
+    """Merger agreement uses MAUD differentiators and field types, not CUAD."""
     merger = get_suite("merger_agreement")
     contract = get_suite("contracts_specialist")
     assert merger.name == "merger_agreement_specialist"

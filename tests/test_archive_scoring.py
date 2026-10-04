@@ -32,12 +32,14 @@ from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES, get_suite
 
 
 def _fill_schema(doc_class: str, values: dict) -> dict:
+    """Every live field for ``doc_class`` defaulted to ``None``, overridden by ``values``."""
     out = {key: None for key in DEFAULT_FIELD_TYPES[doc_class]}
     out.update(values)
     return out
 
 
 def test_empty_block_has_every_archivist_key():
+    """The empty scoring block has every archivist key with null numeric slots."""
     block = empty_archive_scoring_block()
     assert tuple(block) == ARCHIVE_SCORING_KEYS
     assert block["method"] == ARCHIVE_SCORING_METHOD
@@ -49,6 +51,7 @@ def test_empty_block_has_every_archivist_key():
 
 
 def test_merger_is_not_scored_as_contract():
+    """Merger agreement is its own extraction class, not a contract alias."""
     assert EXTRACT_CLASS_ALIASES == {}
     assert resolve_extract_class("merger_agreement") == "merger_agreement"
     merger_map = DEFAULT_FIELD_TYPES["merger_agreement"]
@@ -102,6 +105,7 @@ def test_score_archive_block_rejects_contract_alias_for_merger():
 
 @pytest.mark.parametrize("doc_class", LIVE_ARCHIVE_DOC_TYPES)
 def test_score_archive_block_covers_live_classes(doc_class):
+    """A perfect match scores 1.0 and counts a TP for every live doc class."""
     field_map = DEFAULT_FIELD_TYPES[doc_class]
     first = next(iter(field_map))
     expected = _fill_schema(doc_class, {first: "Acme"})
@@ -116,6 +120,7 @@ def test_score_archive_block_covers_live_classes(doc_class):
 
 
 def test_f1_null_when_no_countable_events():
+    """F1/F2/TP/FP/FN stay null when there are no expected or predicted events."""
     expected = _fill_schema("corporate_record", {"adjuster": None})
     # corporate_record has no adjuster — all live keys empty
     expected = {key: None for key in DEFAULT_FIELD_TYPES["corporate_record"]}
@@ -132,6 +137,7 @@ def test_f1_null_when_no_countable_events():
 
 
 def test_f1_not_derived_from_overall_and_not_overwritten_by_cuad_method():
+    """A CUAD headline ``method`` renames ``method`` only; extraction_f1 stays field-micro."""
     expected = _fill_schema(
         "contract",
         {
@@ -157,6 +163,7 @@ def test_f1_not_derived_from_overall_and_not_overwritten_by_cuad_method():
 
 
 def test_one_block_per_document_second_score_replaces_row():
+    """Scoring the same document twice overwrites, rather than appends, the row."""
     expected = _fill_schema("correspondence", {"sender": "Pat", "recipient": "Alex"})
     predicted = dict(expected)
     first = score_archive_block("correspondence", predicted, expected)
@@ -180,6 +187,7 @@ def test_one_block_per_document_second_score_replaces_row():
 
 
 def test_failed_extraction_still_files_the_block():
+    """A failed extraction still gets scored and filed, not skipped."""
     expected = _fill_schema(
         "insurance_claim",
         {"claim_number": "CLM-1", "insurer": "Acme", "claimed_amount": 100.0},
@@ -200,6 +208,7 @@ def test_failed_extraction_still_files_the_block():
 
 
 def test_retired_prompt_keys_are_ignored():
+    """Retired prompt keys are never scored, even when present on both sides."""
     expected = _fill_schema(
         "contract",
         {
@@ -216,6 +225,7 @@ def test_retired_prompt_keys_are_ignored():
 
 
 def test_archive_entry_hash_is_stable():
+    """The hash is deterministic and insensitive to detail key ordering."""
     detail = {
         "stage": "archived",
         "pipeline_success": True,
@@ -263,6 +273,7 @@ def test_archive_entry_hash_is_stable():
 
 
 def _complete_detail(scoring: dict | None = None, **overrides) -> dict:
+    """A fully-filled ``detail`` object for a happy-path archived row, with overrides."""
     body = {
         "stage": "archived",
         "pipeline_success": True,
@@ -288,6 +299,7 @@ def _complete_detail(scoring: dict | None = None, **overrides) -> dict:
 
 
 def test_empty_audit_log_entry_is_the_archivist_template():
+    """The empty log entry has the right top-level and detail keys, in order."""
     row = empty_audit_log_entry()
     assert tuple(row)[:9] == AUDIT_ENTRY_KEYS
     assert tuple(row["detail"]) == AUDIT_DETAIL_KEYS
@@ -299,6 +311,7 @@ def test_empty_audit_log_entry_is_the_archivist_template():
 
 
 def test_format_audit_entry_computes_stable_entry_hash():
+    """Formatting the same inputs twice yields the same entry hash and scoring block."""
     expected = _fill_schema(
         "contract",
         {
@@ -337,6 +350,7 @@ def test_format_audit_entry_computes_stable_entry_hash():
 
 
 def test_format_normalizes_specialist_and_langfuse_node_aliases():
+    """Specialist / langfuse node aliases fold onto the canonical #236 node names."""
     entry = format_audit_entry(
         doc_id="doc_example",
         matter_id="EXAMPLE",
@@ -356,6 +370,7 @@ def test_format_normalizes_specialist_and_langfuse_node_aliases():
 
 
 def test_archivist_signs_off_when_pipeline_and_hash_are_clean():
+    """A clean, complete happy-path row signs off with no revisions."""
     expected = _fill_schema(
         "correspondence",
         {"sender": "Pat", "recipient": "Alex"},
@@ -389,6 +404,7 @@ def test_archivist_signs_off_when_pipeline_and_hash_are_clean():
 
 
 def test_archivist_requests_revision_when_report_is_not_before_judge():
+    """Reporting after the judge violates pipeline order and is flagged for revision."""
     scoring = empty_archive_scoring_block()
     entry = format_audit_entry(
         doc_id="doc_bad",
@@ -417,6 +433,7 @@ def test_archivist_requests_revision_when_report_is_not_before_judge():
 
 
 def test_tampered_hash_is_not_signed_off():
+    """A post-hash edit to ``detail`` is caught and withheld from sign-off."""
     scoring = empty_archive_scoring_block()
     entry = format_audit_entry(
         doc_id="doc_tamper",
@@ -434,6 +451,7 @@ def test_tampered_hash_is_not_signed_off():
 
 
 def test_failed_extraction_path_still_signs_off_after_report_judge_archive():
+    """A failed-extraction job still signs off once it visits report, judge, archive."""
     expected = _fill_schema(
         "insurance_claim",
         {"claim_number": "CLM-1", "insurer": "Acme", "claimed_amount": 100.0},
@@ -555,6 +573,7 @@ def test_issue_236_example_payload_hash_is_stable():
 
 
 def test_validate_rejects_unknown_pipeline_nodes():
+    """An unrecognized node name in ``nodes_visited`` is flagged as a revision."""
     scoring = empty_archive_scoring_block()
     entry = format_audit_entry(
         doc_id="doc_unknown",

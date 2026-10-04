@@ -32,6 +32,7 @@ def test_every_profile_has_a_dedicated_suite():
 
 
 def test_eight_specialist_suites_and_seven_auditors():
+    """There are eight extraction specialists (merger included) and seven auditors."""
     specialists = list_suites(kind="extraction")
     assert set(specialists) == set(SPECIALIST_AGENTS)
     assert len(specialists) == 8
@@ -41,6 +42,7 @@ def test_eight_specialist_suites_and_seven_auditors():
 
 
 def test_get_suite_accepts_agent_and_doc_type_aliases():
+    """``get_suite`` resolves agent names, ``agent:``/``doc:`` prefixes, and doc types."""
     assert get_suite("sorter").name == "sorter"
     assert get_suite("agent:sorter").name == "sorter"
     assert get_suite("insurance_claim").name == "insurance_claims_specialist"
