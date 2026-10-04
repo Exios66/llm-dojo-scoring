@@ -150,11 +150,24 @@ from .asr import (
     word_error_rate,
 )
 from .content_scoring import (
+    is_valid_maud_answer,
     peel_non_extraction_fields,
     score_content_topic,
     score_correspondence_content,
     score_maud_extraction,
     score_sentiment,
+)
+from .maud import (
+    MAUD_ANSWER_CLASSES,
+    MAUD_CATALOG_GENERATED,
+    MAUD_CATALOG_ROWS,
+    MAUD_CATALOG_SOURCE,
+    MAUD_QUESTION_KEYS_BY_DOC_TYPE,
+    MAUD_VARIABLE_CLASS_QUESTIONS,
+    canonical_maud_class,
+    is_maud_class,
+    maud_class_index,
+    maud_question_catalog,
 )
 from .gt_metadata import (
     ABSENT_PRESENCE_STATUSES,
@@ -331,6 +344,12 @@ __all__ = [
     "score_content_topic", "score_sentiment",
     "peel_non_extraction_fields",
     "score_correspondence_content", "score_maud_extraction",
+    "is_valid_maud_answer",
+    "MAUD_ANSWER_CLASSES", "MAUD_QUESTION_KEYS_BY_DOC_TYPE",
+    "MAUD_VARIABLE_CLASS_QUESTIONS", "MAUD_CATALOG_SOURCE",
+    "MAUD_CATALOG_GENERATED", "MAUD_CATALOG_ROWS",
+    "canonical_maud_class", "is_maud_class", "maud_class_index",
+    "maud_question_catalog",
     "parse_gt_fields", "scoring_gt_fields", "normalize_field_values",
     "parse_json_container", "is_empty_value", "gt_presence_map",
     "presence_expectations_from_cuad_labels", "derive_presence_from_gt",

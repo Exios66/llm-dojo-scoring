@@ -5,6 +5,39 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Added
+
+- **MAUD answer-class catalogs — no guessing on merger-agreement labels**
+  (`llm_dojo_scoring/maud.py`, `docs/MAUD_LABELS.md`). The 152 published
+  merger rows (17 test + 135 train) each carry per-question
+  `valid_classes`; the scorer previously dropped them and treated any
+  non-empty answer as valid on 21 of 22 questions. Now:
+  - `parse_maud_labels` preserves each record's `valid_classes`; repeated
+    Hub keys union their class surfaces instead of last-wins;
+  - `is_valid_maud_answer` / `normalize_maud_answer` accept the record's
+    own classes first, fall back to the corpus union, and fail closed for
+    unknown questions;
+  - `maud_question_catalog(doc_type)` returns the fully populated
+    22-question catalog for `merger_agreement` and `contract` (specialist
+    aliases accepted; unknown doc types raise `KeyError`);
+  - `maud_valid_class_rate` is emitted by the contract / merger suites and
+    by `score_maud_extraction`.
+- `scripts/gen_maud_catalog.py` — deterministic catalog generator plus
+  `--check` verification against the pinned dataset revision.
+- `scripts/verify_gt_penalties.py` — portable perfect-prediction replay
+  over the real Hub GT (both splits) asserting zero FN/FP/spurious and
+  MAUD parity / class membership on all merger rows.
+- `tests/test_maud_catalog.py` — pins catalog completeness, per-doc-type
+  dicts, fixture consistency, canonicalization, component-wise validity,
+  and fail-closed behavior.
+- `catalog` optional extra (`pyarrow`, `huggingface_hub`) for the
+  reproducibility scripts.
+
+### Changed
+
+- `tests/fixtures/maud_valid_classes.json` now records the pinned dataset
+  revision and per-question answered-row / distinct-set counts.
+
 ## [0.19.0] - 2026-10-04
 
 Align scoring contracts with

@@ -190,9 +190,22 @@ Set `LLM_DOJO_SCORING_CONFIG` to a YAML path for the process-wide override.
 ## Tests
 
 ```bash
+python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
 python -m pytest
 ```
+
+MAUD catalog reproducibility (needs the `catalog` extra for Hub parquet
+access):
+
+```bash
+pip install -e ".[dev,catalog]"
+python scripts/gen_maud_catalog.py --check   # committed catalog is current
+python scripts/verify_gt_penalties.py        # perfect-prediction replay, both splits
+```
+
+See [`docs/MAUD_LABELS.md`](docs/MAUD_LABELS.md) for the no-guess
+merger-agreement label contract.
 
 ## CLI Reference
 
@@ -210,7 +223,7 @@ dojo-sync    [--task TRACE_NAME] [--session NAME] [--max-items N]
 
 ## Migration
 
-See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md), [`docs/ARCHIVE_SCORING.md`](docs/ARCHIVE_SCORING.md), [`docs/SCORECARD_HONESTY.md`](docs/SCORECARD_HONESTY.md). Hub ground truth: [`docs/GT_METADATA.md`](docs/GT_METADATA.md). Specialist grid reports: [`docs/GRID_REPORTS.md`](docs/GRID_REPORTS.md). Issue-by-issue alignment status: [`docs/ISSUE_ALIGNMENT.md`](docs/ISSUE_ALIGNMENT.md). Prompt catalog: [`docs/PROMPTS.md`](docs/PROMPTS.md).
+See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md), [`docs/ARCHIVE_SCORING.md`](docs/ARCHIVE_SCORING.md), [`docs/SCORECARD_HONESTY.md`](docs/SCORECARD_HONESTY.md). Hub ground truth: [`docs/GT_METADATA.md`](docs/GT_METADATA.md). MAUD answer classes: [`docs/MAUD_LABELS.md`](docs/MAUD_LABELS.md). Specialist grid reports: [`docs/GRID_REPORTS.md`](docs/GRID_REPORTS.md). Issue-by-issue alignment status: [`docs/ISSUE_ALIGNMENT.md`](docs/ISSUE_ALIGNMENT.md). Prompt catalog: [`docs/PROMPTS.md`](docs/PROMPTS.md).
 
 ## Releases & monorepo sync
 
