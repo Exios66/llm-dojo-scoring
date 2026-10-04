@@ -210,17 +210,24 @@ def _percentile(values: Sequence[float], p: float) -> float | None:
     return round(vals[lo] + (vals[hi] - vals[lo]) * frac, 6)
 
 
-def _is_error(doc: GridDocument) -> bool:
-    """Return whether the first truthy error or error-class value marks failure.
+#: Tokens that mark a completed / no-error outcome (parity with
+#: ``scorecard_honesty.summarize_run_completion``).
+_SUCCESS_TOKENS = frozenset(
+    {"", "stop", "completed", "success", "none", "end_turn", "eos",
+     "stop_sequence", "tool_calls"}
+)
 
-    Blank, completion, and no-error tokens return ``False``; ``ok`` is not
-    consulted.
+
+def _is_error(doc: GridDocument) -> bool:
+    """Return whether either error field holds a non-success token.
+
+    Each field is checked independently so a success token in ``error``
+    cannot mask a failure in ``error_class`` (and vice versa). ``ok`` is
+    not consulted.
     """
-    if doc.error or doc.error_class:
-        token = str(doc.error or doc.error_class or "").strip().lower()
-        if token in {"", "stop", "completed", "success", "none", "end_turn", "eos"}:
-            return False
-        return True
+    for raw in (doc.error, doc.error_class):
+        if raw and str(raw).strip().lower() not in _SUCCESS_TOKENS:
+            return True
     return False
 
 

@@ -712,10 +712,6 @@ def test_pending_labels_become_scorable_when_backfilled():
     assert result["extraction_f1"] is None
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Annotation-only GT normalizes to {}, which bypasses the unscorable gate",
-)
 def test_pending_annotation_only_document_is_unscorable():
     result = get_suite("contracts_specialist").score_document(
         {
