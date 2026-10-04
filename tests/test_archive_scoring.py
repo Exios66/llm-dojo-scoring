@@ -566,10 +566,145 @@ def test_issue_236_example_payload_hash_is_stable():
         event="archived",
         detail=detail,
     )
-    # Hash version 2 of the published #236 example payload (canonical JSON).
-    # The issue also printed a digest; writers should recompute with
-    # archive_entry_hash rather than copy that placeholder.
-    assert digest == "3555df35703017f7dc96533888ba8092d8a1239713486b25e48a9f3a96b82ae7"
+    # Hash version 2 of the published #236 example payload under the
+    # llm-mailroom canonicalization (json.dumps sort_keys=True, default
+    # separators). The issue's printed digest is not reproducible from the
+    # payload as shown; the parity test below pins the live writer contract.
+    assert digest == "4afd352d29e4be1b70605dbaa5a4bd486f187ac908c986e5e8d5feaed8e8bef4"
+
+
+def _mailroom_compute_audit_hash(
+    *,
+    prev_hash: str,
+    doc_id: str,
+    entry_id: str,
+    event: str,
+    detail: dict,
+    matter_id: str = "",
+    actor: str = "",
+    timestamp=None,
+    hash_version: int = 2,
+) -> str:
+    """Verbatim re-implementation of llm-mailroom ``compute_audit_hash``.
+
+    llm-mailroom ``src/schemas/audit.py`` is the writer of record for the
+    hash-chain DB. Dojo never imports mailroom, so this oracle pins the
+    serialization contract: ``json.dumps(..., sort_keys=True, default=str)``
+    over the v2 field set, with ``datetime`` rendered via ``isoformat()``.
+    If mailroom ever changes its canonicalization, both repos must change
+    together (the parity test goes red here first).
+    """
+    import hashlib
+    from datetime import datetime, timezone
+
+    if timestamp is None:
+        timestamp = datetime.now(timezone.utc)
+    ts = timestamp.isoformat() if isinstance(timestamp, datetime) else str(timestamp)
+    payload = json.dumps(
+        {
+            "hash_version": hash_version,
+            "prev_hash": prev_hash,
+            "doc_id": doc_id,
+            "entry_id": entry_id,
+            "matter_id": matter_id,
+            "actor": actor,
+            "timestamp": ts,
+            "event": event,
+            "detail": detail,
+        },
+        sort_keys=True,
+        default=str,
+    )
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
+def test_archive_hash_matches_llm_mailroom_compute_audit_hash():
+    """Same payload → same digest as the live llm-mailroom writer."""
+    detail = {
+        "stage": "archived",
+        "pipeline_success": True,
+        "nodes_visited": [
+            "intake",
+            "sorter",
+            "document_type_specialist",
+            "deterministic_reporter",
+            "deterministic_judge",
+            "archivist",
+        ],
+        "doc_type": "contract",
+        "doc_subclass": "service",
+        "judge_verdict": "complete",
+        "judge_score": 0.902,
+        "scoring": {"overall_score": 0.902, "schema_valid": True, "field_scores": {}},
+    }
+    kwargs = dict(
+        prev_hash="a" * 64,
+        doc_id="doc_example",
+        entry_id="00000000-0000-4000-8000-000000000001",
+        matter_id="EXAMPLE",
+        actor="archivist",
+        timestamp="2026-10-02T23:55:00+00:00",
+        event="archived",
+        detail=detail,
+    )
+    assert archive_entry_hash(**kwargs) == _mailroom_compute_audit_hash(**kwargs)
+
+
+def test_archive_hash_datetime_matches_mailroom_isoformat():
+    """A ``datetime`` timestamp hashes as mailroom's ``isoformat()`` form."""
+    from datetime import datetime, timezone
+
+    ts = datetime(2026, 10, 2, 23, 55, tzinfo=timezone.utc)
+    detail = {"stage": "archived", "scoring": {}}
+    kwargs = dict(
+        prev_hash="",
+        doc_id="doc_dt",
+        entry_id="e-dt",
+        matter_id="M",
+        actor="archivist",
+        timestamp=ts,
+        event="archived",
+        detail=detail,
+    )
+    assert archive_entry_hash(**kwargs) == _mailroom_compute_audit_hash(**kwargs)
+
+
+def test_mailroom_oracle_hash_row_verifies_in_dojo():
+    """A row whose entry_hash was computed by mailroom verifies in dojo."""
+    scoring = empty_archive_scoring_block()
+    entry = format_audit_entry(
+        doc_id="doc_mailroom",
+        matter_id="EXAMPLE",
+        entry_id="e-mailroom",
+        timestamp="2026-10-02T23:55:00+00:00",
+        prev_hash="b" * 64,
+        scoring=scoring,
+        detail={
+            "doc_type": "correspondence",
+            "judge_verdict": "complete",
+            "judge_score": None,
+            "report_path": "matters/EXAMPLE/reports/doc_mailroom.json",
+            "archive_path": "archive/EXAMPLE/correspondence/doc_mailroom.pdf",
+            "file_sha256": "c" * 64,
+            "nodes_visited": list(HAPPY_PATH_NODES),
+            "pipeline_success": True,
+        },
+    )
+    mailroom_digest = _mailroom_compute_audit_hash(
+        prev_hash=entry["prev_hash"],
+        doc_id=entry["doc_id"],
+        entry_id=entry["entry_id"],
+        matter_id=entry["matter_id"],
+        actor=entry["actor"],
+        timestamp=entry["timestamp"],
+        event=entry["event"],
+        detail=entry["detail"],
+    )
+    assert entry["entry_hash"] == mailroom_digest
+    entry["entry_hash"] = mailroom_digest
+    from llm_dojo_scoring.archive import verify_entry_hash
+
+    assert verify_entry_hash(entry) is True
 
 
 def test_validate_rejects_unknown_pipeline_nodes():

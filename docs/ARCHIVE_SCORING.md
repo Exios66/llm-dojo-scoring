@@ -94,10 +94,16 @@ false-positive, and false-negative counts.
 
 ## Example `archived` row (#236)
 
-`entry_hash` is SHA-256 of canonical JSON (`sort_keys`, compact separators)
-over `hash_version`, `prev_hash`, `doc_id`, `entry_id`, `matter_id`,
-`actor`, `timestamp`, `event`, `detail`. Use
-`llm_dojo_scoring.format_audit_entry` (which calls
+`entry_hash` is SHA-256 of canonical JSON over `hash_version`, `prev_hash`,
+`doc_id`, `entry_id`, `matter_id`, `actor`, `timestamp`, `event`, `detail`.
+Canonicalization is **byte-identical to llm-mailroom**
+`src/schemas/audit.py::compute_audit_hash`:
+`json.dumps(payload, sort_keys=True, default=str)` (default separators), with
+a `datetime` timestamp rendered via `isoformat()`. Any difference in
+serialization breaks cross-package chain verification even though each side
+round-trips its own rows; the parity oracle lives in
+`tests/test_archive_scoring.py::test_archive_hash_matches_llm_mailroom_compute_audit_hash`.
+Use `llm_dojo_scoring.format_audit_entry` (which calls
 `archive_entry_hash`). `prev_hash` is the previous document's
 `entry_hash` (empty string only for the first row in the DB).
 
