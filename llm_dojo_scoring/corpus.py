@@ -253,9 +253,9 @@ CORPUS_DIFFERENTIATORS: dict[str, tuple[str, ...]] = {
 }
 
 #: Extraction-schema fields each specialist suite must score, aligned to
-#: mailroom v0.6.0 ``EXTRACTION_SCHEMAS`` + taxonomy ``field_types`` (pared
-#: checklists + semantic trio; no open-ended key_obligations dumps).
-#: ``document_name`` is on the contracts / merger schema (CUAD Document Name).
+#: live mailroom ``EXTRACTION_SCHEMAS`` + taxonomy ``field_types``.
+#: Merger is ``MergerAgreementExtraction`` (no CUAD family/clauses).
+#: ``document_name`` is on the contracts / merger schema.
 CORPUS_EXTRACTION_FIELDS: dict[str, tuple[str, ...]] = {
     "contract": (
         "document_name",
@@ -274,14 +274,13 @@ CORPUS_EXTRACTION_FIELDS: dict[str, tuple[str, ...]] = {
         "document_name",
         "parties",
         "effective_date",
-        "term_length",
+        "effective_time",
         "governing_law",
-        "contract_value",
-        "renewal_terms",
-        "cuad_family",
         "merger_consideration",
-        "cuad_clauses",
         "maud_clauses",
+        "intent",
+        "subject_matter",
+        "keywords",
     ),
     "corporate_record": (
         "entity_name",

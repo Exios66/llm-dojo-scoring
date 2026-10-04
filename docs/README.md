@@ -14,6 +14,7 @@ Documentation for the llm-dojo-scoring package, covering:
 - Scoring methodology
 - Field-type-aware scoring
 - Entity list scoring
+- Archive scoring block (`ARCHIVE_SCORING.md`)
 - Regression diagnostics
 - Factuality audit
 

@@ -23,7 +23,12 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from .classification import fbeta
-from .field_scoring import ExtractionScoreResult, score_extraction
+from .field_scoring import (
+    NEVER_SCORED_FIELDS,
+    RETIRED_PROMPT_KEYS,
+    ExtractionScoreResult,
+    score_extraction,
+)
 
 _EMPTY = (None, "", [], {})
 
@@ -106,6 +111,10 @@ def extraction_binary_metrics(
     expected_events = 0
 
     for name, exp_val in expected.items():
+        if name in NEVER_SCORED_FIELDS or (
+            name in RETIRED_PROMPT_KEYS and name not in types
+        ):
+            continue
         if _is_empty(exp_val):
             if penalize_spurious_empty and not _is_empty(predicted.get(name)):
                 fp += 1
@@ -121,6 +130,10 @@ def extraction_binary_metrics(
             fp += int(list_score.unmatched_predicted)
 
     for key, value in predicted.items():
+        if key in NEVER_SCORED_FIELDS or (
+            key in RETIRED_PROMPT_KEYS and key not in types
+        ):
+            continue
         if key not in expected and not _is_empty(value):
             fp += 1
 

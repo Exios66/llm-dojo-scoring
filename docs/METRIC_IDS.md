@@ -1,4 +1,4 @@
-# Metric identity (v0.18)
+# Metric identity (v0.19)
 
 Cross-leg comparisons must use the **same** `metric_id` on both sides. Mixing
 CUAD clause-presence F1 with pipeline extraction overall is **incomparable**
@@ -22,7 +22,7 @@ Resolve helpers: `llm_dojo_scoring.scorecard_honesty.metric_id_for(...)`.
 | Doc class / suite | Allowed `metric_id` values |
 |---|---|
 | `contract` | `pipeline.extraction.overall`, `cuad.clause_presence.micro_f1`, `pipeline.extraction.field_micro_f1`, `maud.question.micro_accuracy` |
-| `merger_agreement` | `pipeline.extraction.overall`, `maud.question.micro_accuracy`, `maud.clause_presence.rate` |
+| `merger_agreement` | `pipeline.extraction.overall`, `maud.question.micro_accuracy`, `maud.clause_presence.rate`, `pipeline.extraction.field_micro_f1` |
 | `insurance_claim` | `pipeline.extraction.overall`, `pipeline.extraction.field_micro_f1` |
 | `correspondence` | `pipeline.extraction.overall`, `pipeline.enron.topic_accuracy` |
 

@@ -155,17 +155,17 @@ DOCCLASS_FAILURE_MODES: dict[str, dict[str, str]] = {
 # ---------------------------------------------------------------------------
 
 # Full historical + live class set the scorer still understands.
-# Live pipeline (llm-mailroom v0.5+) extracts five of these; court_opinion
-# and due_diligence are RETIRED (sorter emits ``unknown``); merger_agreement
-# is an extract alias of contract. See :mod:`llm_dojo_scoring.mailroom`.
+# Live pipeline extracts five of these; court_opinion, due_diligence, and
+# compliance_filing are RETIRED (sorter emits ``unknown``); merger_agreement
+# is ``MergerAgreementExtraction``. See :mod:`llm_dojo_scoring.mailroom`.
 DOC_CLASS_KEYS: list[str] = [
     "contract", "corporate_record", "due_diligence", "correspondence",
     "compliance_filing", "court_opinion", "insurance_claim",
     "merger_agreement",
 ]
 LIVE_DOC_CLASS_KEYS: list[str] = [
-    "contract", "corporate_record", "correspondence",
-    "compliance_filing", "insurance_claim",
+    "contract", "merger_agreement", "corporate_record", "correspondence",
+    "insurance_claim",
 ]
 RETIRED_DOC_CLASS_KEYS: list[str] = ["court_opinion", "due_diligence"]
 

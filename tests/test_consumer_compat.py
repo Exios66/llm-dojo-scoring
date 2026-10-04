@@ -36,6 +36,7 @@ _TOP_LEVEL = (
     "load_registry",
     "load_settings",
     "score_extraction",
+    "score_archive_block",
     "score_serving_run",
     "score_task",
     "split_local_api",
@@ -76,6 +77,7 @@ _MODULE_ATTRS: dict[str, tuple[str, ...]] = {
     ),
     "export": ("extraction_columns", "sorter_columns", "write_codebook", "write_workbook"),
     "extraction_metrics": ("extraction_binary_metrics",),
+    "archive": ("score_archive_block", "upsert_archive_scoring", "archive_entry_hash"),
     "failure_modes": ("classify_failure",),
     "field_scoring": (
         "ExtractionScoreResult",

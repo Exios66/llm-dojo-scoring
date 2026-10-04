@@ -82,6 +82,7 @@ _CLASS_METRIC_IDS: dict[str, tuple[str, ...]] = {
         "pipeline.extraction.overall",
         "maud.question.micro_accuracy",
         "maud.clause_presence.rate",
+        "pipeline.extraction.field_micro_f1",
     ),
     "insurance_claim": (
         "pipeline.extraction.overall",

@@ -337,6 +337,29 @@ def test_score_extraction_entity_list_scores_and_audit():
     assert result.entity_list_audit["key_obligations"]["true_items"] == 1
 
 
+def test_score_extraction_skips_confidence_reasoning_and_empty_lists():
+    result = fs.score_extraction(
+        "contract",
+        FIELD_TYPES,
+        {
+            "document_name": "MSA",
+            "parties": [],
+            "confidence": 0.99,
+            "reasoning": {"summary": "trace"},
+        },
+        {
+            "document_name": "MSA",
+            "parties": [],
+            "confidence": 0.5,
+            "reasoning": {"summary": "other"},
+        },
+    )
+    assert "confidence" not in result.field_scores
+    assert "reasoning" not in result.field_scores
+    assert "parties" not in result.field_scores
+    assert result.overall_score == 1.0
+
+
 def test_score_extraction_to_dict_serializable():
     result = fs.score_extraction("contract", FIELD_TYPES,
                                  {"parties": ["Acme"]}, {"parties": ["Acme"]})

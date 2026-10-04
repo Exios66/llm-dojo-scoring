@@ -5,6 +5,42 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-10-04
+
+Align scoring contracts with
+[mailroom-issues #236](https://github.com/LLM-Mailroom-Services/mailroom-issues/issues/236),
+[#237](https://github.com/LLM-Mailroom-Services/mailroom-issues/issues/237),
+and [#238](https://github.com/LLM-Mailroom-Services/mailroom-issues/issues/238).
+
+### Added
+
+- **`llm_dojo_scoring.archive`** — `score_archive_block` returns the
+  archivist `detail.scoring` payload (method, field map SHA, overall
+  score, schema validity, per-field scores, and field-micro P/R/F1/F2
+  with TP/FP/FN). `upsert_archive_scoring` replaces the block for a
+  `doc_id` and never appends a second row. `archive_entry_hash` is hash
+  version 2 (SHA-256 of canonical JSON).
+- **`docs/ARCHIVE_SCORING.md`** — example archive row and scoring block;
+  sample numbers are not a measured run.
+- **`merger_agreement_specialist`** profile / suite bound to
+  `MergerAgreementExtraction`.
+
+### Changed
+
+- **Live extract roster** — `contract`, `merger_agreement`,
+  `corporate_record`, `correspondence`, `insurance_claim`.
+  `EXTRACT_CLASS_ALIASES` is empty; merger is not scored as a contract.
+  `compliance_filing` is retired from the live extract roster (suites
+  remain for historical traces).
+- **`DEFAULT_FIELD_TYPES["merger_agreement"]`** — dedicated 10-field map
+  (`effective_time`, `intent`, `subject_matter`, `keywords`; no
+  `cuad_family` / `cuad_clauses`).
+- **`score_extraction`** — never scores `confidence` / `reasoning`;
+  skips empty lists and retired prompt-catalog keys that are not on the
+  live field map.
+- **Aligned classification** — `merger_agreement` ≠ `contract`.
+- Package version **0.19.0**.
+
 ## [0.18.0] - 2026-09-29
 
 Live-run calibration from hub release gate

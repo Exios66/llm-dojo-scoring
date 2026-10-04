@@ -156,8 +156,8 @@ METRIC_META: dict[str, dict[str, str]] = {
         "required",
     ),
     "aligned_accuracy": _m(
-        "HF pipeline aligned doc-type accuracy; merger_agreement ≡ contract "
-        "(mailroom.score_aligned_classification).",
+        "HF pipeline aligned doc-type accuracy; extract aliases only "
+        "(mailroom.score_aligned_classification). merger_agreement ≠ contract.",
         "Requires paired predicted/expected doc types. Empty sequences skipped.",
         "required",
     ),

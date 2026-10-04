@@ -15,9 +15,10 @@ from importlib import metadata
 try:
     __version__ = metadata.version("llm-dojo-scoring")
 except metadata.PackageNotFoundError:
-    __version__ = "0.18.0"
+    __version__ = "0.19.0"
 
 from . import (
+    archive,
     bundles,
     doc_bundles,
     emitter,
@@ -97,6 +98,13 @@ from .field_scoring import (
     score_field,
     score_entity_list,
     warm_embedding_model,
+)
+from .archive import (
+    ARCHIVE_HASH_VERSION,
+    ARCHIVE_SCORING_METHOD,
+    archive_entry_hash,
+    score_archive_block,
+    upsert_archive_scoring,
 )
 from .extraction_metrics import (
     extraction_binary_metrics,
@@ -233,11 +241,14 @@ from .serving import (
 
 __all__ = [
     "__version__",
+    "archive",
     "bootstrap", "classification", "claims_consistency", "config", "content_scoring", "cost", "diagnostics",
     "equivalences", "error_analysis", "experiment", "export", "extraction_metrics", "failure_modes",
     "field_scoring", "io", "interpret", "langfuse_sync", "phoenix_sync",
     "report", "asr", "corpus", "intake", "mailroom", "prompts", "serving",
     "suites", "tasks", "visualize",
+    "ARCHIVE_HASH_VERSION", "ARCHIVE_SCORING_METHOD",
+    "archive_entry_hash", "score_archive_block", "upsert_archive_scoring",
     "bootstrap_ci", "delta_significance", "wilson_ci",
     "accuracy", "binary_metrics", "confusion_matrix", "exact_match",
     "fbeta", "macro_accuracy", "macro_prf", "normalize_label", "per_class_stats",

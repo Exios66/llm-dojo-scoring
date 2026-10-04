@@ -47,6 +47,22 @@ from .config import get_settings
 
 logger = structlog.get_logger(__name__)
 
+#: Trace / format artifacts — never enter :func:`score_extraction`
+#: (mailroom-issues #237 / #238).
+NEVER_SCORED_FIELDS: frozenset[str] = frozenset({"confidence", "reasoning"})
+
+#: Prompt-catalog keys retired from live models. Ignored unless the caller
+#: passed them in an explicit ``field_types`` map (historical rescoring).
+RETIRED_PROMPT_KEYS: frozenset[str] = frozenset(
+    {
+        "key_obligations",
+        "termination_clauses",
+        "key_provisions",
+        "key_points",
+        "referenced_communications",
+    }
+)
+
 # ---------------------------------------------------------------------------
 # Configuration accessors (kept for drop-in compatibility with the
 # llm-entity-extraction API — all read the shared settings object)
@@ -1134,8 +1150,8 @@ def get_field_types(doc_class: str, taxonomy: dict | None = None) -> dict[str, s
        once at import.
     3. ``{}`` when neither is available (no taxonomy configured).
 
-    Returns {} when the class is absent. ``EXTRACT_CLASS_ALIASES`` is applied
-    so aliases resolve to their canonical class.
+    Returns {} when the class is absent. Extract aliases (currently none)
+    resolve to their canonical class; ``merger_agreement`` is its own map.
     """
     from .mailroom import EXTRACT_CLASS_ALIASES
 
@@ -1222,7 +1238,15 @@ def score_extraction(
     entity_list_audit: dict[str, dict] = {}
 
     for key, exp_value in expected.items():
+        if key in NEVER_SCORED_FIELDS:
+            continue
+        if key in RETIRED_PROMPT_KEYS and key not in field_types:
+            continue
         if exp_value is None or exp_value == "":
+            continue
+        if isinstance(exp_value, str) and not exp_value.strip():
+            continue
+        if isinstance(exp_value, (list, dict, tuple, set)) and len(exp_value) == 0:
             continue
         field_type = field_types.get(key) or _heuristic_field_type(key, exp_value)
         pred_value = predicted.get(key)
@@ -1257,6 +1281,8 @@ def score_extraction(
         for key, field_type in sorted(field_types.items()):
             pred_value = predicted.get(key)
             if pred_value in (None, "", []) or key in entity_list_audit:
+                continue
+            if key in NEVER_SCORED_FIELDS:
                 continue
             if is_entity_list(field_type):
                 element_type = field_type.split(":", 1)[1] if ":" in field_type else "name"
