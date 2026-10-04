@@ -32,7 +32,7 @@ def test_sorter_reviewer_profile_shape():
 
 def test_specialist_auditor_profiles_share_shape():
     auditors = [n for n in NEW_PROFILES if n.endswith("_auditor")]
-    assert len(auditors) == 7  # one per specialist (incl. insurance_claims)
+    assert len(auditors) == 7  # historical 1:1 with the v0.8 specialist set
     for name in auditors:
         p = get_profile(name)
         assert p.tasks == ("verify", "review")

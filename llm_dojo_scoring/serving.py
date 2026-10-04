@@ -54,7 +54,6 @@ LOCAL_PROVIDERS = frozenset(
         "ollama",
         "vllm",
         "vllm-local",
-        "modal-vllm",
         "llamacpp",
         "llama.cpp",
         "lmstudio",

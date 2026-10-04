@@ -5,6 +5,84 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`resolve_cost_basis`** — reject a table that mixes labeled and
+  unlabeled `cost_basis` / `usd_basis` rows. Wholly unlabeled inputs
+  still stamp the default (`busy_window`).
+
+### Added
+
+- **`format_audit_entry` / `prepare_archivist_handoff`** — calculate and
+  format the hash-chained `archived` audit row (hash version 2) that is
+  passed to the archivist. The templated row is always handed through;
+  `archivist_sign_off` files it as final only when the hash matches and
+  the pipeline steps for that document need no revision (report → judge
+  → archive; happy-path nodes on a successful job).
+
+## [0.19.0] - 2026-10-04
+
+Align scoring contracts with
+[mailroom-issues #236](https://github.com/LLM-Mailroom-Services/mailroom-issues/issues/236),
+[#237](https://github.com/LLM-Mailroom-Services/mailroom-issues/issues/237),
+and [#238](https://github.com/LLM-Mailroom-Services/mailroom-issues/issues/238),
+and close remaining honesty gaps in
+[llm-dojo-scoring #19](https://github.com/Exios66/llm-dojo-scoring/issues/19),
+[#20](https://github.com/Exios66/llm-dojo-scoring/issues/20), and
+[#21](https://github.com/Exios66/llm-dojo-scoring/issues/21).
+
+### Added
+
+- **`llm_dojo_scoring.archive`** — `score_archive_block` returns the
+  archivist `detail.scoring` payload (method, field map SHA, overall
+  score, schema validity, per-field scores, and field-micro P/R/F1/F2
+  with TP/FP/FN). `upsert_archive_scoring` replaces the block for a
+  `doc_id` and never appends a second row. `archive_entry_hash` is hash
+  version 2 (SHA-256 of canonical JSON).
+- **`docs/ARCHIVE_SCORING.md`** — example archive row and scoring block;
+  sample numbers are not a measured run.
+- **`merger_agreement_specialist`** profile / suite bound to
+  `MergerAgreementExtraction`.
+- **`docs/SCORECARD_HONESTY.md`** — MAUD collapsed GT (#19), format vs
+  extraction and empty-field credit (#20), completion / ITT / `cost_basis`
+  / honest `serving_kind` (#21).
+- **`score_empty_field_contract`** — correctly-empty fields score 1.0
+  without entering archive `overall_score`; spurious fill is a penalty.
+- **`canonical_error_class` / `resolve_cost_basis`** — LengthFinish and
+  context-overflow histogram buckets; refuse mixed `cost_basis` in one
+  table.
+- **`llm_dojo_scoring.trace_knobs`** — capture `confidence` / `reasoning`
+  as experimental knobs (`TraceKnobSettings`: `confidence_min`,
+  `confidence_band`, `reasoning_routes_presence`,
+  `compute_calibration_error`). Filed on `ExtractionScoreResult.trace`
+  and archive `detail.scoring.trace`; never mixed into `overall_score`.
+
+### Changed
+
+- **Live extract roster** — `contract`, `merger_agreement`,
+  `corporate_record`, `correspondence`, `insurance_claim`.
+  `EXTRACT_CLASS_ALIASES` is empty; merger is not scored as a contract.
+  `compliance_filing` is retired from the live extract roster (suites
+  remain for historical traces).
+- **`DEFAULT_FIELD_TYPES["merger_agreement"]`** — dedicated 10-field map
+  (`effective_time`, `intent`, `subject_matter`, `keywords`; no
+  `cuad_family` / `cuad_clauses`).
+- **`score_extraction`** — never scores `confidence` / `reasoning`;
+  skips empty lists and retired prompt-catalog keys that are not on the
+  live field map.
+- **Aligned classification** — `merger_agreement` ≠ `contract`.
+- **`score_maud_extraction`** — distinct sub-question keys score
+  normally; collapsed multi-answer GT (list, slash-string, or repeated
+  Hub spans) is `gt_ambiguous` / unscorable per item; micro-accuracy
+  over clean keys only; `n_ambiguous` always surfaced (#19).
+- **`score_format_layer` vs field-micro** — prose-wrapped JSON is
+  `parse_ok=0` and does not zero extraction on a structured payload
+  (#20).
+- **`summarize_run_completion`** — LengthFinish histogram; ITT quality
+  ≠ completed-only (#21). `classify_serving_kind` keeps Modal as
+  `modal` (not in `LOCAL_PROVIDERS`).
+- Package version **0.19.0**.
+
 ## [0.18.0] - 2026-09-29
 
 Live-run calibration from hub release gate
