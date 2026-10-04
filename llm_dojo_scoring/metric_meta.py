@@ -58,8 +58,10 @@ _CLS_SKIP = (
 
 _EXTRACT_SKIP = (
     "Skipped when expected is empty/null (no events). Empty GT field values "
-    "are not FN. ERROR_PREFIX predictions are dropped by the suite. "
-    "entity_list F1 is None when the document has no list fields."
+    "are not FN; correctly-empty pairs credit 1.0 on the empty-field contract "
+    "(#20) and never enter archive overall_score. ERROR_PREFIX predictions "
+    "are dropped by the suite. entity_list F1 is None when the document has "
+    "no list fields."
 )
 
 _SUBCLASS = (
@@ -289,9 +291,11 @@ METRIC_META: dict[str, dict[str, str]] = {
         "required",
     ),
     "maud_question_accuracy": _m(
-        "MAUD per-question micro exact-answer accuracy over the 22 Hub keys "
-        "(content_scoring.score_maud_extraction).",
-        "None when no MAUD questions are present on the row.",
+        "MAUD per-question micro exact-answer accuracy over clean keys "
+        "(content_scoring.score_maud_extraction). Collapsed multi-answer GT "
+        "is gt_ambiguous / unscorable and excluded from the micro average.",
+        "None when no scorable MAUD questions remain (empty map or all keys "
+        "gt_ambiguous). n_ambiguous is always surfaced.",
         "required",
     ),
     "maud_question_macro_accuracy": _m(

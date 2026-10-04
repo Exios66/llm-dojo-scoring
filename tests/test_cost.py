@@ -32,6 +32,7 @@ def test_tokens_summary():
     assert summary["cost_estimated_usd"] == pytest.approx(
         (200 * 0.03 + 100 * 0.13) / 1_000_000
     )
+    assert summary["cost_basis"] == "busy_window"
 
 
 def test_estimate_for_record():
@@ -43,3 +44,18 @@ def test_estimate_for_record():
     out = estimate_for_record(record)
     assert out["cost_estimated_usd"] == pytest.approx(0.16)
     assert out["per_doc_usd"] == pytest.approx(0.16 / 509, abs=1e-6)
+    assert out["cost_basis"] == "busy_window"
+
+
+def test_tokens_summary_requires_single_cost_basis():
+    summary = tokens_summary(
+        [{"prompt_tokens": 1, "completion_tokens": 0, "total_tokens": 1}]
+    )
+    assert summary["cost_basis"] == "busy_window"
+    with pytest.raises(ValueError, match="cost_basis mixed"):
+        tokens_summary(
+            [
+                {"cost_basis": "busy_window", "prompt_tokens": 1},
+                {"usd_basis": "billed_incl_cold", "prompt_tokens": 1},
+            ]
+        )

@@ -291,7 +291,7 @@ def _maybe_json(value: Any) -> Any:
     return value
 
 
-def _record_from_value(value: Any) -> dict[str, str]:
+def _record_from_value(value: Any) -> dict[str, Any]:
     """Normalize one question's payload to ``{answer, category}``."""
     if isinstance(value, dict):
         answer = value.get("answer")
@@ -299,7 +299,10 @@ def _record_from_value(value: Any) -> dict[str, str]:
             answer = value.get("value") or value.get("label") or ""
         category = value.get("category") or ""
         if isinstance(answer, (list, tuple)):
-            return {"answer": list(answer), "category": str(category)}
+            items = [item for item in answer if item not in (None, "")]
+            if len(items) == 1:
+                return {"answer": items[0], "category": str(category)}
+            return {"answer": list(items), "category": str(category)}
         return {"answer": str(answer), "category": str(category)}
     return {"answer": "" if value is None else str(value), "category": ""}
 
@@ -319,23 +322,66 @@ def _parse_span(span: str) -> tuple[str, str] | None:
     return None
 
 
-def parse_maud_labels(value: Any) -> dict[str, dict[str, str]]:
+def _coalesce_maud_answers(answers: list[Any]) -> Any:
+    """Dedupe by fold; keep a list when several distinct answers remain (#19)."""
+    seen: set[str] = set()
+    unique: list[Any] = []
+    for ans in answers:
+        folded = _fold(ans)
+        if not folded or folded in seen:
+            continue
+        seen.add(folded)
+        unique.append(ans)
+    if not unique:
+        return ""
+    if len(unique) == 1:
+        return unique[0]
+    return unique
+
+
+def _merge_maud_record(out: dict[str, dict[str, Any]], key: str, rec: dict[str, Any]) -> None:
+    """Same Hub key with distinct answers → list (ambiguous), never last-wins."""
+    if key not in out:
+        out[key] = rec
+        return
+    existing = out[key]
+    combined: list[Any] = []
+    for src in (existing.get("answer"), rec.get("answer")):
+        if isinstance(src, (list, tuple)):
+            combined.extend(src)
+        elif src not in (None, ""):
+            combined.append(src)
+    existing["answer"] = _coalesce_maud_answers(combined)
+    if not existing.get("category") and rec.get("category"):
+        existing["category"] = rec["category"]
+    if rec.get("gt_ambiguous") or rec.get("ambiguous"):
+        existing["gt_ambiguous"] = True
+
+
+def parse_maud_labels(value: Any) -> dict[str, dict[str, Any]]:
     """Coerce corpus JSON, specialist spans, or a question→answer map.
 
-    Returns ``{canonical_question: {"answer": str, "category": str}}``.
+    Returns ``{canonical_question: {"answer": str | list, "category": str}}``.
+    Distinct sub-question keys stay distinct. Repeated Hub keys with
+    different answers keep every answer so the scorer can mark
+    ``gt_ambiguous`` instead of silently keeping the last span.
     """
     value = _maybe_json(value)
     if value is None:
         return {}
     if isinstance(value, dict):
-        out: dict[str, dict[str, str]] = {}
+        out: dict[str, dict[str, Any]] = {}
         for raw_key, raw_val in value.items():
             key = normalize_maud_question_key(raw_key)
             if not key:
                 continue
             rec = _record_from_value(raw_val)
             rec["category"] = normalize_maud_category(rec["category"]) if rec["category"] else ""
-            out[key] = rec
+            if isinstance(raw_val, dict) and (
+                raw_val.get("gt_ambiguous") or raw_val.get("ambiguous")
+            ):
+                rec["gt_ambiguous"] = True
+            _merge_maud_record(out, key, rec)
         return out
     if isinstance(value, (list, tuple)):
         out = {}
@@ -347,7 +393,7 @@ def parse_maud_labels(value: Any) -> dict[str, dict[str, str]]:
                     normalize_maud_category(rec["category"]) if rec["category"] else ""
                 )
                 if key:
-                    out[key] = rec
+                    _merge_maud_record(out, key, rec)
                 continue
             parsed = _parse_span(item)
             if parsed is None:
@@ -355,7 +401,7 @@ def parse_maud_labels(value: Any) -> dict[str, dict[str, str]]:
             question, answer = parsed
             key = normalize_maud_question_key(question)
             if key:
-                out[key] = {"answer": answer, "category": ""}
+                _merge_maud_record(out, key, {"answer": answer, "category": ""})
         return out
     parsed = _parse_span(str(value))
     if parsed is None:
@@ -382,15 +428,16 @@ def _documents(expected: Any, predicted: Any) -> list[tuple[Any, Any]]:
 
 
 def score_maud_extraction(expected: Any, predicted: Any) -> dict:
-    """Per-question MAUD extraction over the 22 Hub keys.
+    """Per-question MAUD extraction over the 22 Hub keys plus distinct extras.
 
     Headlines:
 
-    - ``maud_question_accuracy`` — micro exact-answer match over expected questions
+    - ``maud_question_accuracy`` — micro exact-answer match over **clean** questions
     - ``maud_question_macro_accuracy`` — unweighted mean of per-question accuracy
     - ``maud_clause_presence`` — share of expected questions present in the prediction
     - ``maud_valid_class_rate`` — share of predicted answers in the question's class set
     - ``maud_category_accuracy`` — category match when both sides have a category
+    - ``n_ambiguous`` — collapsed multi-answer keys marked ``gt_ambiguous`` / unscorable
     """
     docs = _documents(expected, predicted)
     question_stats: dict[str, dict[str, int]] = {
@@ -405,6 +452,7 @@ def score_maud_extraction(expected: Any, predicted: Any) -> dict:
     n_category = 0
     n_category_ok = 0
     n_ambiguous = 0
+    ambiguous_counts: dict[str, int] = {}
     per_doc: list[dict] = []
 
     for exp_raw, pred_raw in docs:
@@ -414,9 +462,12 @@ def score_maud_extraction(expected: Any, predicted: Any) -> dict:
         doc_n = 0
         doc_exact = 0
         doc_present = 0
+        doc_ambiguous: list[str] = []
         for question, rec in exp_labels.items():
             if question in ambiguous_keys:
                 n_ambiguous += 1
+                ambiguous_counts[question] = ambiguous_counts.get(question, 0) + 1
+                doc_ambiguous.append(question)
                 continue
             stats = question_stats.get(question)
             if stats is None:
@@ -459,6 +510,8 @@ def score_maud_extraction(expected: Any, predicted: Any) -> dict:
             "present": doc_present,
             "accuracy": round(doc_exact / doc_n, 4) if doc_n else 0.0,
             "presence": round(doc_present / doc_n, 4) if doc_n else 0.0,
+            "n_ambiguous": len(doc_ambiguous),
+            "gt_ambiguous_keys": doc_ambiguous,
         })
 
     per_question: dict[str, dict] = {}
@@ -479,13 +532,33 @@ def score_maud_extraction(expected: Any, predicted: Any) -> dict:
                 round(stats["category_ok"] / stats["category_n"], 4)
                 if stats["category_n"] else None
             ),
+            "status": "scored",
+            "gt_ambiguous": False,
         }
+    for question, count in ambiguous_counts.items():
+        bucket = per_question.get(question)
+        if bucket is None:
+            per_question[question] = {
+                "n": 0,
+                "accuracy": None,
+                "presence": None,
+                "valid_class_rate": None,
+                "category_accuracy": None,
+                "status": "unscorable",
+                "gt_ambiguous": True,
+                "n_ambiguous": count,
+            }
+        else:
+            bucket["gt_ambiguous"] = True
+            bucket["n_ambiguous"] = count
 
+    all_ambiguous = n_expected == 0 and n_ambiguous > 0
     return {
         "task": "maud_extraction",
         "kind": "maud_extraction",
-        "status": "unscorable" if n_expected == 0 and n_ambiguous else "scored",
-        "reason": "gt_ambiguous" if n_expected == 0 and n_ambiguous else None,
+        "status": "unscorable" if all_ambiguous else "scored",
+        "reason": "gt_ambiguous" if all_ambiguous else None,
+        "gt_ambiguous": all_ambiguous,
         "maud_question_accuracy": round(n_exact / n_expected, 4) if n_expected else None,
         "maud_question_macro_accuracy": (
             round(sum(question_accuracies) / len(question_accuracies), 4)
@@ -498,6 +571,7 @@ def score_maud_extraction(expected: Any, predicted: Any) -> dict:
         ),
         "n_questions": n_expected,
         "n_ambiguous": n_ambiguous,
+        "ambiguous_keys": sorted(ambiguous_counts),
         "n_documents": len(docs),
         "n_present": n_present,
         "metric_id": "maud.question.micro_accuracy",

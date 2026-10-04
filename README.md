@@ -196,7 +196,7 @@ dojo-sync    [--task TRACE_NAME] [--session NAME] [--max-items N]
 
 ## Migration
 
-See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md). Prompt catalog: [`docs/PROMPTS.md`](docs/PROMPTS.md).
+See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md), [`docs/ARCHIVE_SCORING.md`](docs/ARCHIVE_SCORING.md), [`docs/SCORECARD_HONESTY.md`](docs/SCORECARD_HONESTY.md). Prompt catalog: [`docs/PROMPTS.md`](docs/PROMPTS.md).
 
 ## Releases & monorepo sync
 

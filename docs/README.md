@@ -15,6 +15,7 @@ Documentation for the llm-dojo-scoring package, covering:
 - Field-type-aware scoring
 - Entity list scoring
 - Archive scoring block (`ARCHIVE_SCORING.md`)
+- Scorecard honesty: MAUD GT, format vs extraction, completion/cost (`SCORECARD_HONESTY.md`)
 - Regression diagnostics
 - Factuality audit
 

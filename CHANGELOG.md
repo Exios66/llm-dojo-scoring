@@ -10,7 +10,11 @@ Format based on Keep a Changelog; versioning is SemVer.
 Align scoring contracts with
 [mailroom-issues #236](https://github.com/LLM-Mailroom-Services/mailroom-issues/issues/236),
 [#237](https://github.com/LLM-Mailroom-Services/mailroom-issues/issues/237),
-and [#238](https://github.com/LLM-Mailroom-Services/mailroom-issues/issues/238).
+and [#238](https://github.com/LLM-Mailroom-Services/mailroom-issues/issues/238),
+and close remaining honesty gaps in
+[llm-dojo-scoring #19](https://github.com/Exios66/llm-dojo-scoring/issues/19),
+[#20](https://github.com/Exios66/llm-dojo-scoring/issues/20), and
+[#21](https://github.com/Exios66/llm-dojo-scoring/issues/21).
 
 ### Added
 
@@ -24,6 +28,14 @@ and [#238](https://github.com/LLM-Mailroom-Services/mailroom-issues/issues/238).
   sample numbers are not a measured run.
 - **`merger_agreement_specialist`** profile / suite bound to
   `MergerAgreementExtraction`.
+- **`docs/SCORECARD_HONESTY.md`** — MAUD collapsed GT (#19), format vs
+  extraction and empty-field credit (#20), completion / ITT / `cost_basis`
+  / honest `serving_kind` (#21).
+- **`score_empty_field_contract`** — correctly-empty fields score 1.0
+  without entering archive `overall_score`; spurious fill is a penalty.
+- **`canonical_error_class` / `resolve_cost_basis`** — LengthFinish and
+  context-overflow histogram buckets; refuse mixed `cost_basis` in one
+  table.
 
 ### Changed
 
@@ -39,6 +51,16 @@ and [#238](https://github.com/LLM-Mailroom-Services/mailroom-issues/issues/238).
   skips empty lists and retired prompt-catalog keys that are not on the
   live field map.
 - **Aligned classification** — `merger_agreement` ≠ `contract`.
+- **`score_maud_extraction`** — distinct sub-question keys score
+  normally; collapsed multi-answer GT (list, slash-string, or repeated
+  Hub spans) is `gt_ambiguous` / unscorable per item; micro-accuracy
+  over clean keys only; `n_ambiguous` always surfaced (#19).
+- **`score_format_layer` vs field-micro** — prose-wrapped JSON is
+  `parse_ok=0` and does not zero extraction on a structured payload
+  (#20).
+- **`summarize_run_completion`** — LengthFinish histogram; ITT quality
+  ≠ completed-only (#21). `classify_serving_kind` keeps Modal as
+  `modal` (not in `LOCAL_PROVIDERS`).
 - Package version **0.19.0**.
 
 ## [0.18.0] - 2026-09-29
