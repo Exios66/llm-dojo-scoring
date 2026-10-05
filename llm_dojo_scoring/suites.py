@@ -806,9 +806,17 @@ class ScoringSuite:
             )
 
         scoped_to_empty = False
+        scoped_empty_rows: list[bool] = []
         if isinstance(expected, list):
             parsed_expected = [_parse_expected_one(item) for item in expected]
             expected = [_scope_expected_one(item) for item in parsed_expected]
+            # Annotation-only Hub rows (e.g. pending CUAD labels) parse as
+            # nonempty but scope to {}; keep the flag per row so batches can
+            # mark them unscorable without breaking alignment.
+            scoped_empty_rows = [
+                isinstance(parsed, dict) and bool(parsed) and scoped == {}
+                for parsed, scoped in zip(parsed_expected, expected)
+            ]
             if presence is None and carries_presence:
                 derived = [
                     _gtm.derive_presence_from_gt(item)
@@ -926,10 +934,35 @@ class ScoringSuite:
                 else:
                     peeled_exp.append(exp)
                     peeled_pred.append(pred)
-            extraction = [
-                _run(exp, pred, text)
-                for exp, pred, text in zip(peeled_exp, peeled_pred, texts)
-            ]
+            extraction = []
+            for idx, (exp, pred, text) in enumerate(
+                zip(peeled_exp, peeled_pred, texts)
+            ):
+                row_presence = (
+                    presence[idx]
+                    if isinstance(presence, list) and idx < len(presence)
+                    else presence
+                )
+                if (
+                    idx < len(scoped_empty_rows)
+                    and scoped_empty_rows[idx]
+                    and not row_presence
+                ):
+                    # Keep row alignment: this row is honestly unscorable,
+                    # never scored as gt_empty.
+                    extraction.append(
+                        unscorable_extraction_result(
+                            GtAssessment(
+                                "unscorable", "gt_no_extractable_fields"
+                            ),
+                            doc_class=doc_class,
+                            metric_id=metric_id_for(
+                                "extraction_overall_score", doc_class=doc_class
+                            ),
+                        )
+                    )
+                else:
+                    extraction.append(_run(exp, pred, text))
             if saw_topic and topic_e is None:
                 topic_e, topic_p = topics_e, topics_p
             if saw_sent and sent_e is None:
