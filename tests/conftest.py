@@ -1,8 +1,16 @@
 """Shared fixtures: a synthetic sorter results frame mirroring the
 Sorter_Experiment_Results.xlsx schema, plus export round-trip helpers."""
 
+import sys
+from pathlib import Path
+
 import pandas as pd
 import pytest
+
+# ``scripts/`` helpers are repo-root modules, not installed with the
+# package; plain ``pytest`` does not add the cwd to sys.path the way
+# ``python -m pytest`` does. Make both entry points work.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from llm_dojo_scoring.config import PER_SUBTYPE
 
