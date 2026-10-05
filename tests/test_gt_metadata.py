@@ -761,3 +761,24 @@ def test_batch_annotation_only_row_is_unscorable_and_aligned():
     assert result["extraction"][0]["reason"] == "gt_no_extractable_fields"
     # Populated row: presence-only row stays scored, alignment preserved.
     assert isinstance(result["extraction"][1], ExtractionScoreResult)
+
+
+def test_batch_presence_only_row_does_not_leak_spurious_field_micro():
+    label = {"Governing Law": [{"text": "Delaware law applies."}]}
+    expected = [
+        {"parties": ["Acme"]},
+        {
+            CUAD_PRESENCE_KEY: label,
+            GT_PRESENCE_KEY: {CUAD_PRESENCE_KEY: "populated"},
+        },
+    ]
+    predicted = [
+        {"parties": ["Acme"]},
+        {"cuad_clauses": ["Governing Law: Delaware law applies."]},
+    ]
+    result = get_suite("contracts_specialist").score(expected, predicted)
+    # Presence-only row is scored by the presence metric...
+    assert result["extraction_category_presence"] == 1.0
+    # ...and its predicted clause spans are not field false positives.
+    assert result["extraction_precision"] == 1.0
+    assert result["extraction_f1"] == 1.0
