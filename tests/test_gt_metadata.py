@@ -21,6 +21,7 @@ import pytest
 
 from llm_dojo_scoring import get_suite
 from llm_dojo_scoring.extraction_metrics import extraction_binary_metrics
+from llm_dojo_scoring.field_scoring import ExtractionScoreResult
 from llm_dojo_scoring.gt_metadata import (
     ABSENT_PRESENCE_STATUSES,
     ANNOTATION_KEYS,
@@ -737,3 +738,26 @@ def test_batch_presence_keeps_pending_and_populated_rows_aligned():
     assert len(result["extraction"]) == 2
     assert result["extraction_f1"] is None
     assert result["extraction_f2"] is None
+
+
+def test_batch_annotation_only_row_is_unscorable_and_aligned():
+    label = {"Governing Law": [{"text": "Delaware law applies."}]}
+    expected = [
+        {
+            CUAD_PRESENCE_KEY: label,
+            GT_PRESENCE_KEY: {CUAD_PRESENCE_KEY: "pending_annotation"},
+        },
+        {
+            CUAD_PRESENCE_KEY: label,
+            GT_PRESENCE_KEY: {CUAD_PRESENCE_KEY: "populated"},
+        },
+    ]
+    result = get_suite("contracts_specialist").score(
+        expected, [{"cuad_clauses": []}, {"cuad_clauses": ["Delaware law applies."]}],
+    )
+    assert len(result["extraction"]) == 2
+    # Pending annotation row: unscorable, not silently scored as gt_empty.
+    assert result["extraction"][0]["status"] == "unscorable"
+    assert result["extraction"][0]["reason"] == "gt_no_extractable_fields"
+    # Populated row: presence-only row stays scored, alignment preserved.
+    assert isinstance(result["extraction"][1], ExtractionScoreResult)
