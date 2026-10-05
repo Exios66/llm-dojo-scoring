@@ -154,10 +154,16 @@ def normalize_maud_answer(
 ) -> str:
     """Task-aware answer fold: consideration token, else the class surface.
 
-    ``valid_classes`` is the GT record's own catalog when available; the
-    corpus union (:data:`llm_dojo_scoring.maud.MAUD_ANSWER_CLASSES`) is the
-    fallback. Unknown questions fall back to folded text — callers that need
-    validity must use :func:`is_valid_maud_answer`, which fails closed.
+    A nonempty ``valid_classes`` supplies the GT record's own catalog;
+    otherwise the corpus union
+    (:data:`llm_dojo_scoring.maud.MAUD_ANSWER_CLASSES`) is the fallback.
+    ``Type of Consideration`` ignores this catalog and uses consideration
+    aliases, returning ``other`` for unrecognized values. ``None`` always
+    returns an empty string.
+
+    Other answers use :func:`llm_dojo_scoring.maud.canonical_maud_class`;
+    unrecognized answers fall back to folded text. Normalization does not
+    establish validity; use :func:`is_valid_maud_answer` to check it.
     """
     if value is None:
         return ""
@@ -172,9 +178,15 @@ def is_valid_maud_answer(
 ) -> bool:
     """True when the answer uses only classes from the question's surface.
 
-    Uses the GT record's own ``valid_classes`` when provided, otherwise the
-    corpus union for one of the 22 Hub questions. Unknown questions without
-    an explicit catalog fail closed (``False``) — never guess.
+    Uses a nonempty ``valid_classes`` from the GT record, otherwise the
+    corpus union for one of the 22 Hub questions. ``Type of Consideration``
+    instead uses the configured consideration types and aliases, ignoring
+    ``valid_classes``. ``None``, blank answers, and unknown questions without
+    a nonempty catalog return ``False``.
+
+    Other answers may match a whole class or multiple comma-separated
+    classes after normalization. Yes/No aliases are accepted for whole
+    answers only when the corresponding class exists in the catalog.
     """
     if value is None or str(value).strip() == "":
         return False
@@ -313,10 +325,14 @@ def _maybe_json(value: Any) -> Any:
 
 
 def _record_from_value(value: Any) -> dict[str, Any]:
-    """Normalize one question's payload to ``{answer, category, valid_classes}``.
+    """Normalize a question's payload to an answer, category, and optional classes.
 
-    ``valid_classes`` (the Hub annotation surface) is preserved so scoring
-    can validate answers against the row's own class catalog — never guess.
+    Dictionary answers fall back to ``value`` or ``label`` when ``answer``
+    is missing or ``None``. Lists and tuples drop ``None`` and empty strings
+    and unwrap a single remaining item; scalar answers become strings.
+    ``valid_classes`` is included only when nonempty after filtering, with
+    entries converted to strings and a string treated as one class.
+    A truthy, non-iterable ``valid_classes`` raises ``TypeError``.
     """
     if isinstance(value, dict):
         answer = value.get("answer")
@@ -407,11 +423,16 @@ def _merge_maud_record(out: dict[str, dict[str, Any]], key: str, rec: dict[str, 
 def parse_maud_labels(value: Any) -> dict[str, dict[str, Any]]:
     """Coerce corpus JSON, specialist spans, or a question→answer map.
 
-    Returns ``{canonical_question: {"answer": str | list, "category": str,
-    "valid_classes": list[str] (when present)}}``. Distinct sub-question keys
-    stay distinct. Repeated Hub keys with different answers keep every answer
-    so the scorer can mark ``gt_ambiguous`` instead of silently keeping the
-    last span.
+    Returns records keyed by canonical question, with ``answer``,
+    ``category``, and optional nonempty ``valid_classes``. Distinct
+    sub-question keys stay distinct. Repeated Hub keys with different
+    answers keep every distinct answer so the scorer can mark
+    ``gt_ambiguous`` instead of silently keeping the last span; their
+    class lists are unioned.
+
+    ``None`` and values with no parseable question return an empty dict.
+    Malformed JSON is treated as span text, not raised as a decoding error.
+    A record with truthy, non-iterable ``valid_classes`` raises ``TypeError``.
     """
     value = _maybe_json(value)
     if value is None:
@@ -477,14 +498,31 @@ def _documents(expected: Any, predicted: Any) -> list[tuple[Any, Any]]:
 def score_maud_extraction(expected: Any, predicted: Any) -> dict:
     """Per-question MAUD extraction over the 22 Hub keys plus distinct extras.
 
+    Accepts label maps, JSON, or clause spans via :func:`parse_maud_labels`.
+    A list beginning with a dict is treated as a document batch; a list of
+    strings is one document's spans. Batch lists are paired up to the shorter
+    length; a non-list prediction is reused for each expected document.
+    Label parsing errors propagate.
+
     Headlines:
 
     - ``maud_question_accuracy`` — micro exact-answer match over **clean** questions
     - ``maud_question_macro_accuracy`` — unweighted mean of per-question accuracy
-    - ``maud_clause_presence`` — share of expected questions present in the prediction
-    - ``maud_valid_class_rate`` — share of predicted answers in the question's class set
-    - ``maud_category_accuracy`` — category match when both sides have a category
+    - ``maud_clause_presence`` — share of clean expected questions with a predicted record
+    - ``maud_valid_class_rate`` — share of those present predictions with valid answers
+    - ``maud_category_accuracy`` — match over expected categories; missing predictions miss
     - ``n_ambiguous`` — collapsed multi-answer keys marked ``gt_ambiguous`` / unscorable
+
+    Ambiguous expected answers are excluded from all metric denominators;
+    prediction-only questions are ignored. Answer normalization and validity
+    use the expected record's nonempty class catalog, with the fallback and
+    consideration exception described in :func:`is_valid_maud_answer`.
+    Exact matching is independent of class validity.
+
+    Returns headline rates rounded to four decimals (``None`` when their
+    denominator is zero), counts, and per-question and per-document details.
+    Status is ``unscorable`` only when there are ambiguous expected questions
+    and no clean ones.
     """
     docs = _documents(expected, predicted)
     question_stats: dict[str, dict[str, int]] = {
