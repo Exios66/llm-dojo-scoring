@@ -528,9 +528,9 @@ prompts:
   source_repo: LLM-Mailroom-Services/eval-environment
   source_key: corporate_records_specialist_v1
   template: corporate_records_specialist.production_prompts.md
-  sha256: 484e64dd847b7bb35afebca74edc1fb6c381f0f7d5e9367ad8673bec0b8af45c
-  notes: 'Frozen eval-environment v1 (mailroom-dataset-v1, 2026-09-26). Byte-identical
-    to sandbox stem corporate_records_specialist_simplified.'
+  sha256: fe13501f667fcd9f64f7dfbf8b0f124f81d9dd039f4109288b43f106f82b1399
+  notes: 'Derived from frozen eval-environment v1 (mailroom-dataset-v1, 2026-09-26),
+    sandbox stem corporate_records_specialist_simplified; locally corrected field guidance.'
   priming: []
 - agent: correspondence_specialist
   family: production_prompts
@@ -541,9 +541,9 @@ prompts:
   source_repo: LLM-Mailroom-Services/eval-environment
   source_key: correspondence_specialist_v1
   template: correspondence_specialist.production_prompts.md
-  sha256: eab63b5afd29906b1ad3aca2d7698bf5c15d4b7f4ce9ade3b744be535d18d4f3
-  notes: 'Frozen eval-environment v1 (mailroom-dataset-v1, 2026-09-26). Byte-identical
-    to sandbox stem correspondence_specialist_simplified.'
+  sha256: 2b0b81ff98920b9207627707443e2b023db39212fda5bdcba7bfbded39fa38b6
+  notes: 'Derived from frozen eval-environment v1 (mailroom-dataset-v1, 2026-09-26),
+    sandbox stem correspondence_specialist_simplified; locally corrected field guidance.'
   priming: []
 - agent: insurance_claims_specialist
   family: production_prompts

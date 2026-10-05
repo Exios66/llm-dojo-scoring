@@ -46,15 +46,19 @@ This catalog does **not** vendor the ~1.8MB historical prompt archive.
 
 The five live specialists have a frozen v1 stem that Modal / vLLM specialist
 evals inject. The dojo stores them as `family="production_prompts"`,
-`version="v1"`, byte-identical to the sandbox `config/prompts/<stem>.txt`
+`version="v1"`, derived from the sandbox `config/prompts/<stem>.txt`
 files and sha256-pinned on each record (hash over the loaded text plus a
 trailing newline, matching the sandbox lineage's normalization).
+
+Corporate-record and correspondence stems include local field-guidance corrections;
+their provenance comments preserve the original source digests. Other stems remain
+byte-identical to the frozen source. Catalog digests identify the current text.
 
 | Agent | Eval-environment key | Sandbox stem | `sha256` (prefix) |
 |---|---|---|---|
 | `contracts_specialist` | `contracts_specialist_v1` | `contracts_specialist_v33_simplified` | `d91de396…` |
-| `corporate_records_specialist` | `corporate_records_specialist_v1` | `corporate_records_specialist_simplified` | `484e64dd…` |
-| `correspondence_specialist` | `correspondence_specialist_v1` | `correspondence_specialist_simplified` | `eab63b5a…` |
+| `corporate_records_specialist` | `corporate_records_specialist_v1` | `corporate_records_specialist_simplified` | `fe13501f…` |
+| `correspondence_specialist` | `correspondence_specialist_v1` | `correspondence_specialist_simplified` | `2b0b81ff…` |
 | `insurance_claims_specialist` | `insurance_claims_specialist_v1` | `insurance_claims_specialist_simplified` | `6c2776bc…` |
 | `merger_agreement_specialist` | `merger_agreement_specialist_v1` | `merger_agreement_specialist_simplified` | `00323258…` |
 

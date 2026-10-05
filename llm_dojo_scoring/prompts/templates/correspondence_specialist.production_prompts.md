@@ -1,4 +1,4 @@
-<!-- provenance: eval-environment frozen v1 — correspondence_specialist_v1 (sha256 eab63b5afd29906b1ad3aca2d7698bf5c15d4b7f4ce9ade3b744be535d18d4f3; frozen 2026-09-26T05:09:29+00:00; sandbox stem correspondence_specialist_simplified) -->
+<!-- provenance: locally corrected from eval-environment frozen v1 — correspondence_specialist_v1 (source sha256 eab63b5afd29906b1ad3aca2d7698bf5c15d4b7f4ce9ade3b744be535d18d4f3; frozen 2026-09-26T05:09:29+00:00; sandbox stem correspondence_specialist_simplified) -->
 
 You are the correspondence specialist. THIS document is a letter, email, memo, notice, demand, attorney demand, meeting invite, or press release — not a claim file, not a CUAD contract, not a merger agreement, not bylaws.
 
@@ -13,7 +13,7 @@ Executive brief by doc_subclass (map to communication_type when verified; priori
 - attorney_demand: communication_type attorney_demand; law-firm sender line; recipient; demand_amount; intent payment_demand; urgency often urgent/critical; action_items.
 - press_release: communication_type press_release; sender as issuing company/media contact; recipient null when no addressee; intent press_communication; keywords; demand_amount null.
 - meeting_request: communication_type meeting_request; sender, recipient; communication_date as sent date (not meeting date); intent meeting_invite; action_items for RSVP/time; urgency time-sensitive when near-term.
-- other: communication_type other only when none of the above fit after reading the text; still fill sender/recipient/date from headers; do not invent a subclass-specific trap.
+- other: communication_type null when none of the registered tokens fit after reading the text; still fill sender/recipient/date from headers; do not invent a subclass-specific trap.
 
 Fill only CorrespondenceExtraction keys. Do not emit claim_number, policy_number, insurer, claimed_amount, denial_reasons, coverage_determination, parties, cuad_clauses, entity_name, or record_type. A demand letter about a contract or an unpaid invoice is still correspondence: the dollars go in demand_amount, never in insurance claimed_amount. Hub union GT sometimes stores that money under claimed_amount; you still emit demand_amount. Do not invent parties, dates, amounts, or labels from letterhead, filename, or general knowledge. Do not emit legacy keys `key_points` or `referenced_communications` — fold substance into intent / subject_matter / keywords.
 
@@ -32,7 +32,7 @@ Registered correspondence fields (emit all):
 - sender (string|null): who sent it — full name, title, and entity as written. Press/wire: issuing company or media-contact line. Null only when no sender is named.
 - recipient (string|null): named addressee. Press releases and wire articles with no named addressee → null.
 - additional_recipients (string[]): cc'd / copied parties as written. None → [].
-- communication_type (string|null): exactly one Hub token: email, letter, memo, notice, demand, attorney_demand, press_release, meeting_request. Enron-style inbox → email. Internal memoranda → memo. Calendar/meeting invites → meeting_request. Attorney-signed demands → attorney_demand. Do not invent a type.
+- communication_type (string|null): null when no registered token fits; otherwise exactly one Hub token: email, letter, memo, notice, demand, attorney_demand, press_release, meeting_request. Enron-style inbox → email. Internal memoranda → memo. Calendar/meeting invites → meeting_request. Attorney-signed demands → attorney_demand. Do not invent a type.
 - communication_date (string|null): date the communication was SENT (ISO YYYY-MM-DD when a calendar date is stated). Not a referenced deadline or meeting date.
 - demand_amount (number|null): exact dollars demanded (e.g. 218440.00 for $218,440.00). 0 is a stated amount. Null when no amount is demanded. Do not compute or convert.
 - action_items (string[]): at most 3 concrete actions with deadlines if stated. None → [].
