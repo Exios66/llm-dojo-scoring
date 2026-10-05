@@ -38,6 +38,7 @@ def test_default_field_types_drop_open_ended_obligation_dumps():
 
 
 def test_default_field_types_match_corpus_and_mailroom_pared_schema():
+    """Live field-type maps line up with the corpus schema, and merger diverges from contract."""
     assert set(DEFAULT_FIELD_TYPES["contract"]) == set(CORPUS_EXTRACTION_FIELDS["contract"])
     assert "cuad_clauses" in DEFAULT_FIELD_TYPES["contract"]
     assert "intent" in DEFAULT_FIELD_TYPES["correspondence"]

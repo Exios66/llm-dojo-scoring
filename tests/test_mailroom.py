@@ -31,6 +31,7 @@ from llm_dojo_scoring.tasks import score_task
 
 
 def test_live_roster_is_five_specialists():
+    """The live doc-type / specialist roster is the five live classes, merger included."""
     assert LIVE_DOC_TYPES == (
         "contract",
         "merger_agreement",
@@ -52,6 +53,7 @@ def test_live_roster_is_five_specialists():
 
 
 def test_extract_alias_and_retired_never_extract():
+    """There are no extract-class aliases; retired classes never resolve to an extract class."""
     assert EXTRACT_CLASS_ALIASES == {}
     assert "merger_agreement" not in EXTRACT_CLASS_ALIASES
     assert resolve_extract_class("merger_agreement") == "merger_agreement"
@@ -67,6 +69,7 @@ def test_extract_alias_and_retired_never_extract():
 
 
 def test_aligned_accuracy_merger_is_not_contract():
+    """Aligned classification accuracy does not treat merger_agreement as contract."""
     expected = ["contract", "merger_agreement", "insurance_claim"]
     predicted = ["contract", "contract", "correspondence"]
     out = score_aligned_classification(expected, predicted)
@@ -114,6 +117,7 @@ def test_langfuse_score_transport_alias():
 
 
 def test_retired_suites_flagged_live_filter():
+    """Retired specialists are flagged ``retired`` and excluded from the live-only filter."""
     assert get_suite("court_opinions_specialist").retired is True
     assert get_suite("due_diligence_specialist").retired is True
     assert get_suite("compliance_specialist").retired is True

@@ -43,6 +43,7 @@ from . import (
     extraction_metrics,
     failure_modes,
     field_scoring,
+    grid,
     intake,
     io,
     interpret,
@@ -155,6 +156,20 @@ from .content_scoring import (
     score_maud_extraction,
     score_sentiment,
 )
+from .gt_metadata import (
+    ABSENT_PRESENCE_STATUSES,
+    ANNOTATION_KEYS,
+    CUAD_PRESENCE_KEY,
+    GT_PRESENCE_KEY,
+    derive_presence_from_gt,
+    gt_presence_map,
+    is_empty_value,
+    normalize_field_values,
+    parse_gt_fields,
+    parse_json_container,
+    presence_expectations_from_cuad_labels,
+    scoring_gt_fields,
+)
 from .trace_knobs import (
     capture_trace_knobs,
     confidence_calibration_error,
@@ -249,6 +264,15 @@ from .serving import (
     serving_table_rows,
     split_local_api,
 )
+from .grid import (
+    GridDocument,
+    GridExperiment,
+    build_grid_report,
+    grid_scorecard,
+    serving_efficiency_rows,
+    session_cost_rows,
+    specialist_grid_rows,
+)
 
 __all__ = [
     "__version__",
@@ -257,7 +281,7 @@ __all__ = [
     "equivalences", "error_analysis", "experiment", "export", "extraction_metrics", "failure_modes",
     "field_scoring", "io", "interpret", "langfuse_sync", "phoenix_sync",
     "report", "asr", "corpus", "intake", "mailroom", "prompts", "serving",
-    "suites", "tasks", "trace_knobs", "visualize",
+    "suites", "tasks", "trace_knobs", "visualize", "grid",
     "ARCHIVE_HASH_VERSION", "ARCHIVE_SCORING_METHOD",
     "archive_entry_hash", "archivist_sign_off", "format_audit_entry",
     "prepare_archivist_handoff", "score_archive_block", "upsert_archive_scoring",
@@ -307,6 +331,11 @@ __all__ = [
     "score_content_topic", "score_sentiment",
     "peel_non_extraction_fields",
     "score_correspondence_content", "score_maud_extraction",
+    "parse_gt_fields", "scoring_gt_fields", "normalize_field_values",
+    "parse_json_container", "is_empty_value", "gt_presence_map",
+    "presence_expectations_from_cuad_labels", "derive_presence_from_gt",
+    "ANNOTATION_KEYS", "ABSENT_PRESENCE_STATUSES",
+    "CUAD_PRESENCE_KEY", "GT_PRESENCE_KEY",
     "capture_trace_knobs", "confidence_calibration_error",
     "parse_confidence", "parse_reasoning",
     "apply_intake", "deterministic_normalize", "looks_messy", "score_intake",
@@ -316,4 +345,6 @@ __all__ = [
     "emit_serving_scorecard", "pair_comparable_runs", "score_serving_run",
     "serving_card_markdown", "serving_cost_card", "serving_scorecard",
     "serving_table_markdown", "serving_table_rows", "split_local_api",
+    "GridDocument", "GridExperiment", "build_grid_report", "grid_scorecard",
+    "serving_efficiency_rows", "session_cost_rows", "specialist_grid_rows",
 ]

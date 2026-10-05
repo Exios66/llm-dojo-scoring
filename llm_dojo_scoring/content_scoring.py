@@ -30,6 +30,7 @@ from .corpus import (
 from .tasks import normalize_maud_consideration
 from .scorecard_honesty import detect_maud_gt_ambiguity
 from .field_scoring import RETIRED_PROMPT_KEYS
+from .gt_metadata import ANNOTATION_KEYS
 
 __all__ = [
     "CORRESPONDENCE_CONTENT_KEYS",
@@ -65,8 +66,13 @@ MAUD_LABEL_KEY = "maud_clause_labels"
 #: Keys stripped from extraction dicts before :func:`score_extraction`.
 #: ``confidence`` / ``reasoning`` stay on the dict so :mod:`.trace_knobs`
 #: can capture them; :func:`score_extraction` still skips scoring them.
+#: Hub annotation stats and the stringified presence maps are stripped too
+#: (they are never extraction targets on either side).
 NON_EXTRACTION_KEYS: frozenset[str] = (
-    CORRESPONDENCE_CONTENT_KEYS | {MAUD_LABEL_KEY} | RETIRED_PROMPT_KEYS
+    CORRESPONDENCE_CONTENT_KEYS
+    | {MAUD_LABEL_KEY}
+    | RETIRED_PROMPT_KEYS
+    | ANNOTATION_KEYS
 )
 
 _ALIAS_RE = re.compile(r"[^a-z0-9]+")

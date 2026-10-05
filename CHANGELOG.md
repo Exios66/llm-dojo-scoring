@@ -5,21 +5,6 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
-### Fixed
-
-- **`resolve_cost_basis`** — reject a table that mixes labeled and
-  unlabeled `cost_basis` / `usd_basis` rows. Wholly unlabeled inputs
-  still stamp the default (`busy_window`).
-
-### Added
-
-- **`format_audit_entry` / `prepare_archivist_handoff`** — calculate and
-  format the hash-chained `archived` audit row (hash version 2) that is
-  passed to the archivist. The templated row is always handed through;
-  `archivist_sign_off` files it as final only when the hash matches and
-  the pipeline steps for that document need no revision (report → judge
-  → archive; happy-path nodes on a successful job).
-
 ## [0.19.0] - 2026-10-04
 
 Align scoring contracts with
@@ -29,9 +14,92 @@ and [#238](https://github.com/LLM-Mailroom-Services/mailroom-issues/issues/238),
 and close remaining honesty gaps in
 [llm-dojo-scoring #19](https://github.com/Exios66/llm-dojo-scoring/issues/19),
 [#20](https://github.com/Exios66/llm-dojo-scoring/issues/20), and
-[#21](https://github.com/Exios66/llm-dojo-scoring/issues/21).
+[#21](https://github.com/Exios66/llm-dojo-scoring/issues/21), with the
+v0.19.0 release-completion patch: hash-chain parity with llm-mailroom,
+per-document suite emission for all five live classes, metric identity
+completion, and specialist grid reports.
+
+### Fixed
+
+- **Hash-chain parity with llm-mailroom** — `archive.canonical_json` now
+  serializes byte-identically to llm-mailroom
+  `src/schemas/audit.py::compute_audit_hash`
+  (`json.dumps(sort_keys=True, default=str)`, `datetime` → `isoformat()`).
+  The previous compact-separator form produced a different `entry_hash`
+  for the same row, so a dojo-formatted `archived` row failed
+  `verify_chain` in llm-mailroom. `tests/test_archive_scoring.py` carries
+  the inline mailroom oracle plus a verification round-trip.
+- **Hash fixture** — `test_issue_236_example_payload_hash_is_stable` now
+  pins the llm-mailroom digest. The digest printed in mailroom-issues
+  #236 is not reproducible from the payload as shown (noted in
+  `docs/ARCHIVE_SCORING.md`).
+- **Plain extraction paths carry format scores** — batch `score([...])`
+  always emits `schema_valid` / `parse_ok` / `schema_adherence`;
+  `score_document()` returns the full per-document payload (flattened
+  `overall_score`, field-micro P/R/F1/F2, class extras, `metric_id`,
+  provenance). Single-doc `score(dict)` keeps the historical
+  `ExtractionScoreResult` unless `detailed=True` (#18 alignment).
+- **Insurance single-document extras** — `determination_consistency`,
+  `amount_exactness`, and `schema_promotion_gate` now run on
+  `score_document()` for one claim, not only in batch.
+- **Content-only GT no longer suppressed** — correspondence with only
+  `content_topic` / `sentiment_label` and merger with only
+  `maud_clause_labels` score their content metric; triage-only contract
+  rows stay `unscorable` (#16 unchanged), and a document with no nonempty
+  expected field keeps `overall_score = None`.
+- **Metric identity completed for all five live classes** —
+  `_CLASS_METRIC_IDS` covers contract, merger_agreement, corporate_record,
+  correspondence, and insurance_claim; F2 is allowed for each; Enron
+  topic/sentiment ids are mapped; `metric_id_allowed()` added (#17).
+- **`resolve_cost_basis`** — reject a table that mixes labeled and
+  unlabeled `cost_basis` / `usd_basis` rows. Wholly unlabeled inputs
+  still stamp the default (`busy_window`).
+- **Retired-class drift** — `config.RETIRED_DOC_CLASS_KEYS` now includes
+  `compliance_filing` (retired; llm-mailroom `taxonomy.yaml` has no such
+  class). The merger agreement specialist remains its own class/suite —
+  never an alias of contract — and the compliance specialist is never on
+  the live roster.
+- **Hub `gt_fields` metadata is parsed and scoped per document type** —
+  stringified `"[]"` / `"{}"` values are empty (no phantom FN), `gt_presence`
+  `not_applicable` / `schema_documented_absence` fields are never required
+  events, and annotation stats / other classes' fields never reach extraction
+  scoring. `N/A` date placeholders are empty, and CUAD label spans with no
+  alphanumeric content (`[*]`, `____`, `.`) are omitted from presence
+  expectations. `pending_annotation` (label backfill not yet run) is treated
+  as absent, so stale values on pending fields are never scored. A mis-passed
+  class-label string fails closed (`gt_wrong_schema`) instead of crashing.
+  Perfect-prediction replay over the
+  **full corpus** (both splits, 3,302 rows, 19,924 extraction events):
+  **0 FN / 0 FP / 0 spurious fills / 0 F1 or presence misses**; 91
+  triage-only contract rows stay `unscorable`.
 
 ### Added
+
+- **`llm_dojo_scoring.gt_metadata`** + **`docs/GT_METADATA.md`** —
+  `parse_gt_fields`, `scoring_gt_fields`, `derive_presence_from_gt`,
+  `is_empty_value`, `parse_json_container`; CUAD label spans become presence
+  expectations (placeholder spans skipped); raw clause items are presence
+  candidates (multi-sentence quotes are not lost to disaggregation). Tests:
+  `tests/test_gt_metadata.py`.
+
+- **`llm_dojo_scoring.grid`** — L4-style specialist grid reports
+  (`build_grid_report`, `grid_scorecard`, `GridDocument`,
+  `GridExperiment`): quality / `ok / n` / p50 latency / `$` per ok
+  document, pooled serving efficiency (error rate, docs/min, tokens/s/GPU,
+  GPU `$`/doc), and busy-window vs metered session cost. Missing metered
+  input renders `n/a`; one row never mixes `metric_id`s.
+- **`format_audit_entry` / `prepare_archivist_handoff`** — calculate and
+  format the hash-chained `archived` audit row (hash version 2) that is
+  passed to the archivist. The templated row is always handed through;
+  `archivist_sign_off` files it as final only when the hash matches and
+  the pipeline steps for that document need no revision (report → judge
+  → archive; happy-path nodes on a successful job).
+- **`docs/GRID_REPORTS.md`** and **`docs/ISSUE_ALIGNMENT.md`**.
+- **Taxonomy authority fixture** — `tests/fixtures/taxonomy_field_types.json`
+  + `tests/test_live_roster_parity.py`: the five live field maps pinned to
+  llm-mailroom `taxonomy.yaml` blob
+  `ca297bd8e55e62b79ee452b02b65926b5032bdf1`, with roster / merger /
+  retirement guards and per-document payload tests.
 
 - **`llm_dojo_scoring.archive`** — `score_archive_block` returns the
   archivist `detail.scoring` payload (method, field map SHA, overall
@@ -81,7 +149,7 @@ and close remaining honesty gaps in
 - **`summarize_run_completion`** — LengthFinish histogram; ITT quality
   ≠ completed-only (#21). `classify_serving_kind` keeps Modal as
   `modal` (not in `LOCAL_PROVIDERS`).
-- Package version **0.19.0**.
+- Package version **0.19.0**; tests: **521 passed, 5 skipped**.
 
 ## [0.18.0] - 2026-09-29
 

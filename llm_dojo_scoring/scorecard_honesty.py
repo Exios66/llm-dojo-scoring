@@ -12,6 +12,7 @@ from statistics import fmean
 from typing import Any, Mapping, Sequence
 
 from . import __version__
+from .gt_metadata import is_empty_value
 
 __all__ = [
     "SCORER_VERSION",
@@ -21,6 +22,7 @@ __all__ = [
     "ProvenanceExportError",
     "metric_id_for",
     "metric_ids_for_class",
+    "metric_id_allowed",
     "assert_comparable_metric_ids",
     "assess_extraction_gt",
     "unscorable_extraction_result",
@@ -78,14 +80,21 @@ _METRIC_ID_BY_NAME: dict[str, str] = {
     "maud_clause_presence": "maud.clause_presence.rate",
     "f1_macro": "pipeline.classification.f1_macro",
     "accuracy": "pipeline.classification.accuracy",
+    "content_topic_accuracy": "pipeline.enron.topic_accuracy",
+    "content_topic_f1_macro": "pipeline.enron.topic_f1_macro",
+    "sentiment_accuracy": "pipeline.enron.sentiment_accuracy",
+    "sentiment_f1_macro": "pipeline.enron.sentiment_f1_macro",
 }
 
 # Doc class / suite → allowed metric_ids for comparisons (documented in docs/METRIC_IDS.md).
+# Covers all five live extract classes (#17): contract, merger_agreement,
+# corporate_record, correspondence, insurance_claim.
 _CLASS_METRIC_IDS: dict[str, tuple[str, ...]] = {
     "contract": (
         "pipeline.extraction.overall",
         "cuad.clause_presence.micro_f1",
         "pipeline.extraction.field_micro_f1",
+        "pipeline.extraction.field_micro_f2",
         "maud.question.micro_accuracy",
     ),
     "merger_agreement": (
@@ -93,14 +102,26 @@ _CLASS_METRIC_IDS: dict[str, tuple[str, ...]] = {
         "maud.question.micro_accuracy",
         "maud.clause_presence.rate",
         "pipeline.extraction.field_micro_f1",
+        "pipeline.extraction.field_micro_f2",
+    ),
+    "corporate_record": (
+        "pipeline.extraction.overall",
+        "pipeline.extraction.field_micro_f1",
+        "pipeline.extraction.field_micro_f2",
     ),
     "insurance_claim": (
         "pipeline.extraction.overall",
         "pipeline.extraction.field_micro_f1",
+        "pipeline.extraction.field_micro_f2",
     ),
     "correspondence": (
         "pipeline.extraction.overall",
+        "pipeline.extraction.field_micro_f1",
+        "pipeline.extraction.field_micro_f2",
         "pipeline.enron.topic_accuracy",
+        "pipeline.enron.topic_f1_macro",
+        "pipeline.enron.sentiment_accuracy",
+        "pipeline.enron.sentiment_f1_macro",
     ),
 }
 
@@ -162,6 +183,14 @@ def metric_ids_for_class(doc_class: str) -> tuple[str, ...]:
     return _CLASS_METRIC_IDS.get(doc_class, ("pipeline.extraction.overall",))
 
 
+def metric_id_allowed(metric_id: str, doc_class: str) -> bool:
+    """True when ``metric_id`` is on the class's allowed comparison list (#17).
+
+    Unknown classes allow only ``pipeline.extraction.overall``.
+    """
+    return metric_id in metric_ids_for_class(doc_class)
+
+
 def assert_comparable_metric_ids(
     left: str | None,
     right: str | None,
@@ -188,20 +217,29 @@ def assert_comparable_metric_ids(
 
 
 def _is_empty_value(value: Any) -> bool:
-    if value in (None, "", [], {}):
-        return True
-    if isinstance(value, str) and not value.strip():
-        return True
-    return False
+    """Empty / null / stringified-empty (``"[]"``, ``"{}"``) Hub GT value."""
+    return is_empty_value(value)
 
 
 def _has_extractable_gt(
     expected: Mapping[str, Any],
     field_types: Mapping[str, str],
+    scorable_gt_keys: Sequence[str] = (),
 ) -> bool:
+    """Return whether GT has a nonempty extraction or suite-declared content value.
+
+    Triage keys are ignored in ``field_types`` but may qualify when explicitly
+    included in ``scorable_gt_keys``.
+    """
     for key in field_types:
         if key in _TRIAGE_GT_KEYS:
             continue
+        if not _is_empty_value(expected.get(key)):
+            return True
+    # Content/MAUD differentiators are scorable when the calling suite carries
+    # the matching scorer (correspondence topic/sentiment, MAUD question
+    # accuracy). They stay triage-only for suites without those scorers.
+    for key in scorable_gt_keys:
         if not _is_empty_value(expected.get(key)):
             return True
     return False
@@ -213,8 +251,22 @@ def assess_extraction_gt(
     *,
     doc_class: str = "extraction",
     presence_expectations: Any = None,
+    scorable_gt_keys: Sequence[str] | None = None,
 ) -> GtAssessment:
-    """Fail-closed GT check (#16). Triage-only contracts GT is unscorable."""
+    """Fail-closed GT check (#16). Triage-only contracts GT is unscorable.
+
+    ``scorable_gt_keys`` lets a suite declare content-only differentiators it
+    can genuinely score (e.g. ``content_topic`` for correspondence,
+    ``maud_clause_labels`` for the merger specialist). A GT row holding only
+    those keys is scored on the content metric instead of being suppressed
+    as ``gt_no_extractable_fields``. Contracts triage-only rows (subtype /
+    doc_type labels with no scorer) remain unscorable.
+
+    Return a ``GtAssessment`` with status and reason: missing or non-dict
+    input is unscorable; an empty dict is scored with reason ``gt_empty``.
+    For a nonempty dict, truthy ``presence_expectations`` permits scoring
+    without extractable fields. This check does not compute any scores.
+    """
     if expected is None:
         return GtAssessment("unscorable", "gt_missing")
     if not isinstance(expected, dict):
@@ -224,7 +276,7 @@ def assess_extraction_gt(
     ftypes = dict(field_types or {})
     if presence_expectations:
         return GtAssessment("scored", None)
-    if _has_extractable_gt(expected, ftypes):
+    if _has_extractable_gt(expected, ftypes, tuple(scorable_gt_keys or ())):
         return GtAssessment("scored", None)
     # Triage-only contract rows (subtype labels without schema fields).
     if doc_class in {"contract", "merger_agreement"} or any(

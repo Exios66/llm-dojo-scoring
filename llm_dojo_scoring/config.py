@@ -167,7 +167,15 @@ LIVE_DOC_CLASS_KEYS: list[str] = [
     "contract", "merger_agreement", "corporate_record", "correspondence",
     "insurance_claim",
 ]
-RETIRED_DOC_CLASS_KEYS: list[str] = ["court_opinion", "due_diligence"]
+# Retired classes: excluded from the classifier's valid label set. The live
+# pipeline extracts five classes (``LIVE_DOC_CLASS_KEYS``); court_opinion,
+# due_diligence, and compliance_filing are RETIRED (sorter emits ``unknown``,
+# and llm-mailroom taxonomy.yaml no longer carries a compliance_filing class).
+# merger_agreement is ``MergerAgreementExtraction``. See
+# :mod:`llm_dojo_scoring.mailroom`.
+RETIRED_DOC_CLASS_KEYS: list[str] = [
+    "court_opinion", "due_diligence", "compliance_filing",
+]
 
 # MAUD merger-agreement consideration-type subclass (expert GT dimension —
 # `Type of Consideration`). Keys are the canonical snake_case form used by the
@@ -416,6 +424,7 @@ _SCALAR_KEYS = {
 
 
 def _apply_dict(settings: Settings, data: dict[str, Any]) -> None:
+    """Apply a raw config dict's ``field_scoring`` / ``trace_knobs`` / other blocks onto ``settings``."""
     fs = data.get("field_scoring") or {}
     fs_settings = settings.field_scoring
     if "ambiguous_band" in fs and isinstance(fs["ambiguous_band"], (list, tuple)) and len(fs["ambiguous_band"]) == 2:
@@ -514,6 +523,7 @@ def get_settings() -> Settings:
 
 
 def _apply_trace_knobs(knobs: TraceKnobSettings, data: dict[str, Any]) -> None:
+    """Apply a raw ``trace_knobs:`` config dict onto ``knobs`` in place."""
     if "capture_confidence" in data:
         knobs.capture_confidence = bool(data["capture_confidence"])
     if "capture_reasoning" in data:

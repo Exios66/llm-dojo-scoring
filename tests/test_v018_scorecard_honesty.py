@@ -76,6 +76,7 @@ def test_schema_valid_gate_insurance():
 
 
 def test_maud_collapsed_gt_ambiguous():
+    """Multiple distinct GT answers for one Hub key collapse to ``gt_ambiguous`` / unscorable."""
     expected = {
         "No-Shop": {"answer": ["Yes", "Strict liability standard"]},
     }
@@ -106,6 +107,7 @@ def test_maud_collapsed_gt_ambiguous():
 
 
 def test_maud_distinct_subquestion_keys_score_normally():
+    """Distinct Hub sub-question keys stay distinct and score normally, even alongside an ambiguous key."""
     expected = {
         "No-Shop": {"answer": "Yes"},
         "Fiduciary exception:  Board determination (no-shop)": {"answer": "Yes"},
@@ -145,6 +147,7 @@ def test_maud_distinct_subquestion_keys_score_normally():
 
 
 def test_format_vs_extraction_and_empty_fields():
+    """Spurious fills count as FP with zero empty-field credit; bad JSON fails parse, not extraction."""
     assert classify_extraction_failure(parse_ok=0.0, overall_score=0.9) == "format_parse"
     field_map = DEFAULT_FIELD_TYPES["insurance_claim"]
     expected = {"claim_number": "CLM-1", "adjuster": None}
@@ -162,6 +165,7 @@ def test_format_vs_extraction_and_empty_fields():
 
 
 def test_prose_wrapped_json_is_parse_fail_not_zero_extraction():
+    """JSON wrapped in chatty prose fails format parsing without zeroing out extraction."""
     raw = 'Sure, here you go:\n{"claim_number": "CLM-1", "adjuster": null}\nThanks!'
     fmt = score_format_layer(predicted_raw=raw)
     assert fmt["parse_ok"] == 0.0
@@ -180,6 +184,7 @@ def test_prose_wrapped_json_is_parse_fail_not_zero_extraction():
 
 
 def test_correctly_empty_fields_score_one():
+    """A field correctly left empty on both sides scores 1.0 and is never an FP/FN."""
     field_map = DEFAULT_FIELD_TYPES["insurance_claim"]
     expected = {"claim_number": "CLM-1", "adjuster": None}
     predicted = {"claim_number": "CLM-1", "adjuster": None}
@@ -212,6 +217,7 @@ def test_correctly_empty_fields_score_one():
     ],
 )
 def test_normal_finish_reasons_count_as_completed(finish_reason):
+    """Normal finish reasons (stop, tool_calls, etc.) count as completed, not errored."""
     completion = summarize_run_completion([{"finish_reason": finish_reason}])
     assert completion["n_attempted"] == 1
     assert completion["n_completed"] == 1
@@ -232,6 +238,7 @@ def test_normal_finish_reasons_count_as_completed(finish_reason):
     ],
 )
 def test_normal_finish_reasons_preserve_error_signals(finish_reason, error_signal):
+    """An explicit error signal still counts as errored even alongside a normal finish reason."""
     completion = summarize_run_completion(
         [{"finish_reason": finish_reason, **error_signal}]
     )
@@ -250,6 +257,7 @@ def test_normal_finish_reasons_preserve_error_signals(finish_reason, error_signa
     ],
 )
 def test_error_finish_reasons_count_as_errors(finish_reason, error_class):
+    """Length / content-filter finish reasons count as errored with the right error class."""
     completion = summarize_run_completion([{"finish_reason": finish_reason}])
     assert completion["n_completed"] == 0
     assert completion["n_errored"] == 1
@@ -257,6 +265,7 @@ def test_error_finish_reasons_count_as_errors(finish_reason, error_class):
 
 
 def test_completion_and_cost_basis():
+    """End-to-end completion/error aggregation, quality-ITT, and cost-basis handling."""
     records = [
         {"status": "ok", "overall_score": 1.0},
         {"status": "ok", "overall_score": 1.0},
@@ -295,6 +304,7 @@ def test_completion_and_cost_basis():
 
 
 def test_modal_serving_kind_not_local():
+    """Modal-hosted vLLM serving is classified ``modal``, never ``local``."""
     assert classify_serving_kind({"profile": "modal-vllm"}) == "modal"
     assert classify_serving_kind({"serving_kind": "modal"}) == "modal"
     assert classify_serving_kind({"provider": "modal-vllm"}) == "modal"

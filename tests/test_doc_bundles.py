@@ -69,6 +69,7 @@ def test_contract_doc_bundle_has_laziness_overrides():
 
 
 def test_merger_agreement_bundle_has_maud_extraction_extras():
+    """Merger agreement bundle carries MAUD per-question metrics, not CUAD presence."""
     b = get_doc_bundle("merger_agreement")
     assert "HONEST GAP" not in b.description
     assert "22 Hub" in b.description or "per-question" in b.description.lower()
@@ -145,6 +146,7 @@ def test_resolve_doc_bundle_no_fallback_raises():
 # ----------------------------- 22→23 re-pin + regression ------------------------------
 
 def test_profile_set_re_pinned_to_27():
+    """The default profile roster is pinned to the full 27-agent surface."""
     expected = {
         "sorter", "contracts_specialist", "merger_agreement_specialist",
         "corporate_records_specialist",
