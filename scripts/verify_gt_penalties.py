@@ -71,6 +71,11 @@ MAUD_PARITY_METRICS = (
 
 
 def perfect_prediction(scoped):
+    """Copy scoped GT fields, omitting CUAD presence metadata and empty values.
+
+    Uses :func:`is_empty_value` for absence tokens; retained values are
+    shared with ``scoped``, not deep-copied.
+    """
     return {
         k: v
         for k, v in scoped.items()
@@ -79,6 +84,14 @@ def perfect_prediction(scoped):
 
 
 def _load_split(split: str, parquet_dir: Path | None, revision: str):
+    """Read a split into a DataFrame from local parquet or the Hub cache.
+
+    ``parquet_dir`` is the ground-truth root containing
+    ``<split>/<split>-00000-of-00001.parquet``. When omitted, download the
+    file at ``revision`` through the Hub cache; local files ignore revision.
+    A missing local file raises ``SystemExit``. Import, download, and parquet
+    read errors propagate.
+    """
     import pandas as pd
 
     if parquet_dir is not None:
@@ -98,6 +111,11 @@ def _load_split(split: str, parquet_dir: Path | None, revision: str):
 
 
 def _maud_labels(fields):
+    """Return the MAUD label dict, decoding a JSON string when needed.
+
+    Missing labels, invalid JSON, and non-dictionary values return ``{}``.
+    An existing dict is returned without copying.
+    """
     labels = fields.get("maud_clause_labels")
     if isinstance(labels, str):
         try:
@@ -108,7 +126,15 @@ def _maud_labels(fields):
 
 
 def _check_maud_labels(labels, failures, row):
-    """Every expected answer must be a member of its own row's classes."""
+    """Count invalid MAUD answers and append mismatch tuples to ``failures``.
+
+    Each tuple contains ``(row, "maud-class-mismatch", question, answer)``;
+    the answer is stringified and ``row`` is the caller's row index.
+    Skip non-dictionary records, missing or empty-string answers, and absent
+    or empty classes. Invalid JSON class strings are also skipped.
+    Validity follows :func:`is_valid_maud_answer`, including its consideration
+    alias exception; validation errors propagate.
+    """
     mismatches = 0
     for question, rec in labels.items():
         if not isinstance(rec, dict):
@@ -129,6 +155,18 @@ def _check_maud_labels(labels, failures, row):
 
 
 def verify_split(split: str, parquet_dir: Path | None, revision: str) -> dict:
+    """Replay perfect predictions for a split and return a penalty report.
+
+    Load input as described in :func:`_load_split`. Return ``split``, overall
+    ``totals``, ``per_specialist`` counts, and ``failures`` with zero-based
+    row positions. Unscorable rows contribute row and MAUD class-check counts
+    but skip extraction, presence, and MAUD parity checks.
+
+    Penalties are recorded rather than raised. Unknown specialist names or
+    missing required columns raise ``KeyError``; loading, GT parsing, and
+    scoring errors propagate, including ``SystemExit`` for missing local
+    parquet files.
+    """
     df = _load_split(split, parquet_dir, revision)
     totals = {
         "rows": 0, "scored": 0, "unscorable": 0, "events": 0,
@@ -224,6 +262,12 @@ def verify_split(split: str, parquet_dir: Path | None, revision: str) -> dict:
 
 
 def main() -> int:
+    """Print replay reports for the requested splits (both by default).
+
+    Return 1 if any report contains failures or penalty counts, otherwise 0.
+    Argument parsing may raise ``SystemExit``; errors from :func:`verify_split`
+    propagate rather than becoming a return code.
+    """
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--split", action="append", choices=("test", "train"),
                         help="split to verify (repeatable; default: both)")

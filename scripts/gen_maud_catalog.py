@@ -248,6 +248,14 @@ def maud_question_catalog(doc_type: str) -> dict[str, tuple[str, ...]]:
 
 
 def _load_split(split: str, parquet_dir: Path | None, revision: str):
+    """Read a split into a DataFrame from local parquet or the Hub cache.
+
+    ``parquet_dir`` is the ground-truth root containing
+    ``<split>/<split>-00000-of-00001.parquet``. When omitted, download the
+    file at ``revision`` through the Hub cache; local files ignore revision.
+    A missing local file raises ``SystemExit``. Import, download, and parquet
+    read errors propagate.
+    """
     import pandas as pd
 
     if parquet_dir is not None:
@@ -268,6 +276,14 @@ def _load_split(split: str, parquet_dir: Path | None, revision: str):
 
 def _scan(df, split: str, union: dict[str, set], rows_per_q: Counter,
           distinct_sets: dict[str, set], rows_by_split: Counter) -> None:
+    """Accumulate merger-row class unions and counts in the supplied mappings.
+
+    Count every merger row under ``split`` in ``rows_by_split``. For records
+    with nonempty classes, update ``union``, ``rows_per_q``, and
+    ``distinct_sets``; the question count does not require a nonempty answer.
+    Malformed JSON raises ``json.JSONDecodeError``; missing DataFrame columns
+    raise ``KeyError``. Updates made before an error remain in the mappings.
+    """
     for i in range(len(df)):
         if str(df["expected"].iloc[i]) != "merger_agreement":
             continue
@@ -285,6 +301,16 @@ def _scan(df, split: str, union: dict[str, set], rows_per_q: Counter,
 
 
 def build_artifacts(parquet_dir: Path | None, revision: str, generated: str) -> tuple[str, str]:
+    """Return generated module source and fixture JSON for both dataset splits.
+
+    ``parquet_dir`` and ``revision`` select input as in :func:`_load_split`;
+    ``generated`` is the provenance date embedded verbatim in both outputs.
+    Prepends the repository root to ``sys.path`` and may populate the Hub
+    cache, but does not write either artifact.
+
+    Raises ``SystemExit`` if a local split is missing or any required MAUD
+    question has no catalog. Loading and scanning errors propagate.
+    """
     sys.path.insert(0, str(ROOT))
     from llm_dojo_scoring.corpus import MAUD_QUESTION_KEYS
 
@@ -347,6 +373,11 @@ def build_artifacts(parquet_dir: Path | None, revision: str, generated: str) -> 
 
 
 def _diff(name: str, committed: str, regenerated: str) -> list[str]:
+    """Return an empty list for equal text, otherwise a named mismatch summary.
+
+    Report the first differing line with a one-based line number, or the
+    line counts when no differing pair of lines is found.
+    """
     problems = []
     if committed != regenerated:
         problems.append(name)
@@ -365,6 +396,14 @@ def _diff(name: str, committed: str, regenerated: str) -> list[str]:
 
 
 def main() -> int:
+    """Generate artifacts using command-line options and return an exit status.
+
+    By default, overwrite the module and fixture. ``--check`` instead prints
+    a comparison summary and returns 1 for differences, or 0 for a match.
+    Successful writes return 0. Argument parsing and incomplete or missing
+    catalog inputs may raise ``SystemExit``; loading and file I/O errors
+    propagate.
+    """
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--write", action="store_true",
