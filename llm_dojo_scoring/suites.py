@@ -1050,12 +1050,31 @@ class ScoringSuite:
         if presence and not has_extraction_events:
             prf_payload = prf_bundle_keys({})
         elif is_batch and peeled_exp:
-            rows = [
-                _prf_one(exp, pred, result)
-                for exp, pred, result in zip(peeled_exp, peeled_pred, extraction)
-                if isinstance(result, ExtractionScoreResult)
-            ]
-            rows = [row for row in rows if row]
+            rows = []
+            for idx, (exp, pred, result) in enumerate(
+                zip(peeled_exp, peeled_pred, extraction)
+            ):
+                if not isinstance(result, ExtractionScoreResult):
+                    continue
+                row_presence = (
+                    presence[idx]
+                    if isinstance(presence, list) and idx < len(presence)
+                    else presence
+                )
+                # Presence-only rows are scored by the presence metric; their
+                # predicted clause spans must not count as spurious field
+                # fills (a zero-denominator row otherwise drags micro P/R/F1).
+                if (
+                    row_presence
+                    and isinstance(exp, dict)
+                    and not any(
+                        not _gtm.is_empty_value(value) for value in exp.values()
+                    )
+                ):
+                    continue
+                row = _prf_one(exp, pred, result)
+                if row:
+                    rows.append(row)
             if rows:
                 prf_payload = prf_bundle_keys(merge_extraction_counts(rows))
         elif isinstance(extraction, ExtractionScoreResult) and peeled_exp:
