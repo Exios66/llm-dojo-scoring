@@ -5,6 +5,25 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Added
+
+- **Frozen `production_prompts` v1 lineage** — the five eval-environment
+  frozen specialist stems (`mailroom-dataset-v1`, frozen
+  2026-09-26T05:09:29+00:00) are now importable from the dojo prompt catalog
+  as `get_prompt(<agent>, family="production_prompts")`, sha256-pinned per
+  record (`PromptRecord.sha256`; three byte-identical to the sandbox
+  `config/prompts/<stem>.txt` freeze). Stored separately from the `docclass`
+  family. `tests/test_production_prompts.py` recomputes every digest from the
+  imported text.
+- **Dojo re-freeze of two `production_prompts` v1 records** — CodeRabbit
+  PR #27 follow-up, applied in-repo only (upstream mirrors untouched):
+  `correspondence_specialist` no longer emits the unregistered
+  `communication_type` token `other` (fallback is null per the registered
+  8-token vocabulary); `corporate_records_specialist` keeps `filing_number`
+  null for subsidiary schedules whose only number is a parent-agreement
+  exhibit ID. Provenance comments, catalog pins, docs, and tests updated to
+  the corrected bytes.
+
 ## [0.19.0] - 2026-10-04
 
 Align scoring contracts with
