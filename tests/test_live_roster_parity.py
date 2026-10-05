@@ -133,6 +133,21 @@ def test_compliance_filing_stays_retired():
     assert "compliance_filing" not in _FIXTURE["doc_classes"]
 
 
+def test_extraction_schemas_doc_covers_live_field_maps():
+    """docs/EXTRACTION_SCHEMAS.md must name every live schema class and field."""
+    report = (Path(__file__).resolve().parents[1] / "docs" / "EXTRACTION_SCHEMAS.md").read_text()
+    assert "ContractExtraction" in report
+    assert "MergerAgreementExtraction" in report
+    assert "CorporateRecordExtraction" in report
+    assert "CorrespondenceExtraction" in report
+    assert "InsuranceClaimExtraction" in report
+    for doc_type in _LIVE:
+        heading = f"`{doc_type}`"
+        assert heading in report, f"missing doc_type heading {heading}"
+        for field in DEFAULT_FIELD_TYPES[doc_type]:
+            assert f"`{field}`" in report, f"{doc_type}: missing field {field}"
+
+
 @pytest.mark.parametrize("doc_type", _LIVE)
 def test_metric_ids_cover_every_live_class(doc_type):
     ids = metric_ids_for_class(doc_type)

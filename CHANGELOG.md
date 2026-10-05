@@ -3,6 +3,16 @@
 All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
+## [Unreleased]
+
+### Added
+
+- **`docs/EXTRACTION_SCHEMAS.md`** — concise field-map report for the five
+  live mailroom-dataset classes (`contract`, `merger_agreement`,
+  `corporate_record`, `correspondence`, `insurance_claim`) pinned to
+  v0.19.1 (`DEFAULT_FIELD_TYPES`, frozen `production_prompts` v1, Hub
+  composition, empty-field / never-scored / retired keys).
+
 ## [0.19.1] - 2026-10-05
 
 ### Added
