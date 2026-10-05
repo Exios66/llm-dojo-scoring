@@ -32,16 +32,14 @@ from .field_scoring import (
     ExtractionScoreResult,
     score_extraction,
 )
+from .gt_metadata import is_empty_value
 
 _EMPTY = (None, "", [], {})
 
 
 def _is_empty(value: Any) -> bool:
-    if value in _EMPTY:
-        return True
-    if isinstance(value, str) and not value.strip():
-        return True
-    return False
+    """Empty / null / stringified-empty (``"[]"``, ``"{}"``) — never an event."""
+    return is_empty_value(value)
 
 
 def _public_prf(

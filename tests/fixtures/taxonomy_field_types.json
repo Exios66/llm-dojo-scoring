@@ -1,0 +1,104 @@
+{
+  "_comment": "Live field-map authority for llm-dojo-scoring, generated from llm-mailroom src/config/taxonomy.yaml (mailroom-issues #235/#237). Do not hand-edit: regenerate from the pinned blob and run tests/test_live_roster_parity.py.",
+  "authority": "Exios66/llm-mailroom@main:src/config/taxonomy.yaml",
+  "authority_blob_sha1": "ca297bd8e55e62b79ee452b02b65926b5032bdf1",
+  "authority_sha256": "2fa42886f0182c1d0c6e18d189849da0a333123baddae78fc127285b2f63dfb6",
+  "captured_at": "2026-10-04",
+  "doc_classes": {
+    "contract": {
+      "field_types": {
+        "contract_value": "money",
+        "cuad_clauses": "entity_list:free_text",
+        "cuad_family": "name",
+        "document_name": "name",
+        "effective_date": "date",
+        "governing_law": "name",
+        "maud_clauses": "entity_list:free_text",
+        "merger_consideration": "name",
+        "parties": "entity_list:name",
+        "renewal_terms": "free_text",
+        "term_length": "free_text"
+      },
+      "schema": "ContractExtraction",
+      "specialist": "contracts_specialist"
+    },
+    "corporate_record": {
+      "field_types": {
+        "effective_date": "date",
+        "entity_name": "name",
+        "filing_number": "id",
+        "intent": "name",
+        "jurisdiction": "name",
+        "keywords": "entity_list:name",
+        "record_type": "name",
+        "signatories": "entity_list:name",
+        "subject_matter": "free_text"
+      },
+      "schema": "CorporateRecordExtraction",
+      "specialist": "corporate_records_specialist"
+    },
+    "correspondence": {
+      "field_types": {
+        "action_items": "entity_list",
+        "additional_recipients": "entity_list",
+        "communication_date": "date",
+        "communication_type": "name",
+        "demand_amount": "money",
+        "intent": "name",
+        "keywords": "entity_list:name",
+        "recipient": "name",
+        "sender": "name",
+        "subject_matter": "free_text",
+        "urgency": "name"
+      },
+      "schema": "CorrespondenceExtraction",
+      "specialist": "correspondence_specialist"
+    },
+    "insurance_claim": {
+      "field_types": {
+        "adjuster": "name",
+        "claim_checklist": "entity_list:free_text",
+        "claim_number": "id",
+        "claim_type": "name",
+        "claimed_amount": "money",
+        "coverage_determination": "name",
+        "damages_description": "free_text",
+        "date_filed": "date",
+        "date_of_loss": "date",
+        "denial_reasons": "entity_list:free_text",
+        "insured_party": "name",
+        "insurer": "name",
+        "intent": "name",
+        "keywords": "entity_list:name",
+        "policy_number": "id",
+        "subject_matter": "free_text",
+        "supporting_documents": "entity_list"
+      },
+      "schema": "InsuranceClaimExtraction",
+      "specialist": "insurance_claims_specialist"
+    },
+    "merger_agreement": {
+      "field_types": {
+        "document_name": "name",
+        "effective_date": "date",
+        "effective_time": "free_text",
+        "governing_law": "name",
+        "intent": "name",
+        "keywords": "entity_list:name",
+        "maud_clauses": "entity_list:free_text",
+        "merger_consideration": "name",
+        "parties": "entity_list:name",
+        "subject_matter": "free_text"
+      },
+      "schema": "MergerAgreementExtraction",
+      "specialist": "merger_agreement_specialist"
+    }
+  },
+  "live_doc_types": [
+    "contract",
+    "merger_agreement",
+    "corporate_record",
+    "correspondence",
+    "insurance_claim"
+  ]
+}

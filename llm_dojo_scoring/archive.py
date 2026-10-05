@@ -28,6 +28,7 @@ from .field_scoring import (
     RETIRED_PROMPT_KEYS,
     score_extraction,
 )
+from .gt_metadata import is_empty_value
 from .scorecard_honesty import score_format_layer
 from .trace_knobs import capture_trace_knobs, empty_trace_payload
 
@@ -216,8 +217,28 @@ _HEADLINE_METHOD_ALIASES: dict[str, str] = {
 
 
 def canonical_json(obj: Any) -> str:
-    """RFC-8785-style compact JSON with sorted keys (hash version 2)."""
-    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    """Canonical JSON for hash version 2 — byte-identical to llm-mailroom.
+
+    llm-mailroom ``src/schemas/audit.py::compute_audit_hash`` serializes the
+    payload with ``json.dumps(payload, sort_keys=True, default=str)`` (default
+    separators, ``default=str``). This function must stay byte-identical to
+    that call: any change here (or there) breaks hash-chain verification
+    across the two packages even though each side round-trips its own rows.
+    """
+    return json.dumps(obj, sort_keys=True, default=str)
+
+
+def _hash_timestamp(timestamp: Any) -> str:
+    """Timestamp form used inside the hash — mirrors llm-mailroom exactly.
+
+    llm-mailroom hashes ``timestamp.isoformat()`` when the value is a
+    ``datetime`` and ``str(timestamp)`` otherwise. Normalizing here keeps
+    ``datetime`` inputs interoperable instead of relying on ``default=str``
+    (which would render ``"YYYY-MM-DD HH:MM:SS+00:00"``, not ISO ``T``).
+    """
+    if hasattr(timestamp, "isoformat"):
+        return timestamp.isoformat()
+    return str(timestamp)
 
 
 def field_map_digest(
@@ -260,16 +281,13 @@ def empty_archive_scoring_block() -> dict[str, Any]:
 
 
 def _is_empty(value: Any) -> bool:
-    if value is None or value == "":
-        return True
-    if isinstance(value, str) and not value.strip():
-        return True
-    if isinstance(value, (list, dict, tuple, set)) and len(value) == 0:
-        return True
-    return False
+    """True for ``None``, blank strings, and empty collections (including the
+    stringified ``"[]"`` / ``"{}"`` forms the Hub metadata uses)."""
+    return is_empty_value(value)
 
 
 def _live_field_types(doc_class: str, field_types: Mapping[str, str] | None) -> dict[str, str]:
+    """Return ``field_types`` as given, else the live default map for ``doc_class``."""
     if field_types:
         return dict(field_types)
     from .suites import DEFAULT_FIELD_TYPES
@@ -286,6 +304,7 @@ def _filter_to_live_map(
     record: Mapping[str, Any] | None,
     field_types: Mapping[str, str],
 ) -> dict[str, Any]:
+    """Drop never-scored / retired keys and anything outside ``field_types``."""
     src = dict(record or {})
     out: dict[str, Any] = {}
     for key, value in src.items():
@@ -385,7 +404,11 @@ def audit_hash_payload(
     detail: Mapping[str, Any],
     hash_version: int = ARCHIVE_HASH_VERSION,
 ) -> dict[str, Any]:
-    """Object hashed under version 2. ``seq`` and ``entry_hash`` stay off it."""
+    """Object hashed under version 2. ``seq`` and ``entry_hash`` stay off it.
+
+    The ``timestamp`` slot is normalized through :func:`_hash_timestamp` so a
+    ``datetime`` hashes like llm-mailroom's ``isoformat()`` form.
+    """
     return {
         "hash_version": hash_version,
         "prev_hash": prev_hash,
@@ -393,7 +416,7 @@ def audit_hash_payload(
         "entry_id": entry_id,
         "matter_id": matter_id,
         "actor": actor,
-        "timestamp": timestamp,
+        "timestamp": _hash_timestamp(timestamp),
         "event": event,
         "detail": dict(detail),
     }
@@ -475,10 +498,12 @@ def normalize_audit_node(name: str) -> str:
 
 
 def normalize_audit_nodes(nodes: Iterable[str] | None) -> list[str]:
+    """Fold a list of graph / agent / tray names onto the #236 audit node list."""
     return [normalize_audit_node(n) for n in (nodes or ())]
 
 
 def _is_sha256_hex(value: Any) -> bool:
+    """True for a 64-char lowercase sha256 hex digest."""
     return isinstance(value, str) and bool(_SHA256_HEX.match(value))
 
 
@@ -489,6 +514,7 @@ def _merge_audit_detail(
     nodes_visited: Sequence[str] | None = None,
     pipeline_success: bool | None = None,
 ) -> dict[str, Any]:
+    """Overlay ``detail`` (and explicit overrides) onto the empty-detail template."""
     body = empty_audit_detail()
     extras: dict[str, Any] = {}
     for key, value in dict(detail or {}).items():
@@ -591,10 +617,12 @@ def verify_entry_hash(
 
 
 def _revision(code: str, message: str) -> dict[str, str]:
+    """Build one ``{code, message}`` revision item."""
     return {"code": code, "message": message}
 
 
 def _nodes_in_order(visited: Sequence[str], required: Sequence[str]) -> bool:
+    """True when every ``required`` node appears in ``visited``, in order."""
     last = -1
     for name in required:
         try:

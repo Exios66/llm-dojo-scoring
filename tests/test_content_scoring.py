@@ -23,6 +23,20 @@ from llm_dojo_scoring.corpus import (
 )
 from llm_dojo_scoring.suites import get_suite
 from llm_dojo_scoring.tasks import maud_extraction_score, score_task
+from llm_dojo_scoring.gt_metadata import ANNOTATION_KEYS
+
+
+def test_peeling_annotations_preserves_trace_fields_and_content_payload():
+    expected = {key: "annotation" for key in ANNOTATION_KEYS}
+    expected.update(sender="Alice", content_topic="legal_contracts")
+    predicted = {key: "different annotation" for key in ANNOTATION_KEYS}
+    predicted.update(sender="Alice", content_topic="legal_contracts", confidence=0.9, reasoning="Evidence")
+    exp_fields, pred_fields, payload = peel_non_extraction_fields(expected, predicted)
+    assert exp_fields == {"sender": "Alice"}
+    assert pred_fields == {"sender": "Alice", "confidence": 0.9, "reasoning": "Evidence"}
+    assert payload["content_topic"] == ("legal_contracts", "legal_contracts")
+    assert expected["content_topic"] == "legal_contracts"
+    assert ANNOTATION_KEYS <= predicted.keys()
 
 
 def test_normalize_content_topic_aliases():

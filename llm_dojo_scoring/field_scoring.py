@@ -44,12 +44,15 @@ from typing import Any, Optional
 import structlog
 
 from .config import get_settings
+from .gt_metadata import ANNOTATION_KEYS, is_empty_value, parse_json_container
 
 logger = structlog.get_logger(__name__)
 
-#: Trace / format artifacts — never enter :func:`score_extraction`
-#: (mailroom-issues #237 / #238).
-NEVER_SCORED_FIELDS: frozenset[str] = frozenset({"confidence", "reasoning"})
+#: Trace / format artifacts and Hub annotation stats — never enter
+#: :func:`score_extraction` (mailroom-issues #237 / #238).
+NEVER_SCORED_FIELDS: frozenset[str] = frozenset(
+    {"confidence", "reasoning"}
+) | ANNOTATION_KEYS
 
 #: Prompt-catalog keys retired from live models. Ignored unless the caller
 #: passed them in an explicit ``field_types`` map (historical rescoring).
@@ -567,6 +570,11 @@ class EntityListScore:
 
 
 def _as_list(value) -> list:
+    """Parse a JSON container, then return a list or wrap a non-list value.
+
+    ``None`` becomes ``[]``; existing lists are returned unchanged.
+    """
+    value = parse_json_container(value)
     if value is None:
         return []
     if isinstance(value, list):
@@ -916,8 +924,10 @@ def _presence_candidates(predicted: dict, category: str, field: str) -> list[str
 
     Prefers spans routed explicitly by the extractor's reasoning trace
     (``reasoning.entries[]`` whose ``field`` is the canonical CUAD category
-    name — issue #21 retag), falling back to the disaggregated items of the
-    category's mapped field (e.g. ``cuad_clauses``). Disable routing with
+    name — issue #21 retag), falling back to the category's mapped field
+    (e.g. ``cuad_clauses``): both the disaggregated spans and the raw items,
+    so a model that quotes a multi-sentence clause as one item is not lost to
+    sentence-level splitting. Disable routing with
     ``trace_knobs.reasoning_routes_presence``.
     """
     if get_settings().trace_knobs.reasoning_routes_presence:
@@ -929,7 +939,14 @@ def _presence_candidates(predicted: dict, category: str, field: str) -> list[str
         ]
         if routed:
             return [r for r in routed if r.strip()]
-    return disaggregate_clause_spans(predicted.get(field))
+    items = disaggregate_clause_spans(predicted.get(field))
+    seen = set(items)
+    for raw in _as_list(predicted.get(field)):
+        text = str(raw)
+        if text.strip() and text not in seen:
+            seen.add(text)
+            items.append(text)
+    return items
 
 
 def _presence_matched(item: str, answer: str) -> bool:
@@ -1218,14 +1235,20 @@ def score_extraction(
     """Score one extraction deterministically.
 
     - Only expected fields with a non-null/non-empty value count toward the
-      overall score (null expectations are not requirements).
+      overall score (null expectations are not requirements). Stringified
+      JSON containers are parsed on both sides; empty containers and
+      case-insensitive ``null`` / ``none`` / ``n/a`` / ``n.a.`` expectations
+      are skipped. Trace and annotation keys are never scored; retired
+      prompt keys require an explicit entry in ``field_types``.
     - ``overall_score`` is the mean of the per-field scores (None when no
       field is scored).
     - ``ambiguous_fields`` collects fields landing in the ambiguous band —
       the signal that escalates to the LLM judge.
     - List fields also produce ``entity_list_scores`` with precision/recall.
-    - When ``doc_text`` is provided, EVERY field the model populated produces
-      an ``entity_list_audit`` entry (the factuality guard).
+    - When verification is enabled and ``doc_text`` is nonempty, populated
+      fields in ``field_types`` produce ``entity_list_audit`` entries,
+      including scalar fields and fields absent from GT. Trace and
+      annotation keys are excluded.
     """
     predicted = predicted or {}
     expected = expected or {}
@@ -1248,14 +1271,13 @@ def score_extraction(
             continue
         if key in RETIRED_PROMPT_KEYS and key not in field_types:
             continue
-        if exp_value is None or exp_value == "":
-            continue
-        if isinstance(exp_value, str) and not exp_value.strip():
-            continue
-        if isinstance(exp_value, (list, dict, tuple, set)) and len(exp_value) == 0:
+        exp_value = parse_json_container(exp_value)
+        if is_empty_value(exp_value):
             continue
         field_type = field_types.get(key) or _heuristic_field_type(key, exp_value)
         pred_value = predicted.get(key)
+        if pred_value is not None:
+            pred_value = parse_json_container(pred_value)
         if pred_value is None:
             # A null answer satisfies a null-expectation date (blank-template
             # or label-only GT holds no real date).
@@ -1285,8 +1307,8 @@ def score_extraction(
         # Factuality audit for EVERY content field the model populated —
         # including fields the ground truth does not label.
         for key, field_type in sorted(field_types.items()):
-            pred_value = predicted.get(key)
-            if pred_value in (None, "", []) or key in entity_list_audit:
+            pred_value = parse_json_container(predicted.get(key))
+            if is_empty_value(pred_value) or key in entity_list_audit:
                 continue
             if key in NEVER_SCORED_FIELDS:
                 continue

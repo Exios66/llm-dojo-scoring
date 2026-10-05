@@ -7,6 +7,8 @@ MergerAgreementExtraction, not a contract alias.
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 
 import pytest
 
@@ -19,6 +21,7 @@ from llm_dojo_scoring.archive import (
     LIVE_ARCHIVE_DOC_TYPES,
     archivist_sign_off,
     archive_entry_hash,
+    canonical_json,
     empty_archive_scoring_block,
     empty_audit_log_entry,
     format_audit_entry,
@@ -32,12 +35,14 @@ from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES, get_suite
 
 
 def _fill_schema(doc_class: str, values: dict) -> dict:
+    """Every live field for ``doc_class`` defaulted to ``None``, overridden by ``values``."""
     out = {key: None for key in DEFAULT_FIELD_TYPES[doc_class]}
     out.update(values)
     return out
 
 
 def test_empty_block_has_every_archivist_key():
+    """The empty scoring block has every archivist key with null numeric slots."""
     block = empty_archive_scoring_block()
     assert tuple(block) == ARCHIVE_SCORING_KEYS
     assert block["method"] == ARCHIVE_SCORING_METHOD
@@ -49,6 +54,7 @@ def test_empty_block_has_every_archivist_key():
 
 
 def test_merger_is_not_scored_as_contract():
+    """Merger agreement is its own extraction class, not a contract alias."""
     assert EXTRACT_CLASS_ALIASES == {}
     assert resolve_extract_class("merger_agreement") == "merger_agreement"
     merger_map = DEFAULT_FIELD_TYPES["merger_agreement"]
@@ -102,6 +108,7 @@ def test_score_archive_block_rejects_contract_alias_for_merger():
 
 @pytest.mark.parametrize("doc_class", LIVE_ARCHIVE_DOC_TYPES)
 def test_score_archive_block_covers_live_classes(doc_class):
+    """A perfect match scores 1.0 and counts a TP for every live doc class."""
     field_map = DEFAULT_FIELD_TYPES[doc_class]
     first = next(iter(field_map))
     expected = _fill_schema(doc_class, {first: "Acme"})
@@ -116,6 +123,7 @@ def test_score_archive_block_covers_live_classes(doc_class):
 
 
 def test_f1_null_when_no_countable_events():
+    """F1/F2/TP/FP/FN stay null when there are no expected or predicted events."""
     expected = _fill_schema("corporate_record", {"adjuster": None})
     # corporate_record has no adjuster — all live keys empty
     expected = {key: None for key in DEFAULT_FIELD_TYPES["corporate_record"]}
@@ -132,6 +140,7 @@ def test_f1_null_when_no_countable_events():
 
 
 def test_f1_not_derived_from_overall_and_not_overwritten_by_cuad_method():
+    """A CUAD headline ``method`` renames ``method`` only; extraction_f1 stays field-micro."""
     expected = _fill_schema(
         "contract",
         {
@@ -157,6 +166,7 @@ def test_f1_not_derived_from_overall_and_not_overwritten_by_cuad_method():
 
 
 def test_one_block_per_document_second_score_replaces_row():
+    """Scoring the same document twice overwrites, rather than appends, the row."""
     expected = _fill_schema("correspondence", {"sender": "Pat", "recipient": "Alex"})
     predicted = dict(expected)
     first = score_archive_block("correspondence", predicted, expected)
@@ -180,6 +190,7 @@ def test_one_block_per_document_second_score_replaces_row():
 
 
 def test_failed_extraction_still_files_the_block():
+    """A failed extraction still gets scored and filed, not skipped."""
     expected = _fill_schema(
         "insurance_claim",
         {"claim_number": "CLM-1", "insurer": "Acme", "claimed_amount": 100.0},
@@ -200,6 +211,7 @@ def test_failed_extraction_still_files_the_block():
 
 
 def test_retired_prompt_keys_are_ignored():
+    """Retired prompt keys are never scored, even when present on both sides."""
     expected = _fill_schema(
         "contract",
         {
@@ -216,6 +228,7 @@ def test_retired_prompt_keys_are_ignored():
 
 
 def test_archive_entry_hash_is_stable():
+    """The hash is deterministic and insensitive to detail key ordering."""
     detail = {
         "stage": "archived",
         "pipeline_success": True,
@@ -263,6 +276,7 @@ def test_archive_entry_hash_is_stable():
 
 
 def _complete_detail(scoring: dict | None = None, **overrides) -> dict:
+    """A fully-filled ``detail`` object for a happy-path archived row, with overrides."""
     body = {
         "stage": "archived",
         "pipeline_success": True,
@@ -288,6 +302,7 @@ def _complete_detail(scoring: dict | None = None, **overrides) -> dict:
 
 
 def test_empty_audit_log_entry_is_the_archivist_template():
+    """The empty log entry has the right top-level and detail keys, in order."""
     row = empty_audit_log_entry()
     assert tuple(row)[:9] == AUDIT_ENTRY_KEYS
     assert tuple(row["detail"]) == AUDIT_DETAIL_KEYS
@@ -299,6 +314,7 @@ def test_empty_audit_log_entry_is_the_archivist_template():
 
 
 def test_format_audit_entry_computes_stable_entry_hash():
+    """Formatting the same inputs twice yields the same entry hash and scoring block."""
     expected = _fill_schema(
         "contract",
         {
@@ -337,6 +353,7 @@ def test_format_audit_entry_computes_stable_entry_hash():
 
 
 def test_format_normalizes_specialist_and_langfuse_node_aliases():
+    """Specialist / langfuse node aliases fold onto the canonical #236 node names."""
     entry = format_audit_entry(
         doc_id="doc_example",
         matter_id="EXAMPLE",
@@ -356,6 +373,7 @@ def test_format_normalizes_specialist_and_langfuse_node_aliases():
 
 
 def test_archivist_signs_off_when_pipeline_and_hash_are_clean():
+    """A clean, complete happy-path row signs off with no revisions."""
     expected = _fill_schema(
         "correspondence",
         {"sender": "Pat", "recipient": "Alex"},
@@ -389,6 +407,7 @@ def test_archivist_signs_off_when_pipeline_and_hash_are_clean():
 
 
 def test_archivist_requests_revision_when_report_is_not_before_judge():
+    """Reporting after the judge violates pipeline order and is flagged for revision."""
     scoring = empty_archive_scoring_block()
     entry = format_audit_entry(
         doc_id="doc_bad",
@@ -417,6 +436,7 @@ def test_archivist_requests_revision_when_report_is_not_before_judge():
 
 
 def test_tampered_hash_is_not_signed_off():
+    """A post-hash edit to ``detail`` is caught and withheld from sign-off."""
     scoring = empty_archive_scoring_block()
     entry = format_audit_entry(
         doc_id="doc_tamper",
@@ -434,6 +454,7 @@ def test_tampered_hash_is_not_signed_off():
 
 
 def test_failed_extraction_path_still_signs_off_after_report_judge_archive():
+    """A failed-extraction job still signs off once it visits report, judge, archive."""
     expected = _fill_schema(
         "insurance_claim",
         {"claim_number": "CLM-1", "insurer": "Acme", "claimed_amount": 100.0},
@@ -548,13 +569,149 @@ def test_issue_236_example_payload_hash_is_stable():
         event="archived",
         detail=detail,
     )
-    # Hash version 2 of the published #236 example payload (canonical JSON).
-    # The issue also printed a digest; writers should recompute with
-    # archive_entry_hash rather than copy that placeholder.
-    assert digest == "3555df35703017f7dc96533888ba8092d8a1239713486b25e48a9f3a96b82ae7"
+    # Hash version 2 of the published #236 example payload under the
+    # llm-mailroom canonicalization (json.dumps sort_keys=True, default
+    # separators). The issue's printed digest is not reproducible from the
+    # payload as shown; the parity test below pins the live writer contract.
+    assert digest == "4afd352d29e4be1b70605dbaa5a4bd486f187ac908c986e5e8d5feaed8e8bef4"
+
+
+def _mailroom_compute_audit_hash(
+    *,
+    prev_hash: str,
+    doc_id: str,
+    entry_id: str,
+    event: str,
+    detail: dict,
+    matter_id: str = "",
+    actor: str = "",
+    timestamp=None,
+    hash_version: int = 2,
+) -> str:
+    """Verbatim re-implementation of llm-mailroom ``compute_audit_hash``.
+
+    llm-mailroom ``src/schemas/audit.py`` is the writer of record for the
+    hash-chain DB. Dojo never imports mailroom, so this oracle pins the
+    serialization contract: ``json.dumps(..., sort_keys=True, default=str)``
+    over the v2 field set, with ``datetime`` rendered via ``isoformat()``.
+    If mailroom ever changes its canonicalization, both repos must change
+    together (the parity test goes red here first).
+    """
+    import hashlib
+    from datetime import datetime, timezone
+
+    if timestamp is None:
+        timestamp = datetime.now(timezone.utc)
+    ts = timestamp.isoformat() if isinstance(timestamp, datetime) else str(timestamp)
+    payload = json.dumps(
+        {
+            "hash_version": hash_version,
+            "prev_hash": prev_hash,
+            "doc_id": doc_id,
+            "entry_id": entry_id,
+            "matter_id": matter_id,
+            "actor": actor,
+            "timestamp": ts,
+            "event": event,
+            "detail": detail,
+        },
+        sort_keys=True,
+        default=str,
+    )
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
+def test_archive_hash_matches_llm_mailroom_compute_audit_hash():
+    """Same payload → same digest as the live llm-mailroom writer."""
+    detail = {
+        "stage": "archived",
+        "pipeline_success": True,
+        "nodes_visited": [
+            "intake",
+            "sorter",
+            "document_type_specialist",
+            "deterministic_reporter",
+            "deterministic_judge",
+            "archivist",
+        ],
+        "doc_type": "contract",
+        "doc_subclass": "service",
+        "judge_verdict": "complete",
+        "judge_score": 0.902,
+        "scoring": {"overall_score": 0.902, "schema_valid": True, "field_scores": {}},
+    }
+    kwargs = dict(
+        prev_hash="a" * 64,
+        doc_id="doc_example",
+        entry_id="00000000-0000-4000-8000-000000000001",
+        matter_id="EXAMPLE",
+        actor="archivist",
+        timestamp="2026-10-02T23:55:00+00:00",
+        event="archived",
+        detail=detail,
+    )
+    assert archive_entry_hash(**kwargs) == _mailroom_compute_audit_hash(**kwargs)
+
+
+def test_archive_hash_datetime_matches_mailroom_isoformat():
+    """A ``datetime`` timestamp hashes as mailroom's ``isoformat()`` form."""
+    from datetime import datetime, timezone
+
+    ts = datetime(2026, 10, 2, 23, 55, tzinfo=timezone.utc)
+    detail = {"stage": "archived", "scoring": {}}
+    kwargs = dict(
+        prev_hash="",
+        doc_id="doc_dt",
+        entry_id="e-dt",
+        matter_id="M",
+        actor="archivist",
+        timestamp=ts,
+        event="archived",
+        detail=detail,
+    )
+    assert archive_entry_hash(**kwargs) == _mailroom_compute_audit_hash(**kwargs)
+
+
+def test_mailroom_oracle_hash_row_verifies_in_dojo():
+    """A row whose entry_hash was computed by mailroom verifies in dojo."""
+    scoring = empty_archive_scoring_block()
+    entry = format_audit_entry(
+        doc_id="doc_mailroom",
+        matter_id="EXAMPLE",
+        entry_id="e-mailroom",
+        timestamp="2026-10-02T23:55:00+00:00",
+        prev_hash="b" * 64,
+        scoring=scoring,
+        detail={
+            "doc_type": "correspondence",
+            "judge_verdict": "complete",
+            "judge_score": None,
+            "report_path": "matters/EXAMPLE/reports/doc_mailroom.json",
+            "archive_path": "archive/EXAMPLE/correspondence/doc_mailroom.pdf",
+            "file_sha256": "c" * 64,
+            "nodes_visited": list(HAPPY_PATH_NODES),
+            "pipeline_success": True,
+        },
+    )
+    mailroom_digest = _mailroom_compute_audit_hash(
+        prev_hash=entry["prev_hash"],
+        doc_id=entry["doc_id"],
+        entry_id=entry["entry_id"],
+        matter_id=entry["matter_id"],
+        actor=entry["actor"],
+        timestamp=entry["timestamp"],
+        event=entry["event"],
+        detail=entry["detail"],
+    )
+    assert entry["entry_hash"] == mailroom_digest
+    entry["entry_hash"] = mailroom_digest
+    from llm_dojo_scoring.archive import verify_entry_hash
+
+    assert verify_entry_hash(entry) is True
 
 
 def test_validate_rejects_unknown_pipeline_nodes():
+    """An unrecognized node name in ``nodes_visited`` is flagged as a revision."""
     scoring = empty_archive_scoring_block()
     entry = format_audit_entry(
         doc_id="doc_unknown",
@@ -577,3 +734,50 @@ def test_validate_rejects_unknown_pipeline_nodes():
     )
     codes = {item["code"] for item in validate_audit_entry(entry)}
     assert "unknown_pipeline_node" in codes
+
+
+def test_canonical_json_preserves_mailroom_spacing_escaping_and_default_str():
+    payload = {"z": "café", "a": {"amount": Decimal("12.50"), "ok": True}}
+    assert canonical_json(payload) == (
+        '{"a": {"amount": "12.50", "ok": true}, "z": "caf\\u00e9"}'
+    )
+
+
+@pytest.mark.parametrize("timestamp", [
+    datetime(2026, 10, 2, 23, 55, 1, 123456),
+    datetime(2026, 10, 2, 23, 55, 1, 123456, tzinfo=timezone(timedelta(hours=5, minutes=30))),
+    "2026-10-02T23:55:01.123456Z",
+    0,
+])
+def test_archive_hash_timestamp_variants_match_mailroom(timestamp):
+    kwargs = dict(
+        prev_hash="a" * 64, doc_id="doc-unicode", entry_id="entry-1",
+        matter_id="M", actor="archivist", timestamp=timestamp, event="archived",
+        detail={"name": "café", "amount": Decimal("12.50")},
+    )
+    assert archive_entry_hash(**kwargs) == _mailroom_compute_audit_hash(**kwargs)
+    normalized = timestamp.isoformat() if isinstance(timestamp, datetime) else str(timestamp)
+    assert archive_entry_hash(**kwargs) == archive_entry_hash(**{**kwargs, "timestamp": normalized})
+
+
+def test_archive_hash_ignores_mapping_order_but_detects_nested_content_changes():
+    kwargs = dict(
+        prev_hash="", doc_id="doc-1", entry_id="entry-1", matter_id="M",
+        actor="archivist", timestamp="2026-10-02T23:55:00+00:00", event="archived",
+    )
+    original = {"stage": "archived", "scoring": {"a": 1, "b": 0}}
+    reordered = {"scoring": {"b": 0, "a": 1}, "stage": "archived"}
+    changed = {"stage": "archived", "scoring": {"a": 1, "b": 1}}
+    digest = archive_entry_hash(**kwargs, detail=original)
+    assert digest == archive_entry_hash(**kwargs, detail=reordered)
+    assert digest != archive_entry_hash(**kwargs, detail=changed)
+
+
+@pytest.mark.parametrize("empty", ["[]", "{}", " N/A ", "null"])
+def test_archive_empty_metadata_does_not_create_false_negatives(empty):
+    block = score_archive_block(
+        doc_class="insurance_claim", expected={"claim_number": "CLM-1", "denial_reasons": empty},
+        predicted={"claim_number": "CLM-1"},
+    )
+    assert block["extraction_f1"] == 1.0
+    assert block["fn"] == 0

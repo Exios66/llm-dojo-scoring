@@ -22,11 +22,13 @@ from llm_dojo_scoring.trace_knobs import (
 
 @pytest.fixture(autouse=True)
 def _restore_settings():
+    """Clear the cached settings after each test so knob overrides don't leak."""
     yield
     clear_settings_cache()
 
 
 def test_parse_confidence_and_reasoning():
+    """Confidence and reasoning parsing coerce model output to the stable shapes."""
     assert parse_confidence(0.91) == 0.91
     assert parse_confidence("91") == 0.91
     assert parse_confidence({"confidence": 0.4}) == 0.4
@@ -40,6 +42,7 @@ def test_parse_confidence_and_reasoning():
 
 
 def test_capture_does_not_enter_overall_score():
+    """``confidence`` / ``reasoning`` never score as fields, only land in ``trace``."""
     result = score_extraction(
         "contract",
         {"document_name": "name"},
@@ -56,6 +59,7 @@ def test_capture_does_not_enter_overall_score():
 
 
 def test_confidence_min_and_band_are_adjustable():
+    """``confidence_min`` and ``confidence_band`` knobs change the confidence gate."""
     configure(trace_knobs__confidence_min=0.8)
     low = capture_trace_knobs({"confidence": 0.4})
     assert low["confidence_gate"] == "below_min"
@@ -67,6 +71,7 @@ def test_confidence_min_and_band_are_adjustable():
 
 
 def test_capture_can_be_turned_off():
+    """Turning off capture knobs nulls out confidence / reasoning / entry count."""
     configure(trace_knobs__capture_confidence=False, trace_knobs__capture_reasoning=False)
     out = capture_trace_knobs(
         {"confidence": 0.99, "reasoning": "lots of prose"},
@@ -78,6 +83,7 @@ def test_capture_can_be_turned_off():
 
 
 def test_missing_confidence_assume_modes():
+    """``assume_1`` / ``assume_0`` fill a missing confidence for gating only."""
     configure(trace_knobs__missing_confidence="assume_1")
     out = capture_trace_knobs({}, correctness=0.0)
     assert out["confidence"] is None
@@ -88,6 +94,7 @@ def test_missing_confidence_assume_modes():
 
 
 def test_yaml_taxonomy_wires_trace_knobs():
+    """``trace_knobs:`` in a taxonomy YAML dict wires through to settings and capture."""
     configure_from_taxonomy(
         {
             "trace_knobs": {
@@ -106,6 +113,7 @@ def test_yaml_taxonomy_wires_trace_knobs():
 
 
 def test_reasoning_routes_presence_knob():
+    """Disabling ``reasoning_routes_presence`` stops reasoning entries from routing CUAD matches."""
     anti = "NEITHER PARTY SHALL ASSIGN THIS AGREEMENT"
     predicted = {
         "cuad_clauses": ["an unrelated exclusivity provision"],
@@ -126,11 +134,13 @@ def test_reasoning_routes_presence_knob():
 
 
 def test_calibration_error_helper():
+    """``confidence_calibration_error`` is the absolute gap, or ``None`` when confidence is missing."""
     assert confidence_calibration_error(0.9, 1.0) == pytest.approx(0.1)
     assert confidence_calibration_error(None, 1.0) is None
 
 
 def test_configure_nested_trace_knob_settings_object():
+    """``configure`` accepts a full ``TraceKnobSettings`` object for ``trace_knobs``."""
     knobs = TraceKnobSettings(confidence_min=0.55, capture_reasoning=False)
     configure(trace_knobs=knobs)
     assert get_settings().trace_knobs.confidence_min == 0.55
