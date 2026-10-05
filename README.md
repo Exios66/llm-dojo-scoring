@@ -7,7 +7,7 @@
 Scoring · Error analysis · Visualization · Interpretation
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Release](https://img.shields.io/badge/release-v0.19.0-2EA043)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.19.0)
+[![Release](https://img.shields.io/badge/release-v0.19.1-2EA043)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.19.1)
 [![Contributor](https://img.shields.io/badge/contributor-Exios66-blue)](https://github.com/Exios66)
 [![Tests](https://img.shields.io/badge/pytest-passing-brightgreen)](tests/)
 
@@ -20,7 +20,7 @@ Scoring · Error analysis · Visualization · Interpretation
 <div align="center">
 
 ```bash
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.19.0"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.19.1"
 pip install -e .                # from a local checkout
 ```
 
@@ -42,9 +42,9 @@ pip install -e ".[all]"          # embeddings + tracing + dev
 In **llm-entity-extraction** / **llm-mailroom** `pyproject.toml`:
 
 ```
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.19.0
-# mailroom:     llm-dojo-scoring[tracing] @ git+...@v0.19.0
-# entity:       llm-dojo-scoring[embeddings,tracing] @ git+...@v0.19.0
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.19.1
+# mailroom:     llm-dojo-scoring[tracing] @ git+...@v0.19.1
+# entity:       llm-dojo-scoring[embeddings,tracing] @ git+...@v0.19.1
 ```
 
 ## Quickstart
@@ -223,7 +223,7 @@ dojo-sync    [--task TRACE_NAME] [--session NAME] [--max-items N]
 
 ## Migration
 
-See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md), [`docs/ARCHIVE_SCORING.md`](docs/ARCHIVE_SCORING.md), [`docs/SCORECARD_HONESTY.md`](docs/SCORECARD_HONESTY.md). Hub ground truth: [`docs/GT_METADATA.md`](docs/GT_METADATA.md). MAUD answer classes: [`docs/MAUD_LABELS.md`](docs/MAUD_LABELS.md). Specialist grid reports: [`docs/GRID_REPORTS.md`](docs/GRID_REPORTS.md). Issue-by-issue alignment status: [`docs/ISSUE_ALIGNMENT.md`](docs/ISSUE_ALIGNMENT.md). Prompt catalog + frozen v1 `production_prompts` lineage: [`docs/PROMPTS.md`](docs/PROMPTS.md).
+See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md), [`docs/ARCHIVE_SCORING.md`](docs/ARCHIVE_SCORING.md), [`docs/SCORECARD_HONESTY.md`](docs/SCORECARD_HONESTY.md). Hub ground truth: [`docs/GT_METADATA.md`](docs/GT_METADATA.md). MAUD answer classes: [`docs/MAUD_LABELS.md`](docs/MAUD_LABELS.md). Specialist grid reports: [`docs/GRID_REPORTS.md`](docs/GRID_REPORTS.md). Issue-by-issue alignment status: [`docs/ISSUE_ALIGNMENT.md`](docs/ISSUE_ALIGNMENT.md). Prompt catalog + frozen v1 `production_prompts` lineage: [`docs/PROMPTS.md`](docs/PROMPTS.md). Connected-repo TODOs: [`docs/TODOS.md`](docs/TODOS.md).
 
 ## Releases & monorepo sync
 
