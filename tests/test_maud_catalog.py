@@ -17,6 +17,7 @@ Dataset authority: ``Lucius-Morningstar/mailroom-dataset`` config
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -36,6 +37,7 @@ from llm_dojo_scoring.maud import (
     MAUD_VARIABLE_CLASS_QUESTIONS,
     canonical_maud_class,
     is_maud_class,
+    maud_class_index,
     maud_question_catalog,
 )
 
@@ -223,3 +225,191 @@ def test_merger_suite_perfect_maud_row_scores_1():
     assert out["maud_question_accuracy"] == 1.0
     assert out["maud_clause_presence"] == 1.0
     assert out["maud_valid_class_rate"] == 1.0
+
+
+@pytest.mark.parametrize("value", [None, "", " \t\n", "...", ", ,"])
+def test_empty_or_punctuation_only_answers_are_invalid(value):
+    assert not is_maud_class("No-Shop", value)
+    assert not is_valid_maud_answer("No-Shop", value)
+    assert normalize_maud_answer("No-Shop", value) == ""
+
+
+@pytest.mark.parametrize(
+    "alias, canonical, opposite",
+    [("Y", "yes", "No"), ("true", "yes", "No"), ("1", "yes", "No"),
+     ("N", "no", "Yes"), ("false", "no", "Yes"), ("0", "no", "Yes")],
+)
+def test_alias_requires_its_corresponding_row_class(alias, canonical, opposite):
+    assert is_valid_maud_answer("No-Shop", alias, [canonical])
+    assert normalize_maud_answer("No-Shop", alias, [canonical]) == canonical
+    assert not is_valid_maud_answer("No-Shop", alias, [opposite])
+    assert normalize_maud_answer("No-Shop", alias, [opposite]) == alias.lower()
+
+
+def test_class_index_canonicalizes_and_deduplicates_without_mutating_input():
+    classes = ["", "...", "  ‘FUNDERMENTAL’  R&Ws ", "'fundamental' R&Ws"]
+    original = classes.copy()
+    assert maud_class_index(_RW_QUESTION, classes) == {
+        "fundamental r ws": "'fundamental' R&Ws",
+    }
+    assert classes == original
+    assert maud_class_index("Unknown question") == {}
+
+
+@pytest.mark.parametrize("classes", [None, [], ()])
+def test_empty_row_catalog_uses_union(classes):
+    assert is_valid_maud_answer("No-Shop", "Strict liability", classes)
+    assert not is_valid_maud_answer("Unknown question", "Yes", classes)
+
+
+@pytest.mark.parametrize(
+    "value, classes, canonical, valid",
+    [
+        # A class containing commas must match as a whole, without requiring
+        # its fragments to be separate classes.
+        ("KNOWN, but consequences unknown, at signing",
+         ["Known, but consequences unknown, at signing"],
+         "known but consequences unknown at signing", True),
+        (" YES , no ", ["Yes", "No"], "yes, no", True),
+        ("Yes, maybe", ["Yes", "No"], "yes maybe", False),
+        ("true, No", ["Yes", "No"], "true no", False),
+        ('“ENTITLED TO” specific performance',
+         ['"entitled to" specific performance'], "entitled to specific performance", True),
+        ("UNLISTED answer!", ["Yes", "No"], "unlisted answer", False),
+    ],
+)
+def test_class_matching_boundaries(value, classes, canonical, valid):
+    assert canonical_maud_class("Custom question", value, classes) == canonical
+    assert is_maud_class("Custom question", value, classes) is valid
+
+
+@pytest.mark.parametrize("doc_type", [
+    " CONTRACT ", "Contracts_Specialist", " MERGER_AGREEMENT ",
+    "Merger_Agreement_Specialist",
+])
+def test_catalog_aliases_return_independent_dicts(doc_type):
+    catalog = maud_question_catalog(doc_type)
+    assert catalog == MAUD_ANSWER_CLASSES
+    catalog.pop("No-Shop")
+    assert "No-Shop" in maud_question_catalog(doc_type)
+
+
+@pytest.mark.parametrize("doc_type", [None, "", "merger", "contracts", "unknown"])
+def test_invalid_document_types_fail_closed(doc_type):
+    with pytest.raises(KeyError, match="unknown MAUD document type"):
+        maud_question_catalog(doc_type)
+
+
+@pytest.mark.parametrize("container", ["mapping", "json", "records", "tuple"])
+def test_parser_preserves_classes_across_supported_record_formats(container):
+    record = {"answer": [None, "", "Yes"], "valid_classes": [None, "", "Yes", "No"]}
+    if container in ("mapping", "json"):
+        payload = {"no shop": record}
+        if container == "json":
+            payload = json.dumps(payload)
+    else:
+        payload = [{"question": "no shop", **record}]
+        if container == "tuple":
+            payload = tuple(payload)
+    original = deepcopy(payload)
+    assert parse_maud_labels(payload) == {
+        "No-Shop": {"answer": "Yes", "category": "", "valid_classes": ["Yes", "No"]},
+    }
+    assert payload == original
+
+
+@pytest.mark.parametrize("classes, expected", [
+    ("Strict liability", ["Strict liability"]),
+    (("Yes", 1, None, ""), ["Yes", "1"]),
+    ([], None), (None, None), ([None, ""], None),
+])
+def test_parser_filters_class_entries_and_keeps_scalar_class_whole(classes, expected):
+    result = parse_maud_labels({"No-Shop": {"answer": "Yes", "valid_classes": classes}})
+    assert result["No-Shop"].get("valid_classes") == expected
+    if expected is None:
+        assert "valid_classes" not in result["No-Shop"]
+
+
+@pytest.mark.parametrize("second_answer", ["YES", "No"])
+def test_repeated_keys_union_classes_in_first_seen_order(second_answer):
+    records = [
+        {"question": "No-Shop", "answer": "Yes", "valid_classes": ["Yes", "No"]},
+        {"key": "no shop", "answer": second_answer,
+         "valid_classes": ["No", "Strict liability", "Strict liability"]},
+        {"question": "No-Shop", "answer": "Yes"},
+    ]
+    original = deepcopy(records)
+    result = parse_maud_labels(records)["No-Shop"]
+    assert result["valid_classes"] == ["Yes", "No", "Strict liability"]
+    assert result["answer"] == ("Yes" if second_answer == "YES" else ["Yes", "No"])
+    assert records == original
+
+
+def test_scoring_uses_each_rows_catalog_without_leaking_between_documents():
+    expected = [
+        {"No-Shop": {"answer": "Yes", "valid_classes": ["Yes", "No"]}},
+        {"No-Shop": {"answer": "Strict liability", "valid_classes": ["Strict liability"]}},
+    ]
+    predicted = [{"No-Shop": {"answer": "Strict liability"}}] * 2
+    out = score_maud_extraction(expected, predicted)
+    assert out["maud_valid_class_rate"] == 0.5
+    assert out["maud_question_accuracy"] == 0.5
+    assert out["per_question"]["No-Shop"]["valid_class_rate"] == 0.5
+    assert [doc["accuracy"] for doc in out["per_document"]] == [0.0, 1.0]
+
+
+@pytest.mark.parametrize("suite_name", ["contract", "merger_agreement", "contracts_specialist"])
+def test_prediction_cannot_override_expected_catalog(suite_name):
+    expected = {"maud_clause_labels": {
+        "No-Shop": {"answer": "Yes", "valid_classes": ["Yes", "No"]},
+    }}
+    predicted = {"maud_clause_labels": {
+        "No-Shop": {"answer": "Strict liability", "valid_classes": ["Strict liability"]},
+    }}
+    out = get_suite(suite_name).score_document(expected, predicted)
+    assert out["maud_valid_class_rate"] == 0.0
+    assert out["maud_question_accuracy"] == 0.0
+    assert out["maud_clause_presence"] == 1.0
+
+
+def test_scoring_normalizes_against_custom_gt_catalog():
+    expected = {"Custom question": {"answer": "Yes", "valid_classes": ["Yes"]}}
+    out = score_maud_extraction(expected, {"Custom question": "true"})
+    assert out["maud_question_accuracy"] == 1.0
+    assert out["maud_valid_class_rate"] == 1.0
+
+
+def test_validity_denominator_excludes_missing_ambiguous_and_extra_questions():
+    expected = {
+        "No-Shop": {"answer": "Yes", "valid_classes": ["Yes", "No"]},
+        "Knowledge Definition": {"answer": "Actual knowledge"},
+        "MAE Definition": {"answer": "Yes"},
+        _RW_QUESTION: {"answer": ["Yes", "No"], "valid_classes": ["Yes", "No"]},
+    }
+    predicted = {
+        "No-Shop": "true", "Knowledge Definition": "invented class",
+        _RW_QUESTION: "invented class", "Extra question": "invented class",
+    }
+    out = score_maud_extraction(expected, predicted)
+    assert out["n_questions"] == 3
+    assert out["n_present"] == 2
+    assert out["n_ambiguous"] == 1
+    assert out["maud_valid_class_rate"] == 0.5
+    assert out["maud_question_accuracy"] == pytest.approx(1 / 3, abs=1e-4)
+    assert out["maud_clause_presence"] == pytest.approx(2 / 3, abs=1e-4)
+    assert out["per_question"][_RW_QUESTION]["valid_class_rate"] is None
+    assert "Extra question" not in out["per_question"]
+
+
+@pytest.mark.parametrize("prediction, expected_rate", [({}, None), ({"No-Shop": ""}, 0.0)])
+def test_no_prediction_differs_from_present_but_empty_answer(prediction, expected_rate):
+    out = score_maud_extraction({"No-Shop": {"answer": "Yes"}}, prediction)
+    assert out["maud_valid_class_rate"] == expected_rate
+    assert out["maud_question_accuracy"] == 0.0
+
+
+def test_identical_unknown_answers_do_not_imply_class_validity():
+    labels = {"Custom question": {"answer": "Unlisted answer"}}
+    out = score_maud_extraction(labels, labels)
+    assert out["maud_question_accuracy"] == 1.0
+    assert out["maud_valid_class_rate"] == 0.0
