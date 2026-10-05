@@ -5,6 +5,17 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Added
+
+- **Frozen `production_prompts` v1 lineage** — the five eval-environment
+  frozen specialist stems (`mailroom-dataset-v1`, frozen
+  2026-09-26T05:09:29+00:00) are now importable from the dojo prompt catalog
+  as `get_prompt(<agent>, family="production_prompts")`, byte-identical to
+  the sandbox `config/prompts/<stem>.txt` files and sha256-pinned per record
+  (`PromptRecord.sha256`). Stored separately from the `docclass` family.
+  `tests/test_production_prompts.py` recomputes every digest from the
+  imported text.
+
 ## [0.19.0] - 2026-10-04
 
 Align scoring contracts with

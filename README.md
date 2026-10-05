@@ -223,7 +223,7 @@ dojo-sync    [--task TRACE_NAME] [--session NAME] [--max-items N]
 
 ## Migration
 
-See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md), [`docs/ARCHIVE_SCORING.md`](docs/ARCHIVE_SCORING.md), [`docs/SCORECARD_HONESTY.md`](docs/SCORECARD_HONESTY.md). Hub ground truth: [`docs/GT_METADATA.md`](docs/GT_METADATA.md). MAUD answer classes: [`docs/MAUD_LABELS.md`](docs/MAUD_LABELS.md). Specialist grid reports: [`docs/GRID_REPORTS.md`](docs/GRID_REPORTS.md). Issue-by-issue alignment status: [`docs/ISSUE_ALIGNMENT.md`](docs/ISSUE_ALIGNMENT.md). Prompt catalog: [`docs/PROMPTS.md`](docs/PROMPTS.md).
+See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md), [`docs/ARCHIVE_SCORING.md`](docs/ARCHIVE_SCORING.md), [`docs/SCORECARD_HONESTY.md`](docs/SCORECARD_HONESTY.md). Hub ground truth: [`docs/GT_METADATA.md`](docs/GT_METADATA.md). MAUD answer classes: [`docs/MAUD_LABELS.md`](docs/MAUD_LABELS.md). Specialist grid reports: [`docs/GRID_REPORTS.md`](docs/GRID_REPORTS.md). Issue-by-issue alignment status: [`docs/ISSUE_ALIGNMENT.md`](docs/ISSUE_ALIGNMENT.md). Prompt catalog + frozen v1 `production_prompts` lineage: [`docs/PROMPTS.md`](docs/PROMPTS.md).
 
 ## Releases & monorepo sync
 

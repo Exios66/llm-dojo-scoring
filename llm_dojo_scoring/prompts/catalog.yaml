@@ -1,7 +1,8 @@
-version: 0.15.0
+version: 0.16.0
 description: Importable prompt catalog for llm-dojo-scoring. LLM bodies are production + latest
-  docclass-merged keys. Metric names live in entry metadata (metrics_bundle / doc_bundle),
-  never as eval targets in the model-visible template.
+  docclass-merged keys + the eval-environment frozen production_prompts v1 lineage. Metric
+  names live in entry metadata (metrics_bundle / doc_bundle), never as eval targets in the
+  model-visible template.
 prompts:
 - agent: sorter
   family: production
@@ -500,4 +501,73 @@ prompts:
   notes: 'Procedural serving comparison: TTFT, throughput, utilization, and identity
     tags (model, quantization, GPU). No LLM system prompt. Compare local vs API-key
     runs via serving.compare_serving / get_suite("local_vs_api").score(local, api).'
+  priming: []
+# production_prompts — eval-environment frozen v1 specialist lineage
+# (mailroom-dataset-v1, frozen 2026-09-26T05:09:29+00:00). Byte-identical to the
+# sandbox config/prompts/<stem>_simplified.txt stems; sha256 over the loaded text
+# with a trailing newline. Do not edit without a sanctioned re-freeze.
+- agent: contracts_specialist
+  family: production_prompts
+  version: v1
+  kind: llm
+  metrics_bundle: extraction
+  doc_bundle: contract
+  source_repo: LLM-Mailroom-Services/eval-environment
+  source_key: contracts_specialist_v1
+  template: contracts_specialist.production_prompts.md
+  sha256: d91de3967cc3b12cbd222cc5a4ae167b39578125abc83be7422498dc5024fd24
+  notes: 'Frozen eval-environment v1 (mailroom-dataset-v1, 2026-09-26). Byte-identical
+    to sandbox stem contracts_specialist_v33_simplified.'
+  priming: []
+- agent: corporate_records_specialist
+  family: production_prompts
+  version: v1
+  kind: llm
+  metrics_bundle: extraction
+  doc_bundle: corporate_record
+  source_repo: LLM-Mailroom-Services/eval-environment
+  source_key: corporate_records_specialist_v1
+  template: corporate_records_specialist.production_prompts.md
+  sha256: 484e64dd847b7bb35afebca74edc1fb6c381f0f7d5e9367ad8673bec0b8af45c
+  notes: 'Frozen eval-environment v1 (mailroom-dataset-v1, 2026-09-26). Byte-identical
+    to sandbox stem corporate_records_specialist_simplified.'
+  priming: []
+- agent: correspondence_specialist
+  family: production_prompts
+  version: v1
+  kind: llm
+  metrics_bundle: extraction
+  doc_bundle: correspondence
+  source_repo: LLM-Mailroom-Services/eval-environment
+  source_key: correspondence_specialist_v1
+  template: correspondence_specialist.production_prompts.md
+  sha256: eab63b5afd29906b1ad3aca2d7698bf5c15d4b7f4ce9ade3b744be535d18d4f3
+  notes: 'Frozen eval-environment v1 (mailroom-dataset-v1, 2026-09-26). Byte-identical
+    to sandbox stem correspondence_specialist_simplified.'
+  priming: []
+- agent: insurance_claims_specialist
+  family: production_prompts
+  version: v1
+  kind: llm
+  metrics_bundle: extraction
+  doc_bundle: insurance_claim
+  source_repo: LLM-Mailroom-Services/eval-environment
+  source_key: insurance_claims_specialist_v1
+  template: insurance_claims_specialist.production_prompts.md
+  sha256: 6c2776bcbe00091200aecbcfd21c99f197398d929143dd0c7c722811fa100034
+  notes: 'Frozen eval-environment v1 (mailroom-dataset-v1, 2026-09-26). Byte-identical
+    to sandbox stem insurance_claims_specialist_simplified.'
+  priming: []
+- agent: merger_agreement_specialist
+  family: production_prompts
+  version: v1
+  kind: llm
+  metrics_bundle: extraction
+  doc_bundle: merger_agreement
+  source_repo: LLM-Mailroom-Services/eval-environment
+  source_key: merger_agreement_specialist_v1
+  template: merger_agreement_specialist.production_prompts.md
+  sha256: 003232584d6890054d956398135f439b86692a1123683f58914c0393b5e1a00b
+  notes: 'Frozen eval-environment v1 (mailroom-dataset-v1, 2026-09-26). Byte-identical
+    to sandbox stem merger_agreement_specialist_simplified.'
   priming: []
