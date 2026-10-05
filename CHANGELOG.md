@@ -3,7 +3,7 @@
 All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
-## [Unreleased]
+## [0.19.1] - 2026-10-05
 
 ### Added
 
@@ -23,6 +23,12 @@ Format based on Keep a Changelog; versioning is SemVer.
   null for subsidiary schedules whose only number is a parent-agreement
   exhibit ID. Provenance comments, catalog pins, docs, and tests updated to
   the corrected bytes.
+
+### Notes
+
+- Connected-repo follow-ups for the frozen prompt mirrors (eval-environment
+  re-freeze scripts, sandbox lineage mirror, downstream imports) are tracked
+  in [`docs/TODOS.md`](docs/TODOS.md).
 
 ## [0.19.0] - 2026-10-04
 
