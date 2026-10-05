@@ -42,6 +42,12 @@ tracing = [
     "opentelemetry-exporter-otlp-proto-http>=1.20",
 ]
 dev = ["pytest>=8.0", "pytest-mock>=3.14"]
+# MAUD catalog generation/replay against the pinned Hub dataset
+# (scripts/gen_maud_catalog.py, scripts/verify_gt_penalties.py).
+catalog = [
+    "pyarrow>=15.0",
+    "huggingface_hub>=0.23",
+]
 # Install surface used by the full mailroom + entity scoring path locally.
 all = [
     "llm-dojo-scoring[embeddings,tracing,dev]",
