@@ -66,6 +66,9 @@ byte-identical to the frozen source. Catalog digests identify the current text.
 `PromptRecord.text`; do not edit a template without a sanctioned
 re-freeze and a matching catalog/test update.
 
+Field maps those stems emit (and the scorer grades) are documented in
+[`EXTRACTION_SCHEMAS.md`](EXTRACTION_SCHEMAS.md).
+
 ## `PromptRecord`
 
 | Field | Role |
