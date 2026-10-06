@@ -14,6 +14,7 @@ Documentation for the llm-dojo-scoring package, covering:
 - Scoring methodology
 - Field-type-aware scoring
 - Entity list scoring
+- Live extraction schemas for the five mailroom-dataset document types (`EXTRACTION_SCHEMAS.md`)
 - Archive scoring block (`ARCHIVE_SCORING.md`)
 - Scorecard honesty: MAUD GT, format vs extraction, completion/cost, confidence/reasoning knobs (`SCORECARD_HONESTY.md`)
 - Hub ground-truth metadata: `gt_fields` parsing, `gt_presence`, per-class label scoping (`GT_METADATA.md`)
