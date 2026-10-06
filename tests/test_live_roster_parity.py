@@ -11,6 +11,7 @@ own class/specialist — never a contract alias.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -133,19 +134,39 @@ def test_compliance_filing_stays_retired():
     assert "compliance_filing" not in _FIXTURE["doc_classes"]
 
 
+_SCHEMA_SECTION = re.compile(
+    r"^## \d+\. `(?P<doc_type>[a-z_]+)` — `(?P<schema>\w+)`[^\n]*\n"
+    r"(?P<body>.*?)(?=^## |\Z)",
+    re.MULTILINE | re.DOTALL,
+)
+
+
+def _schema_table_fields(section_body: str) -> set[str]:
+    """Field names from the first ``| Field |`` table in a class section."""
+    lines = section_body.splitlines()
+    start = next((i for i, line in enumerate(lines) if line.startswith("| Field |")), None)
+    assert start is not None, "missing Field table"
+    fields: set[str] = set()
+    for line in lines[start + 2 :]:
+        if not line.startswith("|"):
+            break
+        cell = line.split("|", 2)[1].strip()
+        if cell.startswith("`") and cell.endswith("`"):
+            fields.add(cell.strip("`"))
+    return fields
+
+
 def test_extraction_schemas_doc_covers_live_field_maps():
     """docs/EXTRACTION_SCHEMAS.md must name every live schema class and field."""
-    report = (Path(__file__).resolve().parents[1] / "docs" / "EXTRACTION_SCHEMAS.md").read_text()
-    assert "ContractExtraction" in report
-    assert "MergerAgreementExtraction" in report
-    assert "CorporateRecordExtraction" in report
-    assert "CorrespondenceExtraction" in report
-    assert "InsuranceClaimExtraction" in report
-    for doc_type in _LIVE:
-        heading = f"`{doc_type}`"
-        assert heading in report, f"missing doc_type heading {heading}"
-        for field in DEFAULT_FIELD_TYPES[doc_type]:
-            assert f"`{field}`" in report, f"{doc_type}: missing field {field}"
+    report = (Path(__file__).resolve().parents[1] / "docs" / "EXTRACTION_SCHEMAS.md").read_text(
+        encoding="utf-8"
+    )
+    sections = {m.group("doc_type"): m for m in _SCHEMA_SECTION.finditer(report)}
+    assert set(sections) == set(_LIVE)
+    for doc_type, match in sections.items():
+        assert match.group("schema") == _FIXTURE["doc_classes"][doc_type]["schema"]
+        documented = _schema_table_fields(match.group("body"))
+        assert documented == set(DEFAULT_FIELD_TYPES[doc_type]), doc_type
 
 
 @pytest.mark.parametrize("doc_type", _LIVE)
