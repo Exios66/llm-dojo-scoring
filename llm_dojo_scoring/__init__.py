@@ -83,6 +83,12 @@ from .failure_modes import (
     per_subtype_accuracy,
     summarize_failures,
 )
+from .intents import (
+    INTENT_ALIASES,
+    INTENT_DESCRIPTIONS,
+    INTENT_LABELS,
+    normalize_intent,
+)
 from .field_scoring import (
     EntityListScore,
     ExtractionScoreResult,
@@ -311,6 +317,7 @@ __all__ = [
     "get_field_types", "get_type_bands", "warm_embedding_model",
     "normalize_text", "parse_date", "parse_money", "score_category_presence",
     "is_entity_list", "get_ambiguous_band", "FIELD_SCORERS",
+    "INTENT_LABELS", "INTENT_ALIASES", "INTENT_DESCRIPTIONS", "normalize_intent",
     "extraction_binary_metrics", "mean_entity_list_f1", "merge_extraction_counts",
     "amount_exactness", "determination_consistency", "score_claims_extras",
     "Settings", "TraceKnobSettings", "clear_settings_cache", "configure", "configure_from_taxonomy",
