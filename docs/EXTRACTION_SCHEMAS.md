@@ -10,7 +10,7 @@ retired specialists.
 |---|---|
 | Package | `llm-dojo-scoring` **v0.20.0** |
 | Field maps | `DEFAULT_FIELD_TYPES` ≡ `CORPUS_EXTRACTION_FIELDS` ≡ taxonomy fixture `tests/fixtures/taxonomy_field_types.json` |
-| Taxonomy blob | llm-mailroom `src/config/taxonomy.yaml` SHA-1 `ca297bd8e55e62b79ee452b02b65926b5032bdf1` |
+| Taxonomy blob | llm-mailroom `src/config/taxonomy.yaml` SHA-1 `911ca16469045dc6dd16aed81671f6e8d8769223` |
 | Frozen prompts | `get_prompt(<agent>, family="production_prompts")` — eval-environment v1, frozen 2026-09-26T05:09:29+00:00 |
 | Live classes | `contract` · `merger_agreement` · `corporate_record` · `correspondence` · `insurance_claim` |
 | Not live | `unknown` (routing only) · `court_opinion` / `due_diligence` / `compliance_filing` (retired; zero corpus rows) |
