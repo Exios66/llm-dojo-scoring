@@ -5,12 +5,17 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-10-07
+
 ### Changed
 
 - Re-synced the `production` classification prompts (sorter, sorter_reviewer,
   boss, arbiter, judge, judge-classification) from llm-mailroom 6ddde73: the
   five-class doctrine describes `merger_agreement` and `contract` without
-  naming the MAUD/CUAD evaluation corpora.
+  naming the MAUD/CUAD evaluation corpora. Prompt bodies change, so this is a
+  minor bump; every re-synced row records `source_commit:
+  6ddde73bfca34f39b44e1db9966f4a04543795fa` and the catalog `version` is
+  `0.21.0`.
 
 ## [0.20.0] - 2026-10-07
 
