@@ -262,12 +262,9 @@ _MAILROOM_MODULE_ATTRS: dict[str, tuple[str, ...]] = {
 
 
 def test_mailroom_import_surface_resolves():
-    from llm_dojo_scoring import field_scoring
-
-    missing = []
-    for name in _MAILROOM_TOP_LEVEL:
-        if not (hasattr(dojo, name) or hasattr(field_scoring, name)):
-            missing.append(name)
+    # Mailroom does `from llm_dojo_scoring import <name>`; a name that only
+    # survives in a submodule would still break that import.
+    missing = [name for name in _MAILROOM_TOP_LEVEL if not hasattr(dojo, name)]
     assert not missing, f"missing mailroom top-level imports: {missing}"
     for mod_name, attrs in _MAILROOM_MODULE_ATTRS.items():
         mod = importlib.import_module(f"llm_dojo_scoring.{mod_name}")
