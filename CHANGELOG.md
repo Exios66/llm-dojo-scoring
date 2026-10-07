@@ -5,6 +5,23 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-10-07
+
+### Changed
+
+- **`production` prompt family re-vendored from live llm-mailroom** via the
+  new `scripts/sync_production_prompts.py --mailroom PATH [--check]`.
+  The five `production` specialists are now the frozen v1 bytes (they equal
+  `production_prompts`; rows say `version: v1`, `source_key: frozen_v1`), the
+  retired `contracts_specialist_v32` body is gone, `reporter` is
+  `kind: deterministic`, and every re-vendored row records `source_commit`
+  (new `PromptRecord.source_commit`). Catalog `version: 0.20.0`.
+  `gmail_triage`, `intake` (LLM) and `relations` are listed as not vendored
+  in `docs/PROMPTS.md`.
+- `docs/EXTRACTION_SCHEMAS.md` / `docs/SCORING.md` / `docs/TODOS.md`:
+  `label` type, `intent` rows for the three controlled classes, and the
+  re-vendored `production` family.
+
 ### Added
 
 - **`llm_dojo_scoring.intents`** — controlled `intent` vocabularies for

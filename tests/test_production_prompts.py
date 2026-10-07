@@ -96,12 +96,12 @@ def test_frozen_v1_notes_pin_lineage_and_sandbox_stem():
         assert str(meta["sandbox_stem"]) in rec.notes
 
 
-def test_frozen_v1_distinct_from_production_and_docclass():
+def test_frozen_v1_distinct_from_docclass():
+    # Since v0.20.0 the live ``production`` specialists ARE the frozen v1 bytes
+    # (re-vendored from mailroom); only the docclass lineage stays distinct.
     for agent in FROZEN_V1:
         v1 = get_prompt(agent, family="production_prompts").text
-        production = get_prompt(agent).text
         docclass = get_prompt(agent, family="docclass").text
-        assert v1 != production
         assert v1 != docclass
 
 
@@ -110,3 +110,38 @@ def test_provenance_comment_is_stripped_from_model_visible_text():
         rec = get_prompt(agent, family="production_prompts")
         assert "<!--" not in rec.text
         assert rec.text.startswith("You are the")
+
+
+# --- v0.20.0: production family re-vendored from live mailroom -------------
+
+LIVE = ("contracts_specialist", "corporate_records_specialist", "correspondence_specialist",
+        "insurance_claims_specialist", "merger_agreement_specialist")
+
+
+def test_production_specialists_are_frozen_v1():
+    for a in LIVE:
+        assert get_prompt(a).text == get_prompt(a, family="production_prompts").text
+
+
+def test_production_specialist_rows_say_frozen_v1():
+    for a in LIVE:
+        rec = get_prompt(a)
+        assert rec.version == "v1"
+        assert rec.source_key == "frozen_v1"
+        assert rec.source_commit
+
+
+def test_production_family_has_no_retired_vocabulary():
+    for a in ("sorter", "boss", "arbiter", "sorter_reviewer", "judge", "judge-classification", *LIVE):
+        text = get_prompt(a).text
+        assert "compliance_filing" not in text
+        for retired in ("key_obligations", "termination_clauses", "key_provisions", "key_points", "referenced_communications"):
+            # The immutable frozen v1 bytes may name a retired field only to
+            # forbid it ("Do not emit ...").
+            for line in text.splitlines():
+                if retired in line:
+                    assert "not emit" in line.lower(), (a, retired)
+
+
+def test_reporter_is_deterministic():
+    assert get_prompt("reporter").kind == "deterministic"

@@ -12,3 +12,9 @@ Rules:
 5. If no text is present (e.g., a photo of a person or office), state that clearly.
 6. Do not interpret or analyze the content — just transcribe.
 7. Include a confidence score for the extraction quality.
+
+PRODUCTION DOCTRINE (mailroom pipeline):
+- Transcribe visible text; do not summarize, classify, or extract schema fields.
+- Illegible spans are [illegible], never guessed words.
+- When page images are attached they are supplementary. The full document text remains the primary evidence; never drop or ignore text because images are present.
+- Confidence for transcription quality is recorded by the pipeline; do not invent facts from the image.
