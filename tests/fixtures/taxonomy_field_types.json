@@ -1,9 +1,9 @@
 {
-  "_comment": "Live field-map authority for llm-dojo-scoring, generated from llm-mailroom src/config/taxonomy.yaml (mailroom-issues #235/#237). Do not hand-edit: regenerate from the pinned blob and run tests/test_live_roster_parity.py.",
+  "_comment": "Live field-map authority for llm-dojo-scoring, generated from llm-mailroom src/config/taxonomy.yaml by scripts/gen_taxonomy_fixture.py. Do not hand-edit: regenerate from the pinned blob and run tests/test_live_roster_parity.py.",
   "authority": "Exios66/llm-mailroom@main:src/config/taxonomy.yaml",
-  "authority_blob_sha1": "ca297bd8e55e62b79ee452b02b65926b5032bdf1",
-  "authority_sha256": "2fa42886f0182c1d0c6e18d189849da0a333123baddae78fc127285b2f63dfb6",
-  "captured_at": "2026-10-04",
+  "authority_blob_sha1": "911ca16469045dc6dd16aed81671f6e8d8769223",
+  "authority_sha256": "dd2684d2085f08084f04059203492788a9e40c3c80c89a9683c3fd2e0f6749e9",
+  "captured_at": "2026-10-07",
   "doc_classes": {
     "contract": {
       "field_types": {
@@ -27,7 +27,7 @@
         "effective_date": "date",
         "entity_name": "name",
         "filing_number": "id",
-        "intent": "name",
+        "intent": "label",
         "jurisdiction": "name",
         "keywords": "entity_list:name",
         "record_type": "name",
@@ -44,7 +44,7 @@
         "communication_date": "date",
         "communication_type": "name",
         "demand_amount": "money",
-        "intent": "name",
+        "intent": "label",
         "keywords": "entity_list:name",
         "recipient": "name",
         "sender": "name",
@@ -68,7 +68,7 @@
         "denial_reasons": "entity_list:free_text",
         "insured_party": "name",
         "insurer": "name",
-        "intent": "name",
+        "intent": "label",
         "keywords": "entity_list:name",
         "policy_number": "id",
         "subject_matter": "free_text",
