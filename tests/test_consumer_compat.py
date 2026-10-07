@@ -219,3 +219,55 @@ def test_jellyfish_is_importable_core_dependency():
     import jellyfish
 
     assert jellyfish.jaro_winkler_similarity("Acme Corp", "Acme Corporation") > 0.8
+
+
+def test_release_version_is_0_20_0():
+    assert dojo.__version__ == "0.20.0"
+
+
+# Every name llm-mailroom imports (src/ + notebooks/), per the sync plan's
+# "Mailroom import surface" appendix, plus the v0.20.0 intents module.
+_MAILROOM_TOP_LEVEL = (
+    "get_suite",
+    "list_suites",
+    "load_registry",
+    "get_field_types",
+    "score_extraction",
+    "ExtractionScoreResult",
+    "warm_embedding_model",
+    "score_category_presence",
+    "normalize_text",
+    "is_entity_list",
+    "parse_date",
+    "parse_money",
+    "configure",
+    "configure_from_taxonomy",
+)
+
+_MAILROOM_MODULE_ATTRS: dict[str, tuple[str, ...]] = {
+    "field_scoring": ("_get_embedding",),
+    "mailroom": ("score_aligned_classification",),
+    "intake": ("looks_messy", "INTAKE_SPAN_KEYS"),
+    "serving": ("compare_serving",),
+    "registry": ("MetricTier",),
+    "pruning": ("headline_metrics",),
+    "prompts": ("get_prompt", "list_prompts"),
+    "corpus": ("normalize_corpus_subclass", "DOC_TYPE_SUBCLASSES"),
+    "content_scoring": ("peel_non_extraction_fields",),
+    "archive": ("archive_entry_hash",),
+    "intents": ("INTENT_LABELS", "INTENT_ALIASES", "INTENT_DESCRIPTIONS", "normalize_intent"),
+}
+
+
+def test_mailroom_import_surface_resolves():
+    from llm_dojo_scoring import field_scoring
+
+    missing = []
+    for name in _MAILROOM_TOP_LEVEL:
+        if not (hasattr(dojo, name) or hasattr(field_scoring, name)):
+            missing.append(name)
+    assert not missing, f"missing mailroom top-level imports: {missing}"
+    for mod_name, attrs in _MAILROOM_MODULE_ATTRS.items():
+        mod = importlib.import_module(f"llm_dojo_scoring.{mod_name}")
+        gone = [a for a in attrs if not hasattr(mod, a)]
+        assert not gone, f"llm_dojo_scoring.{mod_name} missing {gone}"

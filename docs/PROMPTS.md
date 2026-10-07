@@ -1,4 +1,4 @@
-# Prompt catalog (v0.16.0)
+# Prompt catalog (v0.20.0)
 
 Importable catalog of the prompts the dojo scores against. This package
 **does not execute agents** — it vendors the live production template, the
