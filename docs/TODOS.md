@@ -39,10 +39,11 @@ or a scripted re-promote — never a hand edit).
 
 ## Downstream importers of `llm-dojo-scoring`
 
-- [ ] Switch consumers that need the frozen eval-environment v1 specialist
+- [x] Switch consumers that need the frozen eval-environment v1 specialist
       text to `get_prompt(<agent>, family="production_prompts")` instead of
-      vendoring their own copy.
-- [ ] Pin `llm-dojo-scoring @ v0.19.1` when adopting the corrected records.
+      vendoring their own copy. (Done by llm-mailroom Task 2: specialists load
+      the frozen v1 bytes; the dojo `production` family now equals them.)
+- [x] Pin `llm-dojo-scoring @ v0.19.1` when adopting the corrected records. (Mailroom pin moves to v0.20.0 after this release.)
 
 ## Dojo reference pins (v0.19.1)
 

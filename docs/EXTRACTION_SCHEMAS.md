@@ -1,4 +1,4 @@
-# Entity extraction schemas — mailroom-dataset (Dojo v0.19.1)
+# Entity extraction schemas — mailroom-dataset (Dojo v0.20.0)
 
 Pared live field maps for the **five primary document types** in
 [`Lucius-Morningstar/mailroom-dataset`](https://huggingface.co/datasets/Lucius-Morningstar/mailroom-dataset)
@@ -8,7 +8,7 @@ retired specialists.
 
 | Pin | Value |
 |---|---|
-| Package | `llm-dojo-scoring` **v0.19.1** |
+| Package | `llm-dojo-scoring` **v0.20.0** |
 | Field maps | `DEFAULT_FIELD_TYPES` ≡ `CORPUS_EXTRACTION_FIELDS` ≡ taxonomy fixture `tests/fixtures/taxonomy_field_types.json` |
 | Taxonomy blob | llm-mailroom `src/config/taxonomy.yaml` SHA-1 `ca297bd8e55e62b79ee452b02b65926b5032bdf1` |
 | Frozen prompts | `get_prompt(<agent>, family="production_prompts")` — eval-environment v1, frozen 2026-09-26T05:09:29+00:00 |
@@ -51,6 +51,7 @@ get_prompt("contracts_specialist", family="production_prompts").text
 | `date` | Canonical ISO date; containment + partial-credit fallbacks |
 | `money` | Parse to float, ±$0.01; unparseable prose → fuzzy string |
 | `name` | Jaro–Winkler + token-set; containment first |
+| `label` | Controlled vocabulary: canonicalized via `normalize_intent`, then exact match — no partial credit, no embedding rescue |
 | `free_text` | SQuAD-style token F1 |
 | `entity_list` | Hungarian bipartite match, then set P/R/F1 |
 | `entity_list:name` | List items scored as `name` |
@@ -195,7 +196,7 @@ Governance instruments. Do **not** emit `document_name`, `parties`,
 | `signatories` | `entity_list:name` | `[]` | Execution / approval names |
 | `jurisdiction` | `name` | `null` | State/country of incorporation or governing jurisdiction |
 | `filing_number` | `id` | `null` | Official file/document number **only**. Exhibit IDs and parent-agreement dockets do **not** qualify (v0.19.1 re-freeze) |
-| `intent` | `name` | `null` | `governance_rules` · `corporate_action_approval` · `entity_formation` · `authority_delegation` · `investor_rights` · `other` |
+| `intent` | `label` | `null` | `governance_rules` · `corporate_action_approval` · `entity_formation` · `authority_delegation` · `investor_rights` · `other`. Canonicalized via `normalize_intent`; exact match. (`DEFAULT_FIELD_TYPES` still maps `intent` to `name` until the taxonomy fixture is re-pinned; `label` applies where the field-type map says so.) |
 | `subject_matter` | `free_text` | `null` | One grounded sentence |
 | `keywords` | `entity_list:name` | `[]` | ≤8 phrases from the text |
 
@@ -242,7 +243,7 @@ go in `demand_amount`, never insurance `claimed_amount`.
 | `demand_amount` | `money` | `null` | Exact dollars demanded; most non-demand mail is `null` |
 | `action_items` | `entity_list` | `[]` | ≤3 concrete actions with deadlines if stated |
 | `urgency` | `name` | never `null` | `routine` · `time-sensitive` · `urgent` · `critical`. Unspecified → `routine` |
-| `intent` | `name` | `null` | `payment_demand` · `notice` · `analysis` · `request` · `update` · `meeting_invite` · `press_communication` · `other` |
+| `intent` | `label` | `null` | `payment_demand` · `notice` · `analysis` · `request` · `update` · `meeting_invite` · `press_communication` · `other`. Canonicalized via `normalize_intent`; exact match. (`DEFAULT_FIELD_TYPES` still maps `intent` to `name` until the taxonomy fixture is re-pinned; `label` applies where the field-type map says so.) |
 | `subject_matter` | `free_text` | `null` | One grounded sentence |
 | `keywords` | `entity_list:name` | `[]` | ≤8 phrases from the text |
 
@@ -292,7 +293,7 @@ fields the text states.
 | `coverage_determination` | `name` | `null` | As written: `approved` · `denied` · `partial` · `pending`. Never infer from tone |
 | `denial_reasons` | `entity_list:free_text` | `[]` | Stated grounds; `[]` when approved / pending / unstated |
 | `supporting_documents` | `entity_list` | `[]` | Referenced docs; CMS provider/NPI lines belong here |
-| `intent` | `name` | `null` | `claim_filing` · `coverage_determination` · `loss_report` · `claim_data_record` · `other` |
+| `intent` | `label` | `null` | `claim_filing` · `coverage_determination` · `loss_report` · `claim_data_record` · `other`. Canonicalized via `normalize_intent`; exact match. (`DEFAULT_FIELD_TYPES` still maps `intent` to `name` until the taxonomy fixture is re-pinned; `label` applies where the field-type map says so.) |
 | `subject_matter` | `free_text` | `null` | One grounded sentence |
 | `keywords` | `entity_list:name` | `[]` | ≤8 phrases from the text |
 | `claim_checklist` | `entity_list:free_text` | `[]` | `'<Category>: <evidence>'` — present only |
@@ -322,7 +323,7 @@ consistency is degenerate on GT-shaped predictions.
 
 ---
 
-## Cross-class rules (v0.19.1)
+## Cross-class rules (v0.20.0)
 
 1. **One schema per document.** Fill only that class's keys. Foreign keys
    (`claim_number` on a letter, `sender` on a claim) are out of schema.
@@ -341,9 +342,11 @@ consistency is degenerate on GT-shaped predictions.
    extraction events): 0 FN / 0 FP / 0 spurious fills; 91 triage-only
    contracts stay `unscorable`.
 6. **Prompt freeze vs live `production` family.** Eval stems are
-   `family="production_prompts"`. Live mailroom constants remain
-   `family="production"` (e.g. `contracts_specialist_v32`). Do not mix
-   lineages in a comparison table without matching `prompt_id`.
+   `family="production_prompts"`. Since v0.20.0 the five `production`
+   specialists are re-vendored from live mailroom and **equal**
+   `production_prompts` v1 (`version: v1`, `source_key: frozen_v1`); the
+   retired `contracts_specialist_v32` body is gone. Do not mix the
+   `docclass` lineage into a comparison table without matching `prompt_id`.
 
 ## Import surface
 
