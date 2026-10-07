@@ -8,8 +8,10 @@ from types import ModuleType
 import pandas as pd
 import pytest
 
-from scripts import gen_maud_catalog as generator
-from scripts import verify_gt_penalties as verifier
+from conftest import load_script
+
+generator = load_script("gen_maud_catalog")
+verifier = load_script("verify_gt_penalties")
 
 
 @pytest.mark.parametrize("script", [generator, verifier], ids=["catalog", "replay"])
