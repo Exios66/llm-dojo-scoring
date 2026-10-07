@@ -7,6 +7,17 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Added
 
+- **`llm_dojo_scoring.intents`** — controlled `intent` vocabularies for
+  `corporate_record`, `correspondence` and `insurance_claim`
+  (`INTENT_LABELS`, `INTENT_ALIASES`, `INTENT_DESCRIPTIONS`,
+  `normalize_intent`), ported from llm-mailroom `bee7f46`.
+- **`label` field type** — exact match after canonicalization (no partial
+  credit). `score_extraction` canonicalizes `intent` on both sides only when
+  the field-type map says `intent: label`; explicit `intent: name` maps keep
+  the old fuzzy behaviour for rescoring archives. `DEFAULT_FIELD_TYPES` still
+  says `name` until the taxonomy fixture is re-pinned.
+- `tests/conftest.py::load_script` loads `scripts/<name>.py` by path so a
+  co-installed llm-mailroom `scripts` package cannot shadow the dojo's.
 - **`docs/EXTRACTION_SCHEMAS.md`** — concise field-map report for the five
   live mailroom-dataset classes (`contract`, `merger_agreement`,
   `corporate_record`, `correspondence`, `insurance_claim`) pinned to
