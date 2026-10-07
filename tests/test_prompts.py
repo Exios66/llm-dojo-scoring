@@ -102,11 +102,14 @@ def test_judge_completeness_alias():
 
 
 def test_colloquial_priming_flagged_not_rewritten():
+    # Since v0.20.0 the production body is frozen v1, which carries none of the
+    # colloquial words; the flag therefore lives only where the words still do.
     rec = get_prompt("contracts_specialist")
-    assert "colloquial_precision" in rec.priming
-    assert "precision" in rec.text.lower()
+    assert rec.priming == ()
+    assert "precision" not in rec.text.lower()
     doc = get_prompt("contracts_specialist", family="docclass")
     assert "colloquial_precision" in doc.priming
+    assert "precision" in doc.text.lower()
 
 
 def test_llm_templates_omit_t0_t1_registry_ids():

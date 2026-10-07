@@ -51,6 +51,7 @@ class PromptRecord:
     notes: str = ""
     template: str | None = None
     sha256: str = ""
+    source_commit: str = ""
 
     @property
     def key(self) -> tuple[str, str]:
@@ -98,6 +99,7 @@ def _record_from_row(row: dict) -> PromptRecord:
         notes=str(row.get("notes") or ""),
         template=template,
         sha256=str(row.get("sha256") or ""),
+        source_commit=str(row.get("source_commit") or ""),
     )
 
 
