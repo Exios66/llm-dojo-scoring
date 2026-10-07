@@ -90,7 +90,11 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     mailroom = args.mailroom.resolve()
     sys.path.insert(0, str(mailroom / "src"))
-    from llm.prompts import _bound_prompt_versions, prompt_templates
+    try:
+        from llm.prompts import _bound_prompt_versions, prompt_templates
+    except ImportError as exc:
+        print(f"cannot import mailroom prompts from {mailroom / 'src'}: {exc}", file=sys.stderr)
+        return 2
 
     live = prompt_templates()
     bound = _bound_prompt_versions()
