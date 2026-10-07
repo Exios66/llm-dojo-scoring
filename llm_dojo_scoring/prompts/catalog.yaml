@@ -1,4 +1,4 @@
-version: 0.16.0
+version: 0.20.0
 description: Importable prompt catalog for llm-dojo-scoring. LLM bodies are production + latest
   docclass-merged keys + the eval-environment frozen production_prompts v1 lineage. Metric
   names live in entry metadata (metrics_bundle / doc_bundle), never as eval targets in the
@@ -12,48 +12,51 @@ prompts:
   doc_bundle: null
   source_repo: llm-mailroom
   source_key: sorter_v14
+  source_commit: d5cdff7017da395c1e329b64a714a0941337cd86
   template: sorter.production.md
   priming: []
 - agent: contracts_specialist
   family: production
-  version: contracts_specialist_v32
+  version: v1
   kind: llm
   metrics_bundle: extraction
   doc_bundle: contract
   source_repo: llm-mailroom
-  source_key: contracts_specialist_v32
+  source_key: frozen_v1
+  source_commit: d5cdff7017da395c1e329b64a714a0941337cd86
   template: contracts_specialist.production.md
-  priming:
-  - colloquial_precision
-  - colloquial_completeness
+  priming: []
 - agent: merger_agreement_specialist
   family: production
-  version: SYSTEM_PROMPT_V0
+  version: v1
   kind: llm
   metrics_bundle: extraction
   doc_bundle: merger_agreement
   source_repo: llm-mailroom
-  source_key: SYSTEM_PROMPT_V0
+  source_key: frozen_v1
+  source_commit: d5cdff7017da395c1e329b64a714a0941337cd86
   template: merger_agreement_specialist.production.md
   priming: []
 - agent: corporate_records_specialist
   family: production
-  version: SYSTEM_PROMPT
+  version: v1
   kind: llm
   metrics_bundle: extraction
   doc_bundle: corporate_record
   source_repo: llm-mailroom
-  source_key: SYSTEM_PROMPT
+  source_key: frozen_v1
+  source_commit: d5cdff7017da395c1e329b64a714a0941337cd86
   template: corporate_records_specialist.production.md
   priming: []
 - agent: correspondence_specialist
   family: production
-  version: SYSTEM_PROMPT
+  version: v1
   kind: llm
   metrics_bundle: extraction
   doc_bundle: correspondence
   source_repo: llm-mailroom
-  source_key: SYSTEM_PROMPT
+  source_key: frozen_v1
+  source_commit: d5cdff7017da395c1e329b64a714a0941337cd86
   template: correspondence_specialist.production.md
   priming: []
 - agent: compliance_specialist
@@ -68,12 +71,13 @@ prompts:
   priming: []
 - agent: insurance_claims_specialist
   family: production
-  version: SYSTEM_PROMPT
+  version: v1
   kind: llm
   metrics_bundle: extraction
   doc_bundle: insurance_claim
   source_repo: llm-mailroom
-  source_key: SYSTEM_PROMPT
+  source_key: frozen_v1
+  source_commit: d5cdff7017da395c1e329b64a714a0941337cd86
   template: insurance_claims_specialist.production.md
   priming: []
 - agent: due_diligence_specialist
@@ -104,6 +108,7 @@ prompts:
   doc_bundle: null
   source_repo: llm-mailroom
   source_key: REVIEWER_SYSTEM_PROMPT
+  source_commit: d5cdff7017da395c1e329b64a714a0941337cd86
   template: sorter_reviewer.production.md
   priming: []
 - agent: arbiter
@@ -114,6 +119,7 @@ prompts:
   doc_bundle: null
   source_repo: llm-mailroom
   source_key: ARBITER_SYSTEM_PROMPT
+  source_commit: d5cdff7017da395c1e329b64a714a0941337cd86
   template: arbiter.production.md
   priming: []
 - agent: judge
@@ -124,6 +130,7 @@ prompts:
   doc_bundle: null
   source_repo: llm-mailroom
   source_key: SYSTEM_PROMPT
+  source_commit: d5cdff7017da395c1e329b64a714a0941337cd86
   template: judge.production.md
   priming: []
 - agent: judge-completeness
@@ -134,6 +141,7 @@ prompts:
   doc_bundle: null
   source_repo: llm-mailroom
   source_key: SYSTEM_PROMPT
+  source_commit: d5cdff7017da395c1e329b64a714a0941337cd86
   template: judge.production.md
   notes: Completeness judge — same production body as agent `judge`.
   priming: []
@@ -145,6 +153,7 @@ prompts:
   doc_bundle: null
   source_repo: llm-mailroom
   source_key: CLASSIFICATION_SYSTEM_PROMPT
+  source_commit: d5cdff7017da395c1e329b64a714a0941337cd86
   template: judge-classification.production.md
   priming: []
 - agent: judge-correctness
@@ -155,6 +164,7 @@ prompts:
   doc_bundle: null
   source_repo: llm-mailroom
   source_key: CORRECTNESS_SYSTEM_PROMPT
+  source_commit: d5cdff7017da395c1e329b64a714a0941337cd86
   template: judge-correctness.production.md
   priming:
   - extraction_correctness
@@ -166,16 +176,18 @@ prompts:
   doc_bundle: null
   source_repo: llm-mailroom
   source_key: BOSS_SYSTEM_PROMPT
+  source_commit: d5cdff7017da395c1e329b64a714a0941337cd86
   template: boss.production.md
   priming: []
 - agent: reporter
   family: production
   version: COMPILE_SYSTEM_PROMPT
-  kind: llm
+  kind: deterministic
   metrics_bundle: reporter
   doc_bundle: null
   source_repo: llm-mailroom
   source_key: COMPILE_SYSTEM_PROMPT
+  source_commit: d5cdff7017da395c1e329b64a714a0941337cd86
   template: reporter.production.md
   priming: []
 - agent: pdf_transcriber
@@ -186,6 +198,7 @@ prompts:
   doc_bundle: null
   source_repo: llm-mailroom
   source_key: SYSTEM_PROMPT
+  source_commit: d5cdff7017da395c1e329b64a714a0941337cd86
   template: pdf_transcriber.production.md
   priming: []
 - agent: image_extractor
@@ -196,6 +209,7 @@ prompts:
   doc_bundle: null
   source_repo: llm-mailroom
   source_key: ImageExtractor.system_prompt
+  source_commit: d5cdff7017da395c1e329b64a714a0941337cd86
   template: image_extractor.production.md
   priming: []
 - agent: audit_agent
