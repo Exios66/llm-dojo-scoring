@@ -5,6 +5,21 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/gen_taxonomy_fixture.py --taxonomy PATH [--check]` regenerates
+  `tests/fixtures/taxonomy_field_types.json` from llm-mailroom's
+  `taxonomy.yaml`, pinning the git blob sha1 (`--check` ignores only
+  `captured_at`).
+
+### Changed
+
+- Live field map re-pinned to mailroom taxonomy blob
+  `911ca16469045dc6dd16aed81671f6e8d8769223`: `intent` is `label` (exact,
+  canonicalized) for `corporate_record`, `correspondence` and `insurance_claim`
+  in `DEFAULT_FIELD_TYPES`; `merger_agreement` keeps `name`. Rescoring with an
+  explicit `field_types` map that says `intent: name` is unchanged.
+
 ## [0.21.0] - 2026-10-07
 
 ### Changed
