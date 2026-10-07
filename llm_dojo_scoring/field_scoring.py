@@ -45,6 +45,7 @@ import structlog
 
 from .config import get_settings
 from .gt_metadata import ANNOTATION_KEYS, is_empty_value, parse_json_container
+from .intents import INTENT_LABELS, normalize_intent
 
 logger = structlog.get_logger(__name__)
 
@@ -425,6 +426,18 @@ def score_name_field(pred, exp, embedding=None) -> float:
     if set(_tokenize(np_)) & set(_tokenize(ne)):
         base = max(base, _jaro_winkler(np_, ne))
     return _with_embedding_rescue(base, pred, exp, embedding)
+
+
+def score_label_field(pred, exp, embedding=None) -> float:
+    """Exact match on a controlled label: 1.0 when both sides compact
+    (lowercase, alphanumerics only) to the same non-empty token, else 0.0.
+
+    No partial credit — a wrong label is a miss, not a near-miss. Callers
+    canonicalize aliases first (see ``score_extraction`` / ``intents``).
+    """
+    cp = re.sub(r"[^a-z0-9]", "", str(pred or "").lower())
+    ce = re.sub(r"[^a-z0-9]", "", str(exp or "").lower())
+    return 1.0 if cp and cp == ce else 0.0
 
 
 def score_free_text_field(pred, exp, embedding=None) -> float:
@@ -1121,6 +1134,7 @@ FIELD_SCORERS = {
     "date": score_date_field,
     "money": score_money_field,
     "name": score_name_field,
+    "label": score_label_field,
     "free_text": score_free_text_field,
     "containment": score_containment_field,
 }
@@ -1278,6 +1292,10 @@ def score_extraction(
         pred_value = predicted.get(key)
         if pred_value is not None:
             pred_value = parse_json_container(pred_value)
+        if field_type == "label" and key == "intent" and doc_class in INTENT_LABELS:
+            exp_value = normalize_intent(doc_class, exp_value) or exp_value
+            if pred_value is not None:
+                pred_value = normalize_intent(doc_class, pred_value) or pred_value
         if pred_value is None:
             # A null answer satisfies a null-expectation date (blank-template
             # or label-only GT holds no real date).

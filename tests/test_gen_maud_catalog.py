@@ -7,8 +7,10 @@ from collections import Counter, defaultdict
 import pandas as pd
 import pytest
 
+from conftest import load_script
 from llm_dojo_scoring.corpus import MAUD_QUESTION_KEYS
-from scripts import gen_maud_catalog as generator
+
+generator = load_script("gen_maud_catalog")
 
 
 def test_scan_unions_classes_and_counts_only_merger_rows():
