@@ -8,6 +8,8 @@ extend this list in the same PR that documents the pin bump.
 from __future__ import annotations
 
 import importlib
+import re
+from pathlib import Path
 
 import llm_dojo_scoring as dojo
 from llm_dojo_scoring import load_registry
@@ -271,3 +273,11 @@ def test_mailroom_import_surface_resolves():
         mod = importlib.import_module(f"llm_dojo_scoring.{mod_name}")
         gone = [a for a in attrs if not hasattr(mod, a)]
         assert not gone, f"llm_dojo_scoring.{mod_name} missing {gone}"
+
+
+def test_readme_release_pins_match_version():
+    # Release commits bump the README badge and install pins with the version
+    # (as v0.19.1 did); a stale pin sends new consumers to the old release.
+    readme = (Path(__file__).resolve().parent.parent / "README.md").read_text(encoding="utf-8")
+    pins = set(re.findall(r"(?:release-|releases/tag/|\.git@|\.\.\.@)v(\d+\.\d+\.\d+)", readme))
+    assert pins == {dojo.__version__}, pins

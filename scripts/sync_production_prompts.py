@@ -31,7 +31,6 @@ CATALOG = PROMPTS / "catalog.yaml"
 # Live agents whose production row is not an LLM prompt in the dojo catalog.
 DETERMINISTIC = {"reporter"}
 
-_PROV = re.compile(r"^\s*<!--.*?-->\s*", re.DOTALL)
 
 
 def _git_head(mailroom: Path) -> str:
@@ -91,7 +90,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     mailroom = args.mailroom.resolve()
     sys.path.insert(0, str(mailroom / "src"))
-    from llm.prompts import _bound_prompt_versions, prompt_templates  # noqa: E402
+    from llm.prompts import _bound_prompt_versions, prompt_templates
 
     live = prompt_templates()
     bound = _bound_prompt_versions()
