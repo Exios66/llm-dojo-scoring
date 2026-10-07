@@ -5,6 +5,13 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Changed
+
+- Re-synced the `production` classification prompts (sorter, sorter_reviewer,
+  boss, arbiter, judge, judge-classification) from llm-mailroom 6ddde73: the
+  five-class doctrine describes `merger_agreement` and `contract` without
+  naming the MAUD/CUAD evaluation corpora.
+
 ## [0.20.0] - 2026-10-07
 
 ### Changed
