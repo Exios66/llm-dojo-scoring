@@ -36,7 +36,7 @@ correctness arms.
 
 | `family` | Meaning |
 |---|---|
-| `production` (default) | Live mailroom / entity production constant. Sorter remains `sorter_v14`; contracts specialist remains `contracts_specialist_v32`. |
+| `production` (default) | Live mailroom prompt bodies, re-vendored verbatim by `scripts/sync_production_prompts.py` from a mailroom checkout (each row records `source_commit`). Sorter is `sorter_v14`. The five specialists are the frozen v1 bytes: they equal `production_prompts` (`version: v1`, `source_key: frozen_v1`). `reporter` is `kind: deterministic`. |
 | `docclass` | Latest key from entity-extraction `src/prompts_docclass.py` (`sorter_docclass_v7`, `*_specialist_docclass_v1`, `reviewer_docclass_v1`, `judge_*_docclass_v1`, `arbiter_docclass_v1`, `boss_docclass_v1`). |
 | `production_prompts` | Frozen eval-environment **v1** specialist lineage (`mailroom-dataset-v1`, frozen 2026-09-26T05:09:29+00:00). Five sha256-locked stems; not grouped with `docclass`. |
 
@@ -81,6 +81,7 @@ Field maps those stems emit (and the scorer grades) are documented in
 | `metrics_bundle` | Bundle the output is scored against |
 | `doc_bundle` | Field-map document class, if any |
 | `source_repo` / `source_key` | Provenance |
+| `source_commit` | Mailroom commit a `production` row was last synced from (else `""`) |
 | `sha256` | Freeze digest on `production_prompts` records (else `""`) |
 | `priming` | Flags for colloquial or JSON-schema collisions (see below) |
 | `notes` | Human contract for non-LLM roles |
@@ -89,6 +90,7 @@ Field maps those stems emit (and the scorer grades) are documented in
 
 | Role | `kind` | What the catalog stores |
 |---|---|---|
+| `reporter` | `deterministic` | Procedural matter-record assembler: the pipeline formats classification and extraction fields; no LLM call. The template file keeps the live procedural text for provenance; `text` stays `""`. |
 | `intake` | `deterministic` | Clerk invariants (NFC, newline unify, NBSP, zero-width, C0, hyphen unwrap, blank-run / horizontal collapse, trim). Gold is `llm_dojo_scoring.intake`. |
 | `archivist` | `procedural` | Content-addressed archive + audit hash. No system prompt. |
 | `local_vs_api` | `procedural` | Serving comparison (TTFT, throughput, utilization, identity). No system prompt. Gold is recorded timings, not a quality label. |
@@ -117,8 +119,28 @@ production would change eval numbers.
 
 | Flag | Meaning |
 |---|---|
-| `colloquial_precision` | Live contracts specialist text says “precision” in English. |
-| `colloquial_completeness` | Live contracts / judge-docclass text says “completeness” in English. |
+| `colloquial_precision` | Docclass contracts specialist text says “precision” in English (the production body is frozen v1 and no longer does). |
+| `colloquial_completeness` | Docclass contracts / judge-docclass text says “completeness” in English. |
 | `schema_valid` / `classification_correct` / `extraction_correctness` | Live judge JSON schema keys that collide with registry names. Left as output keys, not eval priming. |
 
 New dojo-authored keys stay clean (no registry ids in `text`).
+
+## Re-vendoring the `production` family
+
+```bash
+OPENROUTER_API_KEY=dummy PYTHONPATH=<mailroom>/src \
+  python scripts/sync_production_prompts.py --mailroom <mailroom>          # write
+  python scripts/sync_production_prompts.py --mailroom <mailroom> --check  # exit 1 on drift
+```
+
+The script imports mailroom's `llm.prompts.prompt_templates()`, writes every
+live body to `<agent>.production.md` verbatim behind a provenance comment, and
+updates the matching catalog rows. Agents retired in mailroom (for example
+`compliance_specialist`) keep their last vendored body and are not touched.
+
+### Not vendored
+
+`gmail_triage`, `intake` (LLM prompt) and `relations` are live mailroom agents
+with no dojo profile in `DEFAULT_PROFILES`, so they have no `production` row.
+`intake` stays catalogued as the deterministic clerk. Add a profile first if
+the dojo should score them.
