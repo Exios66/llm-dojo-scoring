@@ -30,9 +30,27 @@ COMMENT = (
 AUTHORITY = "Exios66/llm-mailroom@main:src/config/taxonomy.yaml"
 
 
+class _UniqueKeySafeLoader(yaml.SafeLoader):
+    def construct_mapping(self, node, deep=False):
+        mapping = super().construct_mapping(node, deep=deep)
+        seen = set()
+        for key_node, _ in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if key in seen:
+                raise yaml.constructor.ConstructorError(
+                    "while constructing a mapping", node.start_mark,
+                    f"found duplicate key {key!r}", key_node.start_mark,
+                )
+            seen.add(key)
+        return mapping
+
+
 def build_fixture(taxonomy_path: Path) -> dict:
     data = Path(taxonomy_path).read_bytes()
-    classes = yaml.safe_load(data)["doc_classes"]
+    taxonomy = yaml.load(data, Loader=_UniqueKeySafeLoader)
+    if not isinstance(taxonomy, dict) or "doc_classes" not in taxonomy:
+        raise ValueError("taxonomy must contain 'doc_classes' in a top-level mapping")
+    classes = taxonomy["doc_classes"]
     return {
         "_comment": COMMENT,
         "authority": AUTHORITY,
@@ -63,7 +81,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     fixture = build_fixture(args.taxonomy)
     if args.check:
-        current = json.loads(args.out.read_text())
+        current = json.loads(args.out.read_text(encoding="utf-8"))
         current.pop("captured_at", None)
         fixture.pop("captured_at")
         if current != fixture:
@@ -71,7 +89,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"fixture drift in: {', '.join(drifted)}", file=sys.stderr)
             return 1
         return 0
-    args.out.write_text(_dump(fixture))
+    args.out.write_text(_dump(fixture), encoding="utf-8")
     return 0
 
 
