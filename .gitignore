@@ -15,6 +15,7 @@ venv/
 .coverage
 htmlcov/
 .ipynb_checkpoints/
+.pytest_cache
 
 # Analysis output (generated)
 *.report.md
@@ -30,3 +31,4 @@ reports/
 .env
 *.local.yaml
 *.pyc
+build/
