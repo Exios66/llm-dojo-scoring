@@ -459,3 +459,23 @@ def test_conflicting_in_catalog_prediction_is_wrong_and_counted():
     assert out["maud_question_accuracy"] == 0.0
     assert out["n_pred_conflicts"] == 1
     assert out["maud_precision_answered"] == 0.0
+
+
+def test_single_space_fiduciary_question_parses():
+    q = "Fiduciary exception:  Board determination (no-shop)"
+    labels = parse_maud_labels(["Fiduciary exception: Board determination (no-shop): Yes"])
+    assert set(labels) == {q}
+    assert labels[q]["answer"] == "Yes"
+
+
+def test_null_mapping_entry_is_unanswered_not_invalid():
+    exp = {"No-Shop": {"answer": "Yes", "category": ""}}
+    out = score_maud_extraction(exp, {"No-Shop": None})
+    assert out["maud_clause_presence"] == 0.0
+    assert out["maud_valid_class_rate"] is None
+
+
+def test_newline_joined_spans_parse_every_question():
+    labels = parse_maud_labels(["No-Shop: Yes\nSpecific Performance: Yes"])
+    assert set(labels) == {"No-Shop", "Specific Performance"}
+    assert labels["No-Shop"]["answer"] == "Yes"

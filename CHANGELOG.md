@@ -11,6 +11,47 @@ Format based on Keep a Changelog; versioning is SemVer.
   `tests/fixtures/taxonomy_field_types.json` from llm-mailroom's
   `taxonomy.yaml`, pinning the git blob sha1 (`--check` ignores only
   `captured_at`).
+- `cuad_schema` — authoritative CUAD catalog: 41 Atticus categories (group,
+  span/yes-no answer format, CUAD description, CUAD-style and specialist
+  questions, scored-field mapping), 25 contract families + `other` with
+  salient categories and unscored family hints, `cuad_questions(family)`,
+  `render_cuad_question_block`, `cuad_json_schema` for guided decoding.
+  Import-time parity with `CUAD_CLAUSE_CATEGORIES`, the corpus subclass
+  catalog and `DEFAULT_FIELD_TYPES["contract"]`. Reference: `docs/CUAD_SCHEMA.md`.
+- `maud_schema` — authoritative MAUD catalog: 22 questions (deal-point group,
+  derived single/multi-label type, valid classes straight from
+  `MAUD_ANSWER_CLASSES`, explanation, typical sections, tailored question
+  listing every allowed answer), the five consideration subclasses,
+  `render_maud_question_block` (with a per-chunk answering duty),
+  `maud_json_schema(shape="object"|"lines")` enum grammars,
+  `parse_maud_clause` / `maud_answers_to_clauses`. Reference:
+  `docs/MAUD_SCHEMA.md`.
+- `schema_contract.contract_violations(doc_type, model)` — probes a
+  pydantic extraction model field-by-field against the dojo empty-field
+  contract (unstated scalar → `null`, list → `[]`). Catches the SAND-042
+  insurance bug (five non-nullable `str = ""` fields → schema-valid 26–34 %).
+- MAUD scorer reports `maud_precision_answered` and `n_pred_conflicts`.
+
+### Fixed
+
+- SAND-042 RCA, MAUD scoring:
+  - `maud._fold` stripped `>`, collapsing `"> 5 business days"` onto
+    `"5 business days"` on both matching-rights questions; comparators are
+    now spelled out (`"> 5"` ≡ `"Greater than 5"`).
+  - Comma-joined multi-class answers are order-insensitive sets.
+  - Chunk-merged predictions (`["No-Shop: not specified", "No-Shop: Yes"]`)
+    were scored as an ambiguous list (always wrong); `reduce_maud_prediction`
+    drops off-catalog entries and counts real in-catalog conflicts.
+  - Spans with a single space in
+    `"Fiduciary exception:  Board determination (no-shop)"` parse to the Hub key.
+  - Newline-joined span blocks parse one question per line.
+  - `{question: null}` predictions are unanswered, not present-but-invalid.
+  - GT answers that are whole catalog classes containing `" / "` (four Tail
+    Period classes) are no longer marked `gt_ambiguous`.
+- Insurance `claim_type`: a CMS table token (`pde`/`inpatient`/`outpatient`/
+  `carrier`) predicted against GT `health` scores as a match — the frozen
+  prompt directs the table token, the published merge labels all 400 CMS
+  rows `health`. The reverse direction still mismatches.
 
 ### Changed
 

@@ -821,9 +821,10 @@ def scorer_fold_collisions() -> dict[str, list[tuple[str, ...]]]:
     """Classes the scorer's punctuation-stripping fold cannot tell apart.
 
     ``{question: [(class, class, ...), ...]}`` using
-    ``llm_dojo_scoring.maud._fold``. Includes the intentional
-    ``Fundermental`` typo twins and the genuine ``'> 5 business days'`` vs
-    ``'5 business days'`` collision on the matching-rights questions.
+    ``llm_dojo_scoring.maud._fold``. Only intended equivalences remain: the
+    ``Fundermental`` typo twins and ``'> 5 business days'`` ≡ ``'Greater
+    than 5 business days'`` (the fold spells comparators out, so ``'> 5'``
+    no longer collapses onto ``'5 business days'``).
     """
     from .maud import _fold
 
