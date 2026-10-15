@@ -13,6 +13,7 @@ from typing import Any, Mapping, Sequence
 
 from . import __version__
 from .gt_metadata import is_empty_value
+from .maud import is_maud_class
 
 __all__ = [
     "SCORER_VERSION",
@@ -498,8 +499,18 @@ def detect_maud_gt_ambiguity(exp_labels: Mapping[str, Any]) -> set[str]:
             if raw.get("ambiguous") or raw.get("gt_ambiguous"):
                 ambiguous.add(question)
                 continue
-            answers = _split_collapsed_answers(raw.get("answer"))
+            answer = raw.get("answer")
+            # A whole catalog class is one answer even when it contains " / "
+            # (four Tail Period classes read "... No-Vote / MTC Failure
+            # Trigger"); splitting it made those GT rows unscorable.
+            if isinstance(answer, str) and is_maud_class(
+                question, answer, raw.get("valid_classes")
+            ):
+                continue
+            answers = _split_collapsed_answers(answer)
         elif raw is not None:
+            if isinstance(raw, str) and is_maud_class(question, raw):
+                continue
             answers = _split_collapsed_answers(raw)
         normalized = {_fold(a) for a in answers if _fold(a)}
         if len(normalized) > 1:

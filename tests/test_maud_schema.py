@@ -429,8 +429,13 @@ def test_double_space_name_is_what_the_scorer_needs():
 
 def test_scorer_fold_collisions_are_reported_not_hidden():
     collisions = scorer_fold_collisions()
+    # The genuine '5' vs '> 5 business days' collision is fixed in maud._fold;
+    # only intended equivalences ('> 5' ≡ 'Greater than 5', typo twins) remain.
+    for groups in collisions.values():
+        for group in groups:
+            assert "5 business days" not in group
     cor = collisions["Agreement provides for matching rights in connection with COR"]
-    assert ("5 business days", "> 5 business days") in cor
+    assert ("> 5 business days", "Greater than 5 business days") in cor
     assert set(collisions) <= set(MAUD_QUESTION_KEYS)
 
 

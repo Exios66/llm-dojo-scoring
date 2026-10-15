@@ -356,15 +356,32 @@ def _record_from_value(value: Any) -> dict[str, Any]:
     return {"answer": "" if value is None else str(value), "category": ""}
 
 
+#: Hub keys as whitespace-tolerant prefixes, longest first. The Hub spells
+#: "Fiduciary exception:  Board determination (no-shop)" with two spaces; a
+#: model emitting one space used to split at the first colon into an unknown
+#: "Fiduciary exception" question and lose the answer.
+_SPAN_PREFIXES: tuple[tuple[str, "re.Pattern[str]"], ...] = tuple(
+    (key, re.compile(r"\s+".join(re.escape(w) for w in key.split()) + r"\s*:", re.IGNORECASE))
+    for key in sorted(MAUD_QUESTION_KEYS, key=len, reverse=True)
+)
+
+
+def _span_lines(value: Any) -> list[Any]:
+    """Split a newline-joined block of spans into one span per line."""
+    if isinstance(value, str) and "\n" in value:
+        return [line for line in value.splitlines() if line.strip()]
+    return [value]
+
+
 def _parse_span(span: str) -> tuple[str, str] | None:
     """Split ``'<Question>: <Answer>'`` preferring the longest Hub key prefix."""
     text = str(span).strip()
     if not text:
         return None
-    for key in sorted(MAUD_QUESTION_KEYS, key=len, reverse=True):
-        prefix = key + ":"
-        if text.lower().startswith(prefix.lower()):
-            return key, text[len(prefix):].strip()
+    for key, pattern in _SPAN_PREFIXES:
+        match = pattern.match(text)
+        if match:
+            return key, text[match.end():].strip()
     if ":" in text:
         question, answer = text.split(":", 1)
         return question.strip(), answer.strip()
@@ -471,6 +488,10 @@ def parse_maud_labels(value: Any) -> dict[str, dict[str, Any]]:
             key = normalize_maud_question_key(raw_key)
             if not key:
                 continue
+            if raw_val is None:
+                # {question: null} is the object grammar's "not answered" —
+                # absent, not an invalid class. ("" stays present-but-empty.)
+                continue
             rec = _record_from_value(raw_val)
             rec["category"] = normalize_maud_category(rec["category"]) if rec["category"] else ""
             if isinstance(raw_val, dict) and (
@@ -479,9 +500,11 @@ def parse_maud_labels(value: Any) -> dict[str, dict[str, Any]]:
                 rec["gt_ambiguous"] = True
             _merge_maud_record(out, key, rec)
         return out
+    if isinstance(value, str) and "\n" in value:
+        value = _span_lines(value)
     if isinstance(value, (list, tuple)):
         out = {}
-        for item in value:
+        for item in (line for raw in value for line in _span_lines(raw)):
             if isinstance(item, dict) and ("question" in item or "key" in item):
                 key = normalize_maud_question_key(item.get("question") or item.get("key"))
                 rec = _record_from_value(item)
