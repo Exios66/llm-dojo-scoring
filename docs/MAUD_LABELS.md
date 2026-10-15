@@ -20,6 +20,7 @@ Scoring must interpret model output against those labels — never against
 - Offline mirror: `tests/fixtures/maud_valid_classes.json` (per-question
   union classes, answered rows, distinct-set counts).
 - Generated module: `llm_dojo_scoring/maud.py`.
+- Question meanings, allowed answers, JSON Schema grammar and prompt block built on this catalog: [`MAUD_SCHEMA.md`](MAUD_SCHEMA.md).
 
 ## Per-document-type dict
 

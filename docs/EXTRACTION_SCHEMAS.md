@@ -172,6 +172,8 @@ Superior Offer Definition; Tail Period & Acquisition Proposal Details;
 Type of Consideration.
 
 Answers must be the row's Hub `valid_classes` ([`MAUD_LABELS.md`](MAUD_LABELS.md)).
+Per-question allowed answers, deal-point groups, the guided-decoding JSON Schema and the
+subclass table: [`MAUD_SCHEMA.md`](MAUD_SCHEMA.md) (`llm_dojo_scoring.maud_schema`).
 Ambiguous collapsed GT is `unscorable` on those keys, not a guessed match.
 
 **GT extras:** `expected_subclass`, `maud_clause_labels`. MAUD-only rows
