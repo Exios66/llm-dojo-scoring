@@ -236,8 +236,10 @@ def test_score_task_pipeline_fills_f1_macro():
 
 
 def test_headline_metrics_specialists_include_extraction_f1():
+    """Every extraction specialist's headline metrics include ``extraction_overall_score``."""
     for agent in (
         "contracts_specialist",
+        "merger_agreement_specialist",
         "corporate_records_specialist",
         "correspondence_specialist",
         "compliance_specialist",

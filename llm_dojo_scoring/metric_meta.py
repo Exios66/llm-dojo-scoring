@@ -58,8 +58,10 @@ _CLS_SKIP = (
 
 _EXTRACT_SKIP = (
     "Skipped when expected is empty/null (no events). Empty GT field values "
-    "are not FN. ERROR_PREFIX predictions are dropped by the suite. "
-    "entity_list F1 is None when the document has no list fields."
+    "are not FN; correctly-empty pairs credit 1.0 on the empty-field contract "
+    "(#20) and never enter archive overall_score. ERROR_PREFIX predictions "
+    "are dropped by the suite. entity_list F1 is None when the document has "
+    "no list fields."
 )
 
 _SUBCLASS = (
@@ -156,8 +158,8 @@ METRIC_META: dict[str, dict[str, str]] = {
         "required",
     ),
     "aligned_accuracy": _m(
-        "HF pipeline aligned doc-type accuracy; merger_agreement ≡ contract "
-        "(mailroom.score_aligned_classification).",
+        "HF pipeline aligned doc-type accuracy; extract aliases only "
+        "(mailroom.score_aligned_classification). merger_agreement ≠ contract.",
         "Requires paired predicted/expected doc types. Empty sequences skipped.",
         "required",
     ),
@@ -289,9 +291,11 @@ METRIC_META: dict[str, dict[str, str]] = {
         "required",
     ),
     "maud_question_accuracy": _m(
-        "MAUD per-question micro exact-answer accuracy over the 22 Hub keys "
-        "(content_scoring.score_maud_extraction).",
-        "None when no MAUD questions are present on the row.",
+        "MAUD per-question micro exact-answer accuracy over clean keys "
+        "(content_scoring.score_maud_extraction). Collapsed multi-answer GT "
+        "is gt_ambiguous / unscorable and excluded from the micro average.",
+        "None when no scorable MAUD questions remain (empty map or all keys "
+        "gt_ambiguous). n_ambiguous is always surfaced.",
         "required",
     ),
     "maud_question_macro_accuracy": _m(
@@ -484,7 +488,29 @@ METRIC_META: dict[str, dict[str, str]] = {
         "none",
     ),
     # ----- T1 emitter-only mailroom aliases -----
-    "schema_valid": dict(_EMITTER),
+    "schema_valid": {
+        "citation": "v0.18 fail-closed format layer — JSON/schema parse before field scoring.",
+        "inclusion": "Every specialist score() with structured output; headline dashboards.",
+        "ground_truth": "structural",
+    },
+    "parse_ok": {
+        "citation": "v0.18 format vs extraction split — parse success without field match.",
+        "inclusion": "Emitted alongside schema_valid on every extraction scorecard.",
+        "ground_truth": "structural",
+    },
+    "schema_adherence": {
+        "citation": "Required-key coverage after parse (scorecard_honesty.score_format_layer).",
+        "inclusion": "T1 diagnostic when schema_valid < 1.0.",
+        "ground_truth": "structural",
+    },
+    "confidence_calibration_error": {
+        "citation": (
+            "|confidence − correctness| (trace_knobs.confidence_calibration_error). "
+            "Raw confidence is a captured experiment knob, never overall_score."
+        ),
+        "inclusion": "When capture_confidence and compute_calibration_error are on and both values are in [0, 1].",
+        "ground_truth": "none",
+    },
     "parse_error": dict(_EMITTER),
     "success_rate": dict(_EMITTER),
     "completeness": dict(_EMITTER),

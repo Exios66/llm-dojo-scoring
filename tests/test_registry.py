@@ -161,7 +161,6 @@ _ALLOWED_GT = {"required", "optional", "structural", "none"}
 
 # Mailroom aliases this package does not compute (source stays null).
 _EMITTER_ONLY = {
-    "schema_valid",
     "parse_error",
     "success_rate",
     "completeness",

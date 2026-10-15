@@ -1,10 +1,40 @@
 """Shared fixtures: a synthetic sorter results frame mirroring the
 Sorter_Experiment_Results.xlsx schema, plus export round-trip helpers."""
 
+import importlib.util
+import sys
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
+# ``scripts/`` helpers are repo-root modules, not installed with the
+# package; plain ``pytest`` does not add the cwd to sys.path the way
+# ``python -m pytest`` does. Make both entry points work.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from llm_dojo_scoring.config import PER_SUBTYPE
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_script(name: str):
+    """Load ``<repo>/scripts/<name>.py`` by path.
+
+    A co-installed llm-mailroom puts its own ``scripts`` package on
+    ``sys.path``, so ``from scripts import <name>`` can resolve to the wrong
+    package; loading by file path cannot.
+    """
+    module_name = f"dojo_scripts_{name}"
+    if module_name in sys.modules:
+        return sys.modules[module_name]
+    spec = importlib.util.spec_from_file_location(
+        module_name, _REPO_ROOT / "scripts" / f"{name}.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
 
 METRIC = "Subtype Accuracy"
 

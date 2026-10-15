@@ -51,8 +51,8 @@ __all__ = [
 ]
 
 #: The canonical document classes, in mailroom taxonomy order (the sorter's
-#: 7 labels) plus ``merger_agreement`` — the MAUD-grounded contract subtype
-#: scored as its own final-output class per KANBAN-067.
+#: 7 labels) plus ``merger_agreement`` — the MAUD-grounded class scored
+#: as ``MergerAgreementExtraction`` (mailroom-issues #237 / #238).
 DOC_TYPES: tuple[str, ...] = (
     "contract",
     "corporate_record",
@@ -130,17 +130,15 @@ DOC_TYPE_BUNDLES: dict[str, Bundle] = {
             "Merger agreements — MAUD-grounded (EDA: "
             "Exios66/atticus-investigation). Per-question extraction over "
             "the 22 Hub maud_clause_labels keys (exact / valid-class / "
-            "presence) plus the shared ContractExtraction field map and "
-            "MAUD consideration subclass catalog.",
+            "presence) plus MergerAgreementExtraction (effective_time, "
+            "intent, subject_matter, keywords; no cuad_family / "
+            "cuad_clauses).",
             _EXTRACTION_BASE,
             {
-                "contracts_specialist": (
-                    "jaccard_similarity",
-                    "laziness_rate",
-                    "hallucination_rate",
-                    "extraction_category_presence",
+                "merger_agreement_specialist": (
                     "date_mae_days",
-                    "money_mae_usd",
+                    "per_field_scores",
+                    "hallucination_rate",
                     "maud_question_accuracy",
                     "maud_question_macro_accuracy",
                     "maud_clause_presence",

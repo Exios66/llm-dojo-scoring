@@ -4,6 +4,48 @@ composite score_extraction (ported behavior)."""
 import pytest
 
 from llm_dojo_scoring import field_scoring as fs
+from llm_dojo_scoring.gt_metadata import ANNOTATION_KEYS
+
+
+@pytest.mark.parametrize("key", sorted(ANNOTATION_KEYS))
+def test_annotations_never_score_or_enter_factuality_audit_even_with_explicit_map(key):
+    result = fs.score_extraction(
+        doc_class="insurance_claim",
+        expected={"claim_number": "CLM-1", key: "expected annotation"},
+        predicted={"claim_number": "CLM-1", key: "different annotation"},
+        field_types={"claim_number": "id", key: "free_text"},
+        doc_text="Claim CLM-1 was received.",
+    )
+    assert result.field_scores == {"claim_number": 1.0}
+    assert result.overall_score == 1.0
+    assert key not in result.entity_list_audit
+    assert "claim_number" in result.entity_list_audit
+
+
+@pytest.mark.parametrize("empty", ["[]", "{}", " N/A ", "null"])
+def test_empty_serialized_prediction_does_not_enter_factuality_audit(empty):
+    result = fs.score_extraction(
+        doc_class="insurance_claim",
+        expected={"claim_number": "CLM-1"},
+        predicted={"claim_number": "CLM-1", "denial_reasons": empty},
+        field_types={"claim_number": "id", "denial_reasons": "entity_list:free_text"},
+        doc_text="Claim CLM-1 was received.",
+    )
+    assert result.overall_score == 1.0
+    assert set(result.entity_list_audit) == {"claim_number"}
+
+
+def test_stringified_entity_lists_match_native_lists_without_mutating_records():
+    expected = {"reference_ids": '["A-1", "B-2"]'}
+    predicted = {"reference_ids": '["B-2", "A-1"]'}
+    result = fs.score_extraction(
+        "contract", {"reference_ids": "entity_list:id"}, predicted, expected,
+    )
+    assert result.field_scores == {"reference_ids": 1.0}
+    assert result.entity_list_scores["reference_ids"].precision == 1.0
+    assert result.entity_list_scores["reference_ids"].recall == 1.0
+    assert expected == {"reference_ids": '["A-1", "B-2"]'}
+    assert predicted == {"reference_ids": '["B-2", "A-1"]'}
 
 
 # ---------------------------------------------------------------------------
@@ -335,6 +377,32 @@ def test_score_extraction_entity_list_scores_and_audit():
     assert result.entity_list_scores["parties"].score == 1.0
     assert "key_obligations" in result.entity_list_audit
     assert result.entity_list_audit["key_obligations"]["true_items"] == 1
+
+
+def test_score_extraction_skips_confidence_reasoning_and_empty_lists():
+    """``confidence`` / ``reasoning`` and matching empty lists never score as fields."""
+    result = fs.score_extraction(
+        "contract",
+        FIELD_TYPES,
+        {
+            "document_name": "MSA",
+            "parties": [],
+            "confidence": 0.99,
+            "reasoning": {"summary": "trace"},
+        },
+        {
+            "document_name": "MSA",
+            "parties": [],
+            "confidence": 0.5,
+            "reasoning": {"summary": "other"},
+        },
+    )
+    assert "confidence" not in result.field_scores
+    assert "reasoning" not in result.field_scores
+    assert "parties" not in result.field_scores
+    assert result.overall_score == 1.0
+    assert result.trace["confidence"] == 0.99
+    assert result.trace["reasoning"]["summary"] == "trace"
 
 
 def test_score_extraction_to_dict_serializable():

@@ -31,44 +31,56 @@ from llm_dojo_scoring.tasks import score_task
 
 
 def test_live_roster_is_five_specialists():
+    """The live doc-type / specialist roster is the five live classes, merger included."""
     assert LIVE_DOC_TYPES == (
         "contract",
+        "merger_agreement",
         "corporate_record",
         "correspondence",
-        "compliance_filing",
         "insurance_claim",
     )
     assert set(LIVE_SPECIALISTS) == set(LIVE_SPECIALIST_AGENTS)
     assert len(LIVE_SPECIALISTS) == 5
-    assert set(RETIRED_DOC_TYPES) == {"court_opinion", "due_diligence"}
+    assert set(RETIRED_DOC_TYPES) == {
+        "court_opinion",
+        "due_diligence",
+        "compliance_filing",
+    }
     assert UNKNOWN_DOC_TYPE in SORTER_LABEL_SET
     assert "merger_agreement" in SORTER_LABEL_SET
-    assert "merger_agreement" not in LIVE_DOC_TYPES
+    assert "merger_agreement" in LIVE_DOC_TYPES
+    assert "compliance_filing" not in LIVE_DOC_TYPES
 
 
 def test_extract_alias_and_retired_never_extract():
-    assert EXTRACT_CLASS_ALIASES["merger_agreement"] == "contract"
-    assert resolve_extract_class("merger_agreement") == "contract"
+    """There are no extract-class aliases; retired classes never resolve to an extract class."""
+    assert EXTRACT_CLASS_ALIASES == {}
+    assert "merger_agreement" not in EXTRACT_CLASS_ALIASES
+    assert resolve_extract_class("merger_agreement") == "merger_agreement"
     assert resolve_extract_class("contract") == "contract"
     assert resolve_extract_class("unknown") is None
     assert resolve_extract_class("court_opinion") is None
     assert resolve_extract_class("due_diligence") is None
+    assert resolve_extract_class("compliance_filing") is None
     assert is_live_extract_class("insurance_claim")
+    assert is_live_extract_class("merger_agreement")
     assert not is_live_extract_class("court_opinion")
+    assert not is_live_extract_class("compliance_filing")
 
 
-def test_aligned_accuracy_merger_equals_contract():
+def test_aligned_accuracy_merger_is_not_contract():
+    """Aligned classification accuracy does not treat merger_agreement as contract."""
     expected = ["contract", "merger_agreement", "insurance_claim"]
     predicted = ["contract", "contract", "correspondence"]
     out = score_aligned_classification(expected, predicted)
     assert out["n"] == 3
     assert out["exact_accuracy"] == pytest.approx(1 / 3, abs=1e-3)
-    assert out["aligned_accuracy"] == pytest.approx(2 / 3, abs=1e-3)
-    assert align_doc_type("merger_agreement") == "contract"
+    assert out["aligned_accuracy"] == pytest.approx(1 / 3, abs=1e-3)
+    assert align_doc_type("merger_agreement") == "merger_agreement"
 
     task = score_task("pipeline", expected, predicted)
     assert task["kind"] == "pipeline"
-    assert task["aligned_accuracy"] == pytest.approx(2 / 3, abs=1e-3)
+    assert task["aligned_accuracy"] == pytest.approx(1 / 3, abs=1e-3)
 
 
 def test_observation_types_match_mailroom_map():
@@ -105,12 +117,16 @@ def test_langfuse_score_transport_alias():
 
 
 def test_retired_suites_flagged_live_filter():
+    """Retired specialists are flagged ``retired`` and excluded from the live-only filter."""
     assert get_suite("court_opinions_specialist").retired is True
     assert get_suite("due_diligence_specialist").retired is True
+    assert get_suite("compliance_specialist").retired is True
     assert get_suite("contracts_specialist").retired is False
+    assert get_suite("merger_agreement_specialist").retired is False
     live_extract = list_suites(kind="extraction", live_only=True)
     assert set(live_extract) == set(LIVE_SPECIALISTS)
     assert "court_opinions_specialist" not in live_extract
+    assert "compliance_specialist" not in live_extract
     assert "court_opinions_specialist" in list_suites(kind="extraction")
 
 

@@ -1,104 +1,15 @@
-# Scoring (v0.16.0)
+# Scoring
 
-Canonical scoring reference for `llm-dojo-scoring`. The metric **source of truth**
-is [`llm_dojo_scoring/registry.py`](../llm_dojo_scoring/registry.py) `DEFAULT_METRICS_YAML`
-plus citation / inclusion / ground-truth metadata on each T0/T1 `MetricDef`.
-This document does not invent KPIs and does not change formulas shipped in v0.10.0.
+- Live extraction schemas (five mailroom-dataset classes): [`EXTRACTION_SCHEMAS.md`](EXTRACTION_SCHEMAS.md)
+- Archive / unified scoring block: [`ARCHIVE_SCORING.md`](ARCHIVE_SCORING.md)
+- MAUD GT, format vs extraction, completion and cost: [`SCORECARD_HONESTY.md`](SCORECARD_HONESTY.md)
+- Metric identity: [`METRIC_IDS.md`](METRIC_IDS.md)
+- Controlled `intent` labels (`label` field type): `llm_dojo_scoring/intents.py`
 
-Related: [PROMPTS.md](PROMPTS.md) (importable prompt catalog), [MIGRATION.md](MIGRATION.md).
+## Field types
 
-Tiers:
-
-- **T0 HEADLINE** — `headline_metrics(agent)`: bundle ∩ T0. Board view.
-- **T1 CORE** — `dashboard_metrics(agent)` adds the rest of the bundle at T0+T1.
-- **T2 / T3** — opt-in exploration / logs. Not tabulated here.
-
-These T0 lists are **not** the README `score_task` “headline” column (that surface is
-task-kind specific: sorter exact, ContractEval F2, etc.).
-
-## Per-agent T0 / T1
-
-| Agent | Bundle | T0 (`headline_metrics`) | T1 extras on the dashboard (`dashboard_metrics` − T0) |
-|---|---|---|---|
-| `sorter` | `classification` | `accuracy`, `f1_macro` | `classification_correct`, `precision`, `recall`, `f2`, `precision_macro`, `recall_macro`, `f2_macro`, `false_positive_rate`, `false_negative_rate`, `exact_accuracy`, `aligned_accuracy`, `subclass_accuracy`, `subclass_f1_macro`, `subclass_precision_macro`, `subclass_recall_macro`, `subclass_f2_macro`, `estimated_cost_usd`, `cost_per_document`, `schema_valid`, `parse_error`, `success_rate` |
-| `contracts_specialist` | `extraction` | `extraction_overall_score`, `extraction_f1`, `extraction_f2` | `extraction_precision`, `extraction_recall`, `field_presence`, `entity_list_precision`, `entity_list_recall`, `entity_list_f1`, `verified_precision`, `completeness`, `schema_valid`, `parse_error`, `success_rate`, `estimated_cost_usd`, `cost_per_document`, `jaccard_similarity`, `laziness_rate`, `date_mae_days`, `money_mae_usd` |
-| `corporate_records_specialist` | `extraction` | `extraction_overall_score`, `extraction_f1`, `extraction_f2` | `extraction_precision`, `extraction_recall`, `field_presence`, `entity_list_precision`, `entity_list_recall`, `entity_list_f1`, `verified_precision`, `completeness`, `schema_valid`, `parse_error`, `success_rate`, `estimated_cost_usd`, `cost_per_document`, `date_mae_days` |
-| `due_diligence_specialist` | `extraction` | `extraction_overall_score`, `extraction_f1`, `extraction_f2` | `extraction_precision`, `extraction_recall`, `field_presence`, `entity_list_precision`, `entity_list_recall`, `entity_list_f1`, `verified_precision`, `completeness`, `schema_valid`, `parse_error`, `success_rate`, `estimated_cost_usd`, `cost_per_document`, `date_mae_days` |
-| `correspondence_specialist` | `extraction` | `extraction_overall_score`, `extraction_f1`, `extraction_f2`, `content_topic_f1_macro` | `extraction_precision`, `extraction_recall`, `field_presence`, `entity_list_precision`, `entity_list_recall`, `entity_list_f1`, `verified_precision`, `completeness`, `schema_valid`, `parse_error`, `success_rate`, `estimated_cost_usd`, `cost_per_document`, `date_mae_days`, `money_mae_usd`, `content_topic_accuracy`, `sentiment_accuracy`, `sentiment_f1_macro` |
-| `compliance_specialist` | `extraction` | `extraction_overall_score`, `extraction_f1`, `extraction_f2` | `extraction_precision`, `extraction_recall`, `field_presence`, `entity_list_precision`, `entity_list_recall`, `entity_list_f1`, `verified_precision`, `completeness`, `schema_valid`, `parse_error`, `success_rate`, `estimated_cost_usd`, `cost_per_document`, `date_mae_days` |
-| `court_opinions_specialist` | `extraction` | `extraction_overall_score`, `extraction_f1`, `extraction_f2` | `extraction_precision`, `extraction_recall`, `field_presence`, `entity_list_precision`, `entity_list_recall`, `entity_list_f1`, `verified_precision`, `completeness`, `schema_valid`, `parse_error`, `success_rate`, `estimated_cost_usd`, `cost_per_document`, `legalbench_accuracy`, `legalbench_macro_f1`, `date_mae_days` |
-| `insurance_claims_specialist` | `extraction` | `extraction_overall_score`, `extraction_f1`, `extraction_f2` | `extraction_precision`, `extraction_recall`, `field_presence`, `entity_list_precision`, `entity_list_recall`, `entity_list_f1`, `verified_precision`, `completeness`, `schema_valid`, `parse_error`, `success_rate`, `estimated_cost_usd`, `cost_per_document`, `date_mae_days`, `money_mae_usd`, `determination_consistency`, `amount_exactness` |
-| `reporter` | `reporter` | `accuracy`, `f1_macro`, `extraction_overall_score` | `success_rate`, `cost_per_document` |
-| `judge` | `classification` | `accuracy`, `f1_macro` | `classification_correct`, `precision`, `recall`, `f2`, `precision_macro`, `recall_macro`, `f2_macro`, `false_positive_rate`, `false_negative_rate`, `exact_accuracy`, `aligned_accuracy`, `subclass_accuracy`, `subclass_f1_macro`, `subclass_precision_macro`, `subclass_recall_macro`, `subclass_f2_macro`, `estimated_cost_usd`, `cost_per_document`, `schema_valid`, `parse_error`, `success_rate` |
-| `boss` | `reporter` | `accuracy`, `f1_macro`, `extraction_overall_score` | `success_rate`, `cost_per_document` |
-| `pdf_transcriber` | `transcription` | `accuracy`, `f1_macro` | `wer`, `cer`, `word_accuracy` |
-| `image_extractor` | `transcription` | `accuracy`, `f1_macro` | `wer`, `cer`, `word_accuracy` |
-| `archivist` | `cost` | — | `estimated_cost_usd`, `cost_per_document` |
-| `intake` | `intake` | `accuracy`, `f1_macro` | `intake_prep_completeness`, `intake_changed_rate`, `intake_messy_rate`, `success_rate`, `cost_per_document` |
-| `audit_agent` | `audit` | — | `audit_disagreement_rate`, `audit_resolution_rate`, `verified_precision`, `cost_per_document` |
-| `sorter_reviewer` | `classification` | `accuracy`, `f1_macro` | `classification_correct`, `precision`, `recall`, `f2`, `precision_macro`, `recall_macro`, `f2_macro`, `false_positive_rate`, `false_negative_rate`, `exact_accuracy`, `aligned_accuracy`, `subclass_accuracy`, `subclass_f1_macro`, `subclass_precision_macro`, `subclass_recall_macro`, `subclass_f2_macro`, `estimated_cost_usd`, `cost_per_document`, `schema_valid`, `parse_error`, `success_rate` |
-| `contract_auditor` | `audit` | — | `audit_disagreement_rate`, `audit_resolution_rate`, `verified_precision`, `cost_per_document` |
-| `corporate_records_auditor` | `audit` | — | `audit_disagreement_rate`, `audit_resolution_rate`, `verified_precision`, `cost_per_document` |
-| `due_diligence_auditor` | `audit` | — | `audit_disagreement_rate`, `audit_resolution_rate`, `verified_precision`, `cost_per_document` |
-| `correspondence_auditor` | `audit` | — | `audit_disagreement_rate`, `audit_resolution_rate`, `verified_precision`, `cost_per_document` |
-| `compliance_auditor` | `audit` | — | `audit_disagreement_rate`, `audit_resolution_rate`, `verified_precision`, `cost_per_document` |
-| `court_opinions_auditor` | `audit` | — | `audit_disagreement_rate`, `audit_resolution_rate`, `verified_precision`, `cost_per_document` |
-| `insurance_claims_auditor` | `audit` | — | `audit_disagreement_rate`, `audit_resolution_rate`, `verified_precision`, `cost_per_document` |
-| `arbiter` | `audit` | — | `audit_disagreement_rate`, `audit_resolution_rate`, `verified_precision`, `cost_per_document` |
-| `local_vs_api` | `serving` | `ttft_seconds`, `tokens_per_second` | `tpot_seconds`, `e2e_latency_seconds`, `ttft_p50`, `ttft_p95`, `e2e_p50`, `e2e_p95`, `output_tokens_per_second`, `prompt_tokens_per_second`, `requests_per_second`, `docs_per_second`, `gpu_utilization`, `kv_cache_utilization`, `gpu_memory_used_gb`, `queue_time_seconds`, `error_rate`, `prompt_tokens`, `completion_tokens`, `estimated_cost_usd`, `cost_per_document` |
-
-Notes:
-
-- Live specialists share T0 `extraction_overall_score` + `extraction_f1` + `extraction_f2`.
-  Correspondence **also** has T0 `content_topic_f1_macro` (Enron topic imbalance).
-- Sorter / reviewer / judge T0 is `accuracy` + `f1_macro`.
-- Audit profiles have **no T0** names in the audit bundle; the dashboard is T1
-  `audit_disagreement_rate` / `audit_resolution_rate`.
-- Archivist is cost-only (procedural store). Intake T0 still lists `accuracy` /
-  `f1_macro` because those names sit on the intake bundle; the clerk contract
-  itself is `intake_prep_completeness` (structural, T1).
-- `field_presence` appears on extraction dashboards but **is not emitted** by
-  `score_extraction` — see the metric catalog.
-- `local_vs_api` T0 is TTFT + tokens/s. GPU / KV / VRAM are T1 and local-only.
-  Serving names do not apply to sorter or specialists.
-
-## Extraction confusion model
-
-Implemented in `extraction_metrics.extraction_binary_metrics`. Additive on top of
-the soft mean from `field_scoring.score_extraction` (`extraction_overall_score`).
-
-- Each **expected** field with a non-empty ground-truth value is one event.
-- **TP**: that field's typed score is `>= 1.0` (exact, or list F1 of 1.0).
-- **FN**: expected field scored `< 1.0`. Partial list matches are **not** TP;
-  they stay in `extraction_overall_score`.
-- **FP**: predicted extra keys not in expected, **or** unmatched predicted items
-  on an `entity_list` field (`EntityListScore.unmatched_predicted`).
-- Then `P = TP/(TP+FP)`, `R = TP/(TP+FN)`, `F1 = 2PR/(P+R)`, `F2 = 5PR/(4P+R)`
-  (van Rijsbergen β=2). Empty/null GT fields are skipped, not FN.
-
-Typed field scores (the soft mean) use:
-
-- `id` — normalize then exact.
-- `date` — parse to ISO, exact with containment / partial-credit fallbacks.
-- `money` — one-cent tolerance after currency parse.
-- `name` — Jaro–Winkler + token-set ratio, containment first.
-- `free_text` — SQuAD token-F1 over token multisets.
-- `entity_list` — Hungarian bipartite match (scipy `linear_sum_assignment`),
-  then P/R/F1 on the matched set.
-
-## Field maps (`DEFAULT_FIELD_TYPES`)
-
-Copied from `llm_dojo_scoring.suites.DEFAULT_FIELD_TYPES` — mailroom v0.6.0
-`config/taxonomy.yaml` / `EXTRACTION_SCHEMAS` mirror (pared checklists +
-semantic trio). Open-ended `key_obligations` / `termination_clauses` /
-`key_provisions` / long `key_points` are **not** on the live board; use
-`LEGACY_FULL_EXTRACTION_FIELD_TYPES` (or `field_types=`) only for historical
-free-text dumps. Override with `field_types=` on `suite.score()`.
-
-### `contract` (11 fields)
-
-| Field | Type |
-|---|---|
+| Type | Match rule |
+| --- | --- |
 | `document_name` | `name` |
 | `parties` | `entity_list:name` |
 | `effective_date` | `date` |
@@ -114,7 +25,7 @@ free-text dumps. Override with `field_types=` on `suite.score()`.
 ### `corporate_record` (9 fields)
 
 | Field | Type |
-|---|---|
+| --- | --- |
 | `entity_name` | `name` |
 | `record_type` | `name` |
 | `effective_date` | `date` |
@@ -128,7 +39,7 @@ free-text dumps. Override with `field_types=` on `suite.score()`.
 ### `due_diligence` (7 fields)
 
 | Field | Type |
-|---|---|
+| --- | --- |
 | `target_entity` | `name` |
 | `diligence_type` | `name` |
 | `material_findings` | `entity_list:free_text` |
@@ -140,7 +51,7 @@ free-text dumps. Override with `field_types=` on `suite.score()`.
 ### `correspondence` (11 fields)
 
 | Field | Type |
-|---|---|
+| --- | --- |
 | `sender` | `name` |
 | `recipient` | `name` |
 | `additional_recipients` | `entity_list` |
@@ -156,7 +67,7 @@ free-text dumps. Override with `field_types=` on `suite.score()`.
 ### `compliance_filing` (8 fields)
 
 | Field | Type |
-|---|---|
+| --- | --- |
 | `filing_type` | `name` |
 | `regulatory_body` | `name` |
 | `filing_date` | `date` |
@@ -169,7 +80,7 @@ free-text dumps. Override with `field_types=` on `suite.score()`.
 ### `court_opinion` (11 fields)
 
 | Field | Type |
-|---|---|
+| --- | --- |
 | `case_name` | `name` |
 | `court` | `name` |
 | `date_decided` | `date` |
@@ -185,7 +96,7 @@ free-text dumps. Override with `field_types=` on `suite.score()`.
 ### `insurance_claim` (17 fields)
 
 | Field | Type |
-|---|---|
+| --- | --- |
 | `claim_number` | `id` |
 | `policy_number` | `id` |
 | `insurer` | `name` |
@@ -207,7 +118,7 @@ free-text dumps. Override with `field_types=` on `suite.score()`.
 ### `merger_agreement` (11 fields)
 
 | Field | Type |
-|---|---|
+| --- | --- |
 | `document_name` | `name` |
 | `parties` | `entity_list:name` |
 | `effective_date` | `date` |
@@ -1219,5 +1130,3 @@ Sum of completion/output tokens over observations
 - **units:** `count` · **aggregation:** `sum`
 - **citation:** Sum of completion/output tokens over observations (OpenAI usage.completion_tokens).
 - **inclusion:** None when no observation recorded completion tokens.
-
-

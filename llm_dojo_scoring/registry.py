@@ -66,6 +66,7 @@ __all__ = [
 # All specialists the registry still scores (live + retired historical).
 SPECIALIST_AGENTS: tuple[str, ...] = (
     "contracts_specialist",
+    "merger_agreement_specialist",
     "corporate_records_specialist",
     "due_diligence_specialist",
     "correspondence_specialist",
@@ -73,13 +74,14 @@ SPECIALIST_AGENTS: tuple[str, ...] = (
     "court_opinions_specialist",
     "insurance_claims_specialist",
 )
-#: Live llm-mailroom extraction roster (v0.5+). Retired specialists stay
-#: in SPECIALIST_AGENTS so historical traces still validate.
+#: Live llm-mailroom extraction roster (mailroom-issues #236–#238).
+#: Retired specialists stay in SPECIALIST_AGENTS so historical traces
+#: still validate.
 LIVE_SPECIALIST_AGENTS: tuple[str, ...] = (
     "contracts_specialist",
+    "merger_agreement_specialist",
     "corporate_records_specialist",
     "correspondence_specialist",
-    "compliance_specialist",
     "insurance_claims_specialist",
 )
 
@@ -489,11 +491,22 @@ metrics:
     notes: "mailroom alias: extraction_overall_verified_precision"
   schema_valid:
     tier: 1
-    description: "Output parsed to the expected schema (quick health check — promoted per pruning plan)"
+    description: "Output parsed to the expected schema (T1 headline gate — v0.18)"
     applicable_agents: [ALL]
-    notes: "mailroom SCORE_CONFIGS name preserved; not computed in this package"
-    source: null
-    ground_truth: none
+    source: "scorecard_honesty.score_format_layer"
+    ground_truth: structural
+  parse_ok:
+    tier: 1
+    description: "Prediction parsed as JSON / structured output without prose wrapper"
+    applicable_agents: [ALL]
+    source: "scorecard_honesty.score_format_layer"
+    ground_truth: structural
+  schema_adherence:
+    tier: 1
+    description: "Required schema keys present after parse (alias of schema_valid when keys match)"
+    applicable_agents: [ALL]
+    source: "scorecard_honesty.score_format_layer"
+    ground_truth: structural
   parse_error:
     tier: 1
     description: "Output failed to parse (quick health check — promoted per pruning plan)"
@@ -572,7 +585,7 @@ metrics:
     source: "mailroom.score_aligned_classification"
   aligned_accuracy:
     tier: 1
-    description: "HF pipeline aligned doc-type accuracy (merger_agreement ≡ contract)"
+    description: "HF pipeline aligned doc-type accuracy (extract aliases only; merger_agreement ≠ contract)"
     applicable_agents: [CLASSIFIERS]
     source: "mailroom.score_aligned_classification"
   subclass_accuracy:
@@ -997,6 +1010,7 @@ metrics:
     tier: 2
     description: "|confidence - correctness| calibration gap"
     applicable_agents: [ALL]
+    source: "trace_knobs.confidence_calibration_error"
     notes: "absorbs mailroom classification_confidence + extraction_confidence (raw confidences stay at T3 as inputs)"
   hallucination_rate:
     tier: 2
