@@ -20,6 +20,7 @@ __all__ = [
     "PROVENANCE_KEYS",
     "COST_BASIS_VALUES",
     "IncomparableMetricsError",
+    "UnknownMetricNameError",
     "ProvenanceExportError",
     "metric_id_for",
     "metric_ids_for_class",
@@ -32,6 +33,8 @@ __all__ = [
     "score_format_layer",
     "check_schema_promotion_gate",
     "DEFAULT_INSURANCE_SCHEMA_GATE",
+    "DEFAULT_SCHEMA_GATE",
+    "SCHEMA_PROMOTION_GATES",
     "classify_extraction_failure",
     "detect_maud_gt_ambiguity",
     "score_empty_field_contract",
@@ -126,7 +129,20 @@ _CLASS_METRIC_IDS: dict[str, tuple[str, ...]] = {
     ),
 }
 
-DEFAULT_INSURANCE_SCHEMA_GATE = 0.90
+#: Default ``schema_valid`` share a run must reach before promotion (#18).
+DEFAULT_SCHEMA_GATE = 0.90
+#: Kept for v0.18 callers; the gate is no longer insurance-only.
+DEFAULT_INSURANCE_SCHEMA_GATE = DEFAULT_SCHEMA_GATE
+
+#: Per-class promotion thresholds — every live extract class is gated (#18).
+#: Override a class here (or pass ``threshold=``) rather than skipping it.
+SCHEMA_PROMOTION_GATES: dict[str, float] = {
+    "contract": DEFAULT_SCHEMA_GATE,
+    "merger_agreement": DEFAULT_SCHEMA_GATE,
+    "corporate_record": DEFAULT_SCHEMA_GATE,
+    "correspondence": DEFAULT_SCHEMA_GATE,
+    "insurance_claim": DEFAULT_SCHEMA_GATE,
+}
 
 _TRIAGE_GT_KEYS: frozenset[str] = frozenset(
     {
@@ -146,6 +162,13 @@ _JSON_PROSE = re.compile(r"^\s*[\{\[]", re.MULTILINE)
 
 class IncomparableMetricsError(ValueError):
     """Raised when two score legs use different metric_id values."""
+
+
+class UnknownMetricNameError(KeyError):
+    """Raised when a metric name has no canonical ``metric_id`` (#17)."""
+
+    def __str__(self) -> str:  # KeyError repr-quotes its message by default
+        return str(self.args[0]) if self.args else ""
 
 
 class ProvenanceExportError(ValueError):
@@ -168,16 +191,25 @@ def metric_id_for(
     doc_class: str | None = None,
     presence_mode: bool = False,
 ) -> str:
+    """Canonical ``metric_id`` for a registry metric name (#17).
+
+    Strict: a name with no entry in the canonical table raises
+    :class:`UnknownMetricNameError` rather than fabricating
+    ``pipeline.<class>.<name>`` — a made-up id never matches another leg's,
+    so it would hide an incomparable pair instead of refusing it.
+    ``doc_class`` is accepted for call-site symmetry; the id does not depend
+    on it. See ``docs/METRIC_IDS.md``.
+    """
     if presence_mode or metric_name == "extraction_category_presence":
         return "cuad.clause_presence.micro_f1"
-    if metric_name.startswith("maud_"):
-        return _METRIC_ID_BY_NAME.get(metric_name, f"maud.{metric_name.removeprefix('maud_')}")
-    mid = _METRIC_ID_BY_NAME.get(metric_name)
-    if mid:
-        return mid
-    if doc_class:
-        return f"pipeline.{doc_class}.{metric_name}"
-    return f"pipeline.{metric_name}"
+    try:
+        return _METRIC_ID_BY_NAME[metric_name]
+    except KeyError:
+        raise UnknownMetricNameError(
+            f"no canonical metric_id for {metric_name!r}"
+            + (f" (doc_class={doc_class!r})" if doc_class else "")
+            + "; add it to _METRIC_ID_BY_NAME and docs/METRIC_IDS.md"
+        ) from None
 
 
 def metric_ids_for_class(doc_class: str) -> tuple[str, ...]:
@@ -362,7 +394,22 @@ def score_format_layer(
     predicted_raw: str | None = None,
     required_keys: Sequence[str] | None = None,
 ) -> dict[str, float]:
-    """Separate parse/schema from field extraction (#18, #20)."""
+    """Separate parse/schema from field extraction (#18, #20).
+
+    A batch (list/tuple of predictions) is scored item by item and the
+    shares are averaged — a list is never itself "the parsed object", so
+    missing keys and unparseable strings inside a batch count.
+    """
+    if predicted_raw is None and isinstance(predicted, (list, tuple)):
+        if not predicted:
+            return {"parse_ok": 0.0, "schema_valid": 0.0, "schema_adherence": 0.0}
+        per_item = [
+            score_format_layer(predicted=item, required_keys=required_keys)
+            for item in predicted
+        ]
+        parse = round(fmean(r["parse_ok"] for r in per_item), 4)
+        schema = round(fmean(r["schema_valid"] for r in per_item), 4)
+        return {"parse_ok": parse, "schema_valid": schema, "schema_adherence": schema}
     parsed = predicted
     parse_ok = 1.0
     if predicted_raw is not None:
@@ -388,14 +435,27 @@ def score_format_layer(
 def check_schema_promotion_gate(
     schema_valid: float | None,
     *,
-    threshold: float = DEFAULT_INSURANCE_SCHEMA_GATE,
+    threshold: float | None = None,
+    doc_class: str | None = None,
 ) -> dict[str, Any]:
+    """Refuse promotion when structural validity is below the class gate (#18).
+
+    A high overall score with invalid JSON must not read as PASS. The
+    threshold is ``threshold`` if given, else the class entry in
+    :data:`SCHEMA_PROMOTION_GATES`, else :data:`DEFAULT_SCHEMA_GATE`.
+    A missing ``schema_valid`` fails closed.
+    """
+    if threshold is None:
+        threshold = SCHEMA_PROMOTION_GATES.get(doc_class or "", DEFAULT_SCHEMA_GATE)
+    out: dict[str, Any] = {"threshold": threshold}
+    if doc_class:
+        out["doc_class"] = doc_class
     if schema_valid is None:
-        return {"passes": False, "reason": "schema_valid_missing", "threshold": threshold}
+        return {**out, "passes": False, "reason": "schema_valid_missing"}
     ok = float(schema_valid) >= threshold
     return {
+        **out,
         "passes": ok,
-        "threshold": threshold,
         "schema_valid": float(schema_valid),
         "reason": None if ok else "schema_valid_below_threshold",
     }

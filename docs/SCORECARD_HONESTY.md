@@ -47,8 +47,9 @@ Every extraction suite emits its class scores on the per-document surface:
 - `suite.score_document(expected, predicted)` returns one payload per
   document: `extraction`, flattened `overall_score`, field-micro
   P/R/F1/F2, `schema_valid` / `parse_ok` / `schema_adherence`, class extras
-  (content/MAUD, insurance `determination_consistency` / `amount_exactness`
-  and `schema_promotion_gate`), `metric_id`, and `provenance`.
+  (content/MAUD, insurance `determination_consistency` / `amount_exactness`),
+  `schema_promotion_gate` (every live class, `SCHEMA_PROMOTION_GATES`),
+  `metric_id`, and `provenance`.
 - Plain batch `score([...])` always carries `schema_valid` / `parse_ok`.
   The single-document `score(dict)` keeps the historical
   `ExtractionScoreResult` return unless `detailed=True` is passed.

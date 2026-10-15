@@ -316,7 +316,8 @@ Of Loss; Subrogation; Independent Medical Exam; Amount Consistency.
 
 **Class extras:** `determination_consistency` (`approved` ⇒ empty
 reasons; `denied`/`partial` ⇒ nonempty; missing determination ⇒ 0.0),
-`amount_exactness`, `schema_promotion_gate` (default 0.90). Published GT
+`amount_exactness`. `schema_promotion_gate` (default 0.90) is emitted for
+every live class, not only insurance (`SCHEMA_PROMOTION_GATES`). Published GT
 is homogeneous (`coverage_determination=approved`, empty denials), so
 consistency is degenerate on GT-shaped predictions.
 

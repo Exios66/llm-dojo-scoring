@@ -1015,11 +1015,17 @@ def emit_serving_scorecard(
     *,
     run_id: str | None = None,
     emitter: Any | None = None,
+    provenance: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Persist local and API T0/T1 values as separate scorecard runs.
 
     Local values go to ``run_id:local``; API values to ``run_id:api``.
     Missing values are not emitted (never stored as 0.0).
+
+    ``provenance`` maps ``"local"`` / ``"api"`` to that leg's stamp (#22).
+    ``model_id`` / ``serving_kind`` / ``prompt_id`` fall back to the leg's
+    identity tags (``model``, ``serving_kind``, ``prompt_version``);
+    ``dataset_revision`` must come from the caller.
     """
     from .emitter import get_emitter
 
@@ -1027,6 +1033,11 @@ def emit_serving_scorecard(
     card = serving_scorecard(comparison)
     for side in ("local", "api"):
         sid = f"{run_id}:{side}" if run_id else side
+        ident = card["identity"][side]
+        side_prov = dict((provenance or {}).get(side) or {})
+        side_prov.setdefault("model_id", ident.get("model_id") or ident.get("model"))
+        side_prov.setdefault("serving_kind", ident.get("serving_kind") or side)
+        side_prov.setdefault("prompt_id", ident.get("prompt_version"))
         for name, row in card["dashboard"].items():
             value = row.get(side)
             if not isinstance(value, (int, float)) or isinstance(value, bool):
@@ -1038,6 +1049,7 @@ def emit_serving_scorecard(
                 value=float(value),
                 run_id=sid,
                 metadata={"side": side, "status": row.get("status")},
+                provenance=side_prov,
             )
     return card
 

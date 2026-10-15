@@ -742,6 +742,7 @@ class ScoringSuite:
         from .scorecard_honesty import (
             GtAssessment,
             assess_extraction_gt,
+            check_schema_promotion_gate,
             metric_id_for,
             score_format_layer,
             stamp_provenance,
@@ -1118,6 +1119,9 @@ class ScoringSuite:
                     "extraction": extraction,
                     **prf_payload,
                     **format_scores,
+                    "schema_promotion_gate": check_schema_promotion_gate(
+                        format_scores.get("schema_valid"), doc_class=doc_class
+                    ),
                     "metric_id": metric_id_for(
                         "extraction_overall_score", doc_class=doc_class
                     ),
@@ -1142,12 +1146,9 @@ class ScoringSuite:
             doc_class=doc_class,
             presence_mode=bool(presence),
         )
-        if doc_class == "insurance_claim":
-            from .scorecard_honesty import check_schema_promotion_gate
-
-            filtered["schema_promotion_gate"] = check_schema_promotion_gate(
-                format_scores.get("schema_valid")
-            )
+        filtered["schema_promotion_gate"] = check_schema_promotion_gate(
+            format_scores.get("schema_valid"), doc_class=doc_class
+        )
         payload = {
             "extraction": extraction,
             **prf_payload,

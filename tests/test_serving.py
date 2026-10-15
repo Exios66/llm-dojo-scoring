@@ -369,7 +369,19 @@ def test_emit_serving_scorecard_separates_local_and_api_runs():
             "completion_tokens": 40,
         },
     )
-    emit_serving_scorecard(cmp, run_id="exp1", emitter=em)
+    emit_serving_scorecard(
+        cmp,
+        run_id="exp1",
+        emitter=em,
+        provenance={
+            side: {
+                "dataset_revision": "46a4d3c2",
+                "prompt_id": "contracts_v33",
+                "model_id": "qwen/qwen3-8b",
+            }
+            for side in ("local", "api")
+        },
+    )
     local_card = em.get_scorecard("local_vs_api", run_id="exp1:local", min_tier=1)
     api_card = em.get_scorecard("local_vs_api", run_id="exp1:api", min_tier=1)
     assert local_card["ttft_seconds"] == pytest.approx(0.4)
