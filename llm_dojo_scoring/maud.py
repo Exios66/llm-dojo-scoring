@@ -462,11 +462,14 @@ def canonical_maud_class(
     """Canonical folded form of *value* under the question's class surface.
 
     When every comma component is itself a class, the canonical components are
-    rejoined in sorted order (this covers composite classes such as
-    ``"General R&Ws, Capitalization R&Ws"``); otherwise the whole string is
-    matched as one class (class names themselves contain commas), so a multi-class answer is order-insensitive
-    (``"B, A"`` and ``"A, B"`` are the same set of classes). Recognized Yes/No aliases fold to ``yes`` / ``no`` only when
-    the question's surface actually carries Yes/No. Unrecognized text falls
+    rejoined in sorted order, so a multi-class answer is order-insensitive
+    (``"B, A"`` and ``"A, B"`` are the same set of classes); this also covers
+    composite classes such as ``"General R&Ws, fundamental/Special R&Ws"``.
+    Otherwise the whole string is matched as one class (class names themselves
+    contain commas).
+
+    Recognized Yes/No aliases fold to ``yes`` / ``no`` only when the question's
+    surface actually carries Yes/No. Unrecognized text falls
     back to the folded raw value so exact-match scoring stays deterministic.
     """
     if value is None or str(value).strip() == "":
