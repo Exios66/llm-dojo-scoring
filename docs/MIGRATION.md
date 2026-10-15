@@ -16,7 +16,7 @@ scorers, and reporting scripts keep working with minimal edits.
 
 ```bash
 # in llm-entity-extraction / llm-mailroom — pin the published tag
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.15.0"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.16.0"
 # or from a local checkout
 pip install -e /path/to/llm-dojo-scoring
 ```
@@ -24,10 +24,10 @@ pip install -e /path/to/llm-dojo-scoring
 `pyproject.toml` / `requirements.txt`:
 
 ```
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.15.0
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.16.0
 ```
 
-Do not pin a merge SHA. Release notes: https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.15.0
+Do not pin a merge SHA. Release notes: <https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.16.0>
 
 ## 2. Import swap table
 
@@ -270,7 +270,7 @@ Dependents pin the published GitHub Release tag — not a merge SHA:
 llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.10.0
 ```
 
-https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.10.0
+<https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.10.0>
 
 v0.10.0 is additive on the v0.9.0 surface (single-doc `get_suite(...).score()` still returns `ExtractionScoreResult`):
 
@@ -306,7 +306,7 @@ Dependents pin the published GitHub Release tag — not a merge SHA:
 llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.11.0
 ```
 
-https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.11.0
+<https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.11.0>
 
 v0.11.0 is additive on the v0.10.0 scoring surface (formulas and T0 names are unchanged). New imports:
 
@@ -341,7 +341,7 @@ Dependents pin the published GitHub Release tag — not a merge SHA:
 llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.0
 ```
 
-https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.0
+<https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.0>
 
 v0.12.0 is additive on the v0.10.0 / v0.11.0 scoring surface (formulas and T0 names for specialists / sorter are unchanged). New imports:
 
@@ -378,7 +378,7 @@ Dependents pin the published GitHub Release tag — not a merge SHA:
 llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.1
 ```
 
-https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.1
+<https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.1>
 
 v0.12.1 is additive on v0.12.0. `compare_serving` now returns a scoring **table**
 (every T0/T1 serving metric, missing elements as `None`) and a **scorecard**
@@ -405,12 +405,12 @@ Dependents pin the published GitHub Release tag — not a merge SHA:
 llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.12.2
 ```
 
-https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.2
+<https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.12.2>
 
 v0.12.2 aligns dojo's declared dependencies with the core consumers:
 
 | Consumer | Recommended pin | Notes |
-|---|---|---|
+| --- | --- | --- |
 | `llm-mailroom` | `llm-dojo-scoring[tracing] @ …@v0.12.2` | `jellyfish` is now core; `tracing` matches Langfuse / Phoenix |
 | `llm-entity-extraction` | `llm-dojo-scoring[embeddings,tracing] @ …@v0.12.2` | `embeddings` pulls `openai` + `sentence-transformers` for rescue |
 | `local-mailroom-sandbox` | `…@v0.12.2` (via mailroom) | Keep sandbox + mailroom on the same tag |
@@ -435,14 +435,14 @@ Dependents pin the published GitHub Release tag — not a merge SHA:
 llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.13.0
 ```
 
-https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.13.0
+<https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.13.0>
 
 v0.13.0 aligns dojo's default field maps with mailroom **v0.6.0** pared
 extraction (checklists + semantic trio instead of open-ended free-text
 obligation dumps):
 
 | Live class | Board scores | Retired from defaults |
-|---|---|---|
+| --- | --- | --- |
 | `contract` / `merger_agreement` | key entities + `cuad_clauses` / `maud_clauses` | `key_obligations`, `termination_clauses` |
 | `corporate_record` | key entities + `intent` / `subject_matter` / `keywords` | `key_provisions` |
 | `correspondence` | key entities + semantic trio (capped `action_items`) | `key_points`, `referenced_communications` |

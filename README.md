@@ -7,7 +7,7 @@
 Scoring · Error analysis · Visualization · Interpretation
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Release](https://img.shields.io/badge/release-v0.21.0-2EA043)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.21.0)
+[![Release](https://img.shields.io/badge/release-v0.16.0-2EA043)](https://github.com/LLM-Mailroom-Services/Digital-Mailroom/releases/tag/v0.16.0)
 [![Contributor](https://img.shields.io/badge/contributor-Exios66-blue)](https://github.com/Exios66)
 [![Tests](https://img.shields.io/badge/pytest-passing-brightgreen)](tests/)
 
@@ -20,7 +20,7 @@ Scoring · Error analysis · Visualization · Interpretation
 <div align="center">
 
 ```bash
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.21.0"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.16.0"
 pip install -e .                # from a local checkout
 ```
 
@@ -42,9 +42,9 @@ pip install -e ".[all]"          # embeddings + tracing + dev
 In **llm-entity-extraction** / **llm-mailroom** `pyproject.toml`:
 
 ```
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.21.0
-# mailroom:     llm-dojo-scoring[tracing] @ git+...@v0.21.0
-# entity:       llm-dojo-scoring[embeddings,tracing] @ git+...@v0.21.0
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.16.0
+# mailroom:     llm-dojo-scoring[tracing] @ git+...@v0.16.0
+# entity:       llm-dojo-scoring[embeddings,tracing] @ git+...@v0.16.0
 ```
 
 ## Quickstart
@@ -52,7 +52,7 @@ llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.21.0
 <div align="center">
 
 ```python
-from llm_dojo_scoring import score_extraction, score_archive_block, format_audit_entry, bootstrap_ci, tokens_summary
+from llm_dojo_scoring import score_extraction, bootstrap_ci, tokens_summary
 from llm_dojo_scoring import get_suite, apply_intake, score_task, compare_serving
 from llm_dojo_scoring.prompts import get_prompt
 ```
@@ -103,10 +103,7 @@ dojo-sync --check-phoenix
 | `diagnostics` | Run-level diagnostics: date/duration/money MAE+R², span drift, field error decomposition |
 | `experiment` | JSONL record append/load, dotted-path access, git snapshot |
 | `tasks` | Task-aware scoring across the full document hierarchy (MAUD, LegalBench, chained, etc.) |
-| `suites` | Dedicated scoring suite per pipeline agent — the API consumers should call; `score_document()` returns the full per-document payload (schema/parse, field-micro P/R/F1/F2, `metric_id`, provenance) |
-| `gt_metadata` | Hub `gt_fields` parser/normalizer — stringified JSON values, `gt_presence` absence statuses, per-document-type label scoping (never score another class's fields) |
-| `archive` | Archivist scoring block + hash-v2 audit row (`score_archive_block`, `format_audit_entry`, `prepare_archivist_handoff`) — byte-identical to llm-mailroom `compute_audit_hash` |
-| `grid` | Specialist-grid scorecards for local → Modal GPU studies (quality, ok/n, p50, $ per ok doc; busy-window vs metered session cost) |
+| `suites` | Dedicated scoring suite per pipeline agent — the API consumers should call |
 | `registry` | Metric definitions registry: every score name → tier (T0 HEADLINE → T3 LOG) |
 | `bundles` | Eleven pre-built task bundles (classification, extraction, cost, factuality, etc.) |
 | `profiles` | 26 agent profiles — each agent's scoring identity |
@@ -161,17 +158,6 @@ emitter = dojo.Emitter(sinks=[
     dojo.LangfuseSink(),
 ])
 emitter.emit_score("sorter", "doc_17", "accuracy", 0.93, run_id="exp_42")
-
-# 6. One document → full per-document payload for that specialist's class
-from llm_dojo_scoring import get_suite
-out = get_suite("merger_agreement_specialist").score_document(expected, predicted)
-
-# 7. L4-style specialist grid report (local model → Modal GPU run)
-from llm_dojo_scoring import build_grid_report
-report_md = build_grid_report(
-    documents=per_document_rows, experiments=posture_records,
-    setup="Qwen/Qwen3-8B-AWQ on vLLM, NVIDIA L4 at $0.80/GPU-hr; seed 42.",
-)
 ```
 
 ## Configuration
@@ -190,22 +176,9 @@ Set `LLM_DOJO_SCORING_CONFIG` to a YAML path for the process-wide override.
 ## Tests
 
 ```bash
-python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
 python -m pytest
 ```
-
-MAUD catalog reproducibility (needs the `catalog` extra for Hub parquet
-access):
-
-```bash
-pip install -e ".[dev,catalog]"
-python scripts/gen_maud_catalog.py --check   # committed catalog is current
-python scripts/verify_gt_penalties.py        # perfect-prediction replay, both splits
-```
-
-See [`docs/MAUD_LABELS.md`](docs/MAUD_LABELS.md) for the no-guess
-merger-agreement label contract.
 
 ## CLI Reference
 
@@ -223,7 +196,7 @@ dojo-sync    [--task TRACE_NAME] [--session NAME] [--max-items N]
 
 ## Migration
 
-See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md), [`docs/ARCHIVE_SCORING.md`](docs/ARCHIVE_SCORING.md), [`docs/SCORECARD_HONESTY.md`](docs/SCORECARD_HONESTY.md). Live extraction schemas (five mailroom-dataset classes): [`docs/EXTRACTION_SCHEMAS.md`](docs/EXTRACTION_SCHEMAS.md). Hub ground truth: [`docs/GT_METADATA.md`](docs/GT_METADATA.md). MAUD answer classes: [`docs/MAUD_LABELS.md`](docs/MAUD_LABELS.md). Specialist grid reports: [`docs/GRID_REPORTS.md`](docs/GRID_REPORTS.md). Issue-by-issue alignment status: [`docs/ISSUE_ALIGNMENT.md`](docs/ISSUE_ALIGNMENT.md). Prompt catalog + frozen v1 `production_prompts` lineage: [`docs/PROMPTS.md`](docs/PROMPTS.md). Connected-repo TODOs: [`docs/TODOS.md`](docs/TODOS.md).
+See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md). Prompt catalog: [`docs/PROMPTS.md`](docs/PROMPTS.md).
 
 ## Releases & monorepo sync
 

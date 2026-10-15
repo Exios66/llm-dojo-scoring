@@ -11,6 +11,7 @@
 ## Purpose
 
 Documentation for the llm-dojo-scoring package, covering:
+
 - Scoring methodology
 - Field-type-aware scoring
 - Entity list scoring
@@ -26,6 +27,8 @@ Documentation for the llm-dojo-scoring package, covering:
 - Metric identity by doc class (`METRIC_IDS.md`)
 - Specialist grid reports for local → Modal GPU studies (`GRID_REPORTS.md`)
 - Issue-by-issue alignment status (`ISSUE_ALIGNMENT.md`)
+
+
 - Regression diagnostics
 - Factuality audit
 
