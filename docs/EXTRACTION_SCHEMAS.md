@@ -77,7 +77,9 @@ emit `confidence`.
 
 ## 1. `contract` — `ContractExtraction` (11 fields)
 
-CUAD commercial contracts only. Sorter `doc_subclass` / `contract_subtype`
+CUAD commercial contracts only. Category, family, question and JSON-Schema
+catalog: [`CUAD_SCHEMA.md`](CUAD_SCHEMA.md) (`llm_dojo_scoring.cuad_schema`).
+Sorter `doc_subclass` / `contract_subtype`
 is situational context for `cuad_family`; verify against operative text.
 Do **not** emit `intent` / `subject_matter` / `keywords` /
 `effective_time`.
