@@ -1,3 +1,4 @@
+
 # Prompt catalog (v0.21.0)
 
 Importable catalog of the prompts the dojo scores against. This package
@@ -35,7 +36,7 @@ correctness arms.
 ## Families
 
 | `family` | Meaning |
-|---|---|
+| --- | --- |
 | `production` (default) | Live mailroom prompt bodies, re-vendored verbatim by `scripts/sync_production_prompts.py` from a mailroom checkout (each row records `source_commit`). Sorter is `sorter_v14`. The five specialists are the frozen v1 bytes: they equal `production_prompts` (`version: v1`, `source_key: frozen_v1`). `reporter` is `kind: deterministic`. |
 | `docclass` | Latest key from entity-extraction `src/prompts_docclass.py` (`sorter_docclass_v7`, `*_specialist_docclass_v1`, `reviewer_docclass_v1`, `judge_*_docclass_v1`, `arbiter_docclass_v1`, `boss_docclass_v1`). |
 | `production_prompts` | Frozen eval-environment **v1** specialist lineage (`mailroom-dataset-v1`, frozen 2026-09-26T05:09:29+00:00). Five sha256-locked stems; not grouped with `docclass`. |
@@ -55,7 +56,7 @@ their provenance comments preserve the original source digests. Other stems rema
 byte-identical to the frozen source. Catalog digests identify the current text.
 
 | Agent | Eval-environment key | Sandbox stem | `sha256` (prefix) |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `contracts_specialist` | `contracts_specialist_v1` | `contracts_specialist_v33_simplified` | `d91de396…` |
 | `corporate_records_specialist` | `corporate_records_specialist_v1` | `corporate_records_specialist_simplified` | `fe13501f…` |
 | `correspondence_specialist` | `correspondence_specialist_v1` | `correspondence_specialist_simplified` | `2b0b81ff…` |
@@ -72,7 +73,7 @@ Field maps those stems emit (and the scorer grades) are documented in
 ## `PromptRecord`
 
 | Field | Role |
-|---|---|
+| --- | --- |
 | `agent` | Profile / judge-variant name |
 | `family` | `production`, `docclass`, or `production_prompts` |
 | `version` | Source key / version tag (`v1` on the frozen lineage) |
@@ -89,7 +90,7 @@ Field maps those stems emit (and the scorer grades) are documented in
 ## Which roles have no LLM body
 
 | Role | `kind` | What the catalog stores |
-|---|---|---|
+| --- | --- | --- |
 | `reporter` | `deterministic` | Procedural matter-record assembler: the pipeline formats classification and extraction fields; no LLM call. The template file keeps the live procedural text for provenance; `text` stays `""`. |
 | `intake` | `deterministic` | Clerk invariants (NFC, newline unify, NBSP, zero-width, C0, hyphen unwrap, blank-run / horizontal collapse, trim). Gold is `llm_dojo_scoring.intake`. |
 | `archivist` | `procedural` | Content-addressed archive + audit hash. No system prompt. |
@@ -118,7 +119,7 @@ English task language already in production (“extract with precision”,
 production would change eval numbers.
 
 | Flag | Meaning |
-|---|---|
+| --- | --- |
 | `colloquial_precision` | Docclass contracts specialist text says “precision” in English (the production body is frozen v1 and no longer does). |
 | `colloquial_completeness` | Docclass contracts / judge-docclass text says “completeness” in English. |
 | `schema_valid` / `classification_correct` / `extraction_correctness` | Live judge JSON schema keys that collide with registry names. Left as output keys, not eval priming. |

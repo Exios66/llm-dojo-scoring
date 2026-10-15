@@ -704,7 +704,7 @@ Single-doc `get_suite(<specialist>).score(dict, dict)` still returns
 - Package version **0.9.0**. Consumer pin:
 
   ```
-  llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.16.0
+  llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.9.0
   ```
 
 Honesty mandate unchanged for remaining gaps: insurance
