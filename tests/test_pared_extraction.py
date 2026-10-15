@@ -38,13 +38,17 @@ def test_default_field_types_drop_open_ended_obligation_dumps():
 
 
 def test_default_field_types_match_corpus_and_mailroom_pared_schema():
+    """Live field-type maps line up with the corpus schema, and merger diverges from contract."""
     assert set(DEFAULT_FIELD_TYPES["contract"]) == set(CORPUS_EXTRACTION_FIELDS["contract"])
     assert "cuad_clauses" in DEFAULT_FIELD_TYPES["contract"]
     assert "intent" in DEFAULT_FIELD_TYPES["correspondence"]
     assert "subject_matter" in DEFAULT_FIELD_TYPES["corporate_record"]
     assert "keywords" in DEFAULT_FIELD_TYPES["insurance_claim"]
     assert "claim_checklist" in DEFAULT_FIELD_TYPES["insurance_claim"]
-    assert DEFAULT_FIELD_TYPES["contract"] == DEFAULT_FIELD_TYPES["merger_agreement"]
+    assert DEFAULT_FIELD_TYPES["contract"] != DEFAULT_FIELD_TYPES["merger_agreement"]
+    assert "effective_time" in DEFAULT_FIELD_TYPES["merger_agreement"]
+    assert "cuad_family" not in DEFAULT_FIELD_TYPES["merger_agreement"]
+    assert "cuad_clauses" not in DEFAULT_FIELD_TYPES["merger_agreement"]
 
 
 def test_legacy_full_map_keeps_key_obligations_for_historical_rescoring():

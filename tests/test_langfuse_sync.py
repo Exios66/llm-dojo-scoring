@@ -258,7 +258,8 @@ def test_row_from_trace_pipeline_includes_intake_span():
     assert row["intake_collapsed_blanks"] == 2
 
 
-def test_row_from_trace_pipeline_aligns_merger():
+def test_row_from_trace_pipeline_merger_is_not_contract():
+    """A merger-agreement ground truth classified as contract is neither exact nor aligned."""
     trace = {
         "id": "m",
         "name": "document-pipeline",
@@ -268,13 +269,14 @@ def test_row_from_trace_pipeline_aligns_merger():
     }
     row = ls.row_from_trace(trace, task=ls.PIPELINE_TRACE)
     assert row["exact_ok"] is False
-    assert row["aligned_ok"] is True
+    assert row["aligned_ok"] is False
 
 
 def test_aggregate_run_pipeline():
+    """Aggregates per-row pipeline exact/aligned/subclass accuracy across a run."""
     rows = [
         {"expected": "merger_agreement", "predicted": "contract",
-         "exact_ok": False, "aligned_ok": True,
+         "exact_ok": False, "aligned_ok": False,
          "expected_subclass": "all_cash", "predicted_subclass": "all_cash",
          "user_id": "u", "release": "mailroom@0.5.0", "environment": "pilot"},
         {"expected": "contract", "predicted": "contract",
@@ -283,7 +285,7 @@ def test_aggregate_run_pipeline():
     ]
     rec = ls.aggregate_run("pilot-hf-1", rows, task=ls.PIPELINE_TRACE)
     assert rec["scores"]["pipeline"]["exact_accuracy"] == 0.5
-    assert rec["scores"]["pipeline"]["aligned_accuracy"] == 1.0
+    assert rec["scores"]["pipeline"]["aligned_accuracy"] == 0.5
     assert rec["scores"]["pipeline"]["subclass_accuracy"] == 1.0
     assert rec["release"] == "mailroom@0.5.0"
 

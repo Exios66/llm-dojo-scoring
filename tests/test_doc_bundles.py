@@ -69,12 +69,14 @@ def test_contract_doc_bundle_has_laziness_overrides():
 
 
 def test_merger_agreement_bundle_has_maud_extraction_extras():
+    """Merger agreement bundle carries MAUD per-question metrics, not CUAD presence."""
     b = get_doc_bundle("merger_agreement")
     assert "HONEST GAP" not in b.description
     assert "22 Hub" in b.description or "per-question" in b.description.lower()
-    extras = b.metrics_for("contracts_specialist")
+    extras = b.metrics_for("merger_agreement_specialist")
     assert "maud_question_accuracy" in extras
     assert "maud_clause_presence" in extras
+    assert "extraction_category_presence" not in extras
 
 
 def test_correspondence_bundle_has_enron_content_extras():
@@ -143,9 +145,11 @@ def test_resolve_doc_bundle_no_fallback_raises():
 
 # ----------------------------- 22→23 re-pin + regression ------------------------------
 
-def test_profile_set_re_pinned_to_26():
+def test_profile_set_re_pinned_to_27():
+    """The default profile roster is pinned to the full 27-agent surface."""
     expected = {
-        "sorter", "contracts_specialist", "corporate_records_specialist",
+        "sorter", "contracts_specialist", "merger_agreement_specialist",
+        "corporate_records_specialist",
         "due_diligence_specialist", "correspondence_specialist",
         "compliance_specialist", "court_opinions_specialist",
         "insurance_claims_specialist",  # KANBAN-067 Phase 1 addition
@@ -161,7 +165,7 @@ def test_profile_set_re_pinned_to_26():
         "local_vs_api",  # v0.12.0 — local vs API serving comparison
     }
     assert set(list_profiles()) == expected
-    assert len(expected) == 26
+    assert len(expected) == 27
 
 
 def test_preexisting_22_profiles_unchanged_by_v070():

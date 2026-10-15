@@ -54,7 +54,6 @@ LOCAL_PROVIDERS = frozenset(
         "ollama",
         "vllm",
         "vllm-local",
-        "modal-vllm",
         "llamacpp",
         "llama.cpp",
         "lmstudio",
@@ -281,23 +280,28 @@ def classify_serving_kind(
     *,
     provider: str | None = None,
 ) -> str:
-    """``local`` | ``api`` | ``unknown`` from explicit field or provider family."""
+    """``local`` | ``api`` | ``modal`` | ``unknown`` — no modal→local remap (#21)."""
     raw = _first(record or {}, "serving_kind", "serving.kind")
     if raw:
         token = str(raw).strip().lower()
+        if token in {"modal", "modal-vllm", "modal_vllm"}:
+            return "modal"
         if token in {"local", "offline", "self-hosted", "on-prem"}:
             return "local"
         if token in {"api", "cloud", "hosted", "openrouter"}:
             return "api"
     prov = (provider or _as_str(_first(record or {}, "provider", "profile")) or "").lower()
+    if prov in {"modal", "modal-vllm"} or prov.startswith("modal"):
+        return "modal"
     if prov in LOCAL_PROVIDERS or prov.startswith("ollama") or prov.startswith("vllm"):
         return "local"
     if prov in API_PROVIDERS or prov.startswith("openrouter"):
         return "api"
     profile = (_as_str(_first(record or {}, "profile")) or "").lower()
+    if profile in {"modal", "modal-vllm", "modal_vllm"} or profile.startswith("modal"):
+        return "modal"
     if profile in LOCAL_PROVIDERS or profile.startswith("ollama") or profile in {
         "vllm-local",
-        "modal-vllm",
         "llamacpp",
         "lmstudio",
     }:
@@ -613,6 +617,16 @@ def aggregate_serving(
             if gap not in gaps:
                 gaps.append(gap)
 
+    metric_ids: list[str] = []
+    for raw in runs:
+        if isinstance(raw, Mapping):
+            mid = raw.get("metric_id")
+            q = raw.get("quality")
+            if not mid and isinstance(q, Mapping):
+                mid = q.get("metric_id")
+            if mid:
+                metric_ids.append(str(mid))
+
     quality: dict[str, Any] = {}
     for key in _QUALITY_KEYS:
         vals = []
@@ -624,7 +638,7 @@ def aggregate_serving(
         if vals:
             quality[key] = _mean(vals)
 
-    return {
+    out = {
         "n_requests": n_req,
         "n_runs": len(normalized),
         "n_docs": n_docs,
@@ -656,6 +670,9 @@ def aggregate_serving(
         "quality": quality,
         "honest_gaps": gaps,
     }
+    if metric_ids:
+        out["metric_id"] = metric_ids[0]
+    return out
 
 
 def _delta_map(local: Mapping[str, Any], api: Mapping[str, Any]) -> dict[str, Any]:
@@ -1059,6 +1076,18 @@ def compare_serving(
                 quality_key = cand
                 break
 
+    left_metric_id = left.get("metric_id") or (left.get("quality") or {}).get("metric_id")
+    right_metric_id = right.get("metric_id") or (right.get("quality") or {}).get("metric_id")
+    incomparable: dict[str, Any] | None = None
+    if left_metric_id and right_metric_id and left_metric_id != right_metric_id:
+        incomparable = {
+            "comparable": False,
+            "incomparable": True,
+            "incomparable_reason": "metric_id_mismatch",
+            "left_metric_id": left_metric_id,
+            "right_metric_id": right_metric_id,
+        }
+
     quality_block: dict[str, Any] | None = None
     if quality_key:
         lv = (left.get("quality") or {}).get(quality_key)
@@ -1109,6 +1138,8 @@ def compare_serving(
         "e2e_delta": delta_significance(api_e2e, local_e2e),
         "honest_gaps": gaps,
     }
+    if incomparable:
+        payload.update(incomparable)
     payload["table"] = serving_table_rows(payload)
     payload["scorecard"] = serving_scorecard(payload)
     payload["cost"] = payload["scorecard"]["cost"]

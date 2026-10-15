@@ -18,6 +18,22 @@ SORTER_MODE_ORDER = ["function_over_form", "other_fallback",
                      "equivalent_family", "family_confusion"]
 
 
+def classify_extraction_failure(
+    *,
+    parse_ok: float | None = None,
+    schema_valid: float | None = None,
+    overall_score: float | None = None,
+) -> str:
+    """Format/parse vs extraction capability (#20)."""
+    from .scorecard_honesty import classify_extraction_failure as _classify
+
+    return _classify(
+        parse_ok=parse_ok,
+        schema_valid=schema_valid,
+        overall_score=overall_score,
+    )
+
+
 def classify_failure(sorter: dict, subtype_unknown: str = "other") -> str:
     """Classify a failed sorter row into an insight-relevant failure mode.
 
@@ -162,6 +178,7 @@ def confusion_from_rows(rows: list[dict], keys: list[str] | None = None,
 
 __all__ = [
     "SORTER_MODE_ORDER", "SORTER_FAILURE_MODES", "DOCCLASS_FAILURE_MODES",
-    "classify_failure", "classify_docclass_failure", "summarize_failures",
+    "classify_failure", "classify_extraction_failure", "classify_docclass_failure",
+    "summarize_failures",
     "per_subtype_accuracy", "confusion_from_rows",
 ]

@@ -662,3 +662,23 @@ def build_sweep_workbook(records: list[dict], outdir: str = ".",
     write_workbook(path, "Eval Results", columns, recs, codebook_sheet=True)
     write_codebook(os.path.join(outdir, "Sorter_Experiment_Codebook.csv"), columns)
     return path, len(recs)
+
+
+def validate_comparison_export(
+    left: dict[str, Any],
+    right: dict[str, Any],
+) -> None:
+    """Refuse cross-leg export when provenance stamps do not match (#22)."""
+    from .scorecard_honesty import validate_comparison_provenance
+
+    validate_comparison_provenance(left, right)
+
+
+def quality_export_verdict(record: dict[str, Any]) -> str:
+    """Label unscorable runs unproven for workbook rows (#16)."""
+    scores = record.get("scores") or {}
+    if scores.get("status") == "unscorable":
+        return "unproven"
+    if record.get("export_verdict"):
+        return str(record["export_verdict"])
+    return "scored"

@@ -11,7 +11,10 @@ Confusion model
   Partial list matches are **not** TP; they stay in ``extraction_overall_score``.
 * **FN**: expected field scored ``< 1.0``.
 * **FP**: predicted extra keys not in expected, **or** unmatched predicted
-  items on an ``entity_list`` field (``EntityListScore.unmatched_predicted``).
+  items on an ``entity_list`` field (``EntityListScore.unmatched_predicted``),
+  **or** a spurious fill on an empty GT field (configurable).
+* Empty GT + empty/missing prediction is **correctly-empty** (credit 1.0 on
+  the empty-field contract, not an FN, and not part of ``overall_score``).
 
 Then ``P = TP/(TP+FP)``, ``R = TP/(TP+FN)``, ``F1 = 2PR/(P+R)``,
 ``F2 = 5PR/(4P+R)`` — the same F-beta formula as ContractEval in
@@ -23,17 +26,20 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from .classification import fbeta
-from .field_scoring import ExtractionScoreResult, score_extraction
+from .field_scoring import (
+    NEVER_SCORED_FIELDS,
+    RETIRED_PROMPT_KEYS,
+    ExtractionScoreResult,
+    score_extraction,
+)
+from .gt_metadata import is_empty_value
 
 _EMPTY = (None, "", [], {})
 
 
 def _is_empty(value: Any) -> bool:
-    if value in _EMPTY:
-        return True
-    if isinstance(value, str) and not value.strip():
-        return True
-    return False
+    """Empty / null / stringified-empty (``"[]"``, ``"{}"``) — never an event."""
+    return is_empty_value(value)
 
 
 def _public_prf(
@@ -84,12 +90,16 @@ def extraction_binary_metrics(
     doc_class: str = "extraction",
     result: ExtractionScoreResult | None = None,
     doc_text: str | None = None,
+    penalize_spurious_empty: bool = True,
 ) -> dict[str, Any]:
     """Run-level (or single-doc) field-micro P/R/F1/F2.
 
     When ``result`` is omitted, this calls :func:`score_extraction` once.
-    Empty / null expected fields are skipped (same as :func:`score_extraction`
-    for ``None`` / ``""``; empty lists are also skipped so they are not FN).
+    Empty / null expected fields are skipped for P/R events (same as
+    :func:`score_extraction` for ``None`` / ``""``; empty lists are also
+    skipped so they are not FN). Correctly-empty pairs credit 1.0 on
+    ``empty_field_credit``; a spurious value on empty GT is an FP when
+    ``penalize_spurious_empty`` is true.
     """
     expected = dict(expected or {})
     predicted = dict(predicted or {})
@@ -103,9 +113,20 @@ def extraction_binary_metrics(
     fn = 0
     fp = 0
     expected_events = 0
+    n_correctly_empty = 0
+    n_spurious_fill = 0
 
     for name, exp_val in expected.items():
+        if name in NEVER_SCORED_FIELDS or (
+            name in RETIRED_PROMPT_KEYS and name not in types
+        ):
+            continue
         if _is_empty(exp_val):
+            if _is_empty(predicted.get(name)):
+                n_correctly_empty += 1
+            elif penalize_spurious_empty:
+                n_spurious_fill += 1
+                fp += 1
             continue
         expected_events += 1
         score = float(result.field_scores.get(name, 0.0))
@@ -118,12 +139,20 @@ def extraction_binary_metrics(
             fp += int(list_score.unmatched_predicted)
 
     for key, value in predicted.items():
+        if key in NEVER_SCORED_FIELDS or (
+            key in RETIRED_PROMPT_KEYS and key not in types
+        ):
+            continue
         if key not in expected and not _is_empty(value):
             fp += 1
 
     precision = round(tp / (tp + fp), 4) if (tp + fp) else 0.0
     recall = round(tp / (tp + fn), 4) if (tp + fn) else 0.0
-    return _public_prf(
+    n_empty = n_correctly_empty + n_spurious_fill
+    empty_credit = None
+    if n_empty:
+        empty_credit = round(n_correctly_empty / n_empty, 4)
+    out = _public_prf(
         precision,
         recall,
         tp=tp,
@@ -132,6 +161,14 @@ def extraction_binary_metrics(
         expected_events=expected_events,
         entity_list_f1=mean_entity_list_f1(result),
     )
+    out.update(
+        {
+            "n_correctly_empty": n_correctly_empty,
+            "n_spurious_fill": n_spurious_fill,
+            "empty_field_credit": empty_credit,
+        }
+    )
+    return out
 
 
 def merge_extraction_counts(rows: list[Mapping[str, Any]]) -> dict[str, Any]:

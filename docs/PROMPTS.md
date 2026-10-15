@@ -1,8 +1,10 @@
-# Prompt catalog (v0.16.0)
+
+# Prompt catalog (v0.21.0)
 
 Importable catalog of the prompts the dojo scores against. This package
-**does not execute agents** — it vendors the live production template plus
-the latest docclass-merged family so dependents can import one copy.
+**does not execute agents** — it vendors the live production template, the
+latest docclass-merged family, and the eval-environment frozen
+`production_prompts` v1 lineage so dependents can import one copy.
 
 Metric names live on catalog **metadata** (`metrics_bundle`, `doc_bundle`).
 They are not eval targets in the model-visible string.
@@ -14,6 +16,7 @@ from llm_dojo_scoring.prompts import get_prompt, list_prompts
 
 get_prompt("sorter")                       # production (mailroom sorter_v14)
 get_prompt("sorter", family="docclass")    # docclass-merged arm (sorter_docclass_v7)
+get_prompt("contracts_specialist", family="production_prompts")  # frozen eval-environment v1
 get_prompt("intake")                       # kind=deterministic, text=""
 ```
 
@@ -33,31 +36,62 @@ correctness arms.
 ## Families
 
 | `family` | Meaning |
-|---|---|
-| `production` (default) | Live mailroom / entity production constant. Sorter remains `sorter_v14`; contracts specialist remains `contracts_specialist_v32`. |
+| --- | --- |
+| `production` (default) | Live mailroom prompt bodies, re-vendored verbatim by `scripts/sync_production_prompts.py` from a mailroom checkout (each row records `source_commit`). Sorter is `sorter_v14`. The five specialists are the frozen v1 bytes: they equal `production_prompts` (`version: v1`, `source_key: frozen_v1`). `reporter` is `kind: deterministic`. |
 | `docclass` | Latest key from entity-extraction `src/prompts_docclass.py` (`sorter_docclass_v7`, `*_specialist_docclass_v1`, `reviewer_docclass_v1`, `judge_*_docclass_v1`, `arbiter_docclass_v1`, `boss_docclass_v1`). |
+| `production_prompts` | Frozen eval-environment **v1** specialist lineage (`mailroom-dataset-v1`, frozen 2026-09-26T05:09:29+00:00). Five sha256-locked stems; not grouped with `docclass`. |
 
 This catalog does **not** vendor the ~1.8MB historical prompt archive.
+
+## Frozen `production_prompts` v1 lineage
+
+The five live specialists have a frozen v1 stem that Modal / vLLM specialist
+evals inject. The dojo stores them as `family="production_prompts"`,
+`version="v1"`, derived from the sandbox `config/prompts/<stem>.txt`
+files and sha256-pinned on each record (hash over the loaded text plus a
+trailing newline, matching the sandbox lineage's normalization).
+
+Corporate-record and correspondence stems include local field-guidance corrections;
+their provenance comments preserve the original source digests. Other stems remain
+byte-identical to the frozen source. Catalog digests identify the current text.
+
+| Agent | Eval-environment key | Sandbox stem | `sha256` (prefix) |
+| --- | --- | --- | --- |
+| `contracts_specialist` | `contracts_specialist_v1` | `contracts_specialist_v33_simplified` | `d91de396…` |
+| `corporate_records_specialist` | `corporate_records_specialist_v1` | `corporate_records_specialist_simplified` | `fe13501f…` |
+| `correspondence_specialist` | `correspondence_specialist_v1` | `correspondence_specialist_simplified` | `2b0b81ff…` |
+| `insurance_claims_specialist` | `insurance_claims_specialist_v1` | `insurance_claims_specialist_simplified` | `6c2776bc…` |
+| `merger_agreement_specialist` | `merger_agreement_specialist_v1` | `merger_agreement_specialist_simplified` | `00323258…` |
+
+`tests/test_production_prompts.py` recomputes every digest from the imported
+`PromptRecord.text`; do not edit a template without a sanctioned
+re-freeze and a matching catalog/test update.
+
+Field maps those stems emit (and the scorer grades) are documented in
+[`EXTRACTION_SCHEMAS.md`](EXTRACTION_SCHEMAS.md).
 
 ## `PromptRecord`
 
 | Field | Role |
-|---|---|
+| --- | --- |
 | `agent` | Profile / judge-variant name |
-| `family` | `production` or `docclass` |
-| `version` | Source key / version tag |
+| `family` | `production`, `docclass`, or `production_prompts` |
+| `version` | Source key / version tag (`v1` on the frozen lineage) |
 | `kind` | `llm` \| `deterministic` \| `procedural` \| `proposed` |
 | `text` | Model-visible body (`""` when `kind != llm`) |
 | `metrics_bundle` | Bundle the output is scored against |
 | `doc_bundle` | Field-map document class, if any |
 | `source_repo` / `source_key` | Provenance |
+| `source_commit` | Mailroom commit a `production` row was last synced from (else `""`) |
+| `sha256` | Freeze digest on `production_prompts` records (else `""`) |
 | `priming` | Flags for colloquial or JSON-schema collisions (see below) |
 | `notes` | Human contract for non-LLM roles |
 
 ## Which roles have no LLM body
 
 | Role | `kind` | What the catalog stores |
-|---|---|---|
+| --- | --- | --- |
+| `reporter` | `deterministic` | Procedural matter-record assembler: the pipeline formats classification and extraction fields; no LLM call. The template file keeps the live procedural text for provenance; `text` stays `""`. |
 | `intake` | `deterministic` | Clerk invariants (NFC, newline unify, NBSP, zero-width, C0, hyphen unwrap, blank-run / horizontal collapse, trim). Gold is `llm_dojo_scoring.intake`. |
 | `archivist` | `procedural` | Content-addressed archive + audit hash. No system prompt. |
 | `local_vs_api` | `procedural` | Serving comparison (TTFT, throughput, utilization, identity). No system prompt. Gold is recorded timings, not a quality label. |
@@ -85,9 +119,29 @@ English task language already in production (“extract with precision”,
 production would change eval numbers.
 
 | Flag | Meaning |
-|---|---|
-| `colloquial_precision` | Live contracts specialist text says “precision” in English. |
-| `colloquial_completeness` | Live contracts / judge-docclass text says “completeness” in English. |
+| --- | --- |
+| `colloquial_precision` | Docclass contracts specialist text says “precision” in English (the production body is frozen v1 and no longer does). |
+| `colloquial_completeness` | Docclass contracts / judge-docclass text says “completeness” in English. |
 | `schema_valid` / `classification_correct` / `extraction_correctness` | Live judge JSON schema keys that collide with registry names. Left as output keys, not eval priming. |
 
 New dojo-authored keys stay clean (no registry ids in `text`).
+
+## Re-vendoring the `production` family
+
+```bash
+OPENROUTER_API_KEY=dummy PYTHONPATH=<mailroom>/src \
+  python scripts/sync_production_prompts.py --mailroom <mailroom>          # write
+  python scripts/sync_production_prompts.py --mailroom <mailroom> --check  # exit 1 on drift
+```
+
+The script imports mailroom's `llm.prompts.prompt_templates()`, writes every
+live body to `<agent>.production.md` verbatim behind a provenance comment, and
+updates the matching catalog rows. Agents retired in mailroom (for example
+`compliance_specialist`) keep their last vendored body and are not touched.
+
+### Not vendored
+
+`gmail_triage`, `intake` (LLM prompt) and `relations` are live mailroom agents
+with no dojo profile in `DEFAULT_PROFILES`, so they have no `production` row.
+`intake` stays catalogued as the deterministic clerk. Add a profile first if
+the dojo should score them.

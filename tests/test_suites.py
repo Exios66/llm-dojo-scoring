@@ -31,21 +31,23 @@ def test_every_profile_has_a_dedicated_suite():
     assert set(list_suites()) == set(list_profiles())
 
 
-def test_seven_specialist_suites_and_seven_auditors():
+def test_eight_specialist_suites_and_seven_auditors():
+    """There are eight extraction specialists (merger included) and seven auditors."""
     specialists = list_suites(kind="extraction")
     assert set(specialists) == set(SPECIALIST_AGENTS)
-    assert len(specialists) == 7
+    assert len(specialists) == 8
     auditors = [n for n in list_suites(kind="audit") if n.endswith("_auditor")]
     assert len(auditors) == 7
     assert "insurance_claims_auditor" in auditors
 
 
 def test_get_suite_accepts_agent_and_doc_type_aliases():
+    """``get_suite`` resolves agent names, ``agent:``/``doc:`` prefixes, and doc types."""
     assert get_suite("sorter").name == "sorter"
     assert get_suite("agent:sorter").name == "sorter"
     assert get_suite("insurance_claim").name == "insurance_claims_specialist"
     assert get_suite("doc:contract").name == "contracts_specialist"
-    assert get_suite("merger_agreement").name == "contracts_specialist"
+    assert get_suite("merger_agreement").name == "merger_agreement_specialist"
     assert suite_for_doc_type("court_opinion").name == "court_opinions_specialist"
 
 
