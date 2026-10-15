@@ -388,6 +388,34 @@ def _coalesce_maud_answers(answers: list[Any]) -> Any:
     return unique
 
 
+def reduce_maud_prediction(
+    question: str, answer: Any, valid_classes: Sequence[str] | None = None
+) -> tuple[Any, bool]:
+    """Collapse a multi-answer *prediction* for one question.
+
+    Chunked specialists answer the full schema on every chunk, and the merge
+    keeps each distinct string, so a question can arrive as a list such as
+    ``["not specified", "Yes"]``. Off-catalog entries are dropped when at
+    least one in-catalog answer exists; if the in-catalog answers then share
+    one canonical class, that class is the prediction. Distinct in-catalog
+    answers stay a list (scored wrong) and are reported as a conflict, never
+    resolved by position. Returns ``(answer, conflict)``.
+    """
+    if not isinstance(answer, (list, tuple)):
+        return answer, False
+    items = [a for a in answer if a not in (None, "") and str(a).strip()]
+    if len(items) <= 1:
+        return (items[0] if items else ""), False
+    valid = [a for a in items if is_valid_maud_answer(question, a, valid_classes)]
+    pool = valid or items
+    canon: dict[str, Any] = {}
+    for a in pool:
+        canon.setdefault(normalize_maud_answer(question, a, valid_classes), a)
+    if len(canon) == 1:
+        return next(iter(canon.values())), False
+    return list(canon.values()), True
+
+
 def _merge_maud_record(out: dict[str, dict[str, Any]], key: str, rec: dict[str, Any]) -> None:
     """Same Hub key with distinct answers → list (ambiguous), never last-wins.
 
@@ -512,6 +540,9 @@ def score_maud_extraction(expected: Any, predicted: Any) -> dict:
     - ``maud_valid_class_rate`` — share of those present predictions with valid answers
     - ``maud_category_accuracy`` — match over expected categories; missing predictions miss
     - ``n_ambiguous`` — collapsed multi-answer keys marked ``gt_ambiguous`` / unscorable
+    - ``maud_precision_answered`` — exact matches over questions the model answered
+    - ``n_pred_conflicts`` — predicted questions left with distinct in-catalog
+      answers after :func:`reduce_maud_prediction` (scored wrong)
 
     Ambiguous expected answers are excluded from all metric denominators;
     prediction-only questions are ignored. Answer normalization and validity
@@ -537,6 +568,7 @@ def score_maud_extraction(expected: Any, predicted: Any) -> dict:
     n_category = 0
     n_category_ok = 0
     n_ambiguous = 0
+    n_pred_conflicts = 0
     ambiguous_counts: dict[str, int] = {}
     per_doc: list[dict] = []
 
@@ -572,7 +604,10 @@ def score_maud_extraction(expected: Any, predicted: Any) -> dict:
                 stats["present"] += 1
                 n_present += 1
                 doc_present += 1
-                pred_answer = pred_rec["answer"]
+                pred_answer, conflict = reduce_maud_prediction(
+                    question, pred_rec["answer"], gt_classes
+                )
+                n_pred_conflicts += int(conflict)
                 if is_valid_maud_answer(question, pred_answer, gt_classes):
                     stats["valid"] += 1
                     n_valid += 1
@@ -666,6 +701,8 @@ def score_maud_extraction(expected: Any, predicted: Any) -> dict:
         "ambiguous_keys": sorted(ambiguous_counts),
         "n_documents": len(docs),
         "n_present": n_present,
+        "n_pred_conflicts": n_pred_conflicts,
+        "maud_precision_answered": round(n_exact / n_present, 4) if n_present else None,
         "metric_id": "maud.question.micro_accuracy",
         "per_question": per_question,
         "per_document": per_doc,
