@@ -19,6 +19,7 @@ Documentation for the llm-dojo-scoring package, covering:
 - Scorecard honesty: MAUD GT, format vs extraction, completion/cost, confidence/reasoning knobs (`SCORECARD_HONESTY.md`)
 - Hub ground-truth metadata: `gt_fields` parsing, `gt_presence`, per-class label scoping (`GT_METADATA.md`)
 - MAUD answer-class catalogs: no-guess validity/scoring on merger agreements (`MAUD_LABELS.md`)
+- MAUD entity schema: the 22 questions with allowed answers, JSON Schema grammar, prompt block, consideration subclasses (`MAUD_SCHEMA.md`)
 - Importable prompt catalog + frozen eval-environment v1 lineage (`PROMPTS.md`)
 - Connected-repo TODOs for prompt mirrors, re-freeze scripts, and downstream imports (`TODOS.md`)
 - Metric identity by doc class (`METRIC_IDS.md`)
