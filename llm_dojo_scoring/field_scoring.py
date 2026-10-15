@@ -73,6 +73,25 @@ RETIRED_PROMPT_KEYS: frozenset[str] = frozenset(
 # ---------------------------------------------------------------------------
 
 
+#: CMS DE-SynPUF table tokens. The published merge labels every CMS row
+#: ``claim_type=health`` while the frozen insurance prompt (and mailroom's
+#: ``INSURANCE_CLAIM_TYPES``) direct the specialist to the table token, so a
+#: correct, more specific answer used to score as a wrong name (SAND-042 RCA).
+CMS_CLAIM_TYPES: frozenset[str] = frozenset({"pde", "inpatient", "outpatient", "carrier"})
+
+
+def canonical_claim_type(predicted: Any, expected: Any) -> Any:
+    """Fold a CMS table token onto ``health`` when the GT is ``health``.
+
+    Only the CMS → health direction is folded: ``health`` predicted against
+    a CMS-token GT, or one CMS token against another, still mismatches.
+    """
+    pred = str(predicted).strip().lower()
+    if pred in CMS_CLAIM_TYPES and str(expected).strip().lower() == "health":
+        return "health"
+    return predicted
+
+
 def get_ambiguous_band() -> tuple[float, float]:
     return get_settings().field_scoring.ambiguous_band
 
@@ -1296,6 +1315,9 @@ def score_extraction(
             exp_value = normalize_intent(doc_class, exp_value) or exp_value
             if pred_value is not None:
                 pred_value = normalize_intent(doc_class, pred_value) or pred_value
+        if (doc_class == "insurance_claim" and key == "claim_type"
+                and pred_value is not None):
+            pred_value = canonical_claim_type(pred_value, exp_value)
         if pred_value is None:
             # A null answer satisfies a null-expectation date (blank-template
             # or label-only GT holds no real date).

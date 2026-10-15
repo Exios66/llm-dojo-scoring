@@ -424,3 +424,16 @@ def test_heuristic_field_type():
     assert fs._heuristic_field_type("contract_value", "x") == "money"
     assert fs._heuristic_field_type("docket_number", "x") == "id"
     assert fs._heuristic_field_type("note", ["x"]) == "entity_list"
+
+
+def test_cms_claim_type_token_matches_health_gt():
+    from llm_dojo_scoring import get_suite
+
+    suite = get_suite("insurance_claims_specialist")
+    for token in ("pde", "inpatient", "outpatient", "carrier"):
+        out = suite.score_document({"claim_type": "health"}, {"claim_type": token})
+        assert out["overall_score"] == 1.0
+    wrong = suite.score_document({"claim_type": "health"}, {"claim_type": "auto"})
+    assert wrong["overall_score"] < 1.0
+    reverse = suite.score_document({"claim_type": "pde"}, {"claim_type": "health"})
+    assert reverse["overall_score"] < 1.0

@@ -270,7 +270,8 @@ def test_empty_row_catalog_uses_union(classes):
         ("KNOWN, but consequences unknown, at signing",
          ["Known, but consequences unknown, at signing"],
          "known but consequences unknown at signing", True),
-        (" YES , no ", ["Yes", "No"], "yes, no", True),
+        # Multi-class answers are a set: components rejoin in sorted order.
+        (" YES , no ", ["Yes", "No"], "no, yes", True),
         ("Yes, maybe", ["Yes", "No"], "yes maybe", False),
         ("true, No", ["Yes", "No"], "true no", False),
         ('“ENTITLED TO” specific performance',
@@ -413,3 +414,81 @@ def test_identical_unknown_answers_do_not_imply_class_validity():
     out = score_maud_extraction(labels, labels)
     assert out["maud_question_accuracy"] == 1.0
     assert out["maud_valid_class_rate"] == 0.0
+
+
+def test_multi_class_answer_is_order_insensitive():
+    classes = ["General R&Ws", "Capitalization R&Ws", "Other"]
+    q = "Accuracy of Target R&W Closing Condition"
+    assert canonical_maud_class(q, "Capitalization R&Ws, General R&Ws", classes) == (
+        canonical_maud_class(q, "General R&Ws, Capitalization R&Ws", classes)
+    )
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Agreement provides for matching rights in connection with COR",
+        "Agreement provides for matching rights in connection with FTR",
+    ],
+)
+def test_comparator_classes_do_not_collapse(question):
+    # SAND-042 RCA: the fold stripped ">" so "> 5 business days" scored as
+    # "5 business days" — two distinct annotator classes credited as one.
+    assert canonical_maud_class(question, "5 business days") != canonical_maud_class(
+        question, "> 5 business days"
+    )
+    assert canonical_maud_class(question, ">5 business days") == canonical_maud_class(
+        question, "Greater than 5 business days"
+    )
+    index = maud_class_index(question)
+    assert len(index) == len({c for c in MAUD_ANSWER_CLASSES[question]}) - 1
+
+
+def test_chunk_merged_prediction_drops_off_catalog_guess():
+    # SAND-042 RCA: chunk 1 (preamble) guesses, a later chunk has the clause.
+    exp = {"No-Shop": {"answer": "Yes", "category": ""}}
+    for order in (["not specified", "Yes"], ["Yes", "not specified"]):
+        out = score_maud_extraction(exp, [f"No-Shop: {a}" for a in order])
+        assert out["maud_question_accuracy"] == 1.0
+        assert out["n_pred_conflicts"] == 0
+
+
+def test_conflicting_in_catalog_prediction_is_wrong_and_counted():
+    exp = {"No-Shop": {"answer": "Yes", "category": ""}}
+    out = score_maud_extraction(exp, ["No-Shop: No", "No-Shop: Yes"])
+    assert out["maud_question_accuracy"] == 0.0
+    assert out["n_pred_conflicts"] == 1
+    assert out["maud_precision_answered"] == 0.0
+
+
+def test_single_space_fiduciary_question_parses():
+    q = "Fiduciary exception:  Board determination (no-shop)"
+    labels = parse_maud_labels(["Fiduciary exception: Board determination (no-shop): Yes"])
+    assert set(labels) == {q}
+    assert labels[q]["answer"] == "Yes"
+
+
+def test_null_mapping_entry_is_unanswered_not_invalid():
+    exp = {"No-Shop": {"answer": "Yes", "category": ""}}
+    out = score_maud_extraction(exp, {"No-Shop": None})
+    assert out["maud_clause_presence"] == 0.0
+    assert out["maud_valid_class_rate"] is None
+
+
+def test_newline_joined_spans_parse_every_question():
+    labels = parse_maud_labels(["No-Shop: Yes\nSpecific Performance: Yes"])
+    assert set(labels) == {"No-Shop", "Specific Performance"}
+    assert labels["No-Shop"]["answer"] == "Yes"
+
+
+def test_composite_class_with_catalog_components_matches_any_order():
+    # "General R&Ws, fundamental/Special R&Ws" is a class AND both parts are
+    # classes; the GT (catalog order) and a reordered prediction must agree.
+    composite = "General R&Ws, fundamental/Special R&Ws"
+    reordered = "fundamental/Special R&Ws, General R&Ws"
+    assert canonical_maud_class(_RW_QUESTION, composite) == canonical_maud_class(
+        _RW_QUESTION, reordered
+    )
+    exp = {_RW_QUESTION: {"answer": composite, "valid_classes": list(MAUD_ANSWER_CLASSES[_RW_QUESTION])}}
+    out = score_maud_extraction(exp, [f"{_RW_QUESTION}: {reordered}"])
+    assert out["maud_question_accuracy"] == 1.0
