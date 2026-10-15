@@ -356,15 +356,32 @@ def _record_from_value(value: Any) -> dict[str, Any]:
     return {"answer": "" if value is None else str(value), "category": ""}
 
 
+#: Hub keys as whitespace-tolerant prefixes, longest first. The Hub spells
+#: "Fiduciary exception:  Board determination (no-shop)" with two spaces; a
+#: model emitting one space used to split at the first colon into an unknown
+#: "Fiduciary exception" question and lose the answer.
+_SPAN_PREFIXES: tuple[tuple[str, "re.Pattern[str]"], ...] = tuple(
+    (key, re.compile(r"\s+".join(re.escape(w) for w in key.split()) + r"\s*:", re.IGNORECASE))
+    for key in sorted(MAUD_QUESTION_KEYS, key=len, reverse=True)
+)
+
+
+def _span_lines(value: Any) -> list[Any]:
+    """Split a newline-joined block of spans into one span per line."""
+    if isinstance(value, str) and "\n" in value:
+        return [line for line in value.splitlines() if line.strip()]
+    return [value]
+
+
 def _parse_span(span: str) -> tuple[str, str] | None:
     """Split ``'<Question>: <Answer>'`` preferring the longest Hub key prefix."""
     text = str(span).strip()
     if not text:
         return None
-    for key in sorted(MAUD_QUESTION_KEYS, key=len, reverse=True):
-        prefix = key + ":"
-        if text.lower().startswith(prefix.lower()):
-            return key, text[len(prefix):].strip()
+    for key, pattern in _SPAN_PREFIXES:
+        match = pattern.match(text)
+        if match:
+            return key, text[match.end():].strip()
     if ":" in text:
         question, answer = text.split(":", 1)
         return question.strip(), answer.strip()
@@ -386,6 +403,34 @@ def _coalesce_maud_answers(answers: list[Any]) -> Any:
     if len(unique) == 1:
         return unique[0]
     return unique
+
+
+def reduce_maud_prediction(
+    question: str, answer: Any, valid_classes: Sequence[str] | None = None
+) -> tuple[Any, bool]:
+    """Collapse a multi-answer *prediction* for one question.
+
+    Chunked specialists answer the full schema on every chunk, and the merge
+    keeps each distinct string, so a question can arrive as a list such as
+    ``["not specified", "Yes"]``. Off-catalog entries are dropped when at
+    least one in-catalog answer exists; if the in-catalog answers then share
+    one canonical class, that class is the prediction. Distinct in-catalog
+    answers stay a list (scored wrong) and are reported as a conflict, never
+    resolved by position. Returns ``(answer, conflict)``.
+    """
+    if not isinstance(answer, (list, tuple)):
+        return answer, False
+    items = [a for a in answer if a not in (None, "") and str(a).strip()]
+    if len(items) <= 1:
+        return (items[0] if items else ""), False
+    valid = [a for a in items if is_valid_maud_answer(question, a, valid_classes)]
+    pool = valid or items
+    canon: dict[str, Any] = {}
+    for a in pool:
+        canon.setdefault(normalize_maud_answer(question, a, valid_classes), a)
+    if len(canon) == 1:
+        return next(iter(canon.values())), False
+    return list(canon.values()), True
 
 
 def _merge_maud_record(out: dict[str, dict[str, Any]], key: str, rec: dict[str, Any]) -> None:
@@ -443,6 +488,10 @@ def parse_maud_labels(value: Any) -> dict[str, dict[str, Any]]:
             key = normalize_maud_question_key(raw_key)
             if not key:
                 continue
+            if raw_val is None:
+                # {question: null} is the object grammar's "not answered" —
+                # absent, not an invalid class. ("" stays present-but-empty.)
+                continue
             rec = _record_from_value(raw_val)
             rec["category"] = normalize_maud_category(rec["category"]) if rec["category"] else ""
             if isinstance(raw_val, dict) and (
@@ -451,9 +500,11 @@ def parse_maud_labels(value: Any) -> dict[str, dict[str, Any]]:
                 rec["gt_ambiguous"] = True
             _merge_maud_record(out, key, rec)
         return out
+    if isinstance(value, str) and "\n" in value:
+        value = _span_lines(value)
     if isinstance(value, (list, tuple)):
         out = {}
-        for item in value:
+        for item in (line for raw in value for line in _span_lines(raw)):
             if isinstance(item, dict) and ("question" in item or "key" in item):
                 key = normalize_maud_question_key(item.get("question") or item.get("key"))
                 rec = _record_from_value(item)
@@ -512,6 +563,9 @@ def score_maud_extraction(expected: Any, predicted: Any) -> dict:
     - ``maud_valid_class_rate`` — share of those present predictions with valid answers
     - ``maud_category_accuracy`` — match over expected categories; missing predictions miss
     - ``n_ambiguous`` — collapsed multi-answer keys marked ``gt_ambiguous`` / unscorable
+    - ``maud_precision_answered`` — exact matches over questions the model answered
+    - ``n_pred_conflicts`` — predicted questions left with distinct in-catalog
+      answers after :func:`reduce_maud_prediction` (scored wrong)
 
     Ambiguous expected answers are excluded from all metric denominators;
     prediction-only questions are ignored. Answer normalization and validity
@@ -537,6 +591,7 @@ def score_maud_extraction(expected: Any, predicted: Any) -> dict:
     n_category = 0
     n_category_ok = 0
     n_ambiguous = 0
+    n_pred_conflicts = 0
     ambiguous_counts: dict[str, int] = {}
     per_doc: list[dict] = []
 
@@ -572,7 +627,10 @@ def score_maud_extraction(expected: Any, predicted: Any) -> dict:
                 stats["present"] += 1
                 n_present += 1
                 doc_present += 1
-                pred_answer = pred_rec["answer"]
+                pred_answer, conflict = reduce_maud_prediction(
+                    question, pred_rec["answer"], gt_classes
+                )
+                n_pred_conflicts += int(conflict)
                 if is_valid_maud_answer(question, pred_answer, gt_classes):
                     stats["valid"] += 1
                     n_valid += 1
@@ -666,6 +724,8 @@ def score_maud_extraction(expected: Any, predicted: Any) -> dict:
         "ambiguous_keys": sorted(ambiguous_counts),
         "n_documents": len(docs),
         "n_present": n_present,
+        "n_pred_conflicts": n_pred_conflicts,
+        "maud_precision_answered": round(n_exact / n_present, 4) if n_present else None,
         "metric_id": "maud.question.micro_accuracy",
         "per_question": per_question,
         "per_document": per_doc,

@@ -77,7 +77,9 @@ emit `confidence`.
 
 ## 1. `contract` — `ContractExtraction` (11 fields)
 
-CUAD commercial contracts only. Sorter `doc_subclass` / `contract_subtype`
+CUAD commercial contracts only. Category, family, question and JSON-Schema
+catalog: [`CUAD_SCHEMA.md`](CUAD_SCHEMA.md) (`llm_dojo_scoring.cuad_schema`).
+Sorter `doc_subclass` / `contract_subtype`
 is situational context for `cuad_family`; verify against operative text.
 Do **not** emit `intent` / `subject_matter` / `keywords` /
 `effective_time`.
@@ -170,6 +172,8 @@ Superior Offer Definition; Tail Period & Acquisition Proposal Details;
 Type of Consideration.
 
 Answers must be the row's Hub `valid_classes` ([`MAUD_LABELS.md`](MAUD_LABELS.md)).
+Per-question allowed answers, deal-point groups, the guided-decoding JSON Schema and the
+subclass table: [`MAUD_SCHEMA.md`](MAUD_SCHEMA.md) (`llm_dojo_scoring.maud_schema`).
 Ambiguous collapsed GT is `unscorable` on those keys, not a guessed match.
 
 **GT extras:** `expected_subclass`, `maud_clause_labels`. MAUD-only rows
