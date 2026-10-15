@@ -319,7 +319,6 @@ def test_pair_count_is_the_catalog_size():
 @pytest.mark.parametrize("name", [q.name for q in MAUD_QUESTIONS])
 def test_every_rendered_line_round_trips_through_the_real_scorer(name):
     q = maud_question(name)
-    ambiguous = scorer_ambiguous_classes()
     labels = {name: {"answer": "", "valid_classes": list(q.valid_classes)}}
     for cls in q.valid_classes:
         line = maud_clause_line(name, cls)
@@ -331,12 +330,6 @@ def test_every_rendered_line_round_trips_through_the_real_scorer(name):
         assert parsed[name]["answer"] == canonical
         gt = {name: {**labels[name], "answer": cls}}
         out = score_maud_extraction(gt, [line])
-        if cls in ambiguous.get(name, ()):
-            # GT class containing " / " is mis-flagged as a collapsed multi-answer
-            # (scorecard_honesty._COLLAPSED_ANSWER_SPLIT): unscorable today, full
-            # credit once the scorer stops splitting catalog classes.
-            assert out["maud_question_accuracy"] in (None, 1.0), line
-            continue
         assert out["maud_question_accuracy"] == 1.0, line
         assert out["maud_clause_presence"] == 1.0, line
         assert out["maud_valid_class_rate"] == 1.0, line

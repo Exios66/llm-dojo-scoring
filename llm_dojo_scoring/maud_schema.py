@@ -787,9 +787,10 @@ def maud_answers_to_clauses(
 ) -> list[str]:
     """``{question: class | None}`` → scorer-ready ``maud_clauses`` lines.
 
-    ``None`` / blank answers are dropped. **This matters:** the scorer treats a
-    mapping entry with a null value as *present with an empty answer* (counted
-    in ``n_present`` and as an invalid class), so nulls must never reach it.
+    ``None`` / blank answers are dropped before clause rendering. When inputs
+    go directly to the scorer, a top-level ``{question: None}`` entry is
+    unanswered; a blank string or a record with ``answer: None`` is present
+    with an empty answer and fails class validation.
     With ``strict=True`` unknown questions / off-vocabulary answers raise
     ``ValueError``; otherwise they pass through unvalidated so the scorer sees
     exactly what the model said.

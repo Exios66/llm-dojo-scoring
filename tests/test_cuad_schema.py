@@ -447,3 +447,12 @@ def test_reference_doc_covers_every_category_and_family():
         assert f"`{cat.name}`" in doc and cat.description.replace("|", "\\|") in doc
     for fam in CUAD_FAMILIES:
         assert f"`{fam.key}`" in doc
+
+
+def test_cuad_family_unknown_normalized_subtype_falls_back_to_other(monkeypatch):
+    # configure_from_taxonomy() can register a custom subtype that
+    # normalize_subtype returns verbatim; it has no CUAD family.
+    import llm_dojo_scoring.cuad_schema as cs
+
+    monkeypatch.setattr(cs, "normalize_subtype", lambda _name: "custom")
+    assert cs.cuad_family("custom contract").key == "other"

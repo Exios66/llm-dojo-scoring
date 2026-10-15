@@ -77,3 +77,23 @@ def test_urgency_never_null():
 def test_unknown_doc_type_raises():
     with pytest.raises(KeyError):
         contract_violations("court_opinion", _BrokenInsurance)
+
+
+class _RequiredNullable(BaseModel):
+    """Two required-but-nullable fields: each one-field probe omits the other."""
+
+    insurer: str | None
+    insured_party: str | None
+
+
+def test_missing_other_required_field_is_not_blamed_on_probe():
+    assert contract_violations("insurance_claim", _RequiredNullable) == []
+
+
+class _RequiredNonNullable(BaseModel):
+    insurer: str
+    insured_party: str | None
+
+
+def test_required_non_nullable_still_flagged():
+    assert contract_violations("insurance_claim", _RequiredNonNullable) == ["insurer"]
