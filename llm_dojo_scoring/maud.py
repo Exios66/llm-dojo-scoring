@@ -461,9 +461,10 @@ def canonical_maud_class(
 ) -> str:
     """Canonical folded form of *value* under the question's class surface.
 
-    Whole-string class match first (class names themselves contain commas);
-    otherwise all comma components must map and the canonical components are
-    rejoined in sorted order, so a multi-class answer is order-insensitive
+    When every comma component is itself a class, the canonical components are
+    rejoined in sorted order (this covers composite classes such as
+    ``"General R&Ws, Capitalization R&Ws"``); otherwise the whole string is
+    matched as one class (class names themselves contain commas), so a multi-class answer is order-insensitive
     (``"B, A"`` and ``"A, B"`` are the same set of classes). Recognized Yes/No aliases fold to ``yes`` / ``no`` only when
     the question's surface actually carries Yes/No. Unrecognized text falls
     back to the folded raw value so exact-match scoring stays deterministic.
@@ -472,16 +473,19 @@ def canonical_maud_class(
         return ""
     index = maud_class_index(question, valid_classes)
     folded = _fold(value)
-    if folded in index:
-        return _fold(index[folded])
-    alias = _YES_NO_ALIASES.get(folded)
-    if alias and alias in index:
-        return alias
+    # Components first: a composite class whose parts are themselves classes
+    # ("General R&Ws, Capitalization R&Ws") must canonicalize to the same
+    # sorted set as any reordering of it.
     parts = _components(str(value))
     if len(parts) > 1:
         canonical = [index.get(_fold(part)) for part in parts]
         if all(part is not None for part in canonical):
             return ", ".join(sorted({_fold(part) for part in canonical}))
+    if folded in index:
+        return _fold(index[folded])
+    alias = _YES_NO_ALIASES.get(folded)
+    if alias and alias in index:
+        return alias
     return folded
 
 

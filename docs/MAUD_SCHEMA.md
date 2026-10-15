@@ -55,9 +55,9 @@ lists every answer; the grammar makes anything else unemittable.
   `maud_clauses` only (`content_scoring.peel_non_extraction_fields`); a
   `{question: class}` mapping under `maud_clauses` parses, but under `maud_answers`
   it scores **0 presence**. Run `maud_answers_to_clauses(...)` to get lines.
-  **It must drop `null`s**: a mapping entry with a null value is parsed as *present
-  with an empty answer* (`content_scoring._record_from_value`), inflating `n_present`
-  and counting an invalid class.
+  It drops `null`s and blanks. Passed straight to the scorer, a top-level
+  `{question: null}` entry is unanswered, but a blank string or a record with
+  `answer: null` is *present with an empty answer* and fails class validation.
 - **Variable-class questions** (`Accuracy of Target R&W Closing Condition`,
   `Limitations on FTR Exercise`, `MAE Definition`, `Tail Period & Acquisition
   Proposal Details`) record the corpus *union* with `variable=True`; the block says so.
@@ -742,37 +742,36 @@ enter the scored field map.
 
 ## 6. Scorer vs. prompt: observed inconsistencies
 
-Found while building the round-trip tests (`tests/test_maud_schema.py`); the
-scorer was **not** modified.
+Found while building the round-trip tests (`tests/test_maud_schema.py`). Items
+marked **fixed** were corrected in the scorer in the same change (SAND-042 RCA)
+and are pinned by `tests/test_maud_catalog.py`.
 
-1. **Answers are never shown to the model.** See section 1.
-2. **Double-space question name.** `_parse_span`
-   (`content_scoring.py:359-371`) prefix-matches `"Fiduciary exception:  Board
-   determination (no-shop):"` with two spaces. A model that normalizes to one space
-   is split at the *first* colon instead, yielding the unknown question
-   `Fiduciary exception`; the real question counts as missing
-   (accuracy 1.0 → 0.5 in a two-question probe).
+1. **Answers are never shown to the model.** See section 1. (Prompt-side; the
+   rendered block fixes it for stems built from `render_maud_question_block`.)
+2. **Fixed — double-space question name.** A model that normalizes
+   `"Fiduciary exception:  Board determination (no-shop)"` to one space used to be
+   split at the first colon (unknown question `Fiduciary exception`). Span prefixes
+   are now whitespace-tolerant.
 3. **Free-text lines inside `maud_clauses`.** The frozen prompt's per-subclass brief asks
    for "exchange ratio / stock consideration language", "per-share cash and stock mix"
    and "election mechanics" *in `maud_clauses`*. Those lines are not
    `'<Question>: <class>'`; they become unknown extra questions (ignored by the MAUD
    extras) but depress the `maud_clauses` field's token-F1.
 4. **`maud_category_accuracy` is structurally 0.** Span predictions carry
-   `category=""` (`content_scoring.py:592-596`), and the prompt format cannot
-   carry a category. Not a model error.
-5. **Null mapping entries count as present-but-invalid**
-   (`content_scoring.py:327-356`); see section 2.
-6. **A newline-joined string** in `maud_clauses` parses only its first line, with the
-   remaining lines swallowed into that answer.
-7. **`> 5 business days` ≡ `5 business days`.** `maud._fold` strips punctuation
-   (`maud.py:416`) and `maud_class_index` keeps the first of colliding keys
-   (`maud.py:438`), so these two distinct classes (COR and FTR matching rights)
-   are indistinguishable to the scorer (`scorer_fold_collisions()`).
-8. **A legitimate class can make GT unscorable.** `detect_maud_gt_ambiguity` splits
-   answers on whitespace-delimited `/` (`scorecard_honesty.py:66,469-484`), so the
-   4 `Tail Period & Acquisition Proposal Details` classes containing
-   `No-Vote / MTC Failure Trigger` are treated as collapsed multi-answers and the row
-   is `unscorable` on that question (`scorer_ambiguous_classes()`).
+   `category=""`, and the prompt format cannot carry a category. Not a model error.
+5. **Fixed — null mapping entries.** A top-level `{question: null}` is now
+   unanswered rather than present-but-invalid; see section 2 for the shapes that
+   still count as present.
+6. **Fixed — newline-joined strings** in `maud_clauses` are split into one span per
+   line.
+7. **Fixed — `> 5 business days` ≡ `5 business days`.** `maud._fold` now spells
+   comparators out (`>` → `greater than`, `>=`/`≥` → `at least`, …) before stripping
+   punctuation, so the two classes stay distinct; `scorer_fold_collisions()` reports
+   only intended equivalences.
+8. **Fixed — a legitimate class made GT unscorable.** `detect_maud_gt_ambiguity` no
+   longer splits a value that is itself a catalog class, so the 4
+   `Tail Period & Acquisition Proposal Details` classes containing
+   `No-Vote / MTC Failure Trigger` score normally.
 9. **`Type of Consideration` degrades unknown text to `other`**
    (`tasks.normalize_maud_consideration`), and accepts `none`/`cash`/`stock` aliases as
    valid, unlike the other 21 questions.

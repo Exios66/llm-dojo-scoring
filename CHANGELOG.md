@@ -34,6 +34,15 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+- MAUD composite classes whose parts are themselves catalog classes (e.g.
+  `General R&Ws, fundamental/Special R&Ws`) now canonicalize to the same sorted
+  set as any reordering, so a reordered correct answer is no longer scored wrong.
+- `contract_violations` counts only validation errors on the probed field; a
+  model's other required fields are no longer blamed on it.
+- `cuad_family` falls back to `other` for a normalized subtype with no CUAD family
+  (e.g. a custom subtype registered by `configure_from_taxonomy`).
+- README release pins restored to v0.21.0 after the `main` merge reverted them to
+  v0.16.0 (`test_readme_release_pins_match_version`).
 - SAND-042 RCA, MAUD scoring:
   - `maud._fold` stripped `>`, collapsing `"> 5 business days"` onto
     `"5 business days"` on both matching-rights questions; comparators are

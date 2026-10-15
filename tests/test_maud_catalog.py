@@ -479,3 +479,16 @@ def test_newline_joined_spans_parse_every_question():
     labels = parse_maud_labels(["No-Shop: Yes\nSpecific Performance: Yes"])
     assert set(labels) == {"No-Shop", "Specific Performance"}
     assert labels["No-Shop"]["answer"] == "Yes"
+
+
+def test_composite_class_with_catalog_components_matches_any_order():
+    # "General R&Ws, fundamental/Special R&Ws" is a class AND both parts are
+    # classes; the GT (catalog order) and a reordered prediction must agree.
+    composite = "General R&Ws, fundamental/Special R&Ws"
+    reordered = "fundamental/Special R&Ws, General R&Ws"
+    assert canonical_maud_class(_RW_QUESTION, composite) == canonical_maud_class(
+        _RW_QUESTION, reordered
+    )
+    exp = {_RW_QUESTION: {"answer": composite, "valid_classes": list(MAUD_ANSWER_CLASSES[_RW_QUESTION])}}
+    out = score_maud_extraction(exp, [f"{_RW_QUESTION}: {reordered}"])
+    assert out["maud_question_accuracy"] == 1.0

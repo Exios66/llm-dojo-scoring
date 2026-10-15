@@ -899,7 +899,7 @@ def cuad_family(name: Any = None) -> CuadFamily:
     raw = str(name).strip() if name is not None else ""
     if raw in _FAMILY_INDEX:
         return _FAMILY_INDEX[raw]
-    return _FAMILY_INDEX[normalize_subtype(name)]
+    return _FAMILY_INDEX.get(normalize_subtype(name), _FAMILY_INDEX["other"])
 
 
 def salient_categories(family: Any = None) -> tuple[str, ...]:
