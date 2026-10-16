@@ -80,7 +80,7 @@ Field maps those stems emit (and the scorer grades) are documented in
 `mailroom-dataset-v1` lineage, not just the five specialist stems above: the
 archived production prompts (`<role>_v0`, plus `contracts_specialist_v33`), the
 frozen `<role>_v1` snapshot, and the GEPA / manual mutations (`<role>_v2` ...).
-39 versions, 15 roles, pinned to eval-environment commit `3f9bd55`
+40 versions, 15 roles, pinned to eval-environment commit `bdba24c`
 (`LINEAGE_SOURCE`). eval-environment's live `production` kind is not a frozen
 version and is not included. The texts are historical eval-environment bytes:
 the anti-priming rule below is not applied to them.
@@ -129,7 +129,11 @@ between the two conventions.
 
 - `created_at` is not monotonic along the sorter chain: `sorter_v2` / `sorter_v3`
   were created 2026-09-16, before the 2026-09-26 freeze of `sorter_v1`.
-- `sorter_v3` contains its corporate_record block twice (known upstream defect).
+- `sorter_v3` contains its corporate_record block twice (known upstream defect);
+  its `changes.notes` says so. `sorter_v4` removes the duplicate (also noted in
+  its `changes.notes`) and, once its single corporate_record block is cut out,
+  equals the `production` sorter (`sorter_v14`) text plus the catalog's trailing
+  newline (lineage texts are raw; dojo templates end in exactly one `"\n"`).
 - `contracts_specialist_v33` (Modal parity prompt) is a re-keyed copy of the
   archived `contracts_specialist_v0`: its text equals `_v0` apart from a trailing
   newline (the entry's memo says so). It has no predecessor and the highest
@@ -154,7 +158,7 @@ between the two conventions.
 | `merger_agreement_specialist` | v1 to v3 | `merger_agreement_specialist_v3` |
 | `pipeline_quality` | v1 | `pipeline_quality_v1` |
 | `pipeline_verdict` | v1 | `pipeline_verdict_v1` |
-| `sorter` | v1 to v3 | `sorter_v3` |
+| `sorter` | v1 to v4 | `sorter_v4` |
 | `sorter_reviewer` | v1 | `sorter_reviewer_v1` |
 
 Re-sync (reads the data files and parses the Python sources with `ast`; no
