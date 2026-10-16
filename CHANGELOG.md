@@ -151,6 +151,16 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Added
 
+- **eval-environment prompt lineage.** `llm_dojo_scoring.prompts` now exports
+  `list_prompt_versions`, `get_prompt_version`, `prompt_roles`, `prompt_chain`,
+  `latest_prompt_version`, `default_prompt_version`, `diff_prompt_versions`,
+  `PromptVersion` and `LINEAGE_SOURCE`: all 39 archived (`_v0`, `contracts_specialist_v33`),
+  frozen (`_v1`) and mutated (`_v2`...) eval-environment prompt versions
+  (`mailroom-dataset-v1`, pinned to eval-environment `3f9bd55`) with memos,
+  provenance, sha256 and a per-version change summary. Data:
+  `prompts/eval_environment_lineage.json` (shipped as package data);
+  regenerate with `scripts/sync_eval_environment_lineage.py --eval-env PATH [--check]`.
+  See `docs/PROMPTS.md`.
 - `field_scoring.embed_texts(texts)` (top-level export) — the scorer's own
   embedding backend as a public, fail-soft call, so consumers (llm-mailroom
   `pipeline/relations.py`) no longer need `_get_embedding()._embed`.
