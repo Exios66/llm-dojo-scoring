@@ -14,7 +14,11 @@ Typical consumer (llm-entity-extraction ``src/score_emitter.py``)::
     from llm_dojo_scoring.emitter import Emitter, LocalManifestSink
 
     emitter = Emitter(sinks=[LocalManifestSink("reports/scores.jsonl")])
-    emitter.emit_score("sorter", doc_id="doc_17", metric="f1_macro", value=0.93)
+    emitter.emit_score(
+        "sorter", doc_id="doc_17", metric_name="f1_macro", value=0.93,
+        provenance={"dataset_revision": "46a4d3c2", "prompt_id": "sorter_v3",
+                    "serving_kind": "api", "model_id": "qwen/qwen3-8b"},
+    )
     card = emitter.scorecard("sorter", run_id="run_42", min_tier=0)
 """
 
@@ -27,7 +31,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from statistics import fmean
-from typing import Any, Iterable, Protocol
+from typing import Any, Iterable, Mapping, Protocol
 
 from .registry import MetricTier, Registry, load_registry
 
@@ -60,6 +64,7 @@ __all__ = [
     "LocalManifestSink",
     "LangfuseSink",
     "Emitter",
+    "EMIT_REQUIRED_PROVENANCE",
     "get_emitter",
     "reset_default_emitter",
 ]
@@ -218,17 +223,80 @@ def _aggregate(values: list[Any], mode: str) -> Any:
     return float(fmean(numeric)) if numeric else values[-1]
 
 
+#: Provenance keys a caller must supply on every emitted score (#22).
+#: ``scorer_version`` and ``metric_id`` are filled here; ``split`` and
+#: ``draw_seed`` are recorded when given ("if any" in the issue).
+EMIT_REQUIRED_PROVENANCE: tuple[str, ...] = (
+    "dataset_revision",
+    "prompt_id",
+    "serving_kind",
+    "model_id",
+)
+
+
+def _emit_provenance(
+    metric_name: str,
+    units: str,
+    provenance: Mapping[str, Any] | None,
+    *,
+    require: bool,
+) -> dict[str, Any]:
+    """Normalize the caller's stamp; refuse an incomplete one when required."""
+    from .scorecard_honesty import (
+        _METRIC_ID_BY_NAME,
+        COST_BASIS_VALUES,
+        ProvenanceExportError,
+        stamp_provenance,
+    )
+
+    given = dict(provenance or {})
+    if isinstance(given.get("provenance"), Mapping):  # a stamped scorecard
+        given = dict(given["provenance"])
+    # Unmapped registry metrics (latency, cost, ...) have no cross-leg
+    # comparison id; their identity is the registry entry itself.
+    canonical = _METRIC_ID_BY_NAME.get(metric_name) or f"registry:{metric_name}"
+    claimed = given.get("metric_id")
+    if claimed is not None and claimed != canonical:
+        raise ProvenanceExportError(
+            f"provenance metric_id {claimed!r} contradicts {metric_name!r} "
+            f"(canonical {canonical!r})"
+        )
+    prov = stamp_provenance(given, metric_id=canonical)["provenance"]
+    if not require:
+        return prov
+    missing = [k for k in EMIT_REQUIRED_PROVENANCE if not prov.get(k)]
+    if units == "USD":
+        basis = prov.get("cost_basis")
+        if basis not in COST_BASIS_VALUES:
+            missing.append("cost_basis")
+    if missing:
+        raise ProvenanceExportError(
+            f"emit_score({metric_name!r}) refused: provenance missing {missing}"
+        )
+    return prov
+
+
 class Emitter:
-    """Routes score records to sinks and answers scorecard queries."""
+    """Routes score records to sinks and answers scorecard queries.
+
+    Every record carries a provenance stamp in ``metadata["provenance"]``
+    (#22). With ``require_provenance=True`` (the default) a score without
+    :data:`EMIT_REQUIRED_PROVENANCE` — plus ``cost_basis`` on USD metrics —
+    raises :class:`~llm_dojo_scoring.scorecard_honesty.ProvenanceExportError`
+    before reaching any sink. Pass ``require_provenance=False`` only for
+    ad-hoc local exploration whose records are never compared.
+    """
 
     def __init__(
         self,
         sinks: Iterable[ScoreSink] | None = None,
         *,
         registry: Registry | None = None,
+        require_provenance: bool = True,
     ) -> None:
         self.sinks: list[ScoreSink] = list(sinks) if sinks is not None else [LocalManifestSink()]
         self.registry = registry or load_registry()
+        self.require_provenance = require_provenance
         self._records: list[ScoreRecord] = []
 
     # -- emitting ------------------------------------------------------------
@@ -249,16 +317,31 @@ class Emitter:
         value: float | str | None,
         metadata: dict[str, Any] | None = None,
         run_id: str | None = None,
+        *,
+        provenance: Mapping[str, Any] | None = None,
     ) -> ScoreRecord:
-        """Validate against the registry, then fan out to every sink."""
-        self.registry.get(metric_name)  # KeyError on unknown metric: fail fast
+        """Validate against the registry and provenance, then fan out.
+
+        ``provenance`` is a bare stamp or a scorecard already passed through
+        :func:`~llm_dojo_scoring.scorecard_honesty.stamp_provenance`.
+        """
+        mdef = self.registry.get(metric_name)  # KeyError on unknown metric: fail fast
+        meta = dict(metadata or {})
+        if provenance is None and isinstance(meta.get("provenance"), Mapping):
+            provenance = meta["provenance"]
+        meta["provenance"] = _emit_provenance(
+            metric_name,
+            mdef.units,
+            provenance,
+            require=self.require_provenance,
+        )
         record = ScoreRecord(
             agent=agent_name,
             metric=metric_name,
             value=value,
             doc_id=doc_id,
             run_id=run_id,
-            metadata=dict(metadata or {}),
+            metadata=meta,
         )
         self._records.append(record)
         for sink in self.sinks:

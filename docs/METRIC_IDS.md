@@ -44,9 +44,12 @@ different `metric_id` values on their quality blocks. A grid row that mixes
 metric ids raises (`llm_dojo_scoring.grid.specialist_grid_rows`) rather than
 averaging two different scales.
 
-## Not a KPI
+## Strict resolution
 
-`metric_id_for` still fabricates `pipeline.<class>.<name>` for a registry
-metric that has no canonical mapping. Prefer an explicit mapping above; the
-fabricated id exists for historical exports only and is tracked as remaining
-#17 work in [`ISSUE_ALIGNMENT.md`](ISSUE_ALIGNMENT.md).
+`metric_id_for` resolves only the names in the table above. Any other name
+raises `UnknownMetricNameError` (a `KeyError`); it no longer fabricates
+`pipeline.<class>.<name>` or `maud.<name>`. A made-up id never matches the
+other leg's, so it hid an incomparable pair instead of refusing it. To score
+a new metric across legs, add it to `_METRIC_ID_BY_NAME` in
+`scorecard_honesty.py` **and** to this page: `tests/test_metric_id_strict.py`
+fails if the two disagree.
