@@ -129,7 +129,7 @@ Insurance; Covenant Not To Sue; Third Party Beneficiary.
 
 **Allowed `metric_id`:** `pipeline.extraction.overall`,
 `cuad.clause_presence.micro_f1`, `pipeline.extraction.field_micro_f1` /
-`_f2`, `maud.question.micro_accuracy`.
+`_f2` / `_precision` / `_recall`, `maud.question.micro_accuracy`.
 
 **Frozen prompt:** `contracts_specialist` `sha256 d91de396…` (byte-identical
 to sandbox `contracts_specialist_v33_simplified`).
@@ -181,7 +181,7 @@ still score the content metric.
 
 **Allowed `metric_id`:** `pipeline.extraction.overall`,
 `maud.question.micro_accuracy`, `maud.clause_presence.rate`,
-`pipeline.extraction.field_micro_f1` / `_f2`.
+`pipeline.extraction.field_micro_f1` / `_f2` / `_precision` / `_recall`.
 
 **Frozen prompt:** `merger_agreement_specialist` `sha256 00323258…`.
 
@@ -200,7 +200,7 @@ Governance instruments. Do **not** emit `document_name`, `parties`,
 | `signatories` | `entity_list:name` | `[]` | Execution / approval names |
 | `jurisdiction` | `name` | `null` | State/country of incorporation or governing jurisdiction |
 | `filing_number` | `id` | `null` | Official file/document number **only**. Exhibit IDs and parent-agreement dockets do **not** qualify (v0.19.1 re-freeze) |
-| `intent` | `label` | `null` | `governance_rules` · `corporate_action_approval` · `entity_formation` · `authority_delegation` · `investor_rights` · `other`. Canonicalized via `normalize_intent`; exact match. (`DEFAULT_FIELD_TYPES` still maps `intent` to `name` until the taxonomy fixture is re-pinned; `label` applies where the field-type map says so.) |
+| `intent` | `label` | `null` | `governance_rules` · `corporate_action_approval` · `entity_formation` · `authority_delegation` · `investor_rights` · `other`. Canonicalized via `normalize_intent`; exact match. |
 | `subject_matter` | `free_text` | `null` | One grounded sentence |
 | `keywords` | `entity_list:name` | `[]` | ≤8 phrases from the text |
 
@@ -223,7 +223,7 @@ Hub subset.
 official filing/document number is on **this** record.
 
 **Allowed `metric_id`:** `pipeline.extraction.overall`,
-`pipeline.extraction.field_micro_f1` / `_f2`. No CUAD/MAUD-grade external
+`pipeline.extraction.field_micro_f1` / `_f2` / `_precision` / `_recall`. No CUAD/MAUD-grade external
 benchmark.
 
 **Frozen prompt:** `corporate_records_specialist` `sha256 fe13501f…`
@@ -247,7 +247,7 @@ go in `demand_amount`, never insurance `claimed_amount`.
 | `demand_amount` | `money` | `null` | Exact dollars demanded; most non-demand mail is `null` |
 | `action_items` | `entity_list` | `[]` | ≤3 concrete actions with deadlines if stated |
 | `urgency` | `name` | never `null` | `routine` · `time-sensitive` · `urgent` · `critical`. Unspecified → `routine` |
-| `intent` | `label` | `null` | `payment_demand` · `notice` · `analysis` · `request` · `update` · `meeting_invite` · `press_communication` · `other`. Canonicalized via `normalize_intent`; exact match. (`DEFAULT_FIELD_TYPES` still maps `intent` to `name` until the taxonomy fixture is re-pinned; `label` applies where the field-type map says so.) |
+| `intent` | `label` | `null` | `payment_demand` · `notice` · `analysis` · `request` · `update` · `meeting_invite` · `press_communication` · `other`. Canonicalized via `normalize_intent`; exact match. |
 | `subject_matter` | `free_text` | `null` | One grounded sentence |
 | `keywords` | `entity_list:name` | `[]` | ≤8 phrases from the text |
 
@@ -265,7 +265,7 @@ rows: `content_topic` (11) —
 (`negative` 180 / `neutral` 566 / `positive` 254). Content-only rows
 still score those metrics.
 
-**Allowed `metric_id`:** extraction overall + field-micro F1/F2, plus
+**Allowed `metric_id`:** extraction overall + field-micro F1/F2/precision/recall, plus
 `pipeline.enron.topic_accuracy` / `topic_f1_macro` /
 `sentiment_accuracy` / `sentiment_f1_macro`.
 
@@ -297,7 +297,7 @@ fields the text states.
 | `coverage_determination` | `name` | `null` | As written: `approved` · `denied` · `partial` · `pending`. Never infer from tone |
 | `denial_reasons` | `entity_list:free_text` | `[]` | Stated grounds; `[]` when approved / pending / unstated |
 | `supporting_documents` | `entity_list` | `[]` | Referenced docs; CMS provider/NPI lines belong here |
-| `intent` | `label` | `null` | `claim_filing` · `coverage_determination` · `loss_report` · `claim_data_record` · `other`. Canonicalized via `normalize_intent`; exact match. (`DEFAULT_FIELD_TYPES` still maps `intent` to `name` until the taxonomy fixture is re-pinned; `label` applies where the field-type map says so.) |
+| `intent` | `label` | `null` | `claim_filing` · `coverage_determination` · `loss_report` · `claim_data_record` · `other`. Canonicalized via `normalize_intent`; exact match. |
 | `subject_matter` | `free_text` | `null` | One grounded sentence |
 | `keywords` | `entity_list:name` | `[]` | ≤8 phrases from the text |
 | `claim_checklist` | `entity_list:free_text` | `[]` | `'<Category>: <evidence>'` — present only |
@@ -322,7 +322,7 @@ is homogeneous (`coverage_determination=approved`, empty denials), so
 consistency is degenerate on GT-shaped predictions.
 
 **Allowed `metric_id`:** `pipeline.extraction.overall`,
-`pipeline.extraction.field_micro_f1` / `_f2`.
+`pipeline.extraction.field_micro_f1` / `_f2` / `_precision` / `_recall`.
 
 **Frozen prompt:** `insurance_claims_specialist` `sha256 6c2776bc…`.
 
