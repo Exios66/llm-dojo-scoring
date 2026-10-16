@@ -265,13 +265,21 @@ def _emit_provenance(
     if not require:
         return prov
     missing = [k for k in EMIT_REQUIRED_PROVENANCE if not prov.get(k)]
+    invalid = ""
     if units == "USD":
         basis = prov.get("cost_basis")
-        if basis not in COST_BASIS_VALUES:
+        if not basis:
             missing.append("cost_basis")
-    if missing:
+        elif basis not in COST_BASIS_VALUES:
+            invalid = (
+                f"cost_basis {basis!r} is not one of {sorted(COST_BASIS_VALUES)}"
+            )
+    if missing or invalid:
+        parts = [f"provenance missing {missing}"] if missing else []
+        if invalid:
+            parts.append(invalid)
         raise ProvenanceExportError(
-            f"emit_score({metric_name!r}) refused: provenance missing {missing}"
+            f"emit_score({metric_name!r}) refused: " + "; ".join(parts)
         )
     return prov
 

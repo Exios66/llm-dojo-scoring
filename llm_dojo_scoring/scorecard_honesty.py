@@ -18,6 +18,7 @@ from .maud import is_maud_class
 __all__ = [
     "SCORER_VERSION",
     "PROVENANCE_KEYS",
+    "COST_BASIS_TOKEN_PRICE",
     "COST_BASIS_VALUES",
     "IncomparableMetricsError",
     "UnknownMetricNameError",
@@ -61,7 +62,14 @@ PROVENANCE_KEYS: frozenset[str] = frozenset(
     }
 )
 
-COST_BASIS_VALUES: frozenset[str] = frozenset({"busy_window", "billed_incl_cold"})
+#: USD computed as prompt/completion tokens × a provider price table
+#: (``cost.estimate_cost``). An estimate, never comparable with a metered
+#: GPU-time basis.
+COST_BASIS_TOKEN_PRICE = "token_price_estimate"
+
+COST_BASIS_VALUES: frozenset[str] = frozenset(
+    {"busy_window", "billed_incl_cold", COST_BASIS_TOKEN_PRICE}
+)
 
 #: Canonical completion-error histogram keys (#21).
 ERROR_CLASS_LENGTH_FINISH = "LengthFinish"
@@ -231,21 +239,28 @@ def assert_comparable_metric_ids(
     *,
     hard: bool = True,
 ) -> dict[str, Any]:
-    """Refuse silent cross-metric comparisons (#17)."""
-    if not left or not right:
-        return {"comparable": True, "metric_id": left or right}
+    """Refuse silent cross-metric comparisons (#17).
+
+    Both legs unset is legacy data with no identity to check: comparable,
+    flagged ``metric_id_unverified``. One leg set and the other not is
+    incomparable (``metric_id_missing``) — there is no shared identity.
+    """
+    if not left and not right:
+        return {"comparable": True, "metric_id": None, "metric_id_unverified": True}
     if left == right:
         return {"comparable": True, "metric_id": left}
+    reason = "metric_id_mismatch" if left and right else "metric_id_missing"
     detail = {
         "comparable": False,
         "incomparable": True,
-        "incomparable_reason": "metric_id_mismatch",
+        "incomparable_reason": reason,
         "left_metric_id": left,
         "right_metric_id": right,
     }
     if hard:
         raise IncomparableMetricsError(
-            f"Cannot compare {left!r} with {right!r} — use the same metric_id on both legs."
+            f"Cannot compare {left!r} with {right!r} ({reason}) — "
+            "use the same metric_id on both legs."
         )
     return detail
 
@@ -648,19 +663,24 @@ def aggregate_quality_itt(
     *,
     score_key: str = "overall_score",
 ) -> dict[str, Any]:
-    """ITT population: attempted docs, errors count as zero quality (#21)."""
+    """ITT population: attempted docs, errors count as zero quality (#21).
+
+    Unscorable docs (#16) leave the denominator too: they have no ground
+    truth, so they are neither a success nor a zero.
+    """
     base = aggregate_quality_honest(doc_results, score_key=score_key)
     n_attempted = int(completion.get("n_attempted") or len(doc_results))
+    n_attempted = max(n_attempted - base["n_unscorable"], base["n_scored"])
     mean = base.get("quality_mean")
-    n_errored = int(completion.get("n_errored") or 0)
     itt_mean = None
     if n_attempted and mean is not None:
         scored_total = float(mean) * base["n_scored"]
-        itt_mean = round((scored_total + 0.0 * n_errored) / n_attempted, 4)
+        itt_mean = round(scored_total / n_attempted, 4)
     out = dict(base)
     out.update(
         {
             "quality_population_itt": "attempted_including_errors_as_zero",
+            "n_attempted_scorable": n_attempted,
             "quality_mean_itt": itt_mean,
             "quality_population_completed": "scored_only",
             "quality_mean_completed": mean,
@@ -701,31 +721,67 @@ def stamp_provenance(
     return base
 
 
+def _absent(value: Any) -> bool:
+    # 0 is a real draw seed; only None / "" count as missing.
+    return value is None or (isinstance(value, str) and not value.strip())
+
+
+#: Provenance keys a comparison may leave unset on *both* legs (a full-split
+#: run has no draw seed). Set on one leg only is still refused.
+_OPTIONAL_PAIRED_KEYS: frozenset[str] = frozenset({"draw_seed"})
+
+
 def validate_comparison_provenance(
     left: Mapping[str, Any],
     right: Mapping[str, Any],
     *,
     require_cost_basis_if_cost: bool = True,
+    vary: Sequence[str] = (),
 ) -> None:
-    """Refuse exports when provenance keys differ (#22)."""
+    """Refuse exports when provenance keys differ (#22).
+
+    Every key in ``PROVENANCE_KEYS`` must be present on both legs and equal,
+    except:
+
+    * keys named in ``vary`` — the axis the comparison is about (for
+      local-vs-API serving, ``("serving_kind", "model_id")``) — which must be
+      present on both legs but may differ;
+    * ``draw_seed``, which may be absent on both legs (full split, no draw).
+
+    ``cost_basis`` must be one of ``COST_BASIS_VALUES`` on any leg that
+    carries one, and equal across legs when either leg carries cost.
+    """
+    unknown_vary = sorted(set(vary) - PROVENANCE_KEYS)
+    if unknown_vary:
+        raise ValueError(f"vary names non-provenance keys: {unknown_vary}")
     lp = left.get("provenance") or left
     rp = right.get("provenance") or right
     missing: list[str] = []
     mismatched: list[str] = []
-    for key in PROVENANCE_KEYS:
+    for key in sorted(PROVENANCE_KEYS):
         lv, rv = lp.get(key), rp.get(key)
-        if not lv or not rv:
+        if key in _OPTIONAL_PAIRED_KEYS and _absent(lv) and _absent(rv):
+            continue
+        if _absent(lv) or _absent(rv):
             missing.append(key)
-        elif lv != rv:
+        elif key in vary:
+            continue
+        elif str(lv) != str(rv):
             mismatched.append(key)
     if missing or mismatched:
         raise ProvenanceExportError(
             f"Comparison export refused: missing={missing} mismatched={mismatched}"
         )
+    lb, rb = lp.get("cost_basis"), rp.get("cost_basis")
+    invalid = [b for b in (lb, rb) if not _absent(b) and b not in COST_BASIS_VALUES]
+    if invalid:
+        raise ProvenanceExportError(
+            f"Comparison export refused: cost_basis {invalid[0]!r} is not one of "
+            f"{sorted(COST_BASIS_VALUES)}"
+        )
     if require_cost_basis_if_cost:
         if left.get("cost") or right.get("cost"):
-            lb, rb = lp.get("cost_basis"), rp.get("cost_basis")
-            if not lb or not rb:
+            if _absent(lb) or _absent(rb):
                 raise ProvenanceExportError(
                     "Comparison export refused: cost present but cost_basis missing"
                 )
