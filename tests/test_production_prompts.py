@@ -1,6 +1,8 @@
 """production_prompts lineage — eval-environment frozen v1 specialist stems.
 
-The sha256 values pin the current text, including local field-guidance corrections.
+The sha256 values pin the current text. Corporate-records and correspondence carry the
+field-guidance corrections that eval-environment froze as mutations
+``corporate_records_specialist_v6`` / ``correspondence_specialist_v7`` (#29).
 Source lineage comes from the sandbox
 ``config/prompts/eval_environment_lineage.json`` (``mailroom-dataset-v1``,
 frozen 2026-09-26T05:09:29+00:00). Network-free; no sandbox checkout needed.
@@ -24,7 +26,7 @@ FROZEN_V1: dict[str, dict[str, object]] = {
         "doc_bundle": "contract",
     },
     "corporate_records_specialist": {
-        "eval_key": "corporate_records_specialist_v1",
+        "eval_key": "corporate_records_specialist_v6",
         "sandbox_stem": "corporate_records_specialist_simplified",
         "sha256": "fe13501f667fcd9f64f7dfbf8b0f124f81d9dd039f4109288b43f106f82b1399",
         "chars": 5865,
@@ -32,7 +34,7 @@ FROZEN_V1: dict[str, dict[str, object]] = {
         "doc_bundle": "corporate_record",
     },
     "correspondence_specialist": {
-        "eval_key": "correspondence_specialist_v1",
+        "eval_key": "correspondence_specialist_v7",
         "sandbox_stem": "correspondence_specialist_simplified",
         "sha256": "2b0b81ff98920b9207627707443e2b023db39212fda5bdcba7bfbded39fa38b6",
         "chars": 6113,
