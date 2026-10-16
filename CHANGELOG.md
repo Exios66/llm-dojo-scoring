@@ -5,6 +5,8 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-10-16
+
 ### Changed — breaking
 
 - **`metric_id_for` is strict (#17).** An unmapped metric name raises
