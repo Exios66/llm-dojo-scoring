@@ -390,9 +390,8 @@ def aggregate_quality_honest(
         "n_unscorable": n_unscorable,
         "quality_mean": round(fmean(scored_vals), 4) if scored_vals else None,
         "quality_population": "scored_only",
-        "export_verdict": (
-            "unproven" if n_scored == 0 and n_unscorable else "scored"
-        ),
+        # Nothing scored (empty batch or every row unscorable) proves nothing.
+        "export_verdict": "unproven" if n_scored == 0 else "scored",
     }
 
 
@@ -716,7 +715,12 @@ def stamp_provenance(
     prov = {
         "dataset_revision": dataset_revision or base.get("dataset_revision"),
         "split": split or base.get("split"),
-        "draw_seed": draw_seed or base.get("draw_seed") or base.get("dataset_fingerprint"),
+        # 0 is a real draw seed; fall back only when it is unset.
+        "draw_seed": next(
+            (v for v in (draw_seed, base.get("draw_seed"), base.get("dataset_fingerprint"))
+             if not _absent(v)),
+            None,
+        ),
         "prompt_id": prompt_id or base.get("prompt_id") or base.get("prompt_version"),
         "metric_id": metric_id or base.get("metric_id"),
         "scorer_version": base.get("scorer_version") or SCORER_VERSION,
@@ -761,6 +765,8 @@ def validate_comparison_provenance(
     ``cost_basis`` must be one of ``COST_BASIS_VALUES`` on any leg that
     carries one, and equal across legs when either leg carries cost.
     """
+    if isinstance(vary, str):
+        vary = (vary,)  # a bare key name, not its characters
     unknown_vary = sorted(set(vary) - PROVENANCE_KEYS)
     if unknown_vary:
         raise ValueError(f"vary names non-provenance keys: {unknown_vary}")
@@ -789,16 +795,16 @@ def validate_comparison_provenance(
             f"Comparison export refused: cost_basis {invalid[0]!r} is not one of "
             f"{sorted(COST_BASIS_VALUES)}"
         )
-    if require_cost_basis_if_cost:
-        if left.get("cost") or right.get("cost"):
-            if _absent(lb) or _absent(rb):
-                raise ProvenanceExportError(
-                    "Comparison export refused: cost present but cost_basis missing"
-                )
-            if lb != rb:
-                raise ProvenanceExportError(
-                    f"Comparison export refused: cost_basis mismatch ({lb!r} vs {rb!r})"
-                )
+    if not _absent(lb) and not _absent(rb) and lb != rb:
+        # Never compare USD on two different bases, cost block or not.
+        raise ProvenanceExportError(
+            f"Comparison export refused: cost_basis mismatch ({lb!r} vs {rb!r})"
+        )
+    if require_cost_basis_if_cost and (left.get("cost") or right.get("cost")):
+        if _absent(lb) or _absent(rb):
+            raise ProvenanceExportError(
+                "Comparison export refused: cost present but cost_basis missing"
+            )
 
 
 def normalize_serving_kind_token(kind: str | None) -> str | None:

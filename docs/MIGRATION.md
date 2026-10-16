@@ -403,7 +403,12 @@ cmp = get_suite("local_vs_api").score(local_records, api_records)
 assert {r["metric"] for r in cmp["table"]}  # includes queue_time_seconds even when None
 assert cmp["scorecard"]["cost"]["local"]["estimated_cost_usd"] is None  # Ollama slug
 assert cmp["markdown"].startswith("# local vs API serving scorecard")
-emit_serving_scorecard(cmp, run_id="exp_1")
+emit_serving_scorecard(
+    cmp,
+    run_id="exp_1",
+    provenance={"local": {"dataset_revision": "46a4d3c2"},
+                "api": {"dataset_revision": "46a4d3c2"}},
+)
 ```
 
 Do not push pin PRs to dependents from this package PR.

@@ -405,3 +405,159 @@ def test_scoring_doc_field_tables_match_default_field_types():
         assert int(m.group(2)) == len(rows), m.group(1)
         documented[m.group(1)] = rows
     assert documented == {k: dict(v) for k, v in DEFAULT_FIELD_TYPES.items()}
+
+
+# ---- adversarial-review follow-ups ----------------------------------------
+
+
+def _insurance_full():
+    from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES
+
+    full = {k: None for k in DEFAULT_FIELD_TYPES["insurance_claim"]}
+    full.update(GT)
+    return full
+
+
+@pytest.mark.parametrize("pred", [[None], ["garbage"], []])
+def test_missing_batch_predictions_count_as_misses(pred):
+    full = _insurance_full()
+    out = get_suite(INSURANCE).score([GT, GT], [full, *pred])
+    assert len(out["extraction"]) == 2
+    assert out["extraction_recall"] == 0.5
+    assert out["quality_mean"] == 0.5
+    assert out["n_missing_predictions"] == (1 if not pred else 0)
+
+
+def test_empty_prediction_list_scores_every_row_as_unfilled():
+    out = get_suite(INSURANCE).score([GT, GT], [])
+    assert out["n_scored"] == 2
+    assert out["n_missing_predictions"] == 2
+    assert out["extraction_recall"] == 0.0
+    assert out["schema_promotion_gate"]["passes"] is False
+
+
+def test_whole_batch_json_string_is_parsed():
+    import json
+
+    full = _insurance_full()
+    out = get_suite(INSURANCE).score([GT, GT], json.dumps([full, full]))
+    assert out["extraction_recall"] == 1.0
+    assert out["parse_ok"] == 1.0
+
+
+def test_gt_less_batch_rows_feed_no_content_extras():
+    from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES
+
+    keys = list(DEFAULT_FIELD_TYPES["correspondence"])[:2]
+    gold = {**{k: "AB123" for k in keys}, "content_topic": "billing",
+            "sentiment_label": "neutral"}
+    other = {**gold, "content_topic": "legal", "sentiment_label": "negative"}
+    out = get_suite("correspondence_specialist").score(
+        [gold, {"foo": "bar"}], [gold, other]
+    )
+    assert out["n_unscorable"] == 1
+    assert out["n_topic"] == 1 and out["content_topic_accuracy"] == 1.0
+    assert out["n_sentiment"] == 1 and out["sentiment_accuracy"] == 1.0
+
+
+def test_stamp_provenance_keeps_draw_seed_zero():
+    from llm_dojo_scoring.scorecard_honesty import stamp_provenance
+
+    assert stamp_provenance(draw_seed=0)["provenance"]["draw_seed"] == 0
+    out = get_suite(INSURANCE).score_document(GT, _insurance_full(), draw_seed=0)
+    assert out["provenance"]["draw_seed"] == 0
+
+
+def test_mixed_cost_basis_refused_without_cost_block():
+    with pytest.raises(ProvenanceExportError, match="cost_basis mismatch"):
+        validate_comparison_provenance(
+            {**_FULL, "cost_basis": "token_price_estimate"},
+            {**_FULL, "cost_basis": "busy_window"},
+        )
+
+
+def test_vary_accepts_a_bare_key_name():
+    api = {**_FULL, "serving_kind": "api"}
+    validate_comparison_provenance(_FULL, api, vary="serving_kind")
+
+
+def test_empty_batch_quality_is_unproven():
+    from llm_dojo_scoring.scorecard_honesty import aggregate_quality_honest
+
+    assert aggregate_quality_honest([])["export_verdict"] == "unproven"
+
+
+def test_serving_run_inputs_keep_their_metric_id():
+    from llm_dojo_scoring.serving import normalize_serving_record
+
+    left = normalize_serving_record(_leg("vllm", metric_id="pipeline.extraction.overall"))
+    right = normalize_serving_record(
+        _leg("openrouter", metric_id="cuad.clause_presence.micro_f1")
+    )
+    assert left.metric_id == "pipeline.extraction.overall"
+    out = compare_serving(left, right)
+    assert out["incomparable_reason"] == "metric_id_mismatch"
+    mixed = compare_serving(
+        [left, _leg("vllm")], _leg("openrouter", metric_id="pipeline.extraction.overall")
+    )
+    assert mixed["incomparable_reason"] == "metric_id_mixed"
+    assert "mixes metric_ids" in mixed["markdown"]
+
+
+def test_no_metric_ids_on_either_leg_is_flagged_unverified():
+    out = compare_serving(_leg("vllm"), _leg("openrouter"))
+    assert not out.get("incomparable")
+    assert out["metric_id_unverified"] is True
+
+
+def test_leg_pooling_different_datasets_is_identity_mixed():
+    from llm_dojo_scoring.serving import emit_serving_scorecard
+
+    mid = "pipeline.extraction.overall"
+    local = [
+        _leg("vllm", dataset_revision="rA", metric_id=mid),
+        _leg("vllm", dataset_revision="rB", metric_id=mid),
+    ]
+    api = _leg("openrouter", dataset_revision="rA", metric_id=mid)
+    out = compare_serving(local, api)
+    assert out["incomparable_reason"] == "identity_mixed"
+    assert out["local"]["identity_conflict"] == ["dataset_revision"]
+    assert out["quality"]["delta_local_minus_api"] is None
+    with pytest.raises(ProvenanceExportError, match="dataset_revision"):
+        emit_serving_scorecard(out, emitter=Emitter(sinks=[]))
+    with pytest.raises(ProvenanceExportError, match="pools runs"):
+        compare_serving(local, api, require_provenance={"local": {}, "api": {}})
+
+
+def test_emit_drops_a_quality_metric_id_stamp_and_none_values():
+    from llm_dojo_scoring.serving import emit_serving_scorecard
+
+    cmp = compare_serving(
+        _leg("vllm", model="qwen3:8b", prompt_version="p1", dataset_revision="r1"),
+        _leg("openrouter", model="qwen/qwen3.7-flash", prompt_version="p1",
+             dataset_revision="r1"),
+    )
+    stamp = {"metric_id": "pipeline.extraction.overall", "dataset_revision": None}
+    card = emit_serving_scorecard(
+        cmp, emitter=Emitter(sinks=[]), provenance={"local": stamp, "api": stamp}
+    )
+    assert card["dashboard"]["ttft_seconds"]["local"] == pytest.approx(0.2)
+
+
+def test_grid_score_level_unscorable_wins_over_run_status():
+    rows = specialist_grid_rows(
+        documents=[
+            {"experiment": "e1", "specialist": "contract", "status": "completed",
+             "scores": {"status": "unscorable"}, "score": 0.0},
+            {"experiment": "e1", "specialist": "contract", "status": "Unscorable"},
+        ],
+        experiments=[{"name": "e1"}],
+    )
+    assert rows[0]["n_unscorable"] == 2
+
+
+def test_archive_accepts_a_canonical_id_as_method():
+    block = score_archive_block(
+        "insurance_claim", dict(GT), dict(GT), method="pipeline.extraction.overall"
+    )
+    assert block["provenance"]["metric_id"] == "pipeline.extraction.overall"

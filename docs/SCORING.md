@@ -205,7 +205,13 @@ cmp["table"]       # list of {metric, tier, local, api, delta, ratio, status, no
 cmp["scorecard"]   # headlines, dashboard, identity, cost, missing, honest_gaps
 cmp["cost"]        # token × price-table breakdown per side
 print(cmp["markdown"])
-emit_serving_scorecard(cmp, run_id="exp_1")  # local → exp_1:local, api → exp_1:api
+# Provenance is mandatory (#22): records without dataset_revision need it here.
+emit_serving_scorecard(
+    cmp,
+    run_id="exp_1",  # local → exp_1:local, api → exp_1:api
+    provenance={"local": {"dataset_revision": "46a4d3c2"},
+                "api": {"dataset_revision": "46a4d3c2"}},
+)
 ```
 
 `status` is `compared` | `local_only` | `api_only` | `missing`. GPU/KV/VRAM
