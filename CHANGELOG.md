@@ -140,6 +140,15 @@ Format based on Keep a Changelog; versioning is SemVer.
   present but invalid; the error now names the invalid value.
 - The emit-only suite error printed a literal `{{name: value}}`.
 
+### Changed
+
+- **`production_prompts` corporate-records / correspondence records name their
+  upstream key (#29).** eval-environment froze the dojo's corrected text as the
+  mutations `corporate_records_specialist_v6` and `correspondence_specialist_v7`
+  (byte-identical; digests unchanged). `source_key`, the catalog notes and the
+  template provenance comments now name those keys instead of "locally
+  corrected from v1"; the superseded v1 digests stay in the provenance comment.
+
 ### Added
 
 - `field_scoring.embed_texts(texts)` (top-level export) — the scorer's own
