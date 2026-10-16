@@ -7,7 +7,7 @@
 Scoring · Error analysis · Visualization · Interpretation
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Release](https://img.shields.io/badge/release-v0.21.0-2EA043)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.21.0)
+[![Release](https://img.shields.io/badge/release-v0.22.0-2EA043)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.22.0)
 [![Contributor](https://img.shields.io/badge/contributor-Exios66-blue)](https://github.com/Exios66)
 [![Tests](https://img.shields.io/badge/pytest-passing-brightgreen)](tests/)
 
@@ -20,7 +20,7 @@ Scoring · Error analysis · Visualization · Interpretation
 <div align="center">
 
 ```bash
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.21.0"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.22.0"
 pip install -e .                # from a local checkout
 ```
 
@@ -42,9 +42,9 @@ pip install -e ".[all]"          # embeddings + tracing + dev
 In **llm-entity-extraction** / **llm-mailroom** `pyproject.toml`:
 
 ```
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.21.0
-# mailroom:     llm-dojo-scoring[tracing] @ git+...@v0.21.0
-# entity:       llm-dojo-scoring[embeddings,tracing] @ git+...@v0.21.0
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.22.0
+# mailroom:     llm-dojo-scoring[tracing] @ git+...@v0.22.0
+# entity:       llm-dojo-scoring[embeddings,tracing] @ git+...@v0.22.0
 ```
 
 ## Quickstart
@@ -157,7 +157,12 @@ emitter = dojo.Emitter(sinks=[
     dojo.LocalManifestSink("reports/scores_manifest.jsonl"),
     dojo.LangfuseSink(),
 ])
-emitter.emit_score("sorter", "doc_17", "accuracy", 0.93, run_id="exp_42")
+emitter.emit_score(
+    "sorter", "doc_17", "accuracy", 0.93, run_id="exp_42",
+    # Required (#22); USD metrics also need cost_basis.
+    provenance={"dataset_revision": "46a4d3c2", "prompt_id": "sorter_v3",
+                "serving_kind": "api", "model_id": "qwen/qwen3.7-flash"},
+)
 ```
 
 ## Configuration
@@ -196,7 +201,7 @@ dojo-sync    [--task TRACE_NAME] [--session NAME] [--max-items N]
 
 ## Migration
 
-See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md). Prompt catalog: [`docs/PROMPTS.md`](docs/PROMPTS.md).
+See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md). Prompt catalog and eval-environment prompt lineage (`list_prompt_versions`, `prompt_chain`, `diff_prompt_versions`): [`docs/PROMPTS.md`](docs/PROMPTS.md).
 
 ## Releases & monorepo sync
 

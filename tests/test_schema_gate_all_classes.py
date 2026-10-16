@@ -154,10 +154,21 @@ def test_unscorable_document_carries_failing_gate_and_provenance(doc_class):
         None, full, dataset_revision="test-revision", prompt_id="test-prompt"
     )
     assert out["status"] == "unscorable"
-    assert out["schema_promotion_gate"] == check_schema_promotion_gate(None, doc_class=doc_class)
+    # The format layer does not need GT: a well-formed answer to a GT-less
+    # row is scored structurally and is not a schema failure.
+    assert out["schema_valid"] == 1.0
+    assert out["schema_promotion_gate"] == check_schema_promotion_gate(1.0, doc_class=doc_class)
     assert out["provenance"]["dataset_revision"] == "test-revision"
     assert out["provenance"]["prompt_id"] == "test-prompt"
     assert out["provenance"]["metric_id"] == out["metric_id"]
+
+
+@pytest.mark.parametrize("doc_class", LIVE_DOC_TYPES)
+def test_unscorable_document_with_malformed_answer_fails_gate(doc_class):
+    out = get_suite(_SPECIALIST_FOR[doc_class]).score_document(None, "not json")
+    assert out["status"] == "unscorable"
+    assert out["parse_ok"] == 0.0
+    assert out["schema_promotion_gate"]["passes"] is False
 
 
 @pytest.mark.parametrize("metric", ["schema_valid", "parse_ok"])

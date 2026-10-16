@@ -36,7 +36,7 @@ def resolve_cost_basis(
     *,
     default: str = "busy_window",
 ) -> str:
-    """Single ``busy_window`` | ``billed_incl_cold`` label; never mix silently.
+    """Single ``COST_BASIS_VALUES`` label for a table; never mix silently.
 
     Wholly unlabeled inputs keep ``default``. A table that mixes labeled
     rows with unlabeled rows, or two different labels, raises.

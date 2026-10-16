@@ -71,7 +71,8 @@ machine-readable artifact is wanted.
   `modal`, never to `local`.
 - Busy-window numbers are labeled `cost_basis="busy_window"`; metered numbers
   are `billed_incl_cold`. Missing inputs render `n/a` — a metered per-document
-  figure is never estimated.
+  figure is never estimated. A row whose documents are all unscorable renders
+  `unproven` (`quality_status`), not `n/a` or `0.0`.
 - One row must carry one `metric_id`; mixing CUAD micro-F1 with MAUD accuracy
   raises instead of averaging two scales (#17).
 - `ok` comes from the per-document records; errors are read from explicit

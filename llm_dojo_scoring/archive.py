@@ -30,7 +30,10 @@ from .field_scoring import (
 )
 from .gt_metadata import is_empty_value
 from .scorecard_honesty import (
+    _METRIC_ID_BY_NAME,
     ProvenanceExportError,
+    assess_extraction_gt,
+    metric_id_for,
     score_format_layer,
     stamp_provenance,
 )
@@ -39,6 +42,7 @@ from .trace_knobs import capture_trace_knobs, empty_trace_payload
 __all__ = [
     "ARCHIVE_HASH_VERSION",
     "ARCHIVE_SCORING_KEYS",
+    "ARCHIVE_SCORING_POST_V021_KEYS",
     "ARCHIVE_SCORING_METHOD",
     "ARCHIVED_REQUIRED_TAIL",
     "AUDIT_DETAIL_KEYS",
@@ -90,8 +94,17 @@ ARCHIVE_SCORING_KEYS: tuple[str, ...] = (
     "tp",
     "fp",
     "fn",
+    "status",
+    "reason",
     "trace",
     "provenance",
+)
+
+#: Scoring keys added after v0.21.0 (#16 status/reason, #22 provenance).
+#: Rows filed before then are hash-chained and cannot gain them, so
+#: :func:`validate_audit_entry` does not require them.
+ARCHIVE_SCORING_POST_V021_KEYS: frozenset[str] = frozenset(
+    {"status", "reason", "provenance"}
 )
 
 #: Live extraction classes that reach the archive (#238).
@@ -221,6 +234,24 @@ _HEADLINE_METHOD_ALIASES: dict[str, str] = {
 }
 
 
+def _archive_metric_id(resolved_method: str) -> str:
+    """Canonical ``metric_id`` for an archive ``method`` (#17).
+
+    The default method is the pipeline rubric; CUAD / MAUD headline ids pass
+    through; registry metric names resolve through the canonical table, so
+    archive rows and emitted records carry the same identity. Anything else
+    raises :class:`~llm_dojo_scoring.scorecard_honesty.UnknownMetricNameError`
+    rather than stamping an id no other leg can match.
+    """
+    if resolved_method == ARCHIVE_SCORING_METHOD:
+        return "pipeline.extraction.overall"
+    if resolved_method in _HEADLINE_METHOD_ALIASES.values():
+        return resolved_method
+    if resolved_method in set(_METRIC_ID_BY_NAME.values()):
+        return resolved_method  # already a canonical id
+    return metric_id_for(resolved_method)
+
+
 def canonical_json(obj: Any) -> str:
     """Canonical JSON for hash version 2 — byte-identical to llm-mailroom.
 
@@ -281,6 +312,8 @@ def empty_archive_scoring_block() -> dict[str, Any]:
         "tp": None,
         "fp": None,
         "fn": None,
+        "status": None,
+        "reason": None,
         "trace": empty_trace_payload(),
         "provenance": stamp_provenance()["provenance"],
     }
@@ -371,7 +404,16 @@ def score_archive_block(
     prf = extraction_binary_metrics(
         exp, pred, field_map=ftypes, doc_class=doc_class, result=result
     )
-    countable = int(prf.get("expected_events") or 0) > 0 or int(prf.get("fp") or 0) > 0
+    # Fail closed on GT with nothing extractable (#16): status/reason say
+    # why, and the micro counts stay null instead of reading 0.0. F1/F2 need
+    # at least one expected event — with none, recall (and so F1) is
+    # undefined, and spurious fills alone are not a score (#238).
+    assessment = assess_extraction_gt(
+        dict(expected) if isinstance(expected, Mapping) else expected,
+        ftypes,
+        doc_class=doc_class,
+    )
+    countable = assessment.scorable and int(prf.get("expected_events") or 0) > 0
     resolved_method = ARCHIVE_SCORING_METHOD
     if method:
         resolved_method = _HEADLINE_METHOD_ALIASES.get(method, method)
@@ -388,6 +430,8 @@ def score_archive_block(
     block["schema_valid"] = schema_valid
     block["n_fields_scored"] = len(result.field_scores)
     block["field_scores"] = dict(result.field_scores)
+    block["status"] = assessment.status
+    block["reason"] = assessment.reason
     if countable:
         block["extraction_precision"] = prf.get("extraction_precision")
         block["extraction_recall"] = prf.get("extraction_recall")
@@ -396,13 +440,10 @@ def score_archive_block(
         block["tp"] = prf.get("tp")
         block["fp"] = prf.get("fp")
         block["fn"] = prf.get("fn")
-    metric_id = (
-        "pipeline.extraction.overall"
-        if resolved_method == ARCHIVE_SCORING_METHOD
-        else resolved_method
-    )
+    metric_id = _archive_metric_id(resolved_method)
     given = dict(provenance or {})
-    if given.get("metric_id") and given["metric_id"] != metric_id:
+    claimed = given.get("metric_id")
+    if claimed is not None and claimed != metric_id:
         raise ProvenanceExportError(
             f"archive provenance metric_id {given['metric_id']!r} contradicts "
             f"method {resolved_method!r} ({metric_id!r})"
@@ -760,7 +801,11 @@ def validate_audit_entry(
     if not isinstance(scoring, Mapping):
         revisions.append(_revision("missing_scoring", "detail.scoring is required"))
     else:
-        missing = [k for k in ARCHIVE_SCORING_KEYS if k not in scoring]
+        missing = [
+            k
+            for k in ARCHIVE_SCORING_KEYS
+            if k not in scoring and k not in ARCHIVE_SCORING_POST_V021_KEYS
+        ]
         if missing:
             revisions.append(
                 _revision(

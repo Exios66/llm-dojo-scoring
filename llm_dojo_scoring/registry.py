@@ -327,7 +327,7 @@ metrics:
   extraction_overall_score:
     tier: 0
     description: "Specialist headline: overall extraction score for the run"
-    applicable_agents: [SPECIALISTS]
+    applicable_agents: [SPECIALISTS, reporter, boss]
     aggregation: mean
     source: "field_scoring.score_extraction"
     citation: "Mean of per-field typed scores from field_scoring.score_extraction (soft mean; partial list credit stays here)."
@@ -486,7 +486,7 @@ metrics:
   verified_precision:
     tier: 1
     description: "Precision restricted to doc-verifiable items"
-    applicable_agents: [SPECIALISTS]
+    applicable_agents: [SPECIALISTS, AUDITORS]
     source: "field_scoring.audit_list_field"
     notes: "mailroom alias: extraction_overall_verified_precision"
   schema_valid:
@@ -695,27 +695,27 @@ metrics:
   maud_question_accuracy:
     tier: 1
     description: "MAUD per-question micro exact-answer accuracy over the 22 Hub keys"
-    applicable_agents: [contracts_specialist]
+    applicable_agents: [contracts_specialist, merger_agreement_specialist]
     source: "content_scoring.score_maud_extraction"
   maud_question_macro_accuracy:
     tier: 1
     description: "MAUD per-question macro accuracy (unweighted mean over questions)"
-    applicable_agents: [contracts_specialist]
+    applicable_agents: [contracts_specialist, merger_agreement_specialist]
     source: "content_scoring.score_maud_extraction"
   maud_clause_presence:
     tier: 1
     description: "Share of expected MAUD questions present in the prediction"
-    applicable_agents: [contracts_specialist]
+    applicable_agents: [contracts_specialist, merger_agreement_specialist]
     source: "content_scoring.score_maud_extraction"
   maud_valid_class_rate:
     tier: 1
     description: "Share of predicted MAUD answers in the question's known class set"
-    applicable_agents: [contracts_specialist]
+    applicable_agents: [contracts_specialist, merger_agreement_specialist]
     source: "content_scoring.score_maud_extraction"
   maud_category_accuracy:
     tier: 2
     description: "MAUD clause-category exact match when both sides have a category"
-    applicable_agents: [contracts_specialist]
+    applicable_agents: [contracts_specialist, merger_agreement_specialist]
     source: "content_scoring.score_maud_extraction"
   wer:
     tier: 1

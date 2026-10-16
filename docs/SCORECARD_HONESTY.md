@@ -50,7 +50,15 @@ Every extraction suite emits its class scores on the per-document surface:
   (content/MAUD, insurance `determination_consistency` / `amount_exactness`),
   `schema_promotion_gate` (every live class, `SCHEMA_PROMOTION_GATES`),
   `metric_id`, and `provenance`.
-- Plain batch `score([...])` always carries `schema_valid` / `parse_ok`.
+- Plain batch `score([...])` always carries `schema_valid` / `parse_ok`,
+  computed over exactly the GT rows (a missing prediction counts as an
+  unparsed row), plus `n_scored` / `n_unscorable` / `quality_mean` /
+  `export_verdict` — GT-less rows are `unscorable`, never zeros.
+- An unscorable single document still carries the format layer (it does
+  not need GT) and its `schema_promotion_gate`.
+- `score_document(..., metric_id=..., cost_basis=...)` checks both: a
+  contradicting `metric_id` or a `cost_basis` outside `COST_BASIS_VALUES`
+  raises `ProvenanceExportError`.
   The single-document `score(dict)` keeps the historical
   `ExtractionScoreResult` return unless `detailed=True` is passed.
 - Content-only GT rows are scored on their content metric: correspondence
@@ -75,12 +83,24 @@ variants bucket as `LengthFinish`; context-window overflows as
 Quality aggregates name the population:
 
 - `quality_mean_completed` — scored / completed-only
-- `quality_mean_itt` — intention-to-treat: attempted docs, errors as 0
+- `quality_mean_itt` — intention-to-treat: attempted docs, errors as 0;
+  unscorable docs (no GT) leave the denominator (`n_attempted_scorable`)
 
 Cost helpers (`estimate_for_record`, `tokens_summary`) always stamp
-`cost_basis`: `busy_window` or `billed_incl_cold`. Mixing both in one
-table raises, as does mixing labeled and unlabeled rows. Wholly
-unlabeled inputs keep the default (`busy_window`). `serving_kind` stays
+`cost_basis`: one of `COST_BASIS_VALUES` (`busy_window`,
+`billed_incl_cold`, or `token_price_estimate` when the records carry it).
+Mixing two labels in one table raises, as does mixing labeled and
+unlabeled rows. Wholly unlabeled inputs keep the default (`busy_window`).
+Serving cost cards label USD computed from tokens × the provider price
+table `token_price_estimate` (`COST_BASIS_TOKEN_PRICE`).
+`validate_comparison_provenance` refuses any basis outside
+`COST_BASIS_VALUES`, and refuses two legs whose bases differ (so a
+price-table estimate is never compared with a metered figure).
+
+Comparisons (`validate_comparison_provenance`, `validate_comparison_export`)
+require every `PROVENANCE_KEYS` entry on both legs and equal, except the
+`vary=` axis (present on both, may differ — `("serving_kind", "model_id")`
+for local vs API) and `draw_seed`, which may be absent on both legs. `serving_kind` stays
 `modal` / `api` / `local` — Modal is not remapped to local.
 
 ## Confidence and reasoning knobs

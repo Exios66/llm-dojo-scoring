@@ -6,9 +6,14 @@
 - Metric identity: [`METRIC_IDS.md`](METRIC_IDS.md)
 - Controlled `intent` labels (`label` field type): `llm_dojo_scoring/intents.py`
 
-## Field types
+## Field types by class
 
-| Type | Match rule |
+Generated from `DEFAULT_FIELD_TYPES` (`tests/test_v022_repairs.py` keeps these
+tables in lockstep with the code).
+
+### `contract` (11 fields)
+
+| Field | Type |
 | --- | --- |
 | `document_name` | `name` |
 | `parties` | `entity_list:name` |
@@ -32,7 +37,7 @@
 | `signatories` | `entity_list:name` |
 | `jurisdiction` | `name` |
 | `filing_number` | `id` |
-| `intent` | `name` |
+| `intent` | `label` |
 | `subject_matter` | `free_text` |
 | `keywords` | `entity_list:name` |
 
@@ -60,7 +65,7 @@
 | `demand_amount` | `money` |
 | `action_items` | `entity_list` |
 | `urgency` | `name` |
-| `intent` | `name` |
+| `intent` | `label` |
 | `subject_matter` | `free_text` |
 | `keywords` | `entity_list:name` |
 
@@ -110,26 +115,25 @@
 | `coverage_determination` | `name` |
 | `denial_reasons` | `entity_list:free_text` |
 | `supporting_documents` | `entity_list` |
-| `intent` | `name` |
+| `intent` | `label` |
 | `subject_matter` | `free_text` |
 | `keywords` | `entity_list:name` |
 | `claim_checklist` | `entity_list:free_text` |
 
-### `merger_agreement` (11 fields)
+### `merger_agreement` (10 fields)
 
 | Field | Type |
 | --- | --- |
 | `document_name` | `name` |
 | `parties` | `entity_list:name` |
 | `effective_date` | `date` |
-| `term_length` | `free_text` |
+| `effective_time` | `free_text` |
 | `governing_law` | `name` |
-| `contract_value` | `money` |
-| `renewal_terms` | `free_text` |
-| `cuad_family` | `name` |
 | `merger_consideration` | `name` |
-| `cuad_clauses` | `entity_list:free_text` |
 | `maud_clauses` | `entity_list:free_text` |
+| `intent` | `name` |
+| `subject_matter` | `free_text` |
+| `keywords` | `entity_list:name` |
 
 ## Honest gaps (`_HONEST_GAPS`)
 
@@ -201,7 +205,13 @@ cmp["table"]       # list of {metric, tier, local, api, delta, ratio, status, no
 cmp["scorecard"]   # headlines, dashboard, identity, cost, missing, honest_gaps
 cmp["cost"]        # token × price-table breakdown per side
 print(cmp["markdown"])
-emit_serving_scorecard(cmp, run_id="exp_1")  # local → exp_1:local, api → exp_1:api
+# Provenance is mandatory (#22): records without dataset_revision need it here.
+emit_serving_scorecard(
+    cmp,
+    run_id="exp_1",  # local → exp_1:local, api → exp_1:api
+    provenance={"local": {"dataset_revision": "46a4d3c2"},
+                "api": {"dataset_revision": "46a4d3c2"}},
+)
 ```
 
 `status` is `compared` | `local_only` | `api_only` | `missing`. GPU/KV/VRAM

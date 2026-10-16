@@ -14,7 +14,7 @@ import csv
 import json
 import os
 from datetime import datetime, timezone
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 
 import openpyxl
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -667,11 +667,18 @@ def build_sweep_workbook(records: list[dict], outdir: str = ".",
 def validate_comparison_export(
     left: dict[str, Any],
     right: dict[str, Any],
+    *,
+    vary: Sequence[str] = (),
 ) -> None:
-    """Refuse cross-leg export when provenance stamps do not match (#22)."""
+    """Refuse cross-leg export when provenance stamps do not match (#22).
+
+    ``vary`` names the provenance keys the comparison is about (for example
+    ``("serving_kind", "model_id")`` for local vs API); they must be present
+    on both legs but may differ.
+    """
     from .scorecard_honesty import validate_comparison_provenance
 
-    validate_comparison_provenance(left, right)
+    validate_comparison_provenance(left, right, vary=vary)
 
 
 def quality_export_verdict(record: dict[str, Any]) -> str:
