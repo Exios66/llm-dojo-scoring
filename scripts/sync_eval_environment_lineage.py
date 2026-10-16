@@ -291,6 +291,19 @@ def build(eval_env: Path) -> dict:
             source=f"mutation-of:{row['parent']}", text=row["text"], digest=digest,
         ))
 
+    # an archived entry that re-keys another entry's text says so in its memo
+    for e in entries.values():
+        if e["lineage"] != "archived":
+            continue
+        for other in sorted(entries.values(), key=lambda x: x["key"]):
+            if (other["key"] != e["key"] and other["lineage"] == "archived"
+                    and other["version"] < e["version"] and other["role"] == e["role"]
+                    and other["text"].strip("\n") == e["text"].strip("\n")):
+                how = ("apart from a trailing newline" if other["text"] != e["text"]
+                       else "exactly")
+                e["memo"] += f" Text equals {other['key']} {how}."
+                break
+
     # change summaries + integrity -----------------------------------------
     for e in entries.values():
         pred = e["parent"] or e["supersedes"]

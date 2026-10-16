@@ -192,11 +192,17 @@ def prompt_roles() -> list[str]:
 
 
 def latest_prompt_version(role: str) -> PromptVersion:
-    """Highest-numbered version of ``role`` (``KeyError`` for an unknown role)."""
+    """Highest-numbered frozen or mutation version of ``role``.
+
+    Archived entries count only when a role has nothing else, so the verbose
+    ``contracts_specialist_v33`` re-key never outranks ``contracts_specialist_v3``.
+    ``KeyError`` for an unknown role.
+    """
     vs = list_prompt_versions(role=role)
     if not vs:
         raise _unknown("role", role, prompt_roles())
-    return vs[-1]
+    live = [v for v in vs if v.lineage != "archived"]
+    return (live or vs)[-1]
 
 
 def default_prompt_version(role: str) -> PromptVersion:
@@ -213,7 +219,7 @@ def default_prompt_version(role: str) -> PromptVersion:
 def prompt_chain(key_or_role: str) -> list[PromptVersion]:
     """Versions oldest -> newest along predecessor links ending at the given key.
 
-    A role name means that role's highest-version tip. Archived ``_v0`` and
+    A role name means the chain ending at ``latest_prompt_version(role)``. Archived ``_v0`` and
     sorter / judge roots have no predecessor and start their own chain.
     """
     idx = _index()
