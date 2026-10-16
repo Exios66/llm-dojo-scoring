@@ -162,12 +162,25 @@ def test_chain_of_root_and_unknown():
         prompt_chain("nonexistent_role")
 
 
-def test_latest_is_highest_version_number():
+def test_latest_prefers_frozen_and_mutation_over_archived():
     assert latest_prompt_version("sorter").key == "sorter_v3"
-    # archived contracts_specialist_v33 outranks the v1..v3 line by number.
-    assert latest_prompt_version("contracts_specialist").key == "contracts_specialist_v33"
+    # archived contracts_specialist_v33 (a re-keyed v0) must not win on number.
+    assert latest_prompt_version("contracts_specialist").key == "contracts_specialist_v3"
+    assert [v.key for v in prompt_chain("contracts_specialist")] == [
+        f"contracts_specialist_v{i}" for i in range(4)
+    ]
+    for role in prompt_roles():
+        assert latest_prompt_version(role).lineage != "archived"
     with pytest.raises(KeyError):
         latest_prompt_version("nope")
+
+
+def test_v33_listed_and_explicit_chain_works():
+    assert "contracts_specialist_v33" in {v.key for v in list_prompt_versions(role="contracts_specialist")}
+    assert [v.key for v in prompt_chain("contracts_specialist_v33")] == ["contracts_specialist_v33"]
+    v33, v0 = (get_prompt_version(k) for k in ("contracts_specialist_v33", "contracts_specialist_v0"))
+    assert v33.text.rstrip("\n") == v0.text.rstrip("\n") and v33.text != v0.text
+    assert "Text equals contracts_specialist_v0 apart from a trailing newline" in v33.memo
 
 
 def test_default_is_frozen_v1():

@@ -102,8 +102,8 @@ default_prompt_version("sorter").key                          # "sorter_v1"
 | `list_prompt_versions(role=None, lineage=None)` | `list[PromptVersion]` sorted by `(role, version)`; `lineage` is `archived`, `frozen` or `mutation` |
 | `get_prompt_version(key)` | one version; `KeyError` with close-match suggestions on an unknown key |
 | `prompt_roles()` | sorted role names (key minus `_v<N>`; roles may contain hyphens) |
-| `prompt_chain(key_or_role)` | oldest to newest along `predecessor` links; a role name means its highest-version tip |
-| `latest_prompt_version(role)` | highest version number |
+| `prompt_chain(key_or_role)` | oldest to newest along `predecessor` links; a role name means the chain ending at `latest_prompt_version(role)` |
+| `latest_prompt_version(role)` | highest-version `frozen` or `mutation` entry (archived only if a role has nothing else) |
 | `default_prompt_version(role)` | the frozen `<role>_v1` (eval-environment's default) |
 | `diff_prompt_versions(a, b, context=3)` | unified diff of the two texts, labelled with the keys |
 | `LINEAGE_SOURCE` | `{source_repo, source_commit, lineage_id}` |
@@ -130,17 +130,20 @@ between the two conventions.
 - `created_at` is not monotonic along the sorter chain: `sorter_v2` / `sorter_v3`
   were created 2026-09-16, before the 2026-09-26 freeze of `sorter_v1`.
 - `sorter_v3` contains its corporate_record block twice (known upstream defect).
-- `contracts_specialist_v33` (Modal parity prompt, text identical to `_v0` apart
-  from a trailing newline) has no predecessor and the highest number, so
-  `latest_prompt_version("contracts_specialist")` and `prompt_chain("contracts_specialist")`
-  return it; use `prompt_chain("contracts_specialist_v3")` for the v0 to v3 line.
-  Its manifest `chars` is a UTF-8 byte count; the entry stores the character count.
+- `contracts_specialist_v33` (Modal parity prompt) is a re-keyed copy of the
+  archived `contracts_specialist_v0`: its text equals `_v0` apart from a trailing
+  newline (the entry's memo says so). It has no predecessor and the highest
+  number, so `latest_prompt_version(role)` skips archived entries (unless a role
+  has nothing else) and returns `contracts_specialist_v3`; `prompt_chain` of the
+  role walks v0 to v3. `list_prompt_versions` still lists v33 and
+  `prompt_chain("contracts_specialist_v33")` works for the explicit key. Its
+  manifest `chars` is a UTF-8 byte count; the entry stores the character count.
 
 | Role | Versions | Latest |
 | --- | --- | --- |
 | `arbiter` | v1 | `arbiter_v1` |
 | `boss` | v1 | `boss_v1` |
-| `contracts_specialist` | v0, v1, v2, v3, v33 | `contracts_specialist_v33` |
+| `contracts_specialist` | v0, v1, v2, v3, v33 | `contracts_specialist_v3` |
 | `corporate_records_specialist` | v0 to v6 | `corporate_records_specialist_v6` |
 | `correspondence_specialist` | v0 to v7 | `correspondence_specialist_v7` |
 | `insurance_claims_specialist` | v0 to v3 | `insurance_claims_specialist_v3` |
