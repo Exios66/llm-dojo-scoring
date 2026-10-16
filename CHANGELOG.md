@@ -21,15 +21,65 @@ Format based on Keep a Changelog; versioning is SemVer.
   raises). Missing keys raise `ProvenanceExportError` before any sink.
   `Emitter(require_provenance=False)` keeps ad-hoc local exploration
   working. `emit_serving_scorecard(provenance={"local": ..., "api": ...})`
-  falls back to each leg's identity tags for model / serving kind / prompt.
-- **Archive scoring block carries `provenance` (#22).** `ARCHIVE_SCORING_KEYS`
-  gains `provenance`; `score_archive_block(..., provenance=)` stamps it with
-  `metric_id` derived from `method`.
+  falls back to what each leg's records carry: model / serving kind /
+  prompt from the identity tags, `dataset_revision` / `split` /
+  `draw_seed` from the same-named record fields (`draw_seed` also from
+  `dataset_fingerprint`), and `cost_basis` from the leg's cost block.
+  `dataset_revision` is never derived from anything else, so a consumer
+  that records none (local-mailroom-sandbox's `emit_local_vs_api_scorecard`
+  today) must pass it or put it on its serving records.
+- **`COST_BASIS_VALUES` gains `token_price_estimate`** (`COST_BASIS_TOKEN_PRICE`)
+  for USD computed as tokens × a provider price table. `serving_cost_card`
+  and `normalize_serving_record` label price-table costs with it; a
+  recorded cost keeps the record's own `cost_basis` (or none). Comparison
+  gates refuse to mix it with a metered basis.
+- **Archive scoring block carries `status`, `reason` and `provenance` (#16,
+  #22).** `ARCHIVE_SCORING_KEYS` gains all three (provenance stays last);
+  `score_archive_block(..., provenance=)` stamps the canonical `metric_id`
+  for `method` (default → `pipeline.extraction.overall`, headline aliases
+  → their ids, anything else through strict `metric_id_for`), refuses a
+  contradicting claimed `metric_id` (falsy values included), and marks GT
+  with no extractable fields `status="unscorable"`. `validate_audit_entry`
+  does not require the three new keys (`ARCHIVE_SCORING_POST_V021_KEYS`), so
+  rows archived before this release still validate.
+- **`score_document` refuses a contradicting `metric_id` or an unknown
+  `cost_basis`** (`ProvenanceExportError`) instead of silently overriding
+  them, matching `Emitter` and `score_archive_block`. A valid `cost_basis`
+  is now stamped into the payload's provenance.
+- **One-sided `metric_id` is incomparable (#17).** `compare_serving` and
+  `assert_comparable_metric_ids` treat one leg with an id and the other
+  without as `metric_id_missing`, and a leg that mixes ids across its runs as
+  `metric_id_mixed`. An incomparable comparison reports no quality delta
+  (`None`, `status="incomparable"`) and an INCOMPARABLE line in its markdown.
+  Two legs with no id at all stay comparable, flagged `metric_id_unverified`.
+- **`validate_comparison_provenance(..., vary=())`** — the axis a comparison
+  is about (`("serving_kind", "model_id")` for local vs API) must be present
+  on both legs but may differ; previously every comparison across serving
+  kinds was refused. `draw_seed` may be absent on both legs (full split) but
+  not one; `0` is a real seed. A `cost_basis` outside `COST_BASIS_VALUES` is
+  refused. `validate_comparison_export` passes `vary` through, and
+  `compare_serving(require_provenance={"local": ..., "api": ...})` runs the
+  gate up front.
+- **`pair_comparable_runs` keys on provenance (#22)**: `dataset_revision`,
+  `split`, `draw_seed` and `metric_id` join task / prompt / fingerprint, so
+  runs over different dataset revisions are no longer paired.
+- **Judge escalation uses the per-type bands.** `score_extraction` flags
+  `ambiguous_fields` with `field_is_ambiguous(<configured type>, score)`
+  — the taxonomy's `type_bands` (`date: never`, ...) and the half-open
+  global band — instead of the inclusive global band. A perfect 1.0 is no
+  longer ambiguous under a `(0.5, 1.0)` band. Upstreams mailroom-reloaded's
+  vendored patch.
 - **Schema promotion gate covers every live class (#18).**
   `SCHEMA_PROMOTION_GATES` (default `DEFAULT_SCHEMA_GATE = 0.90` for all
   five classes; `DEFAULT_INSURANCE_SCHEMA_GATE` kept as an alias);
-  `check_schema_promotion_gate(..., doc_class=)`; every suite payload —
-  batch and single document — now carries `schema_promotion_gate`.
+  `check_schema_promotion_gate(..., doc_class=)`; every detailed
+  extraction payload (`score_document`, `score(..., detailed=True)`, and
+  any `score()` call that returns a dict) — batch and single document,
+  unscorable rows included — carries `schema_promotion_gate`. The default
+  `score()` on a plain single document still returns a bare
+  `ExtractionScoreResult`; use `score_document` for the gate. An
+  unscorable row reports the format layer (`parse_ok`, `schema_valid`, …),
+  which does not depend on GT, and gates on it.
 
 ### Fixed
 
@@ -37,10 +87,41 @@ Format based on Keep a Changelog; versioning is SemVer.
   `score_format_layer` treated a list of predictions as one parsed object,
   so missing keys and unparseable strings inside a batch were never
   counted and the batch gate could not fail. Batches are now scored per
-  item and averaged; an empty batch fails closed.
+  item and averaged; an empty batch fails closed. The gate covers exactly
+  the GT rows: a short prediction list is padded with unparsed rows, so it
+  cannot pass on its paired subset, and raw-string predictions are parsed.
+- **Batch rows without ground truth were scored as zeros (#16).** Each batch
+  row is assessed on its own; a GT-less row is `unscorable` and the batch
+  payload carries `n_scored` / `n_unscorable` / `quality_mean` /
+  `export_verdict` (`unproven` when nothing was scorable).
+- **ITT quality counted unscorable docs as attempts (#16).**
+  `aggregate_quality_itt` takes them out of the denominator
+  (`n_attempted_scorable`).
+- **Grid reports folded unscorable documents into specialist quality.**
+  `GridDocument.status` (also read from `scores.status`); unscorable
+  documents count toward `n`, errors and cost but not `score` / `coverage`.
+  Rows gain `n_unscorable` and `quality_status` (`unproven` → rendered
+  "unproven", not "n/a").
+- `expected_subclass` in plain-dict GT was scored as an extraction field
+  (a perfect answer scored 0.889); it is now an `ANNOTATION_KEYS` entry.
+- `pipeline.extraction.field_micro_precision` / `field_micro_recall` were
+  canonical ids that no class allowed; every live class now allows them.
+- Registry `applicable_agents` missed suites that emit the metric:
+  `merger_agreement_specialist` for the five MAUD metrics, `reporter` /
+  `boss` for `extraction_overall_score`, the auditors and arbiter for
+  `verified_precision`. A test now checks every suite against the registry.
+- `Emitter` said a USD metric's `cost_basis` was "missing" when it was
+  present but invalid; the error now names the invalid value.
+- The emit-only suite error printed a literal `{{name: value}}`.
 
 ### Added
 
+- `field_scoring.embed_texts(texts)` (top-level export) — the scorer's own
+  embedding backend as a public, fail-soft call, so consumers (llm-mailroom
+  `pipeline/relations.py`) no longer need `_get_embedding()._embed`.
+- `ServingIdentity` gains `dataset_revision`, `split` and `draw_seed`;
+  `ServingRun` gains `cost_basis`; aggregated legs carry `cost_basis` (one
+  labelled basis across every costed run) and `metric_id_conflict`.
 - `scripts/gen_taxonomy_fixture.py --taxonomy PATH [--check]` regenerates
   `tests/fixtures/taxonomy_field_types.json` from llm-mailroom's
   `taxonomy.yaml`, pinning the git blob sha1 (`--check` ignores only

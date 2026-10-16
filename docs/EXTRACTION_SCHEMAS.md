@@ -200,7 +200,7 @@ Governance instruments. Do **not** emit `document_name`, `parties`,
 | `signatories` | `entity_list:name` | `[]` | Execution / approval names |
 | `jurisdiction` | `name` | `null` | State/country of incorporation or governing jurisdiction |
 | `filing_number` | `id` | `null` | Official file/document number **only**. Exhibit IDs and parent-agreement dockets do **not** qualify (v0.19.1 re-freeze) |
-| `intent` | `label` | `null` | `governance_rules` · `corporate_action_approval` · `entity_formation` · `authority_delegation` · `investor_rights` · `other`. Canonicalized via `normalize_intent`; exact match. (`DEFAULT_FIELD_TYPES` still maps `intent` to `name` until the taxonomy fixture is re-pinned; `label` applies where the field-type map says so.) |
+| `intent` | `label` | `null` | `governance_rules` · `corporate_action_approval` · `entity_formation` · `authority_delegation` · `investor_rights` · `other`. Canonicalized via `normalize_intent`; exact match. |
 | `subject_matter` | `free_text` | `null` | One grounded sentence |
 | `keywords` | `entity_list:name` | `[]` | ≤8 phrases from the text |
 
@@ -247,7 +247,7 @@ go in `demand_amount`, never insurance `claimed_amount`.
 | `demand_amount` | `money` | `null` | Exact dollars demanded; most non-demand mail is `null` |
 | `action_items` | `entity_list` | `[]` | ≤3 concrete actions with deadlines if stated |
 | `urgency` | `name` | never `null` | `routine` · `time-sensitive` · `urgent` · `critical`. Unspecified → `routine` |
-| `intent` | `label` | `null` | `payment_demand` · `notice` · `analysis` · `request` · `update` · `meeting_invite` · `press_communication` · `other`. Canonicalized via `normalize_intent`; exact match. (`DEFAULT_FIELD_TYPES` still maps `intent` to `name` until the taxonomy fixture is re-pinned; `label` applies where the field-type map says so.) |
+| `intent` | `label` | `null` | `payment_demand` · `notice` · `analysis` · `request` · `update` · `meeting_invite` · `press_communication` · `other`. Canonicalized via `normalize_intent`; exact match. |
 | `subject_matter` | `free_text` | `null` | One grounded sentence |
 | `keywords` | `entity_list:name` | `[]` | ≤8 phrases from the text |
 
@@ -297,7 +297,7 @@ fields the text states.
 | `coverage_determination` | `name` | `null` | As written: `approved` · `denied` · `partial` · `pending`. Never infer from tone |
 | `denial_reasons` | `entity_list:free_text` | `[]` | Stated grounds; `[]` when approved / pending / unstated |
 | `supporting_documents` | `entity_list` | `[]` | Referenced docs; CMS provider/NPI lines belong here |
-| `intent` | `label` | `null` | `claim_filing` · `coverage_determination` · `loss_report` · `claim_data_record` · `other`. Canonicalized via `normalize_intent`; exact match. (`DEFAULT_FIELD_TYPES` still maps `intent` to `name` until the taxonomy fixture is re-pinned; `label` applies where the field-type map says so.) |
+| `intent` | `label` | `null` | `claim_filing` · `coverage_determination` · `loss_report` · `claim_data_record` · `other`. Canonicalized via `normalize_intent`; exact match. |
 | `subject_matter` | `free_text` | `null` | One grounded sentence |
 | `keywords` | `entity_list:name` | `[]` | ≤8 phrases from the text |
 | `claim_checklist` | `entity_list:free_text` | `[]` | `'<Category>: <evidence>'` — present only |

@@ -384,3 +384,24 @@ def test_specialist_grid_markdown_shows_unproven():
         experiments=[{"name": "e1"}],
     )
     assert "unproven" in md
+
+
+def test_scoring_doc_field_tables_match_default_field_types():
+    import re
+    from pathlib import Path
+
+    from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES
+
+    text = (Path(__file__).resolve().parents[1] / "docs" / "SCORING.md").read_text(
+        encoding="utf-8"
+    )
+    documented = {}
+    for m in re.finditer(
+        r"### `([a-z_]+)` \((\d+) fields\)\n\n\| Field \| Type \|\n\| --- \| --- \|\n"
+        r"((?:\|[^\n]*\|\n)+)",
+        text,
+    ):
+        rows = dict(re.findall(r"\| `([^`]+)` \| `([^`]+)` \|", m.group(3)))
+        assert int(m.group(2)) == len(rows), m.group(1)
+        documented[m.group(1)] = rows
+    assert documented == {k: dict(v) for k, v in DEFAULT_FIELD_TYPES.items()}

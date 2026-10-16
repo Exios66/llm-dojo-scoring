@@ -157,7 +157,12 @@ emitter = dojo.Emitter(sinks=[
     dojo.LocalManifestSink("reports/scores_manifest.jsonl"),
     dojo.LangfuseSink(),
 ])
-emitter.emit_score("sorter", "doc_17", "accuracy", 0.93, run_id="exp_42")
+emitter.emit_score(
+    "sorter", "doc_17", "accuracy", 0.93, run_id="exp_42",
+    # Required (#22); USD metrics also need cost_basis.
+    provenance={"dataset_revision": "46a4d3c2", "prompt_id": "sorter_v3",
+                "serving_kind": "api", "model_id": "qwen/qwen3.7-flash"},
+)
 ```
 
 ## Configuration
