@@ -82,9 +82,10 @@ def test_every_mapped_name_resolves(name):
         ("made_up_metric", None),  # used to fabricate pipeline.*
     ],
 )
-def test_unmapped_name_raises_instead_of_fabricating(name, doc_class):
+@pytest.mark.parametrize("presence_mode", [False, True])
+def test_unmapped_name_raises_instead_of_fabricating(name, doc_class, presence_mode):
     with pytest.raises(UnknownMetricNameError, match=name):
-        metric_id_for(name, doc_class=doc_class)
+        metric_id_for(name, doc_class=doc_class, presence_mode=presence_mode)
 
 
 def test_unknown_metric_error_is_a_key_error():
@@ -92,8 +93,9 @@ def test_unknown_metric_error_is_a_key_error():
         metric_id_for("made_up_metric")
 
 
-def test_presence_mode_still_maps_to_cuad():
+@pytest.mark.parametrize("name", sorted(_METRIC_ID_BY_NAME))
+def test_presence_mode_still_maps_to_cuad(name):
     assert (
-        metric_id_for("extraction_overall_score", presence_mode=True)
+        metric_id_for(name, presence_mode=True)
         == "cuad.clause_presence.micro_f1"
     )

@@ -1027,10 +1027,11 @@ def emit_serving_scorecard(
     identity tags (``model``, ``serving_kind``, ``prompt_version``);
     ``dataset_revision`` must come from the caller.
     """
-    from .emitter import get_emitter
+    from .emitter import _emit_provenance, get_emitter
 
     em = emitter or get_emitter()
     card = serving_scorecard(comparison)
+    pending: list[dict[str, Any]] = []
     for side in ("local", "api"):
         sid = f"{run_id}:{side}" if run_id else side
         ident = card["identity"][side]
@@ -1042,15 +1043,22 @@ def emit_serving_scorecard(
             value = row.get(side)
             if not isinstance(value, (int, float)) or isinstance(value, bool):
                 continue
-            em.emit_score(
-                "local_vs_api",
+            validated_prov = _emit_provenance(
+                name, em.registry.get(name).units, side_prov,
+                require=em.require_provenance,
+            )
+            pending.append(dict(
+                agent_name="local_vs_api",
                 doc_id=side,
                 metric_name=name,
                 value=float(value),
                 run_id=sid,
                 metadata={"side": side, "status": row.get("status")},
-                provenance=side_prov,
-            )
+                provenance=validated_prov,
+            ))
+    # Refuse invalid provenance on either leg before emitting any records.
+    for score in pending:
+        em.emit_score(**score)
     return card
 
 

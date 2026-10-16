@@ -110,6 +110,56 @@ def test_empty_batch_fails_closed():
     assert score_format_layer(predicted=[], required_keys=["a"])["schema_valid"] == 0.0
 
 
+@pytest.mark.parametrize("raw", ["[]", '[{"a": 1}]'])
+def test_parsed_non_object_fails_required_keys(raw):
+    from llm_dojo_scoring.scorecard_honesty import score_format_layer
+
+    out = score_format_layer(predicted_raw=raw, required_keys=["a"])
+    assert out == {"parse_ok": 1.0, "schema_valid": 0.0, "schema_adherence": 0.0}
+    assert score_format_layer(predicted_raw=raw)["schema_valid"] == 1.0
+
+
+@pytest.mark.parametrize("doc_class", LIVE_DOC_TYPES)
+@pytest.mark.parametrize("surplus_is_valid", [False, True])
+def test_batch_gate_ignores_surplus_predictions(doc_class, surplus_is_valid):
+    expected, partial, full = _one_field_pair(doc_class)
+    scored = partial if surplus_is_valid else full
+    surplus = full if surplus_is_valid else partial
+    suite = get_suite(_SPECIALIST_FOR[doc_class])
+    baseline = suite.score([expected], [scored])
+    out = suite.score([expected], [scored, surplus])
+    assert len(out["extraction"]) == 1
+    for key in ("parse_ok", "schema_valid", "schema_adherence", "schema_promotion_gate"):
+        assert out[key] == baseline[key]
+
+
+@pytest.mark.parametrize("doc_class", LIVE_DOC_TYPES)
+def test_batch_gate_respects_doc_text_limit(doc_class):
+    expected, partial, full = _one_field_pair(doc_class)
+    suite = get_suite(_SPECIALIST_FOR[doc_class])
+    baseline = suite.score([expected], [full])
+    out = suite.score([expected, expected], [full, partial], doc_text=[None])
+    assert len(out["extraction"]) == 1
+    assert out["schema_valid"] == baseline["schema_valid"]
+    assert out["schema_promotion_gate"] == baseline["schema_promotion_gate"]
+    empty = suite.score([expected], [full], doc_text=[])
+    assert empty["extraction"] == []
+    assert empty["schema_promotion_gate"]["passes"] is False
+
+
+@pytest.mark.parametrize("doc_class", LIVE_DOC_TYPES)
+def test_unscorable_document_carries_failing_gate_and_provenance(doc_class):
+    _, _, full = _one_field_pair(doc_class)
+    out = get_suite(_SPECIALIST_FOR[doc_class]).score_document(
+        None, full, dataset_revision="test-revision", prompt_id="test-prompt"
+    )
+    assert out["status"] == "unscorable"
+    assert out["schema_promotion_gate"] == check_schema_promotion_gate(None, doc_class=doc_class)
+    assert out["provenance"]["dataset_revision"] == "test-revision"
+    assert out["provenance"]["prompt_id"] == "test-prompt"
+    assert out["provenance"]["metric_id"] == out["metric_id"]
+
+
 @pytest.mark.parametrize("metric", ["schema_valid", "parse_ok"])
 def test_dashboards_never_hide_schema(metric):
     """Registry-driven T0+T1 views must show structural validity for every
