@@ -129,7 +129,7 @@ Insurance; Covenant Not To Sue; Third Party Beneficiary.
 
 **Allowed `metric_id`:** `pipeline.extraction.overall`,
 `cuad.clause_presence.micro_f1`, `pipeline.extraction.field_micro_f1` /
-`_f2`, `maud.question.micro_accuracy`.
+`_f2` / `_precision` / `_recall`, `maud.question.micro_accuracy`.
 
 **Frozen prompt:** `contracts_specialist` `sha256 d91de396…` (byte-identical
 to sandbox `contracts_specialist_v33_simplified`).
@@ -181,7 +181,7 @@ still score the content metric.
 
 **Allowed `metric_id`:** `pipeline.extraction.overall`,
 `maud.question.micro_accuracy`, `maud.clause_presence.rate`,
-`pipeline.extraction.field_micro_f1` / `_f2`.
+`pipeline.extraction.field_micro_f1` / `_f2` / `_precision` / `_recall`.
 
 **Frozen prompt:** `merger_agreement_specialist` `sha256 00323258…`.
 
@@ -223,7 +223,7 @@ Hub subset.
 official filing/document number is on **this** record.
 
 **Allowed `metric_id`:** `pipeline.extraction.overall`,
-`pipeline.extraction.field_micro_f1` / `_f2`. No CUAD/MAUD-grade external
+`pipeline.extraction.field_micro_f1` / `_f2` / `_precision` / `_recall`. No CUAD/MAUD-grade external
 benchmark.
 
 **Frozen prompt:** `corporate_records_specialist` `sha256 fe13501f…`
@@ -265,7 +265,7 @@ rows: `content_topic` (11) —
 (`negative` 180 / `neutral` 566 / `positive` 254). Content-only rows
 still score those metrics.
 
-**Allowed `metric_id`:** extraction overall + field-micro F1/F2, plus
+**Allowed `metric_id`:** extraction overall + field-micro F1/F2/precision/recall, plus
 `pipeline.enron.topic_accuracy` / `topic_f1_macro` /
 `sentiment_accuracy` / `sentiment_f1_macro`.
 
@@ -322,7 +322,7 @@ is homogeneous (`coverage_determination=approved`, empty denials), so
 consistency is degenerate on GT-shaped predictions.
 
 **Allowed `metric_id`:** `pipeline.extraction.overall`,
-`pipeline.extraction.field_micro_f1` / `_f2`.
+`pipeline.extraction.field_micro_f1` / `_f2` / `_precision` / `_recall`.
 
 **Frozen prompt:** `insurance_claims_specialist` `sha256 6c2776bc…`.
 

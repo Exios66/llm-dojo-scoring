@@ -883,6 +883,20 @@ class ScoringSuite:
         if isinstance(expected, list) and predicted is None:
             # No predictions at all: every GT row is an unfilled prediction.
             raw_predicted = predicted = [None] * len(expected)
+        elif isinstance(expected, list) and isinstance(predicted, str):
+            # A whole batch answered as one JSON array string.
+            parsed_batch, batch_ok = _try_parse_json(predicted)
+            raw_predicted = predicted = (
+                list(parsed_batch)
+                if batch_ok and isinstance(parsed_batch, list)
+                else [predicted]
+            )
+        n_missing_predictions = 0
+        if isinstance(expected, list) and isinstance(predicted, list):
+            # A GT row with no prediction is an unfilled answer (scored as
+            # false negatives), never silently dropped by zip().
+            n_missing_predictions = max(0, len(expected) - len(predicted))
+            predicted = list(predicted) + [None] * n_missing_predictions
         if isinstance(predicted, str):
             predicted = _parse_predicted_one(predicted)
         elif isinstance(predicted, list):
@@ -917,13 +931,17 @@ class ScoringSuite:
         extras: dict[str, Any] = {}
         peeled_exp: list = []
         peeled_pred: list = []
+        unscorable_rows: set[int] = set()
 
         def _run(exp: Any, pred: Any, text: str | None):
             return score_extraction(doc_class, ftypes, pred, exp, doc_text=text)
 
         def _prf_one(exp: Any, pred: Any, result: ExtractionScoreResult) -> dict[str, Any]:
-            if not isinstance(exp, dict) or not isinstance(pred, dict):
+            if not isinstance(exp, dict):
                 return {}
+            if not isinstance(pred, dict):
+                # Missing or unparseable answer: every GT field is a miss.
+                pred = {}
             return extraction_binary_metrics(
                 exp, pred, field_map=ftypes, doc_class=doc_class, result=result
             )
@@ -979,8 +997,42 @@ class ScoringSuite:
             mauds_e: list = []
             mauds_p: list = []
             saw_topic = saw_sent = saw_maud = False
-            for exp, pred in zip(expected, predicted):
-                if isinstance(exp, dict) and isinstance(pred, dict):
+            row_assessments: list[GtAssessment] = []
+            for idx in range(len(expected)):
+                row_presence = (
+                    presence[idx]
+                    if isinstance(presence, list) and idx < len(presence)
+                    else presence
+                )
+                if (
+                    idx < len(scoped_empty_rows)
+                    and scoped_empty_rows[idx]
+                    and not row_presence
+                ):
+                    row_assessments.append(
+                        GtAssessment("unscorable", "gt_no_extractable_fields")
+                    )
+                else:
+                    # Same fail-closed check as a single document (#16): a
+                    # plain triage-only / malformed GT row is unscorable,
+                    # never a 0.0 quality row or a run of false negatives.
+                    row_assessments.append(
+                        assess_extraction_gt(
+                            expected[idx],
+                            ftypes,
+                            doc_class=doc_class,
+                            presence_expectations=row_presence,
+                            scorable_gt_keys=scorable_gt_keys,
+                        )
+                    )
+            for idx, (exp, pred) in enumerate(zip(expected, predicted)):
+                if not row_assessments[idx].scorable:
+                    # A GT-less row feeds no topic / sentiment / MAUD / claims
+                    # extras; it stays in place only to keep row alignment.
+                    peeled_exp.append(exp)
+                    peeled_pred.append(pred)
+                    unscorable_rows.add(idx)
+                elif isinstance(exp, dict) and isinstance(pred, dict):
                     e2, p2, payload = peel_non_extraction_fields(exp, pred)
                     peeled_exp.append(e2)
                     peeled_pred.append(p2)
@@ -1003,30 +1055,7 @@ class ScoringSuite:
             for idx, (exp, pred, text) in enumerate(
                 zip(peeled_exp, peeled_pred, texts)
             ):
-                row_presence = (
-                    presence[idx]
-                    if isinstance(presence, list) and idx < len(presence)
-                    else presence
-                )
-                if (
-                    idx < len(scoped_empty_rows)
-                    and scoped_empty_rows[idx]
-                    and not row_presence
-                ):
-                    row_assessment = GtAssessment(
-                        "unscorable", "gt_no_extractable_fields"
-                    )
-                else:
-                    # Same fail-closed check as a single document (#16): a
-                    # plain triage-only / malformed GT row is unscorable,
-                    # never a 0.0 quality row or a run of false negatives.
-                    row_assessment = assess_extraction_gt(
-                        expected[idx],
-                        ftypes,
-                        doc_class=doc_class,
-                        presence_expectations=row_presence,
-                        scorable_gt_keys=scorable_gt_keys,
-                    )
+                row_assessment = row_assessments[idx]
                 if not row_assessment.scorable:
                     # Keep row alignment: this row is honestly unscorable,
                     # never scored as gt_empty.
@@ -1171,8 +1200,10 @@ class ScoringSuite:
 
             claim_rows = [
                 score_claims_extras(exp, pred)
-                for exp, pred in zip(peeled_exp, peeled_pred)
-                if isinstance(exp, dict) and isinstance(pred, dict)
+                for idx, (exp, pred) in enumerate(zip(peeled_exp, peeled_pred))
+                if idx not in unscorable_rows
+                and isinstance(exp, dict)
+                and isinstance(pred, dict)
             ]
             if claim_rows:
                 consist = [row["determination_consistency"] for row in claim_rows]
@@ -1202,6 +1233,7 @@ class ScoringSuite:
                     for row in extraction
                 ]
             )
+            batch_quality["n_missing_predictions"] = n_missing_predictions
         if not extras and is_batch:
             return _stamp(
                 {

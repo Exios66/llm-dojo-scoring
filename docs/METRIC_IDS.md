@@ -42,9 +42,13 @@ All five live extract classes are covered.
 `compare_serving` sets `incomparable: true` (and leaves the quality delta
 `None`) when the local and API legs carry different `metric_id` values
 (`metric_id_mismatch`), when only one leg carries one (`metric_id_missing`),
-or when one leg mixes ids across its runs (`metric_id_mixed`).
-`assert_comparable_metric_ids` uses the same rule; two legs with no id at all
-are legacy data and come back `metric_id_unverified`. A grid row that mixes
+or when one leg mixes ids across its runs (`metric_id_mixed`, listed in the
+leg's `metric_id_conflict`). It also refuses to compare quality for a leg that
+pools runs with different identities — dataset revision, split, draw seed,
+fingerprint, prompt, task, model or serving kind (`identity_mixed`, listed in
+the leg's `identity_conflict`). `assert_comparable_metric_ids` uses the same
+metric rule; two legs with no id at all are legacy data and come back
+`metric_id_unverified` from both. A grid row that mixes
 metric ids raises (`llm_dojo_scoring.grid.specialist_grid_rows`) rather than
 averaging two different scales.
 

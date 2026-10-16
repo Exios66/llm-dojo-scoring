@@ -157,11 +157,15 @@ def _doc(value: GridDocument | Mapping[str, Any]) -> GridDocument:
 
 
 def _doc_status(value: Mapping[str, Any]) -> str | None:
-    status = value.get("status")
     scores = value.get("scores")
-    if not status and isinstance(scores, Mapping):
-        status = scores.get("status")
-    return str(status) if status else None
+    found = [value.get("status")]
+    if isinstance(scores, Mapping):
+        found.append(scores.get("status"))
+    statuses = [str(s).strip().lower() for s in found if s]
+    # A run-level "completed" must not hide a score-level "unscorable" (#16).
+    if "unscorable" in statuses:
+        return "unscorable"
+    return statuses[0] if statuses else None
 
 
 def _is_unscorable(doc: GridDocument) -> bool:

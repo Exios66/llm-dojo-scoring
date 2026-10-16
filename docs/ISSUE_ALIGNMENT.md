@@ -1,4 +1,4 @@
-# Issue alignment — v0.19.0 (updated for Unreleased / v0.22.0)
+# Issue alignment — v0.19.0 (updated for Unreleased, planned v0.22.0)
 
 Status of the open scoring issues after the v0.19.0 release-completion
 patch (adversarial audit of PR #23 + this patch). **Stale** = already

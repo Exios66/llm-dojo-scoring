@@ -31,15 +31,20 @@ Format based on Keep a Changelog; versioning is SemVer.
 - **`COST_BASIS_VALUES` gains `token_price_estimate`** (`COST_BASIS_TOKEN_PRICE`)
   for USD computed as tokens × a provider price table. `serving_cost_card`
   and `normalize_serving_record` label price-table costs with it; a
-  recorded cost keeps the record's own `cost_basis` (or none). Comparison
-  gates refuse to mix it with a metered basis.
-- **Archive scoring block carries `status`, `reason` and `provenance` (#16,
-  #22).** `ARCHIVE_SCORING_KEYS` gains all three (provenance stays last);
-  `score_archive_block(..., provenance=)` stamps the canonical `metric_id`
-  for `method` (default → `pipeline.extraction.overall`, headline aliases
-  → their ids, anything else through strict `metric_id_for`), refuses a
-  contradicting claimed `metric_id` (falsy values included), and marks GT
-  with no extractable fields `status="unscorable"`. `validate_audit_entry`
+  recorded cost keeps the record's own `cost_basis` (or none).
+  `validate_comparison_provenance` refuses two legs whose `cost_basis`
+  differ whether or not a leg carries a `cost` block, and `compare_serving`
+  feeds each leg's aggregated basis into that gate.
+- **Archive scoring block carries `status` and `reason`, and a filled
+  `provenance` (#16, #22).** `ARCHIVE_SCORING_KEYS` gains `status` and
+  `reason` (provenance stays last); `score_archive_block(..., provenance=)`
+  stamps the canonical `metric_id` for `method` (default →
+  `pipeline.extraction.overall`, headline aliases and canonical ids → their
+  ids, anything else through strict `metric_id_for`, so a custom method
+  name now raises `UnknownMetricNameError`), refuses a contradicting claimed
+  `metric_id` (falsy values included), and marks missing GT or GT with no
+  extractable fields `status="unscorable"` (an empty GT object `{}` stays
+  `scored` with `reason="gt_empty"`). `validate_audit_entry`
   does not require the three new keys (`ARCHIVE_SCORING_POST_V021_KEYS`), so
   rows archived before this release still validate.
 - **`score_document` refuses a contradicting `metric_id` or an unknown
@@ -51,13 +56,19 @@ Format based on Keep a Changelog; versioning is SemVer.
   without as `metric_id_missing`, and a leg that mixes ids across its runs as
   `metric_id_mixed`. An incomparable comparison reports no quality delta
   (`None`, `status="incomparable"`) and an INCOMPARABLE line in its markdown.
-  Two legs with no id at all stay comparable, flagged `metric_id_unverified`.
+  Two legs with no id at all stay comparable, flagged `metric_id_unverified`
+  by both. `compare_serving` also marks a leg that pools runs differing on
+  dataset revision, split, seed, fingerprint, prompt, task, model or serving
+  kind `identity_mixed` (the leg's `identity_conflict` names the fields);
+  `emit_serving_scorecard` and `require_provenance` refuse such a leg rather
+  than stamp it with its first run's identity. `ServingRun` inputs keep
+  their `metric_id`, so a pre-normalized run cannot bypass the check.
 - **`validate_comparison_provenance(..., vary=())`** — the axis a comparison
   is about (`("serving_kind", "model_id")` for local vs API) must be present
   on both legs but may differ; previously every comparison across serving
   kinds was refused. `draw_seed` may be absent on both legs (full split) but
-  not one; `0` is a real seed. A `cost_basis` outside `COST_BASIS_VALUES` is
-  refused. `validate_comparison_export` passes `vary` through, and
+  not one; `0` is a real seed (also kept by `stamp_provenance`). A
+  `cost_basis` outside `COST_BASIS_VALUES` is refused. `validate_comparison_export` passes `vary` through, and
   `compare_serving(require_provenance={"local": ..., "api": ...})` runs the
   gate up front.
 - **`pair_comparable_runs` keys on provenance (#22)**: `dataset_revision`,
@@ -89,16 +100,25 @@ Format based on Keep a Changelog; versioning is SemVer.
   counted and the batch gate could not fail. Batches are now scored per
   item and averaged; an empty batch fails closed. The gate covers exactly
   the GT rows: a short prediction list is padded with unparsed rows, so it
-  cannot pass on its paired subset, and raw-string predictions are parsed.
+  cannot pass on its paired subset, and raw-string predictions (per row or
+  one JSON array for the whole batch) are parsed.
+- **Missing batch predictions were dropped from quality and P/R (#16).** A GT
+  row with no prediction (short list, `None`, unparseable text) is scored
+  as an unfilled answer — its fields count as misses — instead of being cut
+  by `zip()` or skipped by micro P/R/F1. The payload reports
+  `n_missing_predictions`.
 - **Batch rows without ground truth were scored as zeros (#16).** Each batch
   row is assessed on its own; a GT-less row is `unscorable` and the batch
   payload carries `n_scored` / `n_unscorable` / `quality_mean` /
-  `export_verdict` (`unproven` when nothing was scorable).
+  `export_verdict` (`unproven` when no row was scored, an empty batch
+  included). A GT-less row also feeds none of the topic / sentiment / MAUD
+  / claims extras.
 - **ITT quality counted unscorable docs as attempts (#16).**
   `aggregate_quality_itt` takes them out of the denominator
   (`n_attempted_scorable`).
 - **Grid reports folded unscorable documents into specialist quality.**
-  `GridDocument.status` (also read from `scores.status`); unscorable
+  `GridDocument.status` (read from `status` and `scores.status`,
+  case-insensitively; `unscorable` on either wins); unscorable
   documents count toward `n`, errors and cost but not `score` / `coverage`.
   Rows gain `n_unscorable` and `quality_status` (`unproven` → rendered
   "unproven", not "n/a").
@@ -120,8 +140,9 @@ Format based on Keep a Changelog; versioning is SemVer.
   embedding backend as a public, fail-soft call, so consumers (llm-mailroom
   `pipeline/relations.py`) no longer need `_get_embedding()._embed`.
 - `ServingIdentity` gains `dataset_revision`, `split` and `draw_seed`;
-  `ServingRun` gains `cost_basis`; aggregated legs carry `cost_basis` (one
-  labelled basis across every costed run) and `metric_id_conflict`.
+  `ServingRun` gains `cost_basis` and `metric_id`; aggregated legs carry
+  `cost_basis` (one labelled basis across every costed run),
+  `metric_id_conflict` and `identity_conflict`.
 - `scripts/gen_taxonomy_fixture.py --taxonomy PATH [--check]` regenerates
   `tests/fixtures/taxonomy_field_types.json` from llm-mailroom's
   `taxonomy.yaml`, pinning the git blob sha1 (`--check` ignores only

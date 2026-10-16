@@ -367,6 +367,8 @@ class ServingRun:
     #: Basis of ``estimated_cost_usd`` (one of ``COST_BASIS_VALUES``), or
     #: ``None`` when a recorded cost carries no label.
     cost_basis: str | None = None
+    #: Quality ``metric_id`` the record was scored under (#17), if stamped.
+    metric_id: str | None = None
 
 
 def _identity_from(record: Mapping[str, Any]) -> ServingIdentity:
@@ -548,6 +550,7 @@ def normalize_serving_record(record: Mapping[str, Any] | ServingRun) -> ServingR
         estimated_cost_usd=cost,
         honest_gaps=gaps,
         cost_basis=cost_basis,
+        metric_id=_record_metric_id(record),
     )
 
 
@@ -632,14 +635,7 @@ def aggregate_serving(
             if gap not in gaps:
                 gaps.append(gap)
 
-    metric_ids: list[str] = []
-    n_raw = 0
-    for raw in runs:
-        if isinstance(raw, Mapping):
-            n_raw += 1
-            mid = _record_metric_id(raw)
-            if mid:
-                metric_ids.append(mid)
+    metric_ids = [r.metric_id for r in normalized if r.metric_id]
 
     quality: dict[str, Any] = {}
     for key in _QUALITY_KEYS:
@@ -687,7 +683,7 @@ def aggregate_serving(
     if metric_ids:
         out["metric_id"] = metric_ids[0]
         distinct = sorted(set(metric_ids))
-        if len(distinct) > 1 or len(metric_ids) != n_raw:
+        if len(distinct) > 1 or len(metric_ids) != len(normalized):
             # A leg that mixes metrics (or mixes stamped and unstamped runs)
             # has no single identity to compare on (#17).
             out["metric_id_conflict"] = distinct
@@ -697,7 +693,29 @@ def aggregate_serving(
         # One labelled basis across every costed run; mixed or unlabelled
         # costs carry no basis and are refused at emission (#22).
         out["cost_basis"] = bases.pop()
+    mixed = sorted(
+        key
+        for key in _LEG_IDENTITY_KEYS
+        if len({ident.get(key) for ident in identities}) > 1
+    )
+    if mixed:
+        # The leg pools runs from different datasets / prompts / models; no
+        # one identity describes it, so it is neither compared nor stamped.
+        out["identity_conflict"] = mixed
     return out
+
+
+#: Identity fields every run in one comparison leg must share.
+_LEG_IDENTITY_KEYS = (
+    "serving_kind",
+    "model",
+    "prompt_version",
+    "task",
+    "dataset_fingerprint",
+    "dataset_revision",
+    "split",
+    "draw_seed",
+)
 
 
 def _record_metric_id(raw: Mapping[str, Any]) -> str | None:
@@ -1013,6 +1031,18 @@ def serving_card_markdown(comparison: Mapping[str, Any]) -> str:
             f"api metric_id={_cell(comparison.get('right_metric_id'))}. "
             "No quality delta is reported.",
         ])
+        for side in ("local", "api"):
+            leg = comparison.get(side) or {}
+            if leg.get("metric_id_conflict"):
+                lines.append(
+                    f"- {side} leg mixes metric_ids: "
+                    f"{', '.join(map(str, leg['metric_id_conflict']))}"
+                )
+            if leg.get("identity_conflict"):
+                lines.append(
+                    f"- {side} leg mixes runs that differ on: "
+                    f"{', '.join(leg['identity_conflict'])}"
+                )
     lines.extend(["", "## Headlines (T0)", ""])
     for name, row in card["headlines"].items():
         lines.append(
@@ -1084,22 +1114,32 @@ def emit_serving_scorecard(
     record is written.
     """
     from .emitter import _emit_provenance, get_emitter
-    from .scorecard_honesty import ProvenanceExportError
+    from .scorecard_honesty import _METRIC_ID_BY_NAME, ProvenanceExportError, _absent
+
+    quality_ids = set(_METRIC_ID_BY_NAME.values())
 
     em = emitter or get_emitter()
     card = serving_scorecard(comparison)
     pending: list[dict[str, Any]] = []
     for side in ("local", "api"):
         sid = f"{run_id}:{side}" if run_id else side
+        _refuse_mixed_leg(side, comparison.get(side))
         ident = card["identity"][side]
         side_prov = dict((provenance or {}).get(side) or {})
         if isinstance(side_prov.get("provenance"), Mapping):  # a stamped card
             side_prov = dict(side_prov["provenance"])
-        # A leg stamp may name the leg's quality metric_id; every emitted
-        # row carries the canonical id of its own metric instead. Any other
+        # An explicit None / "" is "not given": fall back to the records.
+        side_prov = {k: v for k, v in side_prov.items() if not _absent(v)}
+        # A leg stamp may name the leg's quality metric_id (its own, or any
+        # quality id when the leg records none); every emitted row carries
+        # the canonical id of its own serving metric instead. Any other
         # claimed id stays in and is refused per row as a contradiction.
         leg_metric_id = (comparison.get(side) or {}).get("metric_id")
-        if leg_metric_id and side_prov.get("metric_id") == leg_metric_id:
+        claimed = side_prov.get("metric_id")
+        if claimed is not None and (
+            claimed == leg_metric_id
+            or (not leg_metric_id and claimed in quality_ids)
+        ):
             side_prov.pop("metric_id")
         side_prov.setdefault("model_id", ident.get("model_id") or ident.get("model"))
         side_prov.setdefault("serving_kind", ident.get("serving_kind") or side)
@@ -1158,9 +1198,14 @@ def compare_serving(
     Quality is compared only when both legs carry the same ``metric_id``
     (#17). A mismatched, one-sided or mixed identity marks the payload
     ``incomparable`` and leaves the quality delta ``None``.
+    Two legs with no id at all stay comparable and are flagged
+    ``metric_id_unverified``. A leg that pools runs differing on dataset,
+    split, seed, prompt, task or model is ``identity_mixed`` (named in the
+    leg's ``identity_conflict``).
     ``require_provenance`` (``{"local": {...}, "api": {...}}``, merged over
     what the records carry) runs ``validate_comparison_provenance`` first
-    and raises on any gap (#22).
+    and raises on any gap (#22) — including a metric_id mismatch, which it
+    refuses instead of returning an ``incomparable`` payload.
 
     Also returns ``table`` (every T0/T1 metric including missing ``None``
     rows), ``scorecard`` (headlines + dashboard + identity + cost),
@@ -1195,6 +1240,8 @@ def compare_serving(
     elif bool(left_metric_id) != bool(right_metric_id):
         # One leg names its metric, the other does not: no shared identity.
         reason = "metric_id_missing"
+    elif left.get("identity_conflict") or right.get("identity_conflict"):
+        reason = "identity_mixed"
     incomparable: dict[str, Any] | None = None
     if reason:
         incomparable = {
@@ -1207,6 +1254,8 @@ def compare_serving(
     if require_provenance:
         from .scorecard_honesty import validate_comparison_provenance
 
+        _refuse_mixed_leg("local", left)
+        _refuse_mixed_leg("api", right)
         validate_comparison_provenance(
             _leg_provenance(left, require_provenance.get("local")),
             _leg_provenance(right, require_provenance.get("api")),
@@ -1270,11 +1319,26 @@ def compare_serving(
     }
     if incomparable:
         payload.update(incomparable)
+    elif not left_metric_id and not right_metric_id:
+        # Comparable by default, but nothing proves the legs share a metric.
+        payload["metric_id_unverified"] = True
     payload["table"] = serving_table_rows(payload)
     payload["scorecard"] = serving_scorecard(payload)
     payload["cost"] = payload["scorecard"]["cost"]
     payload["markdown"] = serving_card_markdown(payload)
     return payload
+
+
+def _refuse_mixed_leg(side: str, agg: Mapping[str, Any] | None) -> None:
+    """A leg pooling runs with different identities has no one provenance."""
+    mixed = (agg or {}).get("identity_conflict")
+    if mixed:
+        from .scorecard_honesty import ProvenanceExportError
+
+        raise ProvenanceExportError(
+            f"{side} leg pools runs that differ on {', '.join(mixed)}; "
+            "compare or emit one identity per leg"
+        )
 
 
 def _leg_provenance(
@@ -1289,6 +1353,7 @@ def _leg_provenance(
         "metric_id": agg.get("metric_id"),
         "serving_kind": ident.get("serving_kind"),
         "model_id": ident.get("model"),
+        "cost_basis": agg.get("cost_basis"),
     }
     from .scorecard_honesty import SCORER_VERSION
 

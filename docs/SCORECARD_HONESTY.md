@@ -87,13 +87,15 @@ Quality aggregates name the population:
   unscorable docs (no GT) leave the denominator (`n_attempted_scorable`)
 
 Cost helpers (`estimate_for_record`, `tokens_summary`) always stamp
-`cost_basis`: `busy_window` or `billed_incl_cold`. Mixing both in one
-table raises, as does mixing labeled and unlabeled rows. Wholly
-unlabeled inputs keep the default (`busy_window`). Serving cost cards
-label USD computed from tokens × the provider price table
-`token_price_estimate` (`COST_BASIS_TOKEN_PRICE`); it is never comparable
-with a metered basis. `validate_comparison_provenance` refuses any basis
-outside `COST_BASIS_VALUES`.
+`cost_basis`: one of `COST_BASIS_VALUES` (`busy_window`,
+`billed_incl_cold`, or `token_price_estimate` when the records carry it).
+Mixing two labels in one table raises, as does mixing labeled and
+unlabeled rows. Wholly unlabeled inputs keep the default (`busy_window`).
+Serving cost cards label USD computed from tokens × the provider price
+table `token_price_estimate` (`COST_BASIS_TOKEN_PRICE`).
+`validate_comparison_provenance` refuses any basis outside
+`COST_BASIS_VALUES`, and refuses two legs whose bases differ (so a
+price-table estimate is never compared with a metered figure).
 
 Comparisons (`validate_comparison_provenance`, `validate_comparison_export`)
 require every `PROVENANCE_KEYS` entry on both legs and equal, except the

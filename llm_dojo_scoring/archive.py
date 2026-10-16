@@ -30,6 +30,7 @@ from .field_scoring import (
 )
 from .gt_metadata import is_empty_value
 from .scorecard_honesty import (
+    _METRIC_ID_BY_NAME,
     ProvenanceExportError,
     assess_extraction_gt,
     metric_id_for,
@@ -246,6 +247,8 @@ def _archive_metric_id(resolved_method: str) -> str:
         return "pipeline.extraction.overall"
     if resolved_method in _HEADLINE_METHOD_ALIASES.values():
         return resolved_method
+    if resolved_method in set(_METRIC_ID_BY_NAME.values()):
+        return resolved_method  # already a canonical id
     return metric_id_for(resolved_method)
 
 

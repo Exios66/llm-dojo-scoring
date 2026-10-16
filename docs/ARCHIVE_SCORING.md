@@ -51,8 +51,9 @@ never overwrite `extraction_f1`. `method` resolves through strict
 `metric_id_for` (an unknown name raises), and a `provenance` stamp whose
 `metric_id` contradicts the resolved id is refused.
 
-`status` is `scored`, or `unscorable` (with `reason`) when the expected
-fields hold nothing extractable for the class. `status`, `reason` and
+`status` is `scored`, or `unscorable` (with `reason`) when GT is missing
+or holds nothing extractable for the class. An empty GT object (`{}`) is
+`scored` with `reason="gt_empty"` and a null `overall_score`. `status`, `reason` and
 `provenance` are new in this release; `validate_audit_entry` accepts
 older rows without them.
 
