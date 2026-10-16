@@ -1,4 +1,4 @@
-# Migrating llm-entity-extraction / llm-mailroom to llm-dojo-scoring
+# Migrating pipeline projects (llm-mailroom) to llm-dojo-scoring
 
 > **Release checklist:** every `release_chain` cut must bump the
 > `__version__` **fallback** in `llm_dojo_scoring/__init__.py` to the new
@@ -15,7 +15,7 @@ scorers, and reporting scripts keep working with minimal edits.
 ## 1. Install the package
 
 ```bash
-# in llm-entity-extraction / llm-mailroom — pin the published tag
+# in llm-mailroom — pin the published tag
 pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.16.0"
 # or from a local checkout
 pip install -e /path/to/llm-dojo-scoring
@@ -269,9 +269,9 @@ Governance rules that make this safe to adopt incrementally:
   new names upstream first (built-in `DEFAULT_METRICS_YAML` or a
   `LLM_DOJO_SCORING_REGISTRY` YAML), then use them downstream.
 - llm-mailroom validates its flat `SCORE_CONFIGS` list against
-  `load_registry().metrics` at import time; llm-entity-extraction wraps the
-  same layer behind a thin `score_emitter` bridge module. Mirror whichever
-  pattern fits your repo.
+  `load_registry().metrics` at import time; the former llm-entity-extraction
+  (now a standalone repo) wrapped the same layer behind a thin
+  `score_emitter` bridge module. Mirror whichever pattern fits your repo.
 
 ## 3d. Pinning the v0.10.0 release
 
@@ -342,7 +342,7 @@ assert m.citation and m.ground_truth == "required"
 
 Canonical scoring tables (per-agent T0/T1, field maps, honest gaps, metric catalog): [`docs/SCORING.md`](SCORING.md). Prompt catalog rules: [`docs/PROMPTS.md`](PROMPTS.md).
 
-Do not push pin PRs to llm-mailroom / llm-entity-extraction / The-Mailroom from this package PR — consumers bump when they choose.
+Do not push pin PRs to llm-mailroom / The-Mailroom from this package PR — consumers bump when they choose.
 
 ## 3f. Pinning the v0.12.0 release (local vs API serving suite)
 
@@ -378,7 +378,7 @@ Serving T0 (`ttft_seconds`, `tokens_per_second`) applies only to `local_vs_api`.
 Sorter headlines stay `accuracy` + `f1_macro`. TTFT is `None` unless a
 first-token timestamp or explicit `ttft_seconds` is recorded.
 
-Do not push pin PRs to llm-mailroom / llm-entity-extraction / The-Mailroom /
+Do not push pin PRs to llm-mailroom / The-Mailroom /
 local-mailroom-sandbox from this package PR — consumers bump when they choose.
 
 ## 3g. Pinning the v0.12.1 release (serving table + scorecard)

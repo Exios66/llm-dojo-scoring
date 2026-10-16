@@ -3,7 +3,7 @@
 Task bundles (``bundles``) group metrics by what an agent *does*.
 Doc-type bundles (``doc_bundles``) group them by the *kind of document*.
 This module is the third, consumer-facing layer: **one importable suite
-per pipeline agent**, so llm-mailroom / llm-entity-extraction can do::
+per pipeline agent**, so llm-mailroom / local-mailroom-sandbox can do::
 
     from llm_dojo_scoring import get_suite, score_suite
 

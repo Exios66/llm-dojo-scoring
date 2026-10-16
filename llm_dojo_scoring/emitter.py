@@ -9,7 +9,7 @@ Sits ON TOP of the calculation modules (nothing here computes metrics):
   :class:`LangfuseSink` (no-ops when the SDK/config is absent, matching
   llm-mailroom's observability facade philosophy).
 
-Typical consumer (llm-entity-extraction ``src/score_emitter.py``)::
+Typical consumer (a ``score_emitter`` bridge module, as in the former llm-entity-extraction)::
 
     from llm_dojo_scoring.emitter import Emitter, LocalManifestSink
 

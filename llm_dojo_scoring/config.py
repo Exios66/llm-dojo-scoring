@@ -9,8 +9,8 @@ hardcoded fallbacks in ``src/field_scoring.py`` + equivalence constants in
 - overridden per-run via the ``LLM_DOJO_SCORING_CONFIG`` env var.
 
 All thresholds, equivalence sets, subtype lists, cost tables, and failure-mode
-definitions live here so the consuming projects (llm-entity-extraction,
-llm-mailroom) can stop redefining them.
+definitions live here so the consuming projects (llm-mailroom,
+local-mailroom-sandbox) can stop redefining them.
 """
 
 from __future__ import annotations
@@ -592,7 +592,7 @@ def configure_from_taxonomy(taxonomy: dict | None) -> Settings:
     """Wire a repo taxonomy dict into the package settings (single wiring path).
 
     This is the ONE place the taxonomy→settings mapping lives: consuming
-    projects (llm-mailroom, llm-entity-extraction, agent-mailroom) load their
+    projects (llm-mailroom, local-mailroom-sandbox) load their
     own ``taxonomy.yaml`` and pass the parsed dict here — they no longer
     re-implement the field-scoring coercion or the equivalence/cost mapping.
 
