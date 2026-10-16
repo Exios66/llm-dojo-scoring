@@ -97,19 +97,21 @@ def test_unmapped_metric_gets_registry_identity_not_a_comparison_id():
     assert rec.metadata["provenance"]["metric_id"] == "registry:ttft_seconds"
 
 
-def test_contradicting_metric_id_is_refused():
+@pytest.mark.parametrize("metric_id", ["cuad.clause_presence.micro_f1", "", 0, False])
+def test_contradicting_metric_id_is_refused(metric_id):
     em = Emitter(sinks=[], registry=_registry())
     with pytest.raises(ProvenanceExportError, match="contradicts"):
         em.emit_score("a", "d1", "extraction_overall_score", 0.7,
-                      provenance={**PROV, "metric_id": "cuad.clause_presence.micro_f1"})
+                      provenance={**PROV, "metric_id": metric_id})
 
 
 @pytest.mark.parametrize("require_provenance", [True, False])
 @pytest.mark.parametrize("stamped", [True, False])
-def test_unmapped_metric_refuses_conflicting_identity(tmp_path, require_provenance, stamped):
+@pytest.mark.parametrize("metric_id", ["registry:e2e_latency_seconds", "", 0, False])
+def test_unmapped_metric_refuses_conflicting_identity(tmp_path, require_provenance, stamped, metric_id):
     sink = LocalManifestSink(tmp_path / "scores.jsonl")
     em = Emitter(sinks=[sink], registry=_registry(), require_provenance=require_provenance)
-    prov = {**PROV, "metric_id": "registry:e2e_latency_seconds"}
+    prov = {**PROV, "metric_id": metric_id}
     if stamped:
         prov = stamp_provenance(prov)
     with pytest.raises(ProvenanceExportError, match="contradicts"):
