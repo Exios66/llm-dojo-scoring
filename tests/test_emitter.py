@@ -96,11 +96,12 @@ def test_sum_aggregation_for_cost(tmp_path):
 
     reg = Registry()
     reg.metrics["estimated_cost_usd"] = MetricDef(
-        name="estimated_cost_usd", tier=MetricTier.CORE, aggregation="sum"
+        name="estimated_cost_usd", tier=MetricTier.CORE, units="USD", aggregation="sum"
     )
     em = Emitter(sinks=[], registry=reg)
     for v in (0.1, 0.2, 0.3):
-        em.emit_score("sorter", "d", "estimated_cost_usd", v, provenance=PROV)
+        em.emit_score("sorter", "d", "estimated_cost_usd", v,
+                      provenance={**PROV, "cost_basis": "busy_window"})
     assert em.get_scorecard("sorter")["estimated_cost_usd"] == pytest.approx(0.6)
 
 

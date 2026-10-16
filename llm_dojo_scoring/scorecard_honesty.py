@@ -200,16 +200,17 @@ def metric_id_for(
     ``doc_class`` is accepted for call-site symmetry; the id does not depend
     on it. See ``docs/METRIC_IDS.md``.
     """
-    if presence_mode or metric_name == "extraction_category_presence":
-        return "cuad.clause_presence.micro_f1"
     try:
-        return _METRIC_ID_BY_NAME[metric_name]
+        canonical = _METRIC_ID_BY_NAME[metric_name]
     except KeyError:
         raise UnknownMetricNameError(
             f"no canonical metric_id for {metric_name!r}"
             + (f" (doc_class={doc_class!r})" if doc_class else "")
             + "; add it to _METRIC_ID_BY_NAME and docs/METRIC_IDS.md"
         ) from None
+    if presence_mode:
+        return "cuad.clause_presence.micro_f1"
+    return canonical
 
 
 def metric_ids_for_class(doc_class: str) -> tuple[str, ...]:
@@ -421,10 +422,13 @@ def score_format_layer(
     elif predicted is None:
         parse_ok = 0.0
     schema_valid = parse_ok
-    if parse_ok >= 1.0 and isinstance(parsed, dict) and required_keys:
-        missing = [k for k in required_keys if k not in parsed]
-        if missing:
-            schema_valid = round(1.0 - len(missing) / max(len(required_keys), 1), 4)
+    if parse_ok >= 1.0 and required_keys:
+        if not isinstance(parsed, dict):
+            schema_valid = 0.0
+        else:
+            missing = [k for k in required_keys if k not in parsed]
+            if missing:
+                schema_valid = round(1.0 - len(missing) / max(len(required_keys), 1), 4)
     return {
         "parse_ok": float(parse_ok),
         "schema_valid": float(schema_valid),

@@ -252,17 +252,16 @@ def _emit_provenance(
     given = dict(provenance or {})
     if isinstance(given.get("provenance"), Mapping):  # a stamped scorecard
         given = dict(given["provenance"])
-    canonical = _METRIC_ID_BY_NAME.get(metric_name)
     # Unmapped registry metrics (latency, cost, ...) have no cross-leg
     # comparison id; their identity is the registry entry itself.
-    default_id = canonical or f"registry:{metric_name}"
+    canonical = _METRIC_ID_BY_NAME.get(metric_name) or f"registry:{metric_name}"
     claimed = given.get("metric_id")
-    if canonical and claimed and claimed != canonical:
+    if claimed and claimed != canonical:
         raise ProvenanceExportError(
             f"provenance metric_id {claimed!r} contradicts {metric_name!r} "
             f"(canonical {canonical!r})"
         )
-    prov = stamp_provenance(given, metric_id=claimed or default_id)["provenance"]
+    prov = stamp_provenance(given, metric_id=canonical)["provenance"]
     if not require:
         return prov
     missing = [k for k in EMIT_REQUIRED_PROVENANCE if not prov.get(k)]
