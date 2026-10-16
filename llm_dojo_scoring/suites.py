@@ -620,7 +620,7 @@ class ScoringSuite:
         if not self.computable:
             raise TypeError(
                 f"{self.name} suite is emit-only (kind={self.kind}); "
-                "pass metrics={{name: value}} to validate, or emit through "
+                "pass metrics={name: value} to validate, or emit through "
                 f"Emitter using metric_names={self.metric_names()!r}"
             )
         if self.kind == _KIND_EXTRACTION:
@@ -740,7 +740,9 @@ class ScoringSuite:
             prf_bundle_keys,
         )
         from .scorecard_honesty import (
+            COST_BASIS_VALUES,
             GtAssessment,
+            ProvenanceExportError,
             _try_parse_json,
             aggregate_quality_honest,
             assess_extraction_gt,
@@ -754,6 +756,32 @@ class ScoringSuite:
         ftypes = field_types or self.field_types
         doc_class = self.doc_type or self.name
         presence = kwargs.get("presence_expectations")
+
+        def _stamp(payload: dict[str, Any], mid: str) -> dict[str, Any]:
+            # Same refusal as Emitter / score_archive_block (#17, #22): a
+            # caller's metric_id or cost_basis is checked, never overridden.
+            claimed = kwargs.get("metric_id")
+            if claimed is not None and claimed != mid:
+                raise ProvenanceExportError(
+                    f"provenance metric_id {claimed!r} contradicts this "
+                    f"payload's metric_id {mid!r}"
+                )
+            basis = kwargs.get("cost_basis")
+            if basis is not None and basis not in COST_BASIS_VALUES:
+                raise ProvenanceExportError(
+                    f"cost_basis {basis!r} is not one of {sorted(COST_BASIS_VALUES)}"
+                )
+            return stamp_provenance(
+                payload,
+                metric_id=mid,
+                prompt_id=kwargs.get("prompt_id"),
+                dataset_revision=kwargs.get("dataset_revision"),
+                split=kwargs.get("split"),
+                draw_seed=kwargs.get("draw_seed"),
+                serving_kind=kwargs.get("serving_kind"),
+                model_id=kwargs.get("model_id"),
+                cost_basis=basis,
+            )
         # Content/MAUD differentiators this suite can actually score — a GT
         # row holding only these is not suppressed as "no extractable fields".
         scorable_gt_keys = tuple(
@@ -927,20 +955,15 @@ class ScoringSuite:
                     "extraction_overall_score", doc_class=doc_class
                 ),
             )
+            # The format layer does not depend on GT: a well-formed answer to
+            # a triage-only row is not a schema failure.
+            unscorable.update(format_scores)
             unscorable["schema_promotion_gate"] = check_schema_promotion_gate(
-                None, doc_class=doc_class
+                format_scores.get("schema_valid"), doc_class=doc_class
             )
-            return stamp_provenance(
+            return _stamp(
                 unscorable,
-                metric_id=metric_id_for(
-                    "extraction_overall_score", doc_class=doc_class
-                ),
-                prompt_id=kwargs.get("prompt_id"),
-                dataset_revision=kwargs.get("dataset_revision"),
-                split=kwargs.get("split"),
-                draw_seed=kwargs.get("draw_seed"),
-                serving_kind=kwargs.get("serving_kind"),
-                model_id=kwargs.get("model_id"),
+                metric_id_for("extraction_overall_score", doc_class=doc_class),
             )
 
         if isinstance(expected, list) and isinstance(predicted, list):
@@ -1180,7 +1203,7 @@ class ScoringSuite:
                 ]
             )
         if not extras and is_batch:
-            return stamp_provenance(
+            return _stamp(
                 {
                     "extraction": extraction,
                     **prf_payload,
@@ -1193,15 +1216,7 @@ class ScoringSuite:
                         "extraction_overall_score", doc_class=doc_class
                     ),
                 },
-                metric_id=metric_id_for(
-                    "extraction_overall_score", doc_class=doc_class
-                ),
-                prompt_id=kwargs.get("prompt_id"),
-                dataset_revision=kwargs.get("dataset_revision"),
-                split=kwargs.get("split"),
-                draw_seed=kwargs.get("draw_seed"),
-                serving_kind=kwargs.get("serving_kind"),
-                model_id=kwargs.get("model_id"),
+                metric_id_for("extraction_overall_score", doc_class=doc_class),
             )
         filtered = {
             k: v for k, v in extras.items()
@@ -1229,16 +1244,7 @@ class ScoringSuite:
             # Single-document payload: flatten the document's own overall
             # score so consumers do not have to dig into the dataclass.
             payload["overall_score"] = extraction.overall_score
-        return stamp_provenance(
-            payload,
-            metric_id=mid,
-            prompt_id=kwargs.get("prompt_id"),
-            dataset_revision=kwargs.get("dataset_revision"),
-            split=kwargs.get("split"),
-            draw_seed=kwargs.get("draw_seed"),
-            serving_kind=kwargs.get("serving_kind"),
-            model_id=kwargs.get("model_id"),
-        )
+        return _stamp(payload, mid)
 
     def _score_audit(
         self,
