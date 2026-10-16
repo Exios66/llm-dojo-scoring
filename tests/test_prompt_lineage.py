@@ -1,6 +1,6 @@
 """eval-environment prompt lineage — archived / frozen / mutation catalog.
 
-Synced from eval-environment 3f9bd55 by ``scripts/sync_eval_environment_lineage.py``.
+Synced from eval-environment bdba24c by ``scripts/sync_eval_environment_lineage.py``.
 The texts are historical eval-environment bytes, so the anti-priming rule from
 ``docs/PROMPTS.md`` is deliberately not asserted here. Network-free.
 """
@@ -56,6 +56,7 @@ FROZEN = {
 MUTATIONS = {
     "sorter_v2",
     "sorter_v3",
+    "sorter_v4",
     "contracts_specialist_v2",
     "contracts_specialist_v3",
     "corporate_records_specialist_v2",
@@ -83,7 +84,7 @@ def _sha(text: str) -> str:
 
 def test_counts_and_key_set():
     assert {v.key for v in list_prompt_versions()} == ALL_KEYS
-    assert len(ALL_KEYS) == 39
+    assert len(ALL_KEYS) == 40
     assert {v.key for v in list_prompt_versions(lineage="archived")} == ARCHIVED
     assert {v.key for v in list_prompt_versions(lineage="frozen")} == FROZEN
     assert {v.key for v in list_prompt_versions(lineage="mutation")} == MUTATIONS
@@ -92,7 +93,7 @@ def test_counts_and_key_set():
 def test_source_metadata():
     assert dict(LINEAGE_SOURCE) == {
         "source_repo": "LLM-Mailroom-Services/eval-environment",
-        "source_commit": "3f9bd5535f57ed03c43d8ff3c635eb3e72887476",
+        "source_commit": "bdba24ca561aefa8f512d18362534626521601d8",
         "lineage_id": "mailroom-dataset-v1",
     }
 
@@ -157,13 +158,15 @@ def test_chain_v0_to_tip(role, tip, length):
 
 def test_chain_of_root_and_unknown():
     assert [v.key for v in prompt_chain("sorter_reviewer_v1")] == ["sorter_reviewer_v1"]
-    assert [v.key for v in prompt_chain("sorter")] == ["sorter_v1", "sorter_v2", "sorter_v3"]
+    assert [v.key for v in prompt_chain("sorter")] == [
+        "sorter_v1", "sorter_v2", "sorter_v3", "sorter_v4",
+    ]
     with pytest.raises(KeyError):
         prompt_chain("nonexistent_role")
 
 
 def test_latest_prefers_frozen_and_mutation_over_archived():
-    assert latest_prompt_version("sorter").key == "sorter_v3"
+    assert latest_prompt_version("sorter").key == "sorter_v4"
     # archived contracts_specialist_v33 (a re-keyed v0) must not win on number.
     assert latest_prompt_version("contracts_specialist").key == "contracts_specialist_v3"
     assert [v.key for v in prompt_chain("contracts_specialist")] == [
@@ -298,14 +301,16 @@ def test_reexported_from_package():
 
 def test_sorter_chain_is_explicit():
     chain = prompt_chain("sorter")
-    assert [v.key for v in chain] == ["sorter_v1", "sorter_v2", "sorter_v3"]
-    assert [v.lineage for v in chain] == ["frozen", "mutation", "mutation"]
-    assert [v.parent for v in chain] == [None, "sorter_v1", "sorter_v2"]
-    assert [v.predecessor for v in chain] == [None, "sorter_v1", "sorter_v2"]
+    assert [v.key for v in chain] == ["sorter_v1", "sorter_v2", "sorter_v3", "sorter_v4"]
+    assert [v.lineage for v in chain] == ["frozen", "mutation", "mutation", "mutation"]
+    assert [v.parent for v in chain] == [None, "sorter_v1", "sorter_v2", "sorter_v3"]
+    assert [v.predecessor for v in chain] == [None, "sorter_v1", "sorter_v2", "sorter_v3"]
     assert chain[0].supersedes is None and chain[0].source == "production:sorter"
-    assert latest_prompt_version("sorter").key == "sorter_v3"
+    assert latest_prompt_version("sorter").key == "sorter_v4"
     assert default_prompt_version("sorter").key == "sorter_v1"
-    assert [v.key for v in list_prompt_versions(role="sorter")] == ["sorter_v1", "sorter_v2", "sorter_v3"]
+    assert [v.key for v in list_prompt_versions(role="sorter")] == [
+        "sorter_v1", "sorter_v2", "sorter_v3", "sorter_v4",
+    ]
     # sorter_v2/v3 were created (2026-09-16) before the sorter_v1 freeze
     # (2026-09-26), so created_at is NOT monotonic along this chain.
     assert chain[1].created_at < chain[0].created_at
@@ -324,4 +329,23 @@ def test_sorter_v3_duplicated_corporate_record_block_is_recorded():
 
 def test_notes_only_where_expected():
     flagged = {v.key for v in list_prompt_versions() if v.changes and v.changes["notes"]}
-    assert flagged == {"sorter_v2", "sorter_v3"}
+    assert flagged == {"sorter_v2", "sorter_v3", "sorter_v4"}
+
+
+def test_sorter_v4_drops_the_duplicate_block_and_matches_production():
+    v4 = get_prompt_version("sorter_v4")
+    assert v4.parent == "sorter_v3" and v4.lineage == "mutation" and v4.version == 4
+    assert v4.text.count("CORPORATE RECORD SUBCLASS") == 1
+    for stale in ("formation_documents", "minutes", "cap_table", "resolutions"):
+        assert stale not in v4.text
+    assert any("duplicate removed" in n for n in v4.changes["notes"])
+    assert get_prompt_version("sorter_v3").changes["notes"]  # v3 keeps its duplicate-block note
+    # Without its corporate_record block, sorter_v4 is production sorter_v14.
+    # The dojo template ends in exactly one "\n"; the lineage text is raw.
+    a = v4.text.index("\n\nCORPORATE RECORD SUBCLASS")
+    b = v4.text.index("\n\nCONTRACT SUBGROUP")
+    assert a < b
+    stripped = v4.text[:a] + v4.text[b:]
+    prod = get_prompt("sorter").text
+    assert prod == stripped + "\n"
+    assert not v4.text.endswith("\n")

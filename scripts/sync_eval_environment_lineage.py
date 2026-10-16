@@ -180,6 +180,10 @@ def _notes(against: str, old_e: dict, new_e: dict) -> list[str]:
         if n > 1 and n > old_c.get(h, 0):
             notes.append(f"heading {h!r} appears {n} times in this version "
                          f"(duplicated block; {old_c.get(h, 0)} in {against})")
+    for h, n in old_c.items():
+        if n > 1 and new_c.get(h, 0) < n:
+            notes.append(f"heading {h!r} appeared {n} times in {against}; "
+                         f"{new_c.get(h, 0)} in this version (duplicate removed)")
     return notes
 
 
