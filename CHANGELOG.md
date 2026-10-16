@@ -5,6 +5,40 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Changed — breaking
+
+- **`metric_id_for` is strict (#17).** An unmapped metric name raises
+  `UnknownMetricNameError` (a `KeyError`) instead of fabricating
+  `pipeline.<class>.<name>` / `maud.<name>`; a made-up id never matched
+  the other leg, so it hid incomparable pairs. `tests/test_metric_id_strict.py`
+  keeps `docs/METRIC_IDS.md` and `_METRIC_ID_BY_NAME` / `_CLASS_METRIC_IDS`
+  in lockstep.
+- **`Emitter.emit_score` requires a provenance stamp (#22).** Pass
+  `provenance=` (bare stamp or a `stamp_provenance` scorecard) carrying
+  `dataset_revision`, `prompt_id`, `serving_kind`, `model_id`; USD metrics
+  also need `cost_basis`. `scorer_version` and `metric_id` are filled
+  (canonical id, else `registry:<name>`; a contradicting `metric_id`
+  raises). Missing keys raise `ProvenanceExportError` before any sink.
+  `Emitter(require_provenance=False)` keeps ad-hoc local exploration
+  working. `emit_serving_scorecard(provenance={"local": ..., "api": ...})`
+  falls back to each leg's identity tags for model / serving kind / prompt.
+- **Archive scoring block carries `provenance` (#22).** `ARCHIVE_SCORING_KEYS`
+  gains `provenance`; `score_archive_block(..., provenance=)` stamps it with
+  `metric_id` derived from `method`.
+- **Schema promotion gate covers every live class (#18).**
+  `SCHEMA_PROMOTION_GATES` (default `DEFAULT_SCHEMA_GATE = 0.90` for all
+  five classes; `DEFAULT_INSURANCE_SCHEMA_GATE` kept as an alias);
+  `check_schema_promotion_gate(..., doc_class=)`; every suite payload —
+  batch and single document — now carries `schema_promotion_gate`.
+
+### Fixed
+
+- **Batch `schema_valid` / `parse_ok` were always 1.0 (#18).**
+  `score_format_layer` treated a list of predictions as one parsed object,
+  so missing keys and unparseable strings inside a batch were never
+  counted and the batch gate could not fail. Batches are now scored per
+  item and averaged; an empty batch fails closed.
+
 ### Added
 
 - `scripts/gen_taxonomy_fixture.py --taxonomy PATH [--check]` regenerates

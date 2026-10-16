@@ -1015,30 +1015,50 @@ def emit_serving_scorecard(
     *,
     run_id: str | None = None,
     emitter: Any | None = None,
+    provenance: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Persist local and API T0/T1 values as separate scorecard runs.
 
     Local values go to ``run_id:local``; API values to ``run_id:api``.
     Missing values are not emitted (never stored as 0.0).
+
+    ``provenance`` maps ``"local"`` / ``"api"`` to that leg's stamp (#22).
+    ``model_id`` / ``serving_kind`` / ``prompt_id`` fall back to the leg's
+    identity tags (``model``, ``serving_kind``, ``prompt_version``);
+    ``dataset_revision`` must come from the caller.
     """
-    from .emitter import get_emitter
+    from .emitter import _emit_provenance, get_emitter
 
     em = emitter or get_emitter()
     card = serving_scorecard(comparison)
+    pending: list[dict[str, Any]] = []
     for side in ("local", "api"):
         sid = f"{run_id}:{side}" if run_id else side
+        ident = card["identity"][side]
+        side_prov = dict((provenance or {}).get(side) or {})
+        side_prov.setdefault("model_id", ident.get("model_id") or ident.get("model"))
+        side_prov.setdefault("serving_kind", ident.get("serving_kind") or side)
+        side_prov.setdefault("prompt_id", ident.get("prompt_version"))
         for name, row in card["dashboard"].items():
             value = row.get(side)
             if not isinstance(value, (int, float)) or isinstance(value, bool):
                 continue
-            em.emit_score(
-                "local_vs_api",
+            validated_prov = _emit_provenance(
+                name, em.registry.get(name).units, side_prov,
+                require=em.require_provenance,
+            )
+            pending.append(dict(
+                agent_name="local_vs_api",
                 doc_id=side,
                 metric_name=name,
                 value=float(value),
                 run_id=sid,
                 metadata={"side": side, "status": row.get("status")},
-            )
+                provenance=validated_prov,
+            ))
+    # Refuse invalid provenance on either leg before emitting any records.
+    for score in pending:
+        em.emit_score(**score)
     return card
 
 

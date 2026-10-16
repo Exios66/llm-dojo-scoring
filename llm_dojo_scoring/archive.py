@@ -29,7 +29,11 @@ from .field_scoring import (
     score_extraction,
 )
 from .gt_metadata import is_empty_value
-from .scorecard_honesty import score_format_layer
+from .scorecard_honesty import (
+    ProvenanceExportError,
+    score_format_layer,
+    stamp_provenance,
+)
 from .trace_knobs import capture_trace_knobs, empty_trace_payload
 
 __all__ = [
@@ -87,6 +91,7 @@ ARCHIVE_SCORING_KEYS: tuple[str, ...] = (
     "fp",
     "fn",
     "trace",
+    "provenance",
 )
 
 #: Live extraction classes that reach the archive (#238).
@@ -277,6 +282,7 @@ def empty_archive_scoring_block() -> dict[str, Any]:
         "fp": None,
         "fn": None,
         "trace": empty_trace_payload(),
+        "provenance": stamp_provenance()["provenance"],
     }
 
 
@@ -327,6 +333,7 @@ def score_archive_block(
     taxonomy_bytes: bytes | None = None,
     method: str | None = None,
     doc_text: str | None = None,
+    provenance: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """One scoring block for one document (mailroom-issues #237 / #238).
 
@@ -337,6 +344,11 @@ def score_archive_block(
     when TP/FP/FN counts exist. CUAD / MAUD headline names passed as
     ``method`` replace ``method`` only — they never overwrite
     ``extraction_f1``.
+
+    ``provenance`` (dataset revision, prompt lineage, model, serving kind)
+    is stamped onto the block (#22); ``metric_id`` follows ``method`` and a
+    contradicting caller value raises
+    :class:`~llm_dojo_scoring.scorecard_honesty.ProvenanceExportError`.
     """
     ftypes = _live_field_types(doc_class, field_types)
     exp = _filter_to_live_map(expected, ftypes)
@@ -384,6 +396,18 @@ def score_archive_block(
         block["tp"] = prf.get("tp")
         block["fp"] = prf.get("fp")
         block["fn"] = prf.get("fn")
+    metric_id = (
+        "pipeline.extraction.overall"
+        if resolved_method == ARCHIVE_SCORING_METHOD
+        else resolved_method
+    )
+    given = dict(provenance or {})
+    if given.get("metric_id") and given["metric_id"] != metric_id:
+        raise ProvenanceExportError(
+            f"archive provenance metric_id {given['metric_id']!r} contradicts "
+            f"method {resolved_method!r} ({metric_id!r})"
+        )
+    block["provenance"] = stamp_provenance(given, metric_id=metric_id)["provenance"]
     block["trace"] = capture_trace_knobs(
         predicted,
         expected=expected,
