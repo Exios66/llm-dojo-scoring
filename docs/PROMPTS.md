@@ -74,6 +74,99 @@ re-freeze and a matching catalog/test update.
 Field maps those stems emit (and the scorer grades) are documented in
 [`EXTRACTION_SCHEMAS.md`](EXTRACTION_SCHEMAS.md).
 
+## eval-environment prompt lineage
+
+`eval_environment_lineage.json` vendors **every** version of the eval-environment
+`mailroom-dataset-v1` lineage, not just the five specialist stems above: the
+archived production prompts (`<role>_v0`, plus `contracts_specialist_v33`), the
+frozen `<role>_v1` snapshot, and the GEPA / manual mutations (`<role>_v2` ...).
+39 versions, 15 roles, pinned to eval-environment commit `3f9bd55`
+(`LINEAGE_SOURCE`). eval-environment's live `production` kind is not a frozen
+version and is not included. The texts are historical eval-environment bytes:
+the anti-priming rule below is not applied to them.
+
+```python
+from llm_dojo_scoring.prompts import (
+    get_prompt_version, prompt_chain, diff_prompt_versions, default_prompt_version,
+)
+
+v = get_prompt_version("correspondence_specialist_v7")
+v.text, v.memo, v.parent, v.changes["sections_changed"]
+[x.key for x in prompt_chain("correspondence_specialist")]   # v0 -> v7
+print(diff_prompt_versions("correspondence_specialist_v6", "correspondence_specialist_v7"))
+default_prompt_version("sorter").key                          # "sorter_v1"
+```
+
+| Call | Returns |
+| --- | --- |
+| `list_prompt_versions(role=None, lineage=None)` | `list[PromptVersion]` sorted by `(role, version)`; `lineage` is `archived`, `frozen` or `mutation` |
+| `get_prompt_version(key)` | one version; `KeyError` with close-match suggestions on an unknown key |
+| `prompt_roles()` | sorted role names (key minus `_v<N>`; roles may contain hyphens) |
+| `prompt_chain(key_or_role)` | oldest to newest along `predecessor` links; a role name means its highest-version tip |
+| `latest_prompt_version(role)` | highest version number |
+| `default_prompt_version(role)` | the frozen `<role>_v1` (eval-environment's default) |
+| `diff_prompt_versions(a, b, context=3)` | unified diff of the two texts, labelled with the keys |
+| `LINEAGE_SOURCE` | `{source_repo, source_commit, lineage_id}` |
+
+`PromptVersion` fields: `key`, `role`, `version`, `lineage`, `parent`
+(mutations), `supersedes` (frozen v1 to its archived `_v0`), `memo`,
+`anchor_head`, `created_at`, `source`, `sha256`, `chars`, `text`, `changes`;
+`predecessor` is `parent or supersedes`. `changes` (None for roots) compares
+against the predecessor: `against`, `lines_added`, `lines_removed`,
+`chars_delta`, `sections_changed` (heading-like lines whose block changed),
+`added_excerpt` / `removed_excerpt` (first 5 non-blank lines, 160 chars max),
+and `notes` (data-quality observations, usually empty).
+
+**Digests.** `sha256` here is eval-environment's: `sha256(text.encode("utf-8"))`
+over the raw text. The `production_prompts` catalog above hashes the text with a
+trailing newline ensured. They are equal for the specialist stems (those texts
+end in `"\n"`), so `correspondence_specialist_v7` / `corporate_records_specialist_v6`
+are byte-equal to `get_prompt(<role>, family="production_prompts").text` with the
+same digest. Prompts without a trailing newline (sorter, judges) would differ
+between the two conventions.
+
+**Quirks in the source data** (recorded, not corrected):
+
+- `created_at` is not monotonic along the sorter chain: `sorter_v2` / `sorter_v3`
+  were created 2026-09-16, before the 2026-09-26 freeze of `sorter_v1`.
+- `sorter_v3` contains its corporate_record block twice (known upstream defect).
+- `contracts_specialist_v33` (Modal parity prompt, text identical to `_v0` apart
+  from a trailing newline) has no predecessor and the highest number, so
+  `latest_prompt_version("contracts_specialist")` and `prompt_chain("contracts_specialist")`
+  return it; use `prompt_chain("contracts_specialist_v3")` for the v0 to v3 line.
+  Its manifest `chars` is a UTF-8 byte count; the entry stores the character count.
+
+| Role | Versions | Latest |
+| --- | --- | --- |
+| `arbiter` | v1 | `arbiter_v1` |
+| `boss` | v1 | `boss_v1` |
+| `contracts_specialist` | v0, v1, v2, v3, v33 | `contracts_specialist_v33` |
+| `corporate_records_specialist` | v0 to v6 | `corporate_records_specialist_v6` |
+| `correspondence_specialist` | v0 to v7 | `correspondence_specialist_v7` |
+| `insurance_claims_specialist` | v0 to v3 | `insurance_claims_specialist_v3` |
+| `intake` | v1 | `intake_v1` |
+| `judge` | v1 | `judge_v1` |
+| `judge-classification` | v1 | `judge-classification_v1` |
+| `judge-correctness` | v1 | `judge-correctness_v1` |
+| `merger_agreement_specialist` | v1 to v3 | `merger_agreement_specialist_v3` |
+| `pipeline_quality` | v1 | `pipeline_quality_v1` |
+| `pipeline_verdict` | v1 | `pipeline_verdict_v1` |
+| `sorter` | v1 to v3 | `sorter_v3` |
+| `sorter_reviewer` | v1 | `sorter_reviewer_v1` |
+
+Re-sync (reads the data files and parses the Python sources with `ast`; no
+eval-environment code runs, `llm` is not needed):
+
+```bash
+python scripts/sync_eval_environment_lineage.py --eval-env <eval-environment>          # write
+python scripts/sync_eval_environment_lineage.py --eval-env <eval-environment> --check  # exit 1 on drift
+```
+
+The sync fails on any sha256 mismatch against the manifests, a missing
+predecessor, or uncommitted lineage changes in the checkout. The JSON is
+byte-deterministic: `synced_at` is the source commit date, never wall-clock.
+`--check` ignores a moved `source_commit` when the version content is identical.
+
 ## `PromptRecord`
 
 | Field | Role |

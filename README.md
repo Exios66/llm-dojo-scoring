@@ -201,7 +201,7 @@ dojo-sync    [--task TRACE_NAME] [--session NAME] [--max-items N]
 
 ## Migration
 
-See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md). Prompt catalog: [`docs/PROMPTS.md`](docs/PROMPTS.md).
+See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md). Prompt catalog and eval-environment prompt lineage (`list_prompt_versions`, `prompt_chain`, `diff_prompt_versions`): [`docs/PROMPTS.md`](docs/PROMPTS.md).
 
 ## Releases & monorepo sync
 
