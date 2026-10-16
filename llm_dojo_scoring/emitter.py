@@ -256,7 +256,7 @@ def _emit_provenance(
     # comparison id; their identity is the registry entry itself.
     canonical = _METRIC_ID_BY_NAME.get(metric_name) or f"registry:{metric_name}"
     claimed = given.get("metric_id")
-    if claimed and claimed != canonical:
+    if claimed is not None and claimed != canonical:
         raise ProvenanceExportError(
             f"provenance metric_id {claimed!r} contradicts {metric_name!r} "
             f"(canonical {canonical!r})"
