@@ -63,6 +63,12 @@ Format based on Keep a Changelog; versioning is SemVer.
   `emit_serving_scorecard` and `require_provenance` refuse such a leg rather
   than stamp it with its first run's identity. `ServingRun` inputs keep
   their `metric_id`, so a pre-normalized run cannot bypass the check.
+  Consumer impact: local-mailroom-sandbox's `compare_from_records`
+  (`eval/scoring.py`) pools every local and every API row of a log into one
+  leg each; a multi-model or multi-prompt log (`run_local_vs_api_eval
+  --from-log`, matrix cells) is now `identity_mixed`, and
+  `emit_local_vs_api_scorecard` raises. Group rows by identity first (as
+  `pair_comparable_runs` does) or compare one run per leg.
 - **`validate_comparison_provenance(..., vary=())`** — the axis a comparison
   is about (`("serving_kind", "model_id")` for local vs API) must be present
   on both legs but may differ; previously every comparison across serving
