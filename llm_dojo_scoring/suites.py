@@ -741,6 +741,8 @@ class ScoringSuite:
         )
         from .scorecard_honesty import (
             GtAssessment,
+            _try_parse_json,
+            aggregate_quality_honest,
             assess_extraction_gt,
             check_schema_promotion_gate,
             metric_id_for,
@@ -837,6 +839,26 @@ class ScoringSuite:
             scoped_to_empty = (
                 isinstance(parsed_one, dict) and bool(parsed_one) and expected == {}
             )
+        def _parse_predicted_one(value: Any) -> Any:
+            """Raw model text → parsed dict, else ``None`` (scored as no fill).
+
+            The raw string still reaches the format layer, so invalid JSON
+            fails ``parse_ok`` / ``schema_valid`` instead of crashing the
+            field scorer (#18).
+            """
+            if not isinstance(value, str):
+                return value
+            parsed, ok = _try_parse_json(value)
+            return parsed if ok and isinstance(parsed, dict) else None
+
+        raw_predicted = predicted
+        if isinstance(expected, list) and predicted is None:
+            # No predictions at all: every GT row is an unfilled prediction.
+            raw_predicted = predicted = [None] * len(expected)
+        if isinstance(predicted, str):
+            predicted = _parse_predicted_one(predicted)
+        elif isinstance(predicted, list):
+            predicted = [_parse_predicted_one(item) for item in predicted]
         if isinstance(predicted, dict):
             predicted = _gtm.normalize_field_values(predicted)
         elif isinstance(predicted, list):
@@ -844,14 +866,24 @@ class ScoringSuite:
                 _gtm.normalize_field_values(item) if isinstance(item, dict) else item
                 for item in predicted
             ]
-        format_predictions = predicted
-        if isinstance(expected, list) and isinstance(predicted, list):
-            format_predictions = [pred for _, pred in zip(expected, predicted)]
+        format_predictions = raw_predicted
+        if isinstance(expected, list) and isinstance(raw_predicted, list):
+            # The gate covers exactly the GT rows: surplus predictions are
+            # dropped and a GT row with no prediction counts as unparsed,
+            # so a short prediction list cannot pass on its paired subset.
+            padded = list(raw_predicted) + [None] * max(
+                0, len(expected) - len(raw_predicted)
+            )
+            format_predictions = padded[: len(expected)]
             if isinstance(doc_text, list):
                 format_predictions = format_predictions[:len(doc_text)]
         format_scores = score_format_layer(
-            predicted=format_predictions if not isinstance(predicted, str) else None,
-            predicted_raw=predicted if isinstance(predicted, str) else kwargs.get("predicted_raw"),
+            predicted=format_predictions if not isinstance(raw_predicted, str) else None,
+            predicted_raw=(
+                raw_predicted
+                if isinstance(raw_predicted, str)
+                else kwargs.get("predicted_raw")
+            ),
             required_keys=list(ftypes.keys()) if ftypes else None,
         )
         extras: dict[str, Any] = {}
@@ -958,13 +990,26 @@ class ScoringSuite:
                     and scoped_empty_rows[idx]
                     and not row_presence
                 ):
+                    row_assessment = GtAssessment(
+                        "unscorable", "gt_no_extractable_fields"
+                    )
+                else:
+                    # Same fail-closed check as a single document (#16): a
+                    # plain triage-only / malformed GT row is unscorable,
+                    # never a 0.0 quality row or a run of false negatives.
+                    row_assessment = assess_extraction_gt(
+                        expected[idx],
+                        ftypes,
+                        doc_class=doc_class,
+                        presence_expectations=row_presence,
+                        scorable_gt_keys=scorable_gt_keys,
+                    )
+                if not row_assessment.scorable:
                     # Keep row alignment: this row is honestly unscorable,
                     # never scored as gt_empty.
                     extraction.append(
                         unscorable_extraction_result(
-                            GtAssessment(
-                                "unscorable", "gt_no_extractable_fields"
-                            ),
+                            row_assessment,
                             doc_class=doc_class,
                             metric_id=metric_id_for(
                                 "extraction_overall_score", doc_class=doc_class
@@ -1122,12 +1167,25 @@ class ScoringSuite:
 
         if not extras and not is_batch and not detailed:
             return extraction
+        # Batch population counts (#16): unscorable rows are reported, never
+        # folded into the quality mean.
+        batch_quality: dict[str, Any] = {}
+        if is_batch:
+            batch_quality = aggregate_quality_honest(
+                [
+                    row
+                    if isinstance(row, dict)
+                    else {"overall_score": getattr(row, "overall_score", None)}
+                    for row in extraction
+                ]
+            )
         if not extras and is_batch:
             return stamp_provenance(
                 {
                     "extraction": extraction,
                     **prf_payload,
                     **format_scores,
+                    **batch_quality,
                     "schema_promotion_gate": check_schema_promotion_gate(
                         format_scores.get("schema_valid"), doc_class=doc_class
                     ),
@@ -1163,6 +1221,7 @@ class ScoringSuite:
             **prf_payload,
             **filtered,
             **format_scores,
+            **batch_quality,
             "detail": extras,
             "metric_id": mid,
         }
