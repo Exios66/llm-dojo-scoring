@@ -15,7 +15,7 @@ from importlib import metadata
 try:
     __version__ = metadata.version("llm-dojo-scoring")
 except metadata.PackageNotFoundError:
-    __version__ = "0.21.0"
+    __version__ = "0.22.0"
 
 from . import (
     archive,
@@ -91,6 +91,7 @@ from .intents import (
 )
 from .field_scoring import (
     EntityListScore,
+    embed_texts,
     ExtractionScoreResult,
     FIELD_SCORERS,
     field_is_ambiguous,
@@ -336,7 +337,7 @@ __all__ = [
     "score_field", "score_entity_list", "field_is_ambiguous",
     "get_field_types", "get_type_bands", "warm_embedding_model",
     "normalize_text", "parse_date", "parse_money", "score_category_presence",
-    "is_entity_list", "get_ambiguous_band", "FIELD_SCORERS",
+    "is_entity_list", "get_ambiguous_band", "FIELD_SCORERS", "embed_texts",
     "INTENT_LABELS", "INTENT_ALIASES", "INTENT_DESCRIPTIONS", "normalize_intent",
     "extraction_binary_metrics", "mean_entity_list_f1", "merge_extraction_counts",
     "amount_exactness", "determination_consistency", "score_claims_extras",

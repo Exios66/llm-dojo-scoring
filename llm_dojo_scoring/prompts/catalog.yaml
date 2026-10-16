@@ -1,4 +1,4 @@
-version: 0.21.0
+version: 0.22.0
 description: Importable prompt catalog for llm-dojo-scoring. LLM bodies are production + latest
   docclass-merged keys + the eval-environment frozen production_prompts v1 lineage. Metric
   names live in entry metadata (metrics_bundle / doc_bundle), never as eval targets in the
@@ -540,11 +540,12 @@ prompts:
   metrics_bundle: extraction
   doc_bundle: corporate_record
   source_repo: LLM-Mailroom-Services/eval-environment
-  source_key: corporate_records_specialist_v1
+  source_key: corporate_records_specialist_v6
   template: corporate_records_specialist.production_prompts.md
   sha256: fe13501f667fcd9f64f7dfbf8b0f124f81d9dd039f4109288b43f106f82b1399
-  notes: 'Derived from frozen eval-environment v1 (mailroom-dataset-v1, 2026-09-26),
-    sandbox stem corporate_records_specialist_simplified; locally corrected field guidance.'
+  notes: 'Byte-identical to eval-environment mutation corporate_records_specialist_v6
+    (2026-10-16, #29), the field-guidance correction of frozen v1 (mailroom-dataset-v1,
+    2026-09-26; v1 sha256 484e64dd…); sandbox stem corporate_records_specialist_simplified.'
   priming: []
 - agent: correspondence_specialist
   family: production_prompts
@@ -553,11 +554,12 @@ prompts:
   metrics_bundle: extraction
   doc_bundle: correspondence
   source_repo: LLM-Mailroom-Services/eval-environment
-  source_key: correspondence_specialist_v1
+  source_key: correspondence_specialist_v7
   template: correspondence_specialist.production_prompts.md
   sha256: 2b0b81ff98920b9207627707443e2b023db39212fda5bdcba7bfbded39fa38b6
-  notes: 'Derived from frozen eval-environment v1 (mailroom-dataset-v1, 2026-09-26),
-    sandbox stem correspondence_specialist_simplified; locally corrected field guidance.'
+  notes: 'Byte-identical to eval-environment mutation correspondence_specialist_v7
+    (2026-10-16, #29), the field-guidance correction of frozen v1 (mailroom-dataset-v1,
+    2026-09-26; v1 sha256 eab63b5a…); sandbox stem correspondence_specialist_simplified.'
   priming: []
 - agent: insurance_claims_specialist
   family: production_prompts

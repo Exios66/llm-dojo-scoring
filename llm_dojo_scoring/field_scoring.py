@@ -1144,6 +1144,35 @@ def _get_embedding() -> Optional[_EmbeddingMatcher]:
         return None
 
 
+def embed_texts(texts: list[str]) -> Optional[list[list[float]]]:
+    """Embed ``texts`` with the scorer's own model (unit-normalized vectors).
+
+    The public handle on the embedding backend that ``similarity`` uses:
+    the local SentenceTransformer named by ``get_embedding_model()`` when it
+    loads, else the remote fallback. Vectors are cached per text for the
+    process. Returns ``None`` when embeddings are disabled or no backend is
+    available, or if any text fails to embed (fail-soft — callers skip the
+    cosine signal rather than score with a partial batch).
+    """
+    matcher = _get_embedding()
+    if matcher is None:
+        return None
+    try:
+        matcher._load_local()
+        out: list[list[float]] = []
+        for text in texts:
+            vector = matcher._vectors.get(text)
+            if vector is None:
+                vector = matcher._embed(text)
+                if vector is None:
+                    return None
+                matcher._vectors[text] = vector
+            out.append([float(x) for x in vector])
+        return out
+    except Exception:
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Dispatch + composite scoring
 # ---------------------------------------------------------------------------
@@ -1285,7 +1314,6 @@ def score_extraction(
     """
     predicted = predicted or {}
     expected = expected or {}
-    band_low, band_high = get_ambiguous_band()
     partial_gt_fields = get_partial_gt_fields()
     containment_fields = get_containment_fields()
     needs_embedding = any(
@@ -1308,6 +1336,9 @@ def score_extraction(
         if is_empty_value(exp_value):
             continue
         field_type = field_types.get(key) or _heuristic_field_type(key, exp_value)
+        # Judge escalation uses the configured type's band, not the
+        # containment override applied for scoring below.
+        original_field_type = field_type
         pred_value = predicted.get(key)
         if pred_value is not None:
             pred_value = parse_json_container(pred_value)
@@ -1340,7 +1371,7 @@ def score_extraction(
                 score = result
         score = round(score, 4)
         field_scores[key] = score
-        if band_low <= score <= band_high:
+        if field_is_ambiguous(original_field_type, score):
             ambiguous.append(key)
 
     if verification_enabled() and doc_text:

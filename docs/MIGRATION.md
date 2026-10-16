@@ -246,13 +246,24 @@ if used_fallback:                                    # never a silent default
 # Emit through sinks; query tier-capped views.
 emitter = dojo.Emitter(sinks=[dojo.LocalManifestSink("reports/scores_manifest.jsonl")])
 emitter.emit_score("sorter", doc_id="doc_17", metric_name="accuracy",
-                   value=0.93, run_id="exp_42")
+                   value=0.93, run_id="exp_42",
+                   provenance={"dataset_revision": "46a4d3c2",   # required (#22)
+                               "prompt_id": "sorter_v3",
+                               "serving_kind": "api",
+                               "model_id": "qwen/qwen3.7-flash"})
 card = emitter.get_scorecard("sorter", "exp_42", min_tier=1)   # T0+T1 only
 dojo.dashboard_metrics("contracts_specialist")       # bundle ∩ tier cap
 ```
 
 Governance rules that make this safe to adopt incrementally:
 
+- Every emitted score carries a provenance stamp (#22): `dataset_revision`,
+  `prompt_id`, `serving_kind`, `model_id` (plus `cost_basis` on USD
+  metrics) or `emit_score` raises `ProvenanceExportError` before any sink.
+  `Emitter(require_provenance=False)` is for ad-hoc local exploration only.
+  `emit_serving_scorecard` fills what each leg's records carry; pass
+  `provenance={"local": {...}, "api": {...}}` for the rest
+  (`dataset_revision` at minimum, if the records lack it).
 - Every emitted name is validated against the registry at emit time
   (`KeyError` on unknown metrics — fail fast, not silently dropped). Register
   new names upstream first (built-in `DEFAULT_METRICS_YAML` or a
@@ -392,7 +403,12 @@ cmp = get_suite("local_vs_api").score(local_records, api_records)
 assert {r["metric"] for r in cmp["table"]}  # includes queue_time_seconds even when None
 assert cmp["scorecard"]["cost"]["local"]["estimated_cost_usd"] is None  # Ollama slug
 assert cmp["markdown"].startswith("# local vs API serving scorecard")
-emit_serving_scorecard(cmp, run_id="exp_1")
+emit_serving_scorecard(
+    cmp,
+    run_id="exp_1",
+    provenance={"local": {"dataset_revision": "46a4d3c2"},
+                "api": {"dataset_revision": "46a4d3c2"}},
+)
 ```
 
 Do not push pin PRs to dependents from this package PR.
