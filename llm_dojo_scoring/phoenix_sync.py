@@ -1,6 +1,6 @@
 """Phoenix / OTLP local trace-sink reader.
 
-The llm-entity-extraction pipeline's default tracing backend is Arize Phoenix
+The (standalone) llm-entity-extraction pipeline's default tracing backend is Arize Phoenix
 running locally (``http://localhost:6006``), which ingests OpenTelemetry spans
 via its OTLP HTTP receiver. This module lets the dojo suite check that sink
 and pull span data when it is up — and degrade gracefully (clear message, no

@@ -18,7 +18,7 @@ from llm_dojo_scoring.config import RETIRED_DOC_CLASS_KEYS
 ERROR_PREFIX = "ERROR: "  # task output sentinel for failed rows
 
 # Default doc-class keys + regexes for label normalization (the
-# llm-entity-extraction / llm-mailroom taxonomy). Most-specific keys first
+# llm-mailroom taxonomy). Most-specific keys first
 # so broad patterns (e.g. ``contract``) do not win over ``merger_agreement``.
 _DEFAULT_CLASSES_RE: dict[str, re.Pattern[str]] = {
     "merger_agreement": re.compile(r"\bmerger[_ ]?agreement\b"),

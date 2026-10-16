@@ -2,7 +2,7 @@
 
 # ⚖️ llm-dojo-scoring
 
-**The deterministic, field-type-aware scoring engine for the LLM-Mailroom constellation — one importable library replacing project-local scoring across llm-entity-extraction and llm-mailroom.**
+**The deterministic, field-type-aware scoring engine for the LLM-Mailroom constellation — one importable library replacing project-local scoring across llm-mailroom and the sandbox.**
 
 Scoring · Error analysis · Visualization · Interpretation
 
@@ -39,12 +39,12 @@ pip install -e ".[all]"          # embeddings + tracing + dev
 
 </details>
 
-In **llm-entity-extraction** / **llm-mailroom** `pyproject.toml`:
+In **llm-mailroom** `pyproject.toml`:
 
 ```
 llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.22.0
 # mailroom:     llm-dojo-scoring[tracing] @ git+...@v0.22.0
-# entity:       llm-dojo-scoring[embeddings,tracing] @ git+...@v0.22.0
+# embeddings:   llm-dojo-scoring[embeddings,tracing] @ git+...@v0.22.0  (optional rescue extra)
 ```
 
 ## Quickstart
@@ -205,8 +205,8 @@ See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring 
 
 ## Releases & monorepo sync
 
-This package is the shared scoring engine consumed by llm-mailroom,
-llm-entity-extraction, and the sandbox — version bumps are cross-package
+This package is the shared scoring engine consumed by llm-mailroom
+and the sandbox (vendored) — version bumps are cross-package
 events.
 
 - **Monorepo home**: this repo is `packages/llm-dojo-scoring` inside the
@@ -215,7 +215,7 @@ events.
   (`Exios66/llm-dojo-scoring`) ONLY via `scripts/sync_packages.py push`
   (monorepo root) — never hand-edit the mirror.
 - **Release-time pin law**: cutting a release means bumping the version here
-  AND updating every consuming pin — llm-mailroom / llm-entity-extraction /
+  AND updating every consuming pin — llm-mailroom /
   sandbox `pyproject.toml` git pins and the sandbox vendor snapshot.
   The dojo pin is bumped ONLY at release time of this package, via
   `packages/llm-mailroom/src/scripts/bump_dojo_scoring.py` — never delete a
@@ -230,8 +230,7 @@ events.
 <div align="center">
 
 **[llm-mailroom](https://github.com/LLM-Mailroom-Services/Digital-Mailroom)** ·
-**[llm-entity-extraction](https://github.com/Exios66/llm-entity-extraction)** ·
-**[llm-mailroom](https://github.com/LLM-Mailroom-Services/Digital-Mailroom)** ·
+**[local-mailroom-sandbox](https://github.com/LLM-Mailroom-Services/Digital-Mailroom)** ·
 **[The-Mailroom](https://github.com/Exios66/The-Mailroom)**
 
 <sub>Built by the governed evaluation family under <a href="https://github.com/Exios66">@Exios66</a> · 2026</sub>
