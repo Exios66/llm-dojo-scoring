@@ -122,6 +122,55 @@ def test_correct_entity_extraction_not_penalized_on_unlabeled_gt():
     assert set(out["extraction"].field_scores) == {"intent", "subject_matter", "keywords"}
 
 
+@pytest.mark.parametrize("batch", [False, True])
+@pytest.mark.parametrize("serialized", [False, True])
+def test_unlabeled_predictions_still_receive_document_audit(batch, serialized):
+    suite = get_suite("corporate_records_specialist")
+    predicted = dict(_PRED, signatories=["Jane Doe", "Imaginary Goblin"])
+    predictions = [predicted, dict(predicted, entity_name="Phantom Holdings")]
+    if serialized:
+        predictions = [json.dumps(pred) for pred in predictions]
+    text = "Articles of Acme Inc. in Delaware. Jane Doe. CT Corporation."
+    out = suite.score(
+        [json.dumps(_GT)] * 2 if batch else json.dumps(_GT),
+        predictions if batch else predictions[0],
+        doc_text=[text, text] if batch else text,
+        doc_subclass=(
+            ["articles_of_incorporation"] * 2 if batch else "articles_of_incorporation"
+        ),
+        detailed=True,
+    )
+    assert out["extraction_precision"] == out["extraction_recall"] == 1.0
+    results = out["extraction"] if batch else [out["extraction"]]
+    for idx, result in enumerate(results):
+        assert set(result.field_scores) == {"intent", "subject_matter", "keywords"}
+        audit = result.entity_list_audit
+        assert audit["entity_name"]["verified_in_doc"] == int(idx == 0)
+        assert audit["entity_name"]["hallucinated"] == int(idx != 0)
+        assert audit["registered_agent"]["verified_in_doc"] == 1
+        assert audit["signatories"]["n_predicted"] == 2
+        assert audit["signatories"]["verified_in_doc"] == 1
+        assert audit["signatories"]["hallucinated"] == 1
+    assert predicted["signatories"] == ["Jane Doe", "Imaginary Goblin"]
+    assert predicted["entity_name"] == "Acme Inc."
+
+
+@pytest.mark.parametrize(
+    ("verification", "text"), [(False, "Acme Inc."), (True, None), (True, "")]
+)
+def test_unlabeled_prediction_audit_requires_verification_and_document(
+    monkeypatch, verification, text,
+):
+    from llm_dojo_scoring import field_scoring
+
+    monkeypatch.setattr(field_scoring, "verification_enabled", lambda: verification)
+    out = get_suite("corporate_records_specialist").score_document(
+        json.dumps(_GT), _PRED, doc_subclass="articles_of_incorporation", doc_text=text,
+    )
+    assert out["extraction"].entity_list_audit == {}
+    assert out["extraction_precision"] == out["extraction_recall"] == 1.0
+
+
 def test_labeled_entities_are_scored_and_documented_absence_penalizes_fill():
     """Score labeled entities and penalize filling a field documented as absent."""
     suite = get_suite("corporate_records_specialist")
