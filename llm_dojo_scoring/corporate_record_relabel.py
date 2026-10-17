@@ -30,16 +30,22 @@ from .corporate_record_schema import (
     ENTITY_CORE_FIELDS,
     _ID_KEYWORD,
     _CIK_KEYWORD,
-        _TEMPLATE_MARK,
+    RECORD_TYPES,
     _subject_conflicts,
     subclass_schema,
 )
-from .gt_metadata import gt_presence_map, parse_gt_fields
+from .gt_metadata import gt_presence_map, is_empty_value, parse_gt_fields
 
 __all__ = ["relabel_row", "relabel_rows", "company_from_template"]
 
-_TEMPLATE_RE = re.compile(r"^\s*\S+ of (?P<company>.+?)\s*\(CIK\s*\d+\)\s*\(SEC EDGAR exhibit\)", re.S)
-_TICKER_RE = re.compile(r"\s*\((?:[A-Z][A-Z0-9.\-]{0,5})\)\s*$")
+_TEMPLATE_RE = re.compile(r"^\s*\S+ of (?P<company>.+?)\s*\(CIK\s*\d+\)\s*\(SEC EDGAR exhibit[^)]*\)", re.S)
+# Trailing ``(TICK)`` / ``(TICK, TICK-PA)`` and EDGAR ``/UT/`` state suffixes are
+# filer metadata, not part of the legal name. Country / entity-form codes are not.
+_TICKER_RE = re.compile(r"\s*\((?:[A-Z][A-Z0-9.\-]{0,5})(?:\s*,\s*[A-Z][A-Z0-9.\-]{0,5})*\)\s*$")
+_STATE_RE = re.compile(r"\s*/[A-Z]{2}/\s*$")
+_NOT_TICKERS = frozenset(
+    {"UK", "US", "USA", "EU", "LLC", "LP", "LLP", "LTD", "INC", "CORP", "CO", "NV", "AG", "SA", "PLC"}
+)
 
 _PHRASE = {
     "bylaws": "Bylaws",
@@ -63,7 +69,10 @@ def company_from_template(subject_matter: str) -> str | None:
         return None
     name = re.sub(r"\s+", " ", m.group("company")).strip()
     while True:
-        stripped = _TICKER_RE.sub("", name).strip()
+        stripped = _STATE_RE.sub("", name).strip()
+        m = _TICKER_RE.search(stripped)
+        if m and not (set(re.findall(r"[A-Z0-9.\-]+", m.group(0))) & _NOT_TICKERS):
+            stripped = stripped[: m.start()].strip()
         if stripped == name:
             break
         name = stripped
@@ -82,7 +91,8 @@ def relabel_row(row: Mapping[str, Any]) -> tuple[dict[str, Any], list[str]]:
 
     # 1. subclass conflicts (prose subject_matter only)
     conflicts = _subject_conflicts(sub, str(gt.get("subject_matter") or ""))
-    if len(conflicts) == 1:
+    reassigned = len(conflicts) == 1
+    if reassigned:
         changes.append(f"expected_subclass:{sub}->{conflicts[0]}")
         sub = conflicts[0]
         new["expected_subclass"] = sub
@@ -94,7 +104,7 @@ def relabel_row(row: Mapping[str, Any]) -> tuple[dict[str, Any], list[str]]:
     if company:
         gt["entity_name"] = company
         presence["entity_name"] = "populated"
-        gt["subject_matter"] = f"{_PHRASE[schema.subclass]} of {company}."
+        gt["subject_matter"] = f"{_PHRASE[schema.subclass]} of {company}" + ("" if company.endswith(".") else ".")
         changes += ["entity_name", "subject_matter"]
     kws = gt.get("keywords")
     if isinstance(kws, list):
@@ -102,9 +112,10 @@ def relabel_row(row: Mapping[str, Any]) -> tuple[dict[str, Any], list[str]]:
         kept = [
             k for k in kws
             if not (_ID_KEYWORD.match(str(k).strip()) or _CIK_KEYWORD.search(str(k)))
-            and str(k).strip().lower().replace("_", " ") != own
         ]
         if company:
+            # The grounded phrase replaces the bare subclass-name keyword.
+            kept = [k for k in kept if str(k).strip().lower().replace("_", " ") != own]
             kept = [_PHRASE[schema.subclass], *kept]
             if company not in kept:
                 kept.append(company)
@@ -112,18 +123,26 @@ def relabel_row(row: Mapping[str, Any]) -> tuple[dict[str, Any], list[str]]:
             gt["keywords"] = kept
             changes.append("keywords")
 
-    # record_type is a documented function of the (adjudicated) subclass.
-    gt["record_type"] = schema.record_type
-    presence["record_type"] = "populated"
-    changes.append("record_type")
+    # record_type: fill when blank/invalid or when the subclass was reassigned;
+    # a valid existing token is a label, not a gap.
+    current_rt = gt.get("record_type")
+    if current_rt not in RECORD_TYPES or reassigned:
+        if current_rt != schema.record_type:
+            changes.append("record_type")
+        gt["record_type"] = schema.record_type
+    if presence.get("record_type") != "populated":
+        presence["record_type"] = "populated"
 
-    # 3. intent pin + presence for inapplicable entity fields
-    if gt.get("intent") != schema.intent:
+    # intent: re-pin only auto-labeled intents; never override an adjudicated one.
+    if str(gt.get("intent_source") or "") in ("", "heuristic") and gt.get("intent") != schema.intent:
         changes.append(f"intent:{gt.get('intent')}->{schema.intent}")
         gt["intent"] = schema.intent
     for f in ENTITY_CORE_FIELDS:
-        if f not in schema.core_applicable:
-            presence[f] = "not_applicable"
+        if f in schema.core_applicable:
+            continue
+        if presence.get(f) == "populated" or not is_empty_value(gt.get(f)):
+            continue  # a stated value is a label, whatever the subclass says
+        presence[f] = "not_applicable"
     out = {k: (json.dumps(v) if isinstance(v, (list, dict)) else v) for k, v in gt.items()}
     out["gt_presence"] = json.dumps(presence, sort_keys=True)
     new["gt_fields"] = json.dumps(out, sort_keys=True)
@@ -133,4 +152,8 @@ def relabel_row(row: Mapping[str, Any]) -> tuple[dict[str, Any], list[str]]:
 def relabel_rows(rows):
     """Relabel every row; yields ``(new_row, changes)``."""
     for row in rows:
-        yield relabel_row(row)
+        try:
+            yield relabel_row(row)
+        except ValueError:
+            # Malformed gt_fields: leave the row untouched for the audit to flag.
+            yield dict(row), ["gt_unparseable"]

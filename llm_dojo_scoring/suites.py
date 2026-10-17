@@ -758,6 +758,13 @@ class ScoringSuite:
         ftypes = field_types or self.field_types
         doc_class = self.doc_type or self.name
         presence = kwargs.get("presence_expectations")
+        # The format layer requires the registered core only; subclass key
+        # entities are scored (when the dataset labels them) but never required.
+        required_ftypes = ftypes
+        if doc_class == "corporate_record" and ftypes:
+            from .corporate_record_schema import all_entity_field_types
+
+            ftypes = {**all_entity_field_types(), **ftypes}
 
         def _stamp(payload: dict[str, Any], mid: str) -> dict[str, Any]:
             # Same refusal as Emitter / score_archive_block (#17, #22): a
@@ -954,7 +961,7 @@ class ScoringSuite:
                 if isinstance(raw_predicted, str)
                 else kwargs.get("predicted_raw")
             ),
-            required_keys=list(ftypes.keys()) if ftypes else None,
+            required_keys=list(required_ftypes.keys()) if required_ftypes else None,
         )
         extras: dict[str, Any] = {}
         peeled_exp: list = []
@@ -1269,6 +1276,11 @@ class ScoringSuite:
                     **prf_payload,
                     **format_scores,
                     **batch_quality,
+                    **(
+                        {"unlabeled_fields": [list(u) for u in unlabeled]}
+                        if unlabeled
+                        else {}
+                    ),
                     "schema_promotion_gate": check_schema_promotion_gate(
                         format_scores.get("schema_valid"), doc_class=doc_class
                     ),
