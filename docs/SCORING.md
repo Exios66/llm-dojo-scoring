@@ -149,7 +149,7 @@ HONEST GAP: court_opinion was RETIRED from the live llm-mailroom pipeline (v0.5.
 
 ### `corporate_records_specialist`
 
-HONEST GAP: no *external* extraction benchmark (CUAD/MAUD-grade coverage is not claimed). The published merge covers 39 corporate_record rows with record-type subclasses (articles_of_incorporation, rights_instrument, …). Suite scores typed-extraction field-micro P/R/F1/F2 plus that subclass catalog.
+HONEST GAP: no *external* extraction benchmark (CUAD/MAUD-grade coverage is not claimed). The published merge covers 450 corporate_record rows in 10 record-shape subclasses (see [`CORPORATE_RECORD_SCHEMA.md`](CORPORATE_RECORD_SCHEMA.md)). Suite scores typed-extraction field-micro P/R/F1/F2 per subclass schema. Key-entity fields the dataset leaves blank without documenting absence are *unlabeled* and excluded from both sides (reported as `unlabeled_fields`).
 
 ### `compliance_specialist`
 

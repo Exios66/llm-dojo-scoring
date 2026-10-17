@@ -542,9 +542,10 @@ prompts:
   source_repo: LLM-Mailroom-Services/eval-environment
   source_key: corporate_records_specialist_v1
   template: corporate_records_specialist.production_prompts.md
-  sha256: fe13501f667fcd9f64f7dfbf8b0f124f81d9dd039f4109288b43f106f82b1399
+  sha256: b40963bb3c53bdaa7089513c1186dec87fac210b28093008941b3c8a39dab77a
   notes: 'Derived from frozen eval-environment v1 (mailroom-dataset-v1, 2026-09-26),
-    sandbox stem corporate_records_specialist_simplified; locally corrected field guidance.'
+    sandbox stem corporate_records_specialist_simplified; locally corrected field guidance plus
+    per-subclass key-entity schemas generated from corporate_record_schema.'
   priming: []
 - agent: correspondence_specialist
   family: production_prompts

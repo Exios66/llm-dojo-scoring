@@ -7,6 +7,13 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Added
 
+- `corporate_record_schema` — per-subclass corporate-record entity schemas
+  (11 subclasses: applicable core fields, pinned `record_type`/`intent`,
+  subclass key entities such as `trustee`/`guarantors` for indentures or
+  `principal`/`attorneys_in_fact` for POAs), `scored_field_types`,
+  `corporate_record_json_schema`, `render_subclass_block`, and a GT label
+  audit (`audit_gt_rows`, `scripts/audit_corporate_record_labels.py`).
+  Reference: `docs/CORPORATE_RECORD_SCHEMA.md`.
 - `scripts/gen_taxonomy_fixture.py --taxonomy PATH [--check]` regenerates
   `tests/fixtures/taxonomy_field_types.json` from llm-mailroom's
   `taxonomy.yaml`, pinning the git blob sha1 (`--check` ignores only
@@ -34,6 +41,18 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+- `corporate_record` scoring: key-entity fields that GT leaves blank without a
+  documented absence are now *unlabeled* and excluded from both sides
+  (`unlabeled_fields` on the payload; `doc_subclass=` on `score` /
+  `score_document`). Previously a correct entity extraction scored precision
+  0.375 because the published GT labels none of the six entity fields on any
+  of the 450 rows.
+- `corporate_records_specialist` prompt (`production`, `production_prompts`,
+  sha `b40963bb…`): per-subclass key-entity sections generated from
+  `corporate_record_schema`; `entity_name` is always the owning company.
+  Diverges from vendored mailroom `frozen_v1` — upstream re-vendor pending.
+- Stale "39 corporate_record rows" corrected to 450; corpus pin docs now cite Hub tag v9.2.
+- `corporate_record_relabel` + `scripts/relabel_corporate_record_gt.py` — deterministic GT repair proposal (entity_name, record_type, grounded subject_matter, provenance-free keywords, subclass-conflict fixes); `audit_gt_rows` also flags `subclass_content_conflict`.
 - MAUD composite classes whose parts are themselves catalog classes (e.g.
   `General R&Ws, fundamental/Special R&Ws`) now canonicalize to the same sorted
   set as any reordering, so a reordered correct answer is no longer scored wrong.

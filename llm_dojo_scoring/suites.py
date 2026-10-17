@@ -395,10 +395,12 @@ _HONEST_GAPS: dict[str, str] = {
     ),
     "corporate_records_specialist": (
         "HONEST GAP: no *external* extraction benchmark (CUAD/MAUD-grade "
-        "coverage is not claimed). The published merge covers 39 "
-        "corporate_record rows with record-type subclasses "
-        "(articles_of_incorporation, rights_instrument, …). Suite scores "
-        "typed-extraction field-micro P/R/F1/F2 plus that subclass catalog."
+        "coverage is not claimed). The published merge covers 450 "
+        "corporate_record rows in 10 record-shape subclasses with per-subclass "
+        "entity schemas (corporate_record_schema). Key-entity GT is unlabeled "
+        "on every row, so those fields are excluded rather than scored as "
+        "expected-empty. Suite scores field-micro P/R/F1/F2 on the labeled "
+        "fields (intent / subject_matter / keywords today)."
     ),
     "compliance_specialist": (
         "HONEST GAP: compliance_filing was RETIRED from the live llm-mailroom "
@@ -843,6 +845,32 @@ class ScoringSuite:
                 _gtm.normalize_field_values(item) if isinstance(item, dict) else item
                 for item in predicted
             ]
+        # corporate_record: key-entity fields the dataset leaves blank without
+        # documenting absence are *unlabeled*, not "expected empty". Drop them
+        # from both sides so a correct extraction is not scored as spurious
+        # fill. See llm_dojo_scoring.corporate_record_schema.
+        unlabeled: list[tuple[str, ...]] = []
+        if doc_class == "corporate_record":
+            from .corporate_record_schema import align_unlabeled
+
+            sub_kw = kwargs.get("doc_subclass") or kwargs.get("expected_subclass")
+            if isinstance(expected, list):
+                if isinstance(predicted, list):
+                    for idx in range(min(len(expected), len(predicted))):
+                        if isinstance(expected[idx], dict) and isinstance(predicted[idx], dict):
+                            sub = sub_kw[idx] if isinstance(sub_kw, list) and idx < len(sub_kw) else (
+                                None if isinstance(sub_kw, list) else sub_kw
+                            )
+                            expected[idx], predicted[idx], dropped = align_unlabeled(
+                                sub, parsed_expected[idx], expected[idx], predicted[idx]
+                            )
+                            unlabeled.append(dropped)
+            elif isinstance(expected, dict) and isinstance(predicted, dict):
+                expected, predicted, dropped = align_unlabeled(
+                    None if isinstance(sub_kw, list) else sub_kw,
+                    parsed_one, expected, predicted,
+                )
+                unlabeled.append(dropped)
         format_scores = score_format_layer(
             predicted=predicted if not isinstance(predicted, str) else None,
             predicted_raw=predicted if isinstance(predicted, str) else kwargs.get("predicted_raw"),
@@ -1156,6 +1184,10 @@ class ScoringSuite:
             "detail": extras,
             "metric_id": mid,
         }
+        if unlabeled:
+            payload["unlabeled_fields"] = (
+                list(unlabeled[0]) if len(unlabeled) == 1 else [list(u) for u in unlabeled]
+            )
         if isinstance(extraction, ExtractionScoreResult):
             # Single-document payload: flatten the document's own overall
             # score so consumers do not have to dig into the dataclass.
