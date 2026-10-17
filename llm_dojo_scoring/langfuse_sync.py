@@ -2,7 +2,7 @@
 
 Two producer families land here:
 
-- **llm-entity-extraction** eval runners (``run_langfuse_*_eval.py``) trace
+- **llm-entity-extraction** (standalone repo) eval runners (``run_langfuse_*_eval.py``) trace
   per-document classification under ``sessionId = experiment_name`` with
   structured output (``doc_type_ok``, ``subtype_ok``, ``subtype_ok_equiv``,
   ``failure_mode``, …) and per-row scores (``exact_match``,

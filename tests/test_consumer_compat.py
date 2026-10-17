@@ -223,8 +223,8 @@ def test_jellyfish_is_importable_core_dependency():
     assert jellyfish.jaro_winkler_similarity("Acme Corp", "Acme Corporation") > 0.8
 
 
-def test_release_version_is_0_21_0():
-    assert dojo.__version__ == "0.21.0"
+def test_release_version_is_0_22_0():
+    assert dojo.__version__ == "0.22.0"
 
 
 # Every name llm-mailroom imports (src/ + notebooks/), per the sync plan's
@@ -244,12 +244,37 @@ _MAILROOM_TOP_LEVEL = (
     "parse_money",
     "configure",
     "configure_from_taxonomy",
+    # src/scripts/calibrate_field_scoring.py
+    "EntityListScore",
+    "get_ambiguous_band",
+    # public replacement for relations.py's private matcher calls
+    "embed_texts",
 )
 
 _MAILROOM_MODULE_ATTRS: dict[str, tuple[str, ...]] = {
-    "field_scoring": ("_get_embedding",),
+    "field_scoring": (
+        "_get_embedding",
+        "embed_texts",
+        # mailroom tests
+        "FIELD_SCORERS",
+        "field_is_ambiguous",
+        "get_type_bands",
+        "score_date_field",
+        "score_free_text_field",
+        "score_id_field",
+        "score_money_field",
+        "score_name_field",
+    ),
+    "scorecard_honesty": ("SCORER_VERSION",),
     "mailroom": ("score_aligned_classification",),
-    "intake": ("looks_messy", "INTAKE_SPAN_KEYS"),
+    "intake": (
+        "looks_messy",
+        "INTAKE_SPAN_KEYS",
+        "INTAKE_SPAN",
+        "INTAKE_LIVE_METHOD",
+        "INTAKE_PREP_STEPS",
+        "intake_span_output",
+    ),
     "serving": ("compare_serving",),
     "registry": ("MetricTier",),
     "pruning": ("headline_metrics",),
@@ -278,3 +303,82 @@ def test_readme_release_pins_match_version():
     readme = (Path(__file__).resolve().parent.parent / "README.md").read_text(encoding="utf-8")
     pins = set(re.findall(r"(?:release-|releases/tag/|\.git@|\.\.\.@)v(\d+\.\d+\.\d+)", readme))
     assert pins == {dojo.__version__}, pins
+
+
+def test_mailroom_relations_matcher_methods_exist():
+    # relations.py still calls these until it moves to embed_texts.
+    from llm_dojo_scoring.field_scoring import _EmbeddingMatcher
+
+    assert callable(getattr(_EmbeddingMatcher, "_embed", None))
+    assert callable(getattr(_EmbeddingMatcher, "_load_local", None))
+
+
+_MAILROOM_SCORE_DOCUMENT_KWARGS = dict(
+    dataset_revision="46a4d3c2",
+    split="test",
+    draw_seed=42,
+    prompt_id="insurance_claims_specialist_v1",
+    model_id="Qwen/Qwen3-8B-AWQ",
+    serving_kind="modal-vllm",
+)
+
+
+def test_mailroom_score_document_contract():
+    """The payload keys mailroom reads from score_document (scores.py,
+    run_hf_pilot.py) — scorable and unscorable rows."""
+    from llm_dojo_scoring import ExtractionScoreResult, get_suite
+
+    suite = get_suite("insurance_claims_specialist")
+    gt = {"insurer": "Acme Mutual", "claim_number": "CLM-1"}
+    out = suite.score_document(gt, dict(gt), **_MAILROOM_SCORE_DOCUMENT_KWARGS)
+    assert isinstance(out["extraction"], ExtractionScoreResult)
+    for key in ("metric_id", "parse_ok", "schema_adherence", "schema_valid"):
+        assert key in out, key
+    assert out["provenance"]["scorer_version"] == dojo.__version__
+    assert out["provenance"]["dataset_revision"] == "46a4d3c2"
+    assert out["provenance"]["metric_id"] == out["metric_id"]
+
+    unscorable = suite.score_document(
+        {"doc_subtype": "triage"}, dict(gt), **_MAILROOM_SCORE_DOCUMENT_KWARGS
+    )
+    assert unscorable["status"] == "unscorable"
+    assert unscorable["reason"]
+    assert unscorable["overall_score"] is None
+    assert unscorable["provenance"]["dataset_revision"] == "46a4d3c2"
+
+
+def test_sandbox_local_vs_api_emit_call_shape(tmp_path):
+    """local-mailroom-sandbox: emit_local_vs_api_scorecard calls
+    emit_serving_scorecard(comparison, run_id=..., emitter=Emitter(...)) on
+    fixture records. With dataset_revision on the records (or passed as
+    provenance) it must emit; price-table USD needs no hand-written basis."""
+    from llm_dojo_scoring import Emitter, LocalManifestSink, emit_serving_scorecard
+    from llm_dojo_scoring.serving import compare_serving
+
+    def rec(**kw):
+        base = {
+            "prompt_version": "mailroom-default",
+            "task": "sorter",
+            "dataset_fingerprint": "fixture-serving-v0",
+            "dataset_revision": "46a4d3c2",
+            "ttft_seconds": 0.2,
+            "e2e_latency_seconds": 1.0,
+            "prompt_tokens": 100,
+            "completion_tokens": 50,
+        }
+        base.update(kw)
+        return base
+
+    cmp = compare_serving(
+        rec(provider="ollama", model="qwen3:8b", serving_kind="local"),
+        rec(provider="openrouter", model="qwen/qwen3.7-flash"),
+    )
+    em = Emitter(sinks=[LocalManifestSink(tmp_path / "scores.jsonl")])
+    emit_serving_scorecard(cmp, run_id="sand32", emitter=em)
+    usd = [r for r in em._records if r.metric == "estimated_cost_usd"]
+    assert usd and all(
+        r.metadata["provenance"]["cost_basis"] == "token_price_estimate" for r in usd
+    )
+    assert {r.metadata["provenance"]["draw_seed"] for r in em._records} == {
+        "fixture-serving-v0"
+    }

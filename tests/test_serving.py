@@ -361,17 +361,70 @@ def test_emit_serving_scorecard_separates_local_and_api_runs():
             "ttft_seconds": 0.4,
             "e2e_latency_seconds": 2.0,
             "completion_tokens": 40,
+            "estimated_cost_usd": 0.01,
         },
         {
             "provider": "openrouter",
             "ttft_seconds": 0.1,
             "e2e_latency_seconds": 0.8,
             "completion_tokens": 40,
+            "estimated_cost_usd": 0.02,
         },
     )
-    emit_serving_scorecard(cmp, run_id="exp1", emitter=em)
+    emit_serving_scorecard(
+        cmp,
+        run_id="exp1",
+        emitter=em,
+        provenance={
+            side: {
+                "dataset_revision": "46a4d3c2",
+                "prompt_id": "contracts_v33",
+                "model_id": "qwen/qwen3-8b",
+                "cost_basis": "busy_window",
+            }
+            for side in ("local", "api")
+        },
+    )
     local_card = em.get_scorecard("local_vs_api", run_id="exp1:local", min_tier=1)
     api_card = em.get_scorecard("local_vs_api", run_id="exp1:api", min_tier=1)
     assert local_card["ttft_seconds"] == pytest.approx(0.4)
     assert api_card["ttft_seconds"] == pytest.approx(0.1)
+    assert local_card["estimated_cost_usd"] == pytest.approx(0.01)
+    assert api_card["estimated_cost_usd"] == pytest.approx(0.02)
     assert "gpu_utilization" not in api_card
+
+
+@pytest.mark.parametrize("invalid_side", ["local", "api"])
+@pytest.mark.parametrize("invalid_field", ["dataset_revision", "cost_basis", "metric_id"])
+def test_emit_serving_scorecard_validates_all_provenance_before_emitting(
+    tmp_path, mocker, invalid_side, invalid_field
+):
+    from llm_dojo_scoring.emitter import Emitter, LocalManifestSink
+    from llm_dojo_scoring.scorecard_honesty import ProvenanceExportError
+    from llm_dojo_scoring.serving import emit_serving_scorecard
+
+    sink = LocalManifestSink(tmp_path / "scores.jsonl")
+    em = Emitter(sinks=[sink])
+    emit = mocker.spy(em, "emit_score")
+    comparison = compare_serving(
+        {"provider": "vllm", "ttft_seconds": 0.4, "estimated_cost_usd": 0.01},
+        {"provider": "openrouter", "ttft_seconds": 0.1, "estimated_cost_usd": 0.02},
+    )
+    provenance = {
+        side: {
+            "dataset_revision": "test-revision",
+            "prompt_id": "test-prompt",
+            "model_id": "test-model",
+            "cost_basis": "busy_window",
+        }
+        for side in ("local", "api")
+    }
+    if invalid_field == "metric_id":
+        provenance[invalid_side][invalid_field] = "registry:another_metric"
+    else:
+        del provenance[invalid_side][invalid_field]
+    with pytest.raises(ProvenanceExportError, match=invalid_field):
+        emit_serving_scorecard(comparison, emitter=em, provenance=provenance)
+    emit.assert_not_called()
+    assert em._records == []
+    assert sink.read_all() == []

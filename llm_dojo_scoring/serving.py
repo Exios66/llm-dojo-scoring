@@ -24,6 +24,7 @@ from urllib.parse import urlparse
 
 from .bootstrap import bootstrap_ci, delta_significance
 from .cost import estimate_cost, price_for
+from .scorecard_honesty import COST_BASIS_TOKEN_PRICE
 
 __all__ = [
     "LOCAL_PROVIDERS",
@@ -329,6 +330,9 @@ class ServingIdentity:
     task: str | None = None
     base_url_host: str | None = None
     dataset_fingerprint: str | None = None
+    dataset_revision: str | None = None
+    split: str | None = None
+    draw_seed: str | None = None
     experiment_name: str | None = None
     n: int | None = None
 
@@ -360,6 +364,11 @@ class ServingRun:
     scores: dict[str, Any] = field(default_factory=dict)
     estimated_cost_usd: float | None = None
     honest_gaps: list[str] = field(default_factory=list)
+    #: Basis of ``estimated_cost_usd`` (one of ``COST_BASIS_VALUES``), or
+    #: ``None`` when a recorded cost carries no label.
+    cost_basis: str | None = None
+    #: Quality ``metric_id`` the record was scored under (#17), if stamped.
+    metric_id: str | None = None
 
 
 def _identity_from(record: Mapping[str, Any]) -> ServingIdentity:
@@ -391,6 +400,9 @@ def _identity_from(record: Mapping[str, Any]) -> ServingIdentity:
         task=_as_str(_first(merged, "task", "eval_task")),
         base_url_host=_host(_first(merged, "base_url", "VLLM_BASE_URL", "OLLAMA_BASE_URL")),
         dataset_fingerprint=_as_str(_first(merged, "dataset_fingerprint", "fingerprint")),
+        dataset_revision=_as_str(_first(merged, "dataset_revision")),
+        split=_as_str(_first(merged, "split")),
+        draw_seed=_as_str(_first(merged, "draw_seed")),
         experiment_name=_as_str(_first(merged, "experiment_name", "name", "run_id")),
         n=n,
     )
@@ -504,11 +516,14 @@ def normalize_serving_record(record: Mapping[str, Any] | ServingRun) -> ServingR
     cost = _as_float(
         _first(record, "estimated_cost_usd", "cost_usd", "cost", "scores.estimated_cost_usd")
     )
+    cost_basis = _as_str(_first(record, "cost_basis", "usd_basis")) if cost is not None else None
     if cost is None:
         prompt = sum(o.prompt_tokens or 0 for o in observations) or None
         completion = sum(o.completion_tokens or 0 for o in observations) or None
         if prompt or completion:
             cost = estimate_cost(prompt, completion, identity.model)
+            if cost is not None:
+                cost_basis = COST_BASIS_TOKEN_PRICE
     gaps: list[str] = []
     if not any(o.ttft_seconds is not None for o in observations):
         gaps.append("ttft_seconds missing — not inferred from e2e/n_tokens")
@@ -534,6 +549,8 @@ def normalize_serving_record(record: Mapping[str, Any] | ServingRun) -> ServingR
         scores=dict(scores or {}),
         estimated_cost_usd=cost,
         honest_gaps=gaps,
+        cost_basis=cost_basis,
+        metric_id=_record_metric_id(record),
     )
 
 
@@ -570,6 +587,7 @@ def aggregate_serving(
     runs: Iterable[Mapping[str, Any] | ServingRun],
 ) -> dict[str, Any]:
     """Mean + p50/p95 over every observation in ``runs``."""
+    runs = list(runs)
     normalized = [normalize_serving_record(r) for r in runs]
     obs: list[ServingObservation] = []
     for run in normalized:
@@ -617,15 +635,7 @@ def aggregate_serving(
             if gap not in gaps:
                 gaps.append(gap)
 
-    metric_ids: list[str] = []
-    for raw in runs:
-        if isinstance(raw, Mapping):
-            mid = raw.get("metric_id")
-            q = raw.get("quality")
-            if not mid and isinstance(q, Mapping):
-                mid = q.get("metric_id")
-            if mid:
-                metric_ids.append(str(mid))
+    metric_ids = [r.metric_id for r in normalized if r.metric_id]
 
     quality: dict[str, Any] = {}
     for key in _QUALITY_KEYS:
@@ -672,7 +682,48 @@ def aggregate_serving(
     }
     if metric_ids:
         out["metric_id"] = metric_ids[0]
+        distinct = sorted(set(metric_ids))
+        if len(distinct) > 1 or len(metric_ids) != len(normalized):
+            # A leg that mixes metrics (or mixes stamped and unstamped runs)
+            # has no single identity to compare on (#17).
+            out["metric_id_conflict"] = distinct
+    costed = [r for r in normalized if r.estimated_cost_usd is not None]
+    bases = {r.cost_basis for r in costed}
+    if costed and len(bases) == 1 and None not in bases:
+        # One labelled basis across every costed run; mixed or unlabelled
+        # costs carry no basis and are refused at emission (#22).
+        out["cost_basis"] = bases.pop()
+    mixed = sorted(
+        key
+        for key in _LEG_IDENTITY_KEYS
+        if len({ident.get(key) for ident in identities}) > 1
+    )
+    if mixed:
+        # The leg pools runs from different datasets / prompts / models; no
+        # one identity describes it, so it is neither compared nor stamped.
+        out["identity_conflict"] = mixed
     return out
+
+
+#: Identity fields every run in one comparison leg must share.
+_LEG_IDENTITY_KEYS = (
+    "serving_kind",
+    "model",
+    "prompt_version",
+    "task",
+    "dataset_fingerprint",
+    "dataset_revision",
+    "split",
+    "draw_seed",
+)
+
+
+def _record_metric_id(raw: Mapping[str, Any]) -> str | None:
+    mid = raw.get("metric_id")
+    q = raw.get("quality")
+    if not mid and isinstance(q, Mapping):
+        mid = q.get("metric_id")
+    return str(mid) if mid else None
 
 
 def _delta_map(local: Mapping[str, Any], api: Mapping[str, Any]) -> dict[str, Any]:
@@ -841,6 +892,10 @@ def serving_cost_card(agg: Mapping[str, Any] | None) -> dict[str, Any]:
     recorded = _as_float(agg.get("estimated_cost_usd"))
     computed = estimate_cost(prompt, completion, model)
     cost = recorded if recorded is not None else computed
+    cost_basis = agg.get("cost_basis")
+    if cost_basis is None and recorded is None and computed is not None:
+        # Computed here from tokens × the price table, so the basis is known.
+        cost_basis = COST_BASIS_TOKEN_PRICE
     formula = None
     if prices is not None and prompt is not None and completion is not None:
         formula = (
@@ -869,6 +924,7 @@ def serving_cost_card(agg: Mapping[str, Any] | None) -> dict[str, Any]:
         "formula": formula,
         "estimated_cost_usd": cost,
         "cost_per_document": cost_per,
+        "cost_basis": cost_basis if cost is not None else None,
         "honest_gap": gap,
     }
 
@@ -909,7 +965,7 @@ def serving_scorecard(comparison: Mapping[str, Any]) -> dict[str, Any]:
     local_cost = serving_cost_card(comparison.get("local") or {})
     api_cost = serving_cost_card(comparison.get("api") or {})
     missing = [r["metric"] for r in rows if r["status"] == "missing"]
-    return {
+    card: dict[str, Any] = {
         "agent": "local_vs_api",
         "headlines": headlines,
         "dashboard": dashboard,
@@ -930,6 +986,10 @@ def serving_scorecard(comparison: Mapping[str, Any]) -> dict[str, Any]:
             "api": (comparison.get("api") or {}).get("n_requests"),
         },
     }
+    if comparison.get("incomparable"):
+        card["incomparable"] = True
+        card["incomparable_reason"] = comparison.get("incomparable_reason")
+    return card
 
 
 def serving_card_markdown(comparison: Mapping[str, Any]) -> str:
@@ -963,6 +1023,26 @@ def serving_card_markdown(comparison: Mapping[str, Any]) -> str:
         if lv is None and av is None:
             continue
         lines.append(f"| `{field_name}` | {_cell(lv)} | {_cell(av)} |")
+    if card.get("incomparable"):
+        lines.extend([
+            "",
+            f"**INCOMPARABLE quality** ({card.get('incomparable_reason')}): "
+            f"local metric_id={_cell(comparison.get('left_metric_id'))} · "
+            f"api metric_id={_cell(comparison.get('right_metric_id'))}. "
+            "No quality delta is reported.",
+        ])
+        for side in ("local", "api"):
+            leg = comparison.get(side) or {}
+            if leg.get("metric_id_conflict"):
+                lines.append(
+                    f"- {side} leg mixes metric_ids: "
+                    f"{', '.join(map(str, leg['metric_id_conflict']))}"
+                )
+            if leg.get("identity_conflict"):
+                lines.append(
+                    f"- {side} leg mixes runs that differ on: "
+                    f"{', '.join(leg['identity_conflict'])}"
+                )
     lines.extend(["", "## Headlines (T0)", ""])
     for name, row in card["headlines"].items():
         lines.append(
@@ -1015,30 +1095,91 @@ def emit_serving_scorecard(
     *,
     run_id: str | None = None,
     emitter: Any | None = None,
+    provenance: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Persist local and API T0/T1 values as separate scorecard runs.
 
     Local values go to ``run_id:local``; API values to ``run_id:api``.
     Missing values are not emitted (never stored as 0.0).
+
+    ``provenance`` maps ``"local"`` / ``"api"`` to that leg's stamp (#22).
+    Keys the caller leaves out fall back to what the leg's records carry:
+    ``model_id`` / ``serving_kind`` / ``prompt_id`` from the identity tags
+    (``model``, ``serving_kind``, ``prompt_version``); ``dataset_revision`` /
+    ``split`` / ``draw_seed`` from the same-named record fields
+    (``draw_seed`` also from ``dataset_fingerprint``, as ``stamp_provenance``
+    does); ``cost_basis`` from the leg's cost block (price-table USD is
+    ``token_price_estimate``). ``dataset_revision`` is never derived from
+    anything else: a leg with no revision anywhere is refused before any
+    record is written.
     """
-    from .emitter import get_emitter
+    from .emitter import _emit_provenance, get_emitter
+    from .scorecard_honesty import _METRIC_ID_BY_NAME, ProvenanceExportError, _absent
+
+    quality_ids = set(_METRIC_ID_BY_NAME.values())
 
     em = emitter or get_emitter()
     card = serving_scorecard(comparison)
+    pending: list[dict[str, Any]] = []
     for side in ("local", "api"):
         sid = f"{run_id}:{side}" if run_id else side
+        _refuse_mixed_leg(side, comparison.get(side))
+        ident = card["identity"][side]
+        side_prov = dict((provenance or {}).get(side) or {})
+        if isinstance(side_prov.get("provenance"), Mapping):  # a stamped card
+            side_prov = dict(side_prov["provenance"])
+        # An explicit None / "" is "not given": fall back to the records.
+        side_prov = {k: v for k, v in side_prov.items() if not _absent(v)}
+        # A leg stamp may name the leg's quality metric_id (its own, or any
+        # quality id when the leg records none); every emitted row carries
+        # the canonical id of its own serving metric instead. Any other
+        # claimed id stays in and is refused per row as a contradiction.
+        leg_metric_id = (comparison.get(side) or {}).get("metric_id")
+        claimed = side_prov.get("metric_id")
+        if claimed is not None and (
+            claimed == leg_metric_id
+            or (not leg_metric_id and claimed in quality_ids)
+        ):
+            side_prov.pop("metric_id")
+        side_prov.setdefault("model_id", ident.get("model_id") or ident.get("model"))
+        side_prov.setdefault("serving_kind", ident.get("serving_kind") or side)
+        side_prov.setdefault("prompt_id", ident.get("prompt_version"))
+        for key in ("dataset_revision", "split"):
+            if ident.get(key):
+                side_prov.setdefault(key, ident[key])
+        seed = ident.get("draw_seed") or ident.get("dataset_fingerprint")
+        if seed:
+            side_prov.setdefault("draw_seed", seed)
+        side_basis = (card.get("cost") or {}).get(side, {}).get("cost_basis")
+        if side_basis:
+            side_prov.setdefault("cost_basis", side_basis)
         for name, row in card["dashboard"].items():
             value = row.get(side)
             if not isinstance(value, (int, float)) or isinstance(value, bool):
                 continue
-            em.emit_score(
-                "local_vs_api",
+            try:
+                validated_prov = _emit_provenance(
+                    name, em.registry.get(name).units, side_prov,
+                    require=em.require_provenance,
+                )
+            except ProvenanceExportError as exc:
+                raise ProvenanceExportError(
+                    f"emit_serving_scorecard: {side} leg: {exc}. Pass "
+                    f"provenance={{'local': {{...}}, 'api': {{...}}}} or record "
+                    f"the key on the leg's serving records."
+                ) from exc
+            pending.append(dict(
+                agent_name="local_vs_api",
                 doc_id=side,
                 metric_name=name,
                 value=float(value),
                 run_id=sid,
                 metadata={"side": side, "status": row.get("status")},
-            )
+                provenance=validated_prov,
+            ))
+    # Refuse invalid provenance on either leg before emitting any records.
+    for score in pending:
+        em.emit_score(**score)
     return card
 
 
@@ -1047,11 +1188,24 @@ def compare_serving(
     api: Mapping[str, Any] | ServingRun | Sequence[Any],
     *,
     quality_metric: str | None = None,
+    require_provenance: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Compare a local serving run (or list) against an API-key run.
 
     ``delta_local_minus_api`` is signed: negative TTFT means local is faster.
     GPU/KV metrics stay ``None`` on the API side rather than being zero-filled.
+
+    Quality is compared only when both legs carry the same ``metric_id``
+    (#17). A mismatched, one-sided or mixed identity marks the payload
+    ``incomparable`` and leaves the quality delta ``None``.
+    Two legs with no id at all stay comparable and are flagged
+    ``metric_id_unverified``. A leg that pools runs differing on dataset,
+    split, seed, prompt, task or model is ``identity_mixed`` (named in the
+    leg's ``identity_conflict``).
+    ``require_provenance`` (``{"local": {...}, "api": {...}}``, merged over
+    what the records carry) runs ``validate_comparison_provenance`` first
+    and raises on any gap (#22) — including a metric_id mismatch, which it
+    refuses instead of returning an ``incomparable`` payload.
 
     Also returns ``table`` (every T0/T1 metric including missing ``None``
     rows), ``scorecard`` (headlines + dashboard + identity + cost),
@@ -1078,15 +1232,36 @@ def compare_serving(
 
     left_metric_id = left.get("metric_id") or (left.get("quality") or {}).get("metric_id")
     right_metric_id = right.get("metric_id") or (right.get("quality") or {}).get("metric_id")
+    reason: str | None = None
+    if left.get("metric_id_conflict") or right.get("metric_id_conflict"):
+        reason = "metric_id_mixed"
+    elif left_metric_id and right_metric_id and left_metric_id != right_metric_id:
+        reason = "metric_id_mismatch"
+    elif bool(left_metric_id) != bool(right_metric_id):
+        # One leg names its metric, the other does not: no shared identity.
+        reason = "metric_id_missing"
+    elif left.get("identity_conflict") or right.get("identity_conflict"):
+        reason = "identity_mixed"
     incomparable: dict[str, Any] | None = None
-    if left_metric_id and right_metric_id and left_metric_id != right_metric_id:
+    if reason:
         incomparable = {
             "comparable": False,
             "incomparable": True,
-            "incomparable_reason": "metric_id_mismatch",
+            "incomparable_reason": reason,
             "left_metric_id": left_metric_id,
             "right_metric_id": right_metric_id,
         }
+    if require_provenance:
+        from .scorecard_honesty import validate_comparison_provenance
+
+        _refuse_mixed_leg("local", left)
+        _refuse_mixed_leg("api", right)
+        validate_comparison_provenance(
+            _leg_provenance(left, require_provenance.get("local")),
+            _leg_provenance(right, require_provenance.get("api")),
+            require_cost_basis_if_cost=False,
+            vary=("serving_kind", "model_id"),
+        )
 
     quality_block: dict[str, Any] | None = None
     if quality_key:
@@ -1096,8 +1271,12 @@ def compare_serving(
             "metric": quality_key,
             "local": lv,
             "api": rv,
-            "delta_local_minus_api": None if lv is None or rv is None else round(lv - rv, 6),
+            "delta_local_minus_api": (
+                None if incomparable or lv is None or rv is None else round(lv - rv, 6)
+            ),
         }
+        if incomparable:
+            quality_block["status"] = "incomparable"
 
     local_ttft = [
         o.ttft_seconds
@@ -1140,11 +1319,47 @@ def compare_serving(
     }
     if incomparable:
         payload.update(incomparable)
+    elif not left_metric_id and not right_metric_id:
+        # Comparable by default, but nothing proves the legs share a metric.
+        payload["metric_id_unverified"] = True
     payload["table"] = serving_table_rows(payload)
     payload["scorecard"] = serving_scorecard(payload)
     payload["cost"] = payload["scorecard"]["cost"]
     payload["markdown"] = serving_card_markdown(payload)
     return payload
+
+
+def _refuse_mixed_leg(side: str, agg: Mapping[str, Any] | None) -> None:
+    """A leg pooling runs with different identities has no one provenance."""
+    mixed = (agg or {}).get("identity_conflict")
+    if mixed:
+        from .scorecard_honesty import ProvenanceExportError
+
+        raise ProvenanceExportError(
+            f"{side} leg pools runs that differ on {', '.join(mixed)}; "
+            "compare or emit one identity per leg"
+        )
+
+
+def _leg_provenance(
+    agg: Mapping[str, Any], given: Mapping[str, Any] | None
+) -> dict[str, Any]:
+    ident = _identity_dict(agg)
+    prov: dict[str, Any] = {
+        "dataset_revision": ident.get("dataset_revision"),
+        "split": ident.get("split"),
+        "draw_seed": ident.get("draw_seed") or ident.get("dataset_fingerprint"),
+        "prompt_id": ident.get("prompt_version"),
+        "metric_id": agg.get("metric_id"),
+        "serving_kind": ident.get("serving_kind"),
+        "model_id": ident.get("model"),
+        "cost_basis": agg.get("cost_basis"),
+    }
+    from .scorecard_honesty import SCORER_VERSION
+
+    prov["scorer_version"] = SCORER_VERSION
+    prov.update({k: v for k, v in dict(given or {}).items() if v is not None})
+    return prov
 
 
 def split_local_api(
@@ -1168,12 +1383,26 @@ def split_local_api(
 def pair_comparable_runs(
     records: Sequence[Mapping[str, Any]],
 ) -> list[tuple[Mapping[str, Any], Mapping[str, Any]]]:
-    """Pair local/api records that share task + prompt + dataset fingerprint."""
+    """Pair local/api records that measured the same thing.
+
+    Records pair only when task, prompt, dataset fingerprint, and every
+    provenance field they carry (``dataset_revision``, ``split``,
+    ``draw_seed``, ``metric_id``) match (#22). A field one record carries and
+    the other does not keeps them apart.
+    """
     local, api, _ = split_local_api(records)
 
     def _key(rec: Mapping[str, Any]) -> tuple[Any, ...]:
         ident = _identity_from(rec)
-        return (ident.task, ident.prompt_version, ident.dataset_fingerprint)
+        return (
+            ident.task,
+            ident.prompt_version,
+            ident.dataset_fingerprint,
+            ident.dataset_revision,
+            ident.split,
+            ident.draw_seed,
+            _record_metric_id(rec),
+        )
 
     api_by: dict[tuple[Any, ...], list[Mapping[str, Any]]] = {}
     for rec in api:

@@ -47,7 +47,15 @@ non-empty expected field; TP only when that field scores 1.0;
 `F1 = 2PR/(P+R)`, `F2 = 5PR/(4P+R)`. They stay `null` unless TP/FP/FN
 counts exist. CUAD category-presence micro-F1 and MAUD accuracy are
 different metrics — pass them as `method=` if that run used them; they
-never overwrite `extraction_f1`.
+never overwrite `extraction_f1`. `method` resolves through strict
+`metric_id_for` (an unknown name raises), and a `provenance` stamp whose
+`metric_id` contradicts the resolved id is refused.
+
+`status` is `scored`, or `unscorable` (with `reason`) when GT is missing
+or holds nothing extractable for the class. An empty GT object (`{}`) is
+`scored` with `reason="gt_empty"` and a null `overall_score`. `status`, `reason` and
+`provenance` are new in this release; `validate_audit_entry` accepts
+older rows without them.
 
 `schema_valid` is whether every live-map key is present on the prediction.
 It is not part of `overall_score`.
@@ -78,12 +86,24 @@ A second `score_archive_block` on the same `doc_id` **replaces**
   "tp": null,
   "fp": null,
   "fn": null,
+  "status": "scored",
+  "reason": null,
   "trace": {
     "confidence": 0.91,
     "reasoning": {"summary": "parties on signature page", "entries": []},
     "confidence_gate": "pass",
     "calibration_error": 0.008,
     "n_reasoning_entries": 0
+  },
+  "provenance": {
+    "dataset_revision": "46a4d3c2",
+    "split": "test",
+    "draw_seed": null,
+    "prompt_id": "contracts_specialist_v1",
+    "metric_id": "pipeline.extraction.overall",
+    "scorer_version": "0.21.0",
+    "serving_kind": "modal",
+    "model_id": "Qwen/Qwen3-8B-AWQ"
   }
 }
 ```
