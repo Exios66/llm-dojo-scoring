@@ -1293,6 +1293,8 @@ def score_extraction(
     predicted: dict | None,
     expected: dict | None,
     doc_text: str | None = None,
+    *,
+    audit_predicted: dict | None = None,
 ) -> ExtractionScoreResult:
     """Score one extraction deterministically.
 
@@ -1310,7 +1312,8 @@ def score_extraction(
     - When verification is enabled and ``doc_text`` is nonempty, populated
       fields in ``field_types`` produce ``entity_list_audit`` entries,
       including scalar fields and fields absent from GT. Trace and
-      annotation keys are excluded.
+      annotation keys are excluded. ``audit_predicted``, when supplied,
+      preserves predictions omitted from GT scoring for this audit.
     """
     predicted = predicted or {}
     expected = expected or {}
@@ -1377,8 +1380,9 @@ def score_extraction(
     if verification_enabled() and doc_text:
         # Factuality audit for EVERY content field the model populated —
         # including fields the ground truth does not label.
+        audit_source = predicted if audit_predicted is None else audit_predicted
         for key, field_type in sorted(field_types.items()):
-            pred_value = parse_json_container(predicted.get(key))
+            pred_value = parse_json_container(audit_source.get(key))
             if is_empty_value(pred_value) or key in entity_list_audit:
                 continue
             if key in NEVER_SCORED_FIELDS:
