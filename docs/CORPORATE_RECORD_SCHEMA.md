@@ -63,3 +63,10 @@ Pinned intents the schema flags for review (`SubclassSchema.intent_review`): `ch
 ## Specialist prompt
 
 `corporate_records_specialist` (`production` and `production_prompts`, identical text, `sha256 b40963bb…`) now carries one generated line per subclass (`record_type, intent; +extra keys; null …`) in place of the old executive brief, plus the `entity_name` rule — 5,333 chars, 532 *shorter* than frozen v1 (5,865). This diverges from the vendored mailroom `frozen_v1` bytes; the same change must land in llm-mailroom and eval-environment (`prompts/corporate_records_specialist_v1.md`) before the next `sync_production_prompts.py --check`. The legacy `docclass` stem is unchanged (retired `key_provisions` lineage).
+
+## Known limits of the repaired labels
+
+- `entity_name` comes from the EDGAR filer metadata in the template `subject_matter`, not from document text; ~25% differ from the in-document name (mostly `CO`/`Company` style). Treat it as the registrant, not a verbatim string.
+- `DOC-85c7b49cdac19586` (organizational minutes approving bylaws) matches two subclass cues and is deliberately not auto-reassigned; it is probably `board_resolution`.
+- All 450 intents remain `intent_source: heuristic`; the relabel never overrides an adjudicated intent, `record_type`, or a populated `filing_number`.
+- Extension entities are scored only once the dataset labels them (`gt_presence` `populated` / `schema_documented_absence`); `pending_annotation` and unstated blanks are unlabeled.
