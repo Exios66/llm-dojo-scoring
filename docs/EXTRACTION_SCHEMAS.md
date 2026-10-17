@@ -216,10 +216,12 @@ Governance instruments. Do **not** emit `document_name`, `parties`,
 | `rights_instrument` | `rights_instrument` |
 | `subsidiary_list` · `indenture` · `board_resolution` · `officer_certificate` · `other` | `other` |
 
-Hub inventory has the 10 surfaces above except
-`certificate_of_formation` (scoring catalog keeps it as an LLC-formation
-alias of `articles_of_incorporation`). Corpus GT currently covers that
-Hub subset.
+Hub inventory has the 10 surfaces above except `certificate_of_formation`
+(no Hub rows; any would fold into `articles_of_incorporation` for
+`record_type`). It still gets its own explicit prompt line —
+`+organizers[], registered_agent; omit authorized_capital entirely, even
+when null` — because an LLC certificate has no capital-article share
+schedule. Corpus GT currently covers that Hub subset.
 
 **v0.19.1:** `subsidiary_list` keeps `filing_number` null unless an
 official filing/document number is on **this** record.
@@ -228,7 +230,7 @@ official filing/document number is on **this** record.
 `pipeline.extraction.field_micro_f1` / `_f2` / `_precision` / `_recall`. No CUAD/MAUD-grade external
 benchmark.
 
-**Prompt:** `corporate_records_specialist` `sha256 b40963bb…`
+**Prompt:** `corporate_records_specialist` `sha256 253559fc…`
 (locally corrected + per-subclass entity schemas; upstream eval-environment re-freeze tracked in
 [`TODOS.md`](TODOS.md)).
 
@@ -350,9 +352,11 @@ consistency is degenerate on GT-shaped predictions.
    contracts stay `unscorable`.
 6. **Prompt freeze vs live `production` family.** Eval stems are
    `family="production_prompts"`. Since v0.20.0 the five `production`
-   specialists are re-vendored from live mailroom and **equal**
-   `production_prompts` v1 (`version: v1`, `source_key: frozen_v1`); the
-   retired `contracts_specialist_v32` body is gone. Do not mix the
+   specialists are re-vendored from live mailroom (`version: v1`,
+   `source_key: frozen_v1`). Corporate records stays on mailroom's v6 freeze
+   (`fe13501f…`), while `production_prompts` carries evaluation v7 (`253559fc…`);
+   the other four specialist bodies match across families. The retired
+   `contracts_specialist_v32` body is gone. Do not mix the
    `docclass` lineage into a comparison table without matching `prompt_id`.
 
 ## Import surface

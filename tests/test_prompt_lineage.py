@@ -73,8 +73,10 @@ MUTATIONS = {
     "correspondence_specialist_v7",
     "insurance_claims_specialist_v2",
     "insurance_claims_specialist_v3",
+    "insurance_claims_specialist_v4",
     "merger_agreement_specialist_v2",
     "merger_agreement_specialist_v3",
+    "merger_agreement_specialist_v4",
 }
 ALL_KEYS = ARCHIVED | FROZEN | MUTATIONS
 
@@ -84,17 +86,19 @@ def _sha(text: str) -> str:
 
 
 def test_counts_and_key_set():
+    """The lineage catalog contains exactly the expected keys in each category."""
     assert {v.key for v in list_prompt_versions()} == ALL_KEYS
-    assert len(ALL_KEYS) == 41
+    assert len(ALL_KEYS) == 43
     assert {v.key for v in list_prompt_versions(lineage="archived")} == ARCHIVED
     assert {v.key for v in list_prompt_versions(lineage="frozen")} == FROZEN
     assert {v.key for v in list_prompt_versions(lineage="mutation")} == MUTATIONS
 
 
 def test_source_metadata():
+    """Lineage metadata pins the expected source repository, commit, and lineage."""
     assert dict(LINEAGE_SOURCE) == {
         "source_repo": "LLM-Mailroom-Services/eval-environment",
-        "source_commit": "b449a7983eb5c14e9d8c14776a84519cfbb7a88f",
+        "source_commit": "22d217ab9f226f2674ace699a6ea41c121bbc26b",
         "lineage_id": "mailroom-dataset-v1",
     }
 
@@ -149,6 +153,7 @@ def test_roles_including_hyphens():
     [("correspondence_specialist", 7, 8), ("corporate_records_specialist", 7, 8)],
 )
 def test_chain_v0_to_tip(role, tip, length):
+    """Prompt chains connect the archived root through every version to the tip."""
     chain = prompt_chain(role)
     assert [v.key for v in chain] == [f"{role}_v{i}" for i in range(tip + 1)]
     assert len(chain) == length
@@ -211,6 +216,7 @@ def test_unknown_key_suggests_close_matches():
     ],
 )
 def test_corrected_records_equal_production_prompts_catalog(key, role):
+    """Corrected lineage versions match production prompt text, source, and digest."""
     v = get_prompt_version(key)
     rec = get_prompt(role, family="production_prompts")
     assert v.text == rec.text
@@ -263,6 +269,7 @@ def test_frozen_v1_changes_are_against_archived_v0():
 
 
 def test_data_file_is_deterministic_and_packaged():
+    """Packaged lineage JSON uses stable formatting, timestamps, and version order."""
     raw = importlib.resources.files("llm_dojo_scoring.prompts").joinpath(
         "eval_environment_lineage.json"
     ).read_text(encoding="utf-8")
@@ -330,7 +337,7 @@ def test_sorter_v3_duplicated_corporate_record_block_is_recorded():
 
 def test_notes_only_where_expected():
     flagged = {v.key for v in list_prompt_versions() if v.changes and v.changes["notes"]}
-    assert flagged == {"sorter_v2", "sorter_v3", "sorter_v4"}
+    assert flagged == {"sorter_v2", "sorter_v3", "sorter_v4", "merger_agreement_specialist_v4"}
 
 
 def test_sorter_v4_drops_the_duplicate_block_and_matches_production():

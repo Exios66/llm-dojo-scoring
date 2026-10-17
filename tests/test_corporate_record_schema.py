@@ -50,6 +50,7 @@ _PRED = {
 
 
 def test_every_subclass_has_a_schema_and_valid_record_type():
+    """Every sorter subclass has a schema with valid record type and core fields."""
     assert set(SUBCLASS_SCHEMAS) == set(DOC_TYPE_SUBCLASSES["corporate_record"])
     for s in SUBCLASS_SCHEMAS.values():
         assert s.record_type in RECORD_TYPES
@@ -57,6 +58,7 @@ def test_every_subclass_has_a_schema_and_valid_record_type():
 
 
 def test_subclasses_are_not_one_blanket_schema():
+    """Subclass schemas expose distinct entities and omit inapplicable core fields."""
     shapes = {
         s.subclass: (s.core_applicable, tuple(e.key for e in s.entities))
         for s in SUBCLASS_SCHEMAS.values()
@@ -70,6 +72,7 @@ def test_subclasses_are_not_one_blanket_schema():
 
 
 def test_sorter_subclass_maps_to_record_type():
+    """Subclass lookup normalizes aliases and falls back to the other schema."""
     assert subclass_schema("charter_amendment").record_type == "articles_of_incorporation"
     assert subclass_schema("indenture").record_type == "other"
     assert subclass_schema("Powers of Attorney").record_type == "powers_of_attorney"
@@ -77,6 +80,7 @@ def test_sorter_subclass_maps_to_record_type():
 
 
 def test_scored_field_types_gates_extension_entities_on_labels():
+    """Score extension fields only when labeled, retaining canonical core types."""
     core = scored_field_types("indenture")
     assert "trustee" not in core and "filing_number" not in core
     labeled = scored_field_types("indenture", {"trustee": "Wells Fargo", "guarantors": "[]"})
@@ -92,6 +96,7 @@ def test_scored_field_types_gates_extension_entities_on_labels():
 
 
 def test_json_schema_is_per_subclass():
+    """Subclass JSON schemas expose their own entities and the record-type enum."""
     poa = corporate_record_json_schema("powers_of_attorney")
     assert "principal" in poa["properties"] and "trustee" not in poa["properties"]
     assert poa["properties"]["record_type"] == {"enum": [*RECORD_TYPES, None]}
@@ -99,6 +104,7 @@ def test_json_schema_is_per_subclass():
 
 
 def test_unlabeled_vs_documented_absence():
+    """Blank entities are unlabeled unless presence metadata documents absence."""
     assert set(unlabeled_fields("articles_of_incorporation", _GT)) >= {
         "entity_name", "filing_number", "registered_agent"
     }
@@ -107,6 +113,7 @@ def test_unlabeled_vs_documented_absence():
 
 
 def test_correct_entity_extraction_not_penalized_on_unlabeled_gt():
+    """Filled predictions for unlabeled entities do not reduce extraction scores."""
     suite = get_suite("corporate_records_specialist")
     out = suite.score_document(json.dumps(_GT), _PRED, doc_subclass="articles_of_incorporation")
     assert out["extraction_precision"] == 1.0
@@ -115,7 +122,57 @@ def test_correct_entity_extraction_not_penalized_on_unlabeled_gt():
     assert set(out["extraction"].field_scores) == {"intent", "subject_matter", "keywords"}
 
 
+@pytest.mark.parametrize("batch", [False, True])
+@pytest.mark.parametrize("serialized", [False, True])
+def test_unlabeled_predictions_still_receive_document_audit(batch, serialized):
+    suite = get_suite("corporate_records_specialist")
+    predicted = dict(_PRED, signatories=["Jane Doe", "Imaginary Goblin"])
+    predictions = [predicted, dict(predicted, entity_name="Phantom Holdings")]
+    if serialized:
+        predictions = [json.dumps(pred) for pred in predictions]
+    text = "Articles of Acme Inc. in Delaware. Jane Doe. CT Corporation."
+    out = suite.score(
+        [json.dumps(_GT)] * 2 if batch else json.dumps(_GT),
+        predictions if batch else predictions[0],
+        doc_text=[text, text] if batch else text,
+        doc_subclass=(
+            ["articles_of_incorporation"] * 2 if batch else "articles_of_incorporation"
+        ),
+        detailed=True,
+    )
+    assert out["extraction_precision"] == out["extraction_recall"] == 1.0
+    results = out["extraction"] if batch else [out["extraction"]]
+    for idx, result in enumerate(results):
+        assert set(result.field_scores) == {"intent", "subject_matter", "keywords"}
+        audit = result.entity_list_audit
+        assert audit["entity_name"]["verified_in_doc"] == int(idx == 0)
+        assert audit["entity_name"]["hallucinated"] == int(idx != 0)
+        assert audit["registered_agent"]["verified_in_doc"] == 1
+        assert audit["signatories"]["n_predicted"] == 2
+        assert audit["signatories"]["verified_in_doc"] == 1
+        assert audit["signatories"]["hallucinated"] == 1
+    assert predicted["signatories"] == ["Jane Doe", "Imaginary Goblin"]
+    assert predicted["entity_name"] == "Acme Inc."
+
+
+@pytest.mark.parametrize(
+    ("verification", "text"), [(False, "Acme Inc."), (True, None), (True, "")]
+)
+def test_unlabeled_prediction_audit_requires_verification_and_document(
+    monkeypatch, verification, text,
+):
+    from llm_dojo_scoring import field_scoring
+
+    monkeypatch.setattr(field_scoring, "verification_enabled", lambda: verification)
+    out = get_suite("corporate_records_specialist").score_document(
+        json.dumps(_GT), _PRED, doc_subclass="articles_of_incorporation", doc_text=text,
+    )
+    assert out["extraction"].entity_list_audit == {}
+    assert out["extraction_precision"] == out["extraction_recall"] == 1.0
+
+
 def test_labeled_entities_are_scored_and_documented_absence_penalizes_fill():
+    """Score labeled entities and penalize filling a field documented as absent."""
     suite = get_suite("corporate_records_specialist")
     gt = dict(
         _GT,
@@ -131,6 +188,7 @@ def test_labeled_entities_are_scored_and_documented_absence_penalizes_fill():
 
 
 def test_batch_scoring_aligns_unlabeled_per_row():
+    """Batch scoring excludes unlabeled entities separately for each subclass."""
     suite = get_suite("corporate_records_specialist")
     out = suite.score(
         [json.dumps(_GT), json.dumps(_GT)],
@@ -166,7 +224,28 @@ def test_batch_unlabeled_fields_stay_aligned_across_unparseable_rows():
     assert short["unlabeled_fields"] == [[]]
 
 
+def test_one_row_batch_reports_unlabeled_fields_per_row_with_extras():
+    """Regression: with extras in play (presence scoring) a one-row batch
+    reports ``unlabeled_fields`` as a per-row list of lists, matching the
+    no-extras batch branch — it must not collapse to a bare field list just
+    because there is only one row."""
+    suite = get_suite("corporate_records_specialist")
+    out = suite.score(
+        [json.dumps(_GT)],
+        [_PRED],
+        doc_subclass=["articles_of_incorporation"],
+        presence_expectations={"agent_or_power": {"expected": False}},
+    )
+    assert out["unlabeled_fields"] == [list(unlabeled_fields("articles_of_incorporation", _GT))]
+    # The single-document payload keeps its flat shape.
+    single = suite.score_document(
+        json.dumps(_GT), _PRED, doc_subclass="articles_of_incorporation",
+    )
+    assert single["unlabeled_fields"] == list(unlabeled_fields("articles_of_incorporation", _GT))
+
+
 def test_audit_flags_published_label_defects():
+    """Audit detects known label defects and aggregates only corporate rows."""
     gt = {
         "intent": "investor_rights",
         "subject_matter": "indenture of X Ltd. (CIK 0001900035) (SEC EDGAR exhibit).",
@@ -198,22 +277,80 @@ def test_audit_flags_published_label_defects():
 
 
 def test_wrong_subclass_entity_is_flagged():
+    """Audit flags populated entities belonging to a different subclass."""
     gt = dict(_GT, trustee="BNY")
     assert "entity_wrong_subclass:trustee" in audit_gt_row("bylaws", gt)
 
 
-@pytest.mark.parametrize("family", ["production", "production_prompts"])
-def test_specialist_prompt_embeds_generated_subclass_schema(family):
-    text = get_prompt("corporate_records_specialist", family=family).text
-    assert render_prompt_section() in text
+def test_specialist_prompt_embeds_generated_subclass_schema():
+    """The evaluation prompt embeds generated subclass guidance within the size cap."""
+    text = get_prompt("corporate_records_specialist", family="production_prompts").text
+    section = render_prompt_section()
+    assert section in text
+    # The section sits as one contiguous block right after the "By doc_subclass"
+    # intro line — no other "- " prose lines between the rendered lines.
+    lines = text.splitlines()
+    first = lines.index(section.splitlines()[0])
+    assert lines[first : first + len(section.splitlines())] == section.splitlines()
+    assert lines[first - 1].startswith("By doc_subclass")
     for sub in SUBCLASS_SCHEMAS:
-        if sub != "certificate_of_formation":  # folded into articles_of_incorporation
-            assert render_subclass_block(sub) in text
+        assert render_subclass_block(sub) in text
     assert len(text) <= 5865  # never longer than the frozen v1 baseline
     assert "key_provisions" not in text.replace("Do not emit the retired key `key_provisions`", "")
 
 
+def test_certificate_of_formation_is_explicit_with_omit_clause():
+    """The frozen prompt names certificate_of_formation explicitly (no more
+    prose alias) and forbids emitting authorized_capital even as null."""
+    assert render_subclass_block("certificate_of_formation") == (
+        "- certificate_of_formation: articles_of_incorporation, entity_formation; "
+        "+organizers[], registered_agent; omit authorized_capital entirely, even when null"
+    )
+    section = render_prompt_section()
+    assert "omit authorized_capital entirely, even when null" in section
+    # Guard the byte-locked production_prompts template file itself: the
+    # generated section is pure data and can never contain prose, so the
+    # regression (the old "organizers instead of incorporators" alias prose
+    # coming back) is only detectable in the frozen prompt text.
+    frozen = get_prompt("corporate_records_specialist", family="production_prompts").text
+    assert "articles_of_incorporation with organizers instead of incorporators" not in frozen
+    assert section in frozen
+
+
+def test_render_order_keeps_certificate_of_formation_between_articles_and_amendment():
+    lines = render_prompt_section().splitlines()
+    assert lines[0].startswith("- bylaws:")
+    assert lines[1].startswith("- articles_of_incorporation:")
+    assert lines[2].startswith("- certificate_of_formation:")
+    assert lines[3].startswith("- charter_amendment:")
+    assert lines[-1] == "- other: other, other"
+
+
+def test_only_certificate_of_formation_may_omit_entity_keys():
+    subs = SUBCLASS_SCHEMAS["certificate_of_formation"]
+    assert subs.omit_entity_keys == ("authorized_capital",)
+    assert [s.subclass for s in SUBCLASS_SCHEMAS.values() if s.omit_entity_keys] == ["certificate_of_formation"]
+    assert [s.subclass for s in SUBCLASS_SCHEMAS.values() if s.core_guidance] == ["subsidiary_list"]
+
+
+def test_omit_and_guidance_keys_are_schema_backed():
+    """Re-asserts the import-time drift guard: ``omit_entity_keys`` may only
+    name entities the subclass (or a close-alias sibling sharing its
+    ``record_type``) declares, and ``core_guidance`` targets applicable core
+    fields only."""
+    for schema in SUBCLASS_SCHEMAS.values():
+        family = {e.key for e in schema.entities} | {
+            e.key
+            for other in SUBCLASS_SCHEMAS.values()
+            if other.record_type == schema.record_type
+            for e in other.entities
+        }
+        assert set(schema.omit_entity_keys) <= family
+        assert {k for k, _ in schema.core_guidance} <= set(schema.core_applicable)
+
+
 def test_audit_flags_subclass_content_conflict_on_prose_subject():
+    """Prose can reveal subclass conflicts; provenance templates cannot."""
     gt = {"intent": "entity_formation", "subject_matter": "Bylaws of Acme Inc., governing meetings."}
     assert "subclass_content_conflict:bylaws" in audit_gt_row("articles_of_incorporation", gt)
     assert not [d for d in audit_gt_row("bylaws", gt) if d.startswith("subclass_content")]
@@ -222,6 +359,7 @@ def test_audit_flags_subclass_content_conflict_on_prose_subject():
 
 
 def test_labeled_extension_entity_is_scored_both_ways():
+    """Labeled extensions reward matches and penalize wrong or missing predictions."""
     suite = get_suite("corporate_records_specialist")
     gt = dict(
         _GT,
@@ -239,6 +377,7 @@ def test_labeled_extension_entity_is_scored_both_ways():
 
 
 def test_pending_annotation_is_unlabeled_not_expected_empty():
+    """Pending entity annotations are excluded from scoring and reported unlabeled."""
     gt = dict(_GT, gt_presence=json.dumps({"entity_name": "pending_annotation"}))
     assert "entity_name" in unlabeled_fields("articles_of_incorporation", gt)
     suite = get_suite("corporate_records_specialist")
@@ -248,6 +387,7 @@ def test_pending_annotation_is_unlabeled_not_expected_empty():
 
 
 def test_json_schema_accepts_prompt_compliant_output_for_inapplicable_keys():
+    """Required inapplicable core keys accept only null or empty list values."""
     from llm_dojo_scoring.corporate_record_schema import corporate_record_json_schema as js
 
     sch = js("bylaws")

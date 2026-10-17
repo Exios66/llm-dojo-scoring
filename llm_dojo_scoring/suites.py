@@ -933,9 +933,15 @@ class ScoringSuite:
         # from both sides so a correct extraction is not scored as spurious
         # fill. See llm_dojo_scoring.corporate_record_schema.
         unlabeled: list[tuple[str, ...]] = []
+        audit_predictions = None
         if doc_class == "corporate_record":
             from .corporate_record_schema import align_unlabeled
 
+            # Alignment replaces dictionaries (and batch entries). Keep the
+            # original populated fields for verification against doc_text.
+            audit_predictions = (
+                list(predicted) if isinstance(predicted, list) else predicted
+            )
             sub_kw = kwargs.get("doc_subclass") or kwargs.get("expected_subclass")
             if isinstance(expected, list):
                 # ``unlabeled_fields`` on a batch payload is per-row and must
@@ -958,7 +964,7 @@ class ScoringSuite:
                             sub, parsed_expected[idx], expected[idx], pred
                         )
                     else:
-                        dropped: tuple[str, ...] = ()
+                        dropped = ()
                     unlabeled.append(dropped)
             elif isinstance(expected, dict) and isinstance(predicted, dict):
                 expected, predicted, dropped = align_unlabeled(
@@ -991,8 +997,10 @@ class ScoringSuite:
         peeled_pred: list = []
         unscorable_rows: set[int] = set()
 
-        def _run(exp: Any, pred: Any, text: str | None):
-            return score_extraction(doc_class, ftypes, pred, exp, doc_text=text)
+        def _run(exp: Any, pred: Any, text: str | None, audit_pred: Any = None):
+            return score_extraction(
+                doc_class, ftypes, pred, exp, doc_text=text, audit_predicted=audit_pred,
+            )
 
         def _prf_one(exp: Any, pred: Any, result: ExtractionScoreResult) -> dict[str, Any]:
             if not isinstance(exp, dict):
@@ -1127,7 +1135,11 @@ class ScoringSuite:
                         )
                     )
                 else:
-                    extraction.append(_run(exp, pred, text))
+                    audit_pred = (
+                        audit_predictions[idx]
+                        if isinstance(audit_predictions, list) else None
+                    )
+                    extraction.append(_run(exp, pred, text, audit_pred))
             if saw_topic and topic_e is None:
                 topic_e, topic_p = topics_e, topics_p
             if saw_sent and sent_e is None:
@@ -1137,7 +1149,7 @@ class ScoringSuite:
         elif isinstance(expected, dict) and isinstance(predicted, dict):
             e2, p2, payload = peel_non_extraction_fields(expected, predicted)
             peeled_exp, peeled_pred = [e2], [p2]
-            extraction = _run(e2, p2, doc_text)
+            extraction = _run(e2, p2, doc_text, audit_predictions)
             if "content_topic" in payload and topic_e is None:
                 topic_e, topic_p = payload["content_topic"]
             if "sentiment_label" in payload and sent_e is None:
@@ -1145,7 +1157,7 @@ class ScoringSuite:
             if "maud" in payload and maud_e is None:
                 maud_e, maud_p = payload["maud"]
         else:
-            extraction = _run(expected, predicted, doc_text)
+            extraction = _run(expected, predicted, doc_text, audit_predictions)
 
         if topic_e is not None or topic_p is not None:
             extras.update(
@@ -1336,8 +1348,13 @@ class ScoringSuite:
             "metric_id": mid,
         }
         if unlabeled:
+            # Same contract as the no-extras batch branch above:
+            # ``unlabeled_fields`` is per-row (list of lists, aligned with the
+            # GT row order) whenever *is_batch*, and a flat field list only on
+            # a single-document payload. A one-row batch therefore stays
+            # ``[[...]]`` instead of collapsing to a bare field list.
             payload["unlabeled_fields"] = (
-                list(unlabeled[0]) if len(unlabeled) == 1 else [list(u) for u in unlabeled]
+                [list(u) for u in unlabeled] if is_batch else list(unlabeled[0])
             )
         if isinstance(extraction, ExtractionScoreResult):
             # Single-document payload: flatten the document's own overall

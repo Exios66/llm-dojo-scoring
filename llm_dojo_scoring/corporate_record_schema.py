@@ -109,6 +109,13 @@ class SubclassSchema:
     entities: tuple[RecordEntity, ...] = ()
     notes: str = ""
     intent_review: str = ""  # why the pinned intent is debatable, if it is
+    #: Extension-entity keys the extraction must NOT emit at all — not even as
+    #: null / [] (rendered as the prompt's "; omit A entirely, even when null").
+    omit_entity_keys: tuple[str, ...] = ()
+    #: Per-core-field semantic guidance rendered into the prompt line
+    #: ("; subject_matter = ..., keywords = ...") for mappings the schema
+    #: structure alone cannot express (e.g. the subsidiary list schedule).
+    core_guidance: tuple[tuple[str, str], ...] = ()
 
     @property
     def core_not_applicable(self) -> tuple[str, ...]:
@@ -175,7 +182,10 @@ SUBCLASS_SCHEMAS: dict[str, SubclassSchema] = {
                 _E("registered_agent", "name", "Registered agent for service of process.",
                    "'Registered Agent' article", True),
             ),
-            "Hub inventory has no rows for this subclass; kept as an alias of articles_of_incorporation.",
+            "Hub inventory has no rows for this subclass; kept as an alias of "
+            "articles_of_incorporation. An LLC certificate has no capital-article share "
+            "schedule, so the prompt forbids emitting authorized_capital even as null.",
+            omit_entity_keys=("authorized_capital",),
         ),
         SubclassSchema(
             "charter_amendment", "Certificate of Amendment / Restated Charter",
@@ -223,6 +233,7 @@ SUBCLASS_SCHEMAS: dict[str, SubclassSchema] = {
             ),
             "entity_name is the parent/registrant. No signatories, filing_number or governing "
             "jurisdiction: a schedule is not executed or filed on its own.",
+            core_guidance=(("subject_matter", "the listing statement"), ("keywords", "subsidiary names")),
         ),
         SubclassSchema(
             "rights_instrument", "Rights / Warrant / Preferred / Specimen-Stock Instrument",
@@ -309,6 +320,28 @@ for _sc in SUBCLASS_SCHEMAS.values():
     _dup = {e.key for e in _sc.entities} & set(CORE_FIELDS)
     if _dup:
         raise RuntimeError(f"{_sc.subclass}: entity keys shadow core fields: {sorted(_dup)}")
+    # ``omit_entity_keys`` may only suppress a key the subclass (or a
+    # close-alias sibling sharing its record_type) actually declares —
+    # otherwise the "omit X entirely, even when null" prompt clause would
+    # reference an entity the schema never knows about.
+    _family = {e.key for e in _sc.entities} | {
+        e.key
+        for _other in SUBCLASS_SCHEMAS.values()
+        if _other.record_type == _sc.record_type
+        for e in _other.entities
+    }
+    _bad_omit = set(_sc.omit_entity_keys) - _family
+    if _bad_omit:
+        raise RuntimeError(
+            f"{_sc.subclass}: omit_entity_keys names undeclared entities: {sorted(_bad_omit)}"
+        )
+    # ``core_guidance`` targets core fields this subclass actually applies;
+    # guidance on a dropped core field would be dead prompt text.
+    _bad_guidance = {k for k, _ in _sc.core_guidance} - set(_sc.core_applicable)
+    if _bad_guidance:
+        raise RuntimeError(
+            f"{_sc.subclass}: core_guidance names inapplicable core fields: {sorted(_bad_guidance)}"
+        )
 del _sc
 
 # ---------------------------------------------------------------------------
@@ -519,15 +552,23 @@ def corporate_record_json_schema(subclass: Any = None) -> dict[str, Any]:
 def render_subclass_block(subclass: Any) -> str:
     """One compact prompt line for a subclass (generated from the data).
 
-    ``- subclass: record_type, intent; +extra keys [] = list; null inapplicable``.
+    ``subclass[ | alias]: record_type, intent; +extra keys [] = list;
+    omit A entirely, even when null; null = emit null/[]``.
     Descriptions and where-to-look hints stay in :data:`SUBCLASS_SCHEMAS`
     (docs / audit) and out of the model-visible prompt.
     """
     s = subclass_schema(subclass)
     extras = ", ".join(e.key + ("[]" if e.type.startswith("entity_list") else "") for e in s.entities)
+    # Clause order below — extras, omit, core_guidance, null-per-field —
+    # is FROZEN: it must match the byte-locked corporate_records_specialist_v7
+    # prompt (sha256 253559fc…). Reordering breaks the byte-lock.
     line = f"- {s.subclass}: {s.record_type}, {s.intent}"
     if extras:
         line += f"; +{extras}"
+    if s.omit_entity_keys:
+        line += "; omit " + ", ".join(s.omit_entity_keys) + " entirely, even when null"
+    if s.core_guidance:
+        line += "; " + ", ".join(f"{k} = {v}" for k, v in s.core_guidance)
     if s.core_not_applicable:
         line += "; null " + ", ".join(s.core_not_applicable)
     return line
@@ -536,10 +577,13 @@ def render_subclass_block(subclass: Any) -> str:
 def render_prompt_section() -> str:
     """The per-subclass lines embedded in the specialist prompt.
 
-    ``certificate_of_formation`` (no Hub rows) is omitted to keep the prompt
-    short; ``other`` is placed last.
+    Every class in :data:`SUBCLASS_SCHEMAS` gets its own line — including
+    ``certificate_of_formation`` (no Hub rows, but the frozen eval-environment
+    prompt carries its line) — in dict insertion order with the residual
+    ``other`` last. Byte-identical to the doc_subclass block of the frozen
+    corporate_records_specialist_v7 prompt.
     """
-    order = [k for k in SUBCLASS_SCHEMAS if k not in ("other", "certificate_of_formation")] + ["other"]
+    order = [k for k in SUBCLASS_SCHEMAS if k != "other"] + ["other"]
     return "\n".join(render_subclass_block(k) for k in order)
 
 
