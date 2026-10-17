@@ -50,7 +50,7 @@ or a scripted re-promote — never a hand edit).
 | Agent | `family` | `sha256` (prefix) |
 |---|---|---|
 | `contracts_specialist` | `production_prompts` | `d91de396…` |
-| `corporate_records_specialist` | `production_prompts` | `fe13501f…` (locally corrected) |
+| `corporate_records_specialist` | `production_prompts` | `b40963bb…` (locally corrected + per-subclass entities) |
 | `correspondence_specialist` | `production_prompts` | `2b0b81ff…` (locally corrected) |
 | `insurance_claims_specialist` | `production_prompts` | `6c2776bc…` |
 | `merger_agreement_specialist` | `production_prompts` | `00323258…` |

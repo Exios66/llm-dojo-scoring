@@ -2,7 +2,7 @@
 
 Pared live field maps for the **five primary document types** in
 [`Lucius-Morningstar/mailroom-dataset`](https://huggingface.co/datasets/Lucius-Morningstar/mailroom-dataset)
-(`ground_truth` config, v9 GT-closure pin `46a4d3c2`, **3,302** rows:
+(`ground_truth` config, Hub tag **v9.2** — same 3,302 rows as the v9 GT-closure pin `46a4d3c2` and v9.1; most experiments ran on v9.1, **3,302** rows:
 2,979 train / 323 test). Authority is the dojo live roster, not the
 retired specialists.
 
@@ -187,7 +187,9 @@ still score the content metric.
 
 ---
 
-## 3. `corporate_record` — `CorporateRecordExtraction` (9 fields)
+## 3. `corporate_record` — `CorporateRecordExtraction` (9 core fields + per-subclass entities)
+
+> **Not one blanket schema.** The nine fields are a shared core; each subclass adds its own key entities and drops inapplicable core fields — see [`CORPORATE_RECORD_SCHEMA.md`](CORPORATE_RECORD_SCHEMA.md). Key-entity GT is currently unlabeled on all 450 rows and is excluded from scoring rather than scored as expected-empty.
 
 Governance instruments. Do **not** emit `document_name`, `parties`,
 `cuad_*`, or SEC form types as `record_type`.
@@ -226,8 +228,8 @@ official filing/document number is on **this** record.
 `pipeline.extraction.field_micro_f1` / `_f2`. No CUAD/MAUD-grade external
 benchmark.
 
-**Frozen prompt:** `corporate_records_specialist` `sha256 fe13501f…`
-(locally corrected; upstream eval-environment re-freeze tracked in
+**Prompt:** `corporate_records_specialist` `sha256 b40963bb…`
+(locally corrected + per-subclass entity schemas; upstream eval-environment re-freeze tracked in
 [`TODOS.md`](TODOS.md)).
 
 ---

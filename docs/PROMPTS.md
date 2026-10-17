@@ -58,7 +58,7 @@ byte-identical to the frozen source. Catalog digests identify the current text.
 | Agent | Eval-environment key | Sandbox stem | `sha256` (prefix) |
 | --- | --- | --- | --- |
 | `contracts_specialist` | `contracts_specialist_v1` | `contracts_specialist_v33_simplified` | `d91de396…` |
-| `corporate_records_specialist` | `corporate_records_specialist_v1` | `corporate_records_specialist_simplified` | `fe13501f…` |
+| `corporate_records_specialist` | `corporate_records_specialist_v1` | `corporate_records_specialist_simplified` | `b40963bb…` (locally enhanced) |
 | `correspondence_specialist` | `correspondence_specialist_v1` | `correspondence_specialist_simplified` | `2b0b81ff…` |
 | `insurance_claims_specialist` | `insurance_claims_specialist_v1` | `insurance_claims_specialist_simplified` | `6c2776bc…` |
 | `merger_agreement_specialist` | `merger_agreement_specialist_v1` | `merger_agreement_specialist_simplified` | `00323258…` |
