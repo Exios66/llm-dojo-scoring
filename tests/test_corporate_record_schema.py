@@ -141,6 +141,31 @@ def test_batch_scoring_aligns_unlabeled_per_row():
     assert len(out["unlabeled_fields"]) == 2
 
 
+def test_batch_unlabeled_fields_stay_aligned_across_unparseable_rows():
+    """Per-row ``unlabeled_fields`` is aligned to GT row order even when an
+    earlier row's model answer does not parse: the skipped row reports ``[]``
+    instead of skipping the entry, so later rows are not shifted."""
+    suite = get_suite("corporate_records_specialist")
+    out = suite.score(
+        [json.dumps(_GT), json.dumps(_GT)],
+        ["{not json", _PRED],
+        doc_subclass=["articles_of_incorporation", "bylaws"],
+    )
+    fields = out["unlabeled_fields"]
+    assert len(fields) == 2
+    assert fields[0] == []  # unparseable prediction: no alignment, no entry skipped
+    # The aligned partner row still sees its own bylaws unlabeled set, not the
+    # set of the row that was skipped — proving no shift-against-GT alignment.
+    assert fields[1] == list(unlabeled_fields("bylaws", _GT))
+    # A padded missing prediction reports ``[]`` too.
+    short = suite.score(
+        [json.dumps(_GT)],
+        [],
+        doc_subclass=["articles_of_incorporation"],
+    )
+    assert short["unlabeled_fields"] == [[]]
+
+
 def test_audit_flags_published_label_defects():
     gt = {
         "intent": "investor_rights",
@@ -155,7 +180,16 @@ def test_audit_flags_published_label_defects():
     assert "intent_mismatch" in defects
     assert "intent_heuristic" in defects
     assert "entity_unlabeled:certifying_officer" in defects
-    assert audit_gt_row("indenture", dict(gt, trustee="BNY"))[0] != ""
+    # The stated own-subclass entity is labeled: no unlabeled/wrong-subclass
+    # defect for it, the pin (investor_rights) is honored, and the template /
+    # provenance / heuristic defects from the shared fixture are still there.
+    trustee_labeled = audit_gt_row("indenture", dict(gt, trustee="BNY"))
+    assert "entity_unlabeled:trustee" not in trustee_labeled
+    assert "entity_wrong_subclass:trustee" not in trustee_labeled
+    assert "intent_mismatch" not in trustee_labeled
+    assert "intent_heuristic" in trustee_labeled
+    assert "subject_matter_template" in trustee_labeled
+    assert "keywords_provenance_ids" in trustee_labeled
     rows = [{"expected": "corporate_record", "expected_subclass": "indenture", "gt_fields": json.dumps(gt)},
             {"expected": "contract", "expected_subclass": "license", "gt_fields": "{}"}]
     report = audit_gt_rows(rows)

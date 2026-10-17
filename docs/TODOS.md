@@ -18,15 +18,42 @@ because `_v2`… were already taken by GEPA mutations:
 
 ## `Exios66/local-mailroom-sandbox` — mirror the corrected stems
 
+Corporate line: the eval-environment `corporate_records_specialist_v7`
+(per-subclass entity schemas, sha `b40963bb…`) is authoritative. Corporate v7
+is **already frozen** in the sandbox lineage as a successor
+(`frozen_successors` → stem `corporate_records_specialist_subclass_v2`), so no
+new freeze is needed there — what remains is moving the default
+`specialists` row and mirroring the stem bytes itself.
+
 - [ ] Mirror the corrected bytes into
       `config/prompts/correspondence_specialist_simplified.txt` and
-      `config/prompts/corporate_records_specialist_simplified.txt`.
+      `config/prompts/corporate_records_specialist_simplified.txt`
+      (corporate: the `_v7` bytes, i.e.
+      `corporate_records_specialist_subclass_v2`).
 - [ ] Refresh `config/prompts/eval_environment_lineage.json` for both rows to
       the eval-environment mutation keys `correspondence_specialist_v7` /
-      `corporate_records_specialist_v6` (keep the superseded v1 digest and
-      `frozen_at` recoverable).
+      `corporate_records_specialist_v7` (keep the superseded v1 digest and
+      every `frozen_at` recoverable in each row's `superseded` block; the
+      corporate `frozen_successors` entry already carries the v7 freeze —
+      refresh the default `specialists` row, do not re-freeze v7).
 - [ ] `scripts/sync_specialist_prompts.py --check` and the sandbox prompt /
       lineage tests must pass with the stems byte-identical to the lock.
+
+## Upstream blockers (tracked outside this repo)
+
+- [ ] eval-environment canonical prompt fix — the canonical prompt text needs
+      the `certificate_of_formation` wording fix (it is described as a real
+      subclass there while the dojo prompt folds it into
+      `articles_of_incorporation`); tracked in the eval-environment
+      coordination, referenced here so the sandbox mirror work does not
+      proceed until it lands.
+- [ ] llm-mailroom re-vendor — bump the vendored llm-dojo-scoring snapshot
+      (still v0.22.0: no `corporate_record_schema.py`, no unlabeled
+      alignment, "39 corporate_record rows" suite docstring) and re-freeze
+      the corporate prompt in `vendor/llm-mailroom/src/llm/frozen_v1/lineage.json`
+      (still the v6 digest `fe13501f…`) to the `b40963bb…` (v7) bytes. Until
+      then the sandbox/eval-env runtime keeps v0.22.0 scoring semantics
+      regardless of any prompt bump.
 
 ## Downstream importers of `llm-dojo-scoring`
 

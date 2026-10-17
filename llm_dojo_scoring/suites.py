@@ -927,16 +927,28 @@ class ScoringSuite:
 
             sub_kw = kwargs.get("doc_subclass") or kwargs.get("expected_subclass")
             if isinstance(expected, list):
-                if isinstance(predicted, list):
-                    for idx in range(min(len(expected), len(predicted))):
-                        if isinstance(expected[idx], dict) and isinstance(predicted[idx], dict):
-                            sub = sub_kw[idx] if isinstance(sub_kw, list) and idx < len(sub_kw) else (
-                                None if isinstance(sub_kw, list) else sub_kw
-                            )
-                            expected[idx], predicted[idx], dropped = align_unlabeled(
-                                sub, parsed_expected[idx], expected[idx], predicted[idx]
-                            )
-                            unlabeled.append(dropped)
+                # ``unlabeled_fields`` on a batch payload is per-row and must
+                # stay aligned with the GT row order: a row whose prediction
+                # is missing (padded ``None``), whose model JSON does not
+                # parse, or whose GT object is unparseable gets no alignment
+                # at all and reports ``[]`` — never a skipped entry that
+                # would shift later rows out of alignment.
+                for idx in range(len(expected)):
+                    pred = (
+                        predicted[idx]
+                        if isinstance(predicted, list) and idx < len(predicted)
+                        else None
+                    )
+                    if isinstance(expected[idx], dict) and isinstance(pred, dict):
+                        sub = sub_kw[idx] if isinstance(sub_kw, list) and idx < len(sub_kw) else (
+                            None if isinstance(sub_kw, list) else sub_kw
+                        )
+                        expected[idx], predicted[idx], dropped = align_unlabeled(
+                            sub, parsed_expected[idx], expected[idx], pred
+                        )
+                    else:
+                        dropped: tuple[str, ...] = ()
+                    unlabeled.append(dropped)
             elif isinstance(expected, dict) and isinstance(predicted, dict):
                 expected, predicted, dropped = align_unlabeled(
                     None if isinstance(sub_kw, list) else sub_kw,
