@@ -73,8 +73,10 @@ MUTATIONS = {
     "correspondence_specialist_v7",
     "insurance_claims_specialist_v2",
     "insurance_claims_specialist_v3",
+    "insurance_claims_specialist_v4",
     "merger_agreement_specialist_v2",
     "merger_agreement_specialist_v3",
+    "merger_agreement_specialist_v4",
 }
 ALL_KEYS = ARCHIVED | FROZEN | MUTATIONS
 
@@ -86,7 +88,7 @@ def _sha(text: str) -> str:
 def test_counts_and_key_set():
     """The lineage catalog contains exactly the expected keys in each category."""
     assert {v.key for v in list_prompt_versions()} == ALL_KEYS
-    assert len(ALL_KEYS) == 41
+    assert len(ALL_KEYS) == 43
     assert {v.key for v in list_prompt_versions(lineage="archived")} == ARCHIVED
     assert {v.key for v in list_prompt_versions(lineage="frozen")} == FROZEN
     assert {v.key for v in list_prompt_versions(lineage="mutation")} == MUTATIONS
@@ -96,7 +98,7 @@ def test_source_metadata():
     """Lineage metadata pins the expected source repository, commit, and lineage."""
     assert dict(LINEAGE_SOURCE) == {
         "source_repo": "LLM-Mailroom-Services/eval-environment",
-        "source_commit": "b449a7983eb5c14e9d8c14776a84519cfbb7a88f",
+        "source_commit": "22d217ab9f226f2674ace699a6ea41c121bbc26b",
         "lineage_id": "mailroom-dataset-v1",
     }
 
@@ -335,7 +337,7 @@ def test_sorter_v3_duplicated_corporate_record_block_is_recorded():
 
 def test_notes_only_where_expected():
     flagged = {v.key for v in list_prompt_versions() if v.changes and v.changes["notes"]}
-    assert flagged == {"sorter_v2", "sorter_v3", "sorter_v4"}
+    assert flagged == {"sorter_v2", "sorter_v3", "sorter_v4", "merger_agreement_specialist_v4"}
 
 
 def test_sorter_v4_drops_the_duplicate_block_and_matches_production():
