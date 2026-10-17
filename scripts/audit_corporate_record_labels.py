@@ -23,6 +23,7 @@ from llm_dojo_scoring.corporate_record_schema import audit_gt_rows
 
 
 def _rows(path: Path):
+    """Yield audit rows from JSONL or selected ground-truth parquet columns."""
     if path.suffix == ".jsonl":
         with path.open(encoding="utf-8") as fh:
             for line in fh:
@@ -35,6 +36,7 @@ def _rows(path: Path):
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Print the label audit and return 1 for defects, otherwise 0."""
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("paths", nargs="+", type=Path)
     ap.add_argument("--json", action="store_true", help="emit the report as JSON")
@@ -47,6 +49,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"corporate_record rows audited: {report['n_rows']}")
 
         def fmt(counts: dict[str, int]) -> str:
+            """Summarize defects, grouping unlabeled entities and subclass conflicts."""
             ent = {k.split(":", 1)[1]: v for k, v in counts.items() if k.startswith("entity_unlabeled:")}
             rest = {k: v for k, v in counts.items() if k != "rows" and ":" not in k}
             parts = [f"{k}={v}" for k, v in sorted(rest.items())]
