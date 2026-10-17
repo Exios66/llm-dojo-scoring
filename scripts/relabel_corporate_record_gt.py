@@ -25,6 +25,10 @@ from llm_dojo_scoring.corporate_record_schema import audit_gt_rows
 
 
 def main(argv: list[str]) -> int:
+    """Write repaired rows and audit counts; argv includes the script name.
+
+    Return 2 when output or input paths are missing, otherwise 0.
+    """
     if len(argv) < 3:
         print(__doc__)
         return 2

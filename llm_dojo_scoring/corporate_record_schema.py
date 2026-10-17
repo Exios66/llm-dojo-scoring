@@ -112,9 +112,11 @@ class SubclassSchema:
 
     @property
     def core_not_applicable(self) -> tuple[str, ...]:
+        """Return inapplicable core fields in their canonical order."""
         return tuple(f for f in CORE_FIELDS if f not in self.core_applicable)
 
     def entity(self, key: str) -> RecordEntity:
+        """Look up an extension entity by key, raising KeyError if absent."""
         for ent in self.entities:
             if ent.key == key:
                 return ent
@@ -126,6 +128,7 @@ _ALL = CORE_FIELDS
 
 
 def _s(*names: str) -> tuple[str, ...]:
+    """Select named core fields in their canonical order."""
     return tuple(f for f in CORE_FIELDS if f in names)
 
 
@@ -348,6 +351,7 @@ def all_entity_field_types() -> dict[str, str]:
 
 
 def _labeled(presence: Mapping[str, str], gt: Mapping[str, Any], key: str) -> bool:
+    """Determine label availability from explicit status, then the GT value."""
     status = presence.get(key)
     if status == "populated" or status == "schema_documented_absence":
         return True
@@ -455,6 +459,7 @@ _TYPE_JSON: dict[str, dict[str, Any]] = {
 
 
 def _json_for(field_type: str) -> dict[str, Any]:
+    """Map a scoring type to an array or nullable scalar JSON schema."""
     if field_type.startswith("entity_list"):
         return {"type": "array", "items": {"type": "string"}}
     return dict(_TYPE_JSON.get(field_type, {"type": ["string", "null"]}))
@@ -530,6 +535,7 @@ _CIK_KEYWORD = re.compile(r"\(CIK \d+\)")
 
 
 def _keywords(gt: Mapping[str, Any]) -> list[str]:
+    """Return keyword list items as strings, or an empty list for other values."""
     value = parse_json_container(gt.get("keywords"))
     return [str(v) for v in value] if isinstance(value, list) else []
 
@@ -605,6 +611,7 @@ class _Audit:
     by_subclass: dict[str, dict[str, int]] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
+        """Return row counts, per-subclass defects, and summed defect totals."""
         totals: dict[str, int] = {}
         for counts in self.by_subclass.values():
             for code, n in counts.items():

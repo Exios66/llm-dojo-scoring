@@ -50,6 +50,7 @@ _PRED = {
 
 
 def test_every_subclass_has_a_schema_and_valid_record_type():
+    """Every sorter subclass has a schema with valid record type and core fields."""
     assert set(SUBCLASS_SCHEMAS) == set(DOC_TYPE_SUBCLASSES["corporate_record"])
     for s in SUBCLASS_SCHEMAS.values():
         assert s.record_type in RECORD_TYPES
@@ -57,6 +58,7 @@ def test_every_subclass_has_a_schema_and_valid_record_type():
 
 
 def test_subclasses_are_not_one_blanket_schema():
+    """Subclass schemas expose distinct entities and omit inapplicable core fields."""
     shapes = {
         s.subclass: (s.core_applicable, tuple(e.key for e in s.entities))
         for s in SUBCLASS_SCHEMAS.values()
@@ -70,6 +72,7 @@ def test_subclasses_are_not_one_blanket_schema():
 
 
 def test_sorter_subclass_maps_to_record_type():
+    """Subclass lookup normalizes aliases and falls back to the other schema."""
     assert subclass_schema("charter_amendment").record_type == "articles_of_incorporation"
     assert subclass_schema("indenture").record_type == "other"
     assert subclass_schema("Powers of Attorney").record_type == "powers_of_attorney"
@@ -77,6 +80,7 @@ def test_sorter_subclass_maps_to_record_type():
 
 
 def test_scored_field_types_gates_extension_entities_on_labels():
+    """Score extension fields only when labeled, retaining canonical core types."""
     core = scored_field_types("indenture")
     assert "trustee" not in core and "filing_number" not in core
     labeled = scored_field_types("indenture", {"trustee": "Wells Fargo", "guarantors": "[]"})
@@ -92,6 +96,7 @@ def test_scored_field_types_gates_extension_entities_on_labels():
 
 
 def test_json_schema_is_per_subclass():
+    """Subclass JSON schemas expose their own entities and the record-type enum."""
     poa = corporate_record_json_schema("powers_of_attorney")
     assert "principal" in poa["properties"] and "trustee" not in poa["properties"]
     assert poa["properties"]["record_type"] == {"enum": [*RECORD_TYPES, None]}
@@ -99,6 +104,7 @@ def test_json_schema_is_per_subclass():
 
 
 def test_unlabeled_vs_documented_absence():
+    """Blank entities are unlabeled unless presence metadata documents absence."""
     assert set(unlabeled_fields("articles_of_incorporation", _GT)) >= {
         "entity_name", "filing_number", "registered_agent"
     }
@@ -107,6 +113,7 @@ def test_unlabeled_vs_documented_absence():
 
 
 def test_correct_entity_extraction_not_penalized_on_unlabeled_gt():
+    """Filled predictions for unlabeled entities do not reduce extraction scores."""
     suite = get_suite("corporate_records_specialist")
     out = suite.score_document(json.dumps(_GT), _PRED, doc_subclass="articles_of_incorporation")
     assert out["extraction_precision"] == 1.0
@@ -116,6 +123,7 @@ def test_correct_entity_extraction_not_penalized_on_unlabeled_gt():
 
 
 def test_labeled_entities_are_scored_and_documented_absence_penalizes_fill():
+    """Score labeled entities and penalize filling a field documented as absent."""
     suite = get_suite("corporate_records_specialist")
     gt = dict(
         _GT,
@@ -131,6 +139,7 @@ def test_labeled_entities_are_scored_and_documented_absence_penalizes_fill():
 
 
 def test_batch_scoring_aligns_unlabeled_per_row():
+    """Batch scoring excludes unlabeled entities separately for each subclass."""
     suite = get_suite("corporate_records_specialist")
     out = suite.score(
         [json.dumps(_GT), json.dumps(_GT)],
@@ -167,6 +176,7 @@ def test_batch_unlabeled_fields_stay_aligned_across_unparseable_rows():
 
 
 def test_audit_flags_published_label_defects():
+    """Audit detects known label defects and aggregates only corporate rows."""
     gt = {
         "intent": "investor_rights",
         "subject_matter": "indenture of X Ltd. (CIK 0001900035) (SEC EDGAR exhibit).",
@@ -198,12 +208,14 @@ def test_audit_flags_published_label_defects():
 
 
 def test_wrong_subclass_entity_is_flagged():
+    """Audit flags populated entities belonging to a different subclass."""
     gt = dict(_GT, trustee="BNY")
     assert "entity_wrong_subclass:trustee" in audit_gt_row("bylaws", gt)
 
 
 @pytest.mark.parametrize("family", ["production", "production_prompts"])
 def test_specialist_prompt_embeds_generated_subclass_schema(family):
+    """Both prompt families embed generated subclass guidance within the size cap."""
     text = get_prompt("corporate_records_specialist", family=family).text
     assert render_prompt_section() in text
     for sub in SUBCLASS_SCHEMAS:
@@ -214,6 +226,7 @@ def test_specialist_prompt_embeds_generated_subclass_schema(family):
 
 
 def test_audit_flags_subclass_content_conflict_on_prose_subject():
+    """Prose can reveal subclass conflicts; provenance templates cannot."""
     gt = {"intent": "entity_formation", "subject_matter": "Bylaws of Acme Inc., governing meetings."}
     assert "subclass_content_conflict:bylaws" in audit_gt_row("articles_of_incorporation", gt)
     assert not [d for d in audit_gt_row("bylaws", gt) if d.startswith("subclass_content")]
@@ -222,6 +235,7 @@ def test_audit_flags_subclass_content_conflict_on_prose_subject():
 
 
 def test_labeled_extension_entity_is_scored_both_ways():
+    """Labeled extensions reward matches and penalize wrong or missing predictions."""
     suite = get_suite("corporate_records_specialist")
     gt = dict(
         _GT,
@@ -239,6 +253,7 @@ def test_labeled_extension_entity_is_scored_both_ways():
 
 
 def test_pending_annotation_is_unlabeled_not_expected_empty():
+    """Pending entity annotations are excluded from scoring and reported unlabeled."""
     gt = dict(_GT, gt_presence=json.dumps({"entity_name": "pending_annotation"}))
     assert "entity_name" in unlabeled_fields("articles_of_incorporation", gt)
     suite = get_suite("corporate_records_specialist")
@@ -248,6 +263,7 @@ def test_pending_annotation_is_unlabeled_not_expected_empty():
 
 
 def test_json_schema_accepts_prompt_compliant_output_for_inapplicable_keys():
+    """Required inapplicable core keys accept only null or empty list values."""
     from llm_dojo_scoring.corporate_record_schema import corporate_record_json_schema as js
 
     sch = js("bylaws")

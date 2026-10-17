@@ -24,6 +24,7 @@ _TEMPLATE_ROW = {
 
 
 def test_company_from_template_strips_ticker_and_cik():
+    """Template names omit ticker and CIK metadata; prose yields no company."""
     assert company_from_template(
         "bylaws of DentonX Inc  (DNTX)  (CIK 0002093375) (SEC EDGAR exhibit). X"
     ) == "DentonX Inc"
@@ -31,6 +32,7 @@ def test_company_from_template_strips_ticker_and_cik():
 
 
 def test_relabel_repairs_template_row_without_mutating_input():
+    """Repair template labels and presence flags while preserving the input row."""
     before = json.dumps(_TEMPLATE_ROW, sort_keys=True)
     new, changes = relabel_row(_TEMPLATE_ROW)
     assert json.dumps(_TEMPLATE_ROW, sort_keys=True) == before
@@ -53,6 +55,7 @@ def test_relabel_repairs_template_row_without_mutating_input():
 
 
 def test_relabel_reassigns_conflicting_subclass_and_intent():
+    """An unambiguous prose conflict reassigns both subclass and inferred intent."""
     row = {
         "expected": "corporate_record",
         "expected_subclass": "articles_of_incorporation",
@@ -65,11 +68,13 @@ def test_relabel_reassigns_conflicting_subclass_and_intent():
 
 
 def test_non_corporate_rows_pass_through():
+    """Non-corporate rows retain their values and report no repairs."""
     row = {"expected": "contract", "expected_subclass": "license", "gt_fields": "{}"}
     assert relabel_row(row) == (row, [])
 
 
 def test_relabeled_row_scores_entities_end_to_end():
+    """Repaired entity labels reward matching predictions and penalize wrong names."""
     new, _ = relabel_row(_TEMPLATE_ROW)
     pred = {
         "entity_name": "DentonX Inc",
@@ -93,10 +98,12 @@ def test_relabeled_row_scores_entities_end_to_end():
 
 
 def _row(sub, gt):
+    """Wrap subclass and ground-truth fields in a serialized corporate row."""
     return {"expected": "corporate_record", "expected_subclass": sub, "gt_fields": json.dumps(gt)}
 
 
 def test_relabel_is_idempotent():
+    """Repeating repair preserves the row without reporting keyword or type changes."""
     once, _ = relabel_row(_TEMPLATE_ROW)
     twice, changes = relabel_row(once)
     assert twice == once
@@ -104,6 +111,7 @@ def test_relabel_is_idempotent():
 
 
 def test_company_from_template_ticker_lists_and_codes():
+    """Strip ticker lists and EDGAR state suffixes while preserving country codes."""
     tpl = "bylaws of {} (CIK 0000000001) (SEC EDGAR exhibit: EXHIBIT 4.2). X"
     assert company_from_template(tpl.format("PureCycle Technologies, Inc. (PCT, PCTTU, PCTTW)")) == "PureCycle Technologies, Inc."
     assert company_from_template(tpl.format("SOURCE ENERGY CORP /UT/")) == "SOURCE ENERGY CORP"
@@ -111,6 +119,7 @@ def test_company_from_template_ticker_lists_and_codes():
 
 
 def test_no_double_period_and_paren_exhibit_keywords():
+    """Repair avoids doubled periods and removes exhibit IDs with parentheses."""
     gt = {
         "intent": "entity_formation",
         "subject_matter": "articles_of_incorporation of ClubCorp Holdings, Inc. (CIK 0001) (SEC EDGAR exhibit). X",
@@ -123,6 +132,7 @@ def test_no_double_period_and_paren_exhibit_keywords():
 
 
 def test_relabel_never_overwrites_stated_labels():
+    """Preserve adjudicated intent, valid record type, and populated filing labels."""
     gt = {
         "intent": "other",
         "intent_source": "human_adjudicated",
@@ -141,6 +151,7 @@ def test_relabel_never_overwrites_stated_labels():
 
 
 def test_relabel_rows_survives_malformed_gt():
+    """Malformed JSON is retained and reported as unparseable during batch repair."""
     bad = {"expected": "corporate_record", "expected_subclass": "bylaws", "gt_fields": "{not json"}
     from llm_dojo_scoring.corporate_record_relabel import relabel_rows
 
