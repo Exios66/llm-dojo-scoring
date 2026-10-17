@@ -18,8 +18,10 @@ from .maud import is_maud_class
 __all__ = [
     "SCORER_VERSION",
     "PROVENANCE_KEYS",
+    "COST_BASIS_TOKEN_PRICE",
     "COST_BASIS_VALUES",
     "IncomparableMetricsError",
+    "UnknownMetricNameError",
     "ProvenanceExportError",
     "metric_id_for",
     "metric_ids_for_class",
@@ -32,6 +34,8 @@ __all__ = [
     "score_format_layer",
     "check_schema_promotion_gate",
     "DEFAULT_INSURANCE_SCHEMA_GATE",
+    "DEFAULT_SCHEMA_GATE",
+    "SCHEMA_PROMOTION_GATES",
     "classify_extraction_failure",
     "detect_maud_gt_ambiguity",
     "score_empty_field_contract",
@@ -58,7 +62,14 @@ PROVENANCE_KEYS: frozenset[str] = frozenset(
     }
 )
 
-COST_BASIS_VALUES: frozenset[str] = frozenset({"busy_window", "billed_incl_cold"})
+#: USD computed as prompt/completion tokens × a provider price table
+#: (``cost.estimate_cost``). An estimate, never comparable with a metered
+#: GPU-time basis.
+COST_BASIS_TOKEN_PRICE = "token_price_estimate"
+
+COST_BASIS_VALUES: frozenset[str] = frozenset(
+    {"busy_window", "billed_incl_cold", COST_BASIS_TOKEN_PRICE}
+)
 
 #: Canonical completion-error histogram keys (#21).
 ERROR_CLASS_LENGTH_FINISH = "LengthFinish"
@@ -96,6 +107,8 @@ _CLASS_METRIC_IDS: dict[str, tuple[str, ...]] = {
         "cuad.clause_presence.micro_f1",
         "pipeline.extraction.field_micro_f1",
         "pipeline.extraction.field_micro_f2",
+        "pipeline.extraction.field_micro_precision",
+        "pipeline.extraction.field_micro_recall",
         "maud.question.micro_accuracy",
     ),
     "merger_agreement": (
@@ -104,21 +117,29 @@ _CLASS_METRIC_IDS: dict[str, tuple[str, ...]] = {
         "maud.clause_presence.rate",
         "pipeline.extraction.field_micro_f1",
         "pipeline.extraction.field_micro_f2",
+        "pipeline.extraction.field_micro_precision",
+        "pipeline.extraction.field_micro_recall",
     ),
     "corporate_record": (
         "pipeline.extraction.overall",
         "pipeline.extraction.field_micro_f1",
         "pipeline.extraction.field_micro_f2",
+        "pipeline.extraction.field_micro_precision",
+        "pipeline.extraction.field_micro_recall",
     ),
     "insurance_claim": (
         "pipeline.extraction.overall",
         "pipeline.extraction.field_micro_f1",
         "pipeline.extraction.field_micro_f2",
+        "pipeline.extraction.field_micro_precision",
+        "pipeline.extraction.field_micro_recall",
     ),
     "correspondence": (
         "pipeline.extraction.overall",
         "pipeline.extraction.field_micro_f1",
         "pipeline.extraction.field_micro_f2",
+        "pipeline.extraction.field_micro_precision",
+        "pipeline.extraction.field_micro_recall",
         "pipeline.enron.topic_accuracy",
         "pipeline.enron.topic_f1_macro",
         "pipeline.enron.sentiment_accuracy",
@@ -126,7 +147,20 @@ _CLASS_METRIC_IDS: dict[str, tuple[str, ...]] = {
     ),
 }
 
-DEFAULT_INSURANCE_SCHEMA_GATE = 0.90
+#: Default ``schema_valid`` share a run must reach before promotion (#18).
+DEFAULT_SCHEMA_GATE = 0.90
+#: Kept for v0.18 callers; the gate is no longer insurance-only.
+DEFAULT_INSURANCE_SCHEMA_GATE = DEFAULT_SCHEMA_GATE
+
+#: Per-class promotion thresholds — every live extract class is gated (#18).
+#: Override a class here (or pass ``threshold=``) rather than skipping it.
+SCHEMA_PROMOTION_GATES: dict[str, float] = {
+    "contract": DEFAULT_SCHEMA_GATE,
+    "merger_agreement": DEFAULT_SCHEMA_GATE,
+    "corporate_record": DEFAULT_SCHEMA_GATE,
+    "correspondence": DEFAULT_SCHEMA_GATE,
+    "insurance_claim": DEFAULT_SCHEMA_GATE,
+}
 
 _TRIAGE_GT_KEYS: frozenset[str] = frozenset(
     {
@@ -146,6 +180,13 @@ _JSON_PROSE = re.compile(r"^\s*[\{\[]", re.MULTILINE)
 
 class IncomparableMetricsError(ValueError):
     """Raised when two score legs use different metric_id values."""
+
+
+class UnknownMetricNameError(KeyError):
+    """Raised when a metric name has no canonical ``metric_id`` (#17)."""
+
+    def __str__(self) -> str:  # KeyError repr-quotes its message by default
+        return str(self.args[0]) if self.args else ""
 
 
 class ProvenanceExportError(ValueError):
@@ -168,16 +209,26 @@ def metric_id_for(
     doc_class: str | None = None,
     presence_mode: bool = False,
 ) -> str:
-    if presence_mode or metric_name == "extraction_category_presence":
+    """Canonical ``metric_id`` for a registry metric name (#17).
+
+    Strict: a name with no entry in the canonical table raises
+    :class:`UnknownMetricNameError` rather than fabricating
+    ``pipeline.<class>.<name>`` — a made-up id never matches another leg's,
+    so it would hide an incomparable pair instead of refusing it.
+    ``doc_class`` is accepted for call-site symmetry; the id does not depend
+    on it. See ``docs/METRIC_IDS.md``.
+    """
+    try:
+        canonical = _METRIC_ID_BY_NAME[metric_name]
+    except KeyError:
+        raise UnknownMetricNameError(
+            f"no canonical metric_id for {metric_name!r}"
+            + (f" (doc_class={doc_class!r})" if doc_class else "")
+            + "; add it to _METRIC_ID_BY_NAME and docs/METRIC_IDS.md"
+        ) from None
+    if presence_mode:
         return "cuad.clause_presence.micro_f1"
-    if metric_name.startswith("maud_"):
-        return _METRIC_ID_BY_NAME.get(metric_name, f"maud.{metric_name.removeprefix('maud_')}")
-    mid = _METRIC_ID_BY_NAME.get(metric_name)
-    if mid:
-        return mid
-    if doc_class:
-        return f"pipeline.{doc_class}.{metric_name}"
-    return f"pipeline.{metric_name}"
+    return canonical
 
 
 def metric_ids_for_class(doc_class: str) -> tuple[str, ...]:
@@ -198,21 +249,28 @@ def assert_comparable_metric_ids(
     *,
     hard: bool = True,
 ) -> dict[str, Any]:
-    """Refuse silent cross-metric comparisons (#17)."""
-    if not left or not right:
-        return {"comparable": True, "metric_id": left or right}
+    """Refuse silent cross-metric comparisons (#17).
+
+    Both legs unset is legacy data with no identity to check: comparable,
+    flagged ``metric_id_unverified``. One leg set and the other not is
+    incomparable (``metric_id_missing``) — there is no shared identity.
+    """
+    if not left and not right:
+        return {"comparable": True, "metric_id": None, "metric_id_unverified": True}
     if left == right:
         return {"comparable": True, "metric_id": left}
+    reason = "metric_id_mismatch" if left and right else "metric_id_missing"
     detail = {
         "comparable": False,
         "incomparable": True,
-        "incomparable_reason": "metric_id_mismatch",
+        "incomparable_reason": reason,
         "left_metric_id": left,
         "right_metric_id": right,
     }
     if hard:
         raise IncomparableMetricsError(
-            f"Cannot compare {left!r} with {right!r} — use the same metric_id on both legs."
+            f"Cannot compare {left!r} with {right!r} ({reason}) — "
+            "use the same metric_id on both legs."
         )
     return detail
 
@@ -332,9 +390,8 @@ def aggregate_quality_honest(
         "n_unscorable": n_unscorable,
         "quality_mean": round(fmean(scored_vals), 4) if scored_vals else None,
         "quality_population": "scored_only",
-        "export_verdict": (
-            "unproven" if n_scored == 0 and n_unscorable else "scored"
-        ),
+        # Nothing scored (empty batch or every row unscorable) proves nothing.
+        "export_verdict": "unproven" if n_scored == 0 else "scored",
     }
 
 
@@ -362,7 +419,22 @@ def score_format_layer(
     predicted_raw: str | None = None,
     required_keys: Sequence[str] | None = None,
 ) -> dict[str, float]:
-    """Separate parse/schema from field extraction (#18, #20)."""
+    """Separate parse/schema from field extraction (#18, #20).
+
+    A batch (list/tuple of predictions) is scored item by item and the
+    shares are averaged — a list is never itself "the parsed object", so
+    missing keys and unparseable strings inside a batch count.
+    """
+    if predicted_raw is None and isinstance(predicted, (list, tuple)):
+        if not predicted:
+            return {"parse_ok": 0.0, "schema_valid": 0.0, "schema_adherence": 0.0}
+        per_item = [
+            score_format_layer(predicted=item, required_keys=required_keys)
+            for item in predicted
+        ]
+        parse = round(fmean(r["parse_ok"] for r in per_item), 4)
+        schema = round(fmean(r["schema_valid"] for r in per_item), 4)
+        return {"parse_ok": parse, "schema_valid": schema, "schema_adherence": schema}
     parsed = predicted
     parse_ok = 1.0
     if predicted_raw is not None:
@@ -374,10 +446,13 @@ def score_format_layer(
     elif predicted is None:
         parse_ok = 0.0
     schema_valid = parse_ok
-    if parse_ok >= 1.0 and isinstance(parsed, dict) and required_keys:
-        missing = [k for k in required_keys if k not in parsed]
-        if missing:
-            schema_valid = round(1.0 - len(missing) / max(len(required_keys), 1), 4)
+    if parse_ok >= 1.0 and required_keys:
+        if not isinstance(parsed, dict):
+            schema_valid = 0.0
+        else:
+            missing = [k for k in required_keys if k not in parsed]
+            if missing:
+                schema_valid = round(1.0 - len(missing) / max(len(required_keys), 1), 4)
     return {
         "parse_ok": float(parse_ok),
         "schema_valid": float(schema_valid),
@@ -388,14 +463,27 @@ def score_format_layer(
 def check_schema_promotion_gate(
     schema_valid: float | None,
     *,
-    threshold: float = DEFAULT_INSURANCE_SCHEMA_GATE,
+    threshold: float | None = None,
+    doc_class: str | None = None,
 ) -> dict[str, Any]:
+    """Refuse promotion when structural validity is below the class gate (#18).
+
+    A high overall score with invalid JSON must not read as PASS. The
+    threshold is ``threshold`` if given, else the class entry in
+    :data:`SCHEMA_PROMOTION_GATES`, else :data:`DEFAULT_SCHEMA_GATE`.
+    A missing ``schema_valid`` fails closed.
+    """
+    if threshold is None:
+        threshold = SCHEMA_PROMOTION_GATES.get(doc_class or "", DEFAULT_SCHEMA_GATE)
+    out: dict[str, Any] = {"threshold": threshold}
+    if doc_class:
+        out["doc_class"] = doc_class
     if schema_valid is None:
-        return {"passes": False, "reason": "schema_valid_missing", "threshold": threshold}
+        return {**out, "passes": False, "reason": "schema_valid_missing"}
     ok = float(schema_valid) >= threshold
     return {
+        **out,
         "passes": ok,
-        "threshold": threshold,
         "schema_valid": float(schema_valid),
         "reason": None if ok else "schema_valid_below_threshold",
     }
@@ -584,19 +672,24 @@ def aggregate_quality_itt(
     *,
     score_key: str = "overall_score",
 ) -> dict[str, Any]:
-    """ITT population: attempted docs, errors count as zero quality (#21)."""
+    """ITT population: attempted docs, errors count as zero quality (#21).
+
+    Unscorable docs (#16) leave the denominator too: they have no ground
+    truth, so they are neither a success nor a zero.
+    """
     base = aggregate_quality_honest(doc_results, score_key=score_key)
     n_attempted = int(completion.get("n_attempted") or len(doc_results))
+    n_attempted = max(n_attempted - base["n_unscorable"], base["n_scored"])
     mean = base.get("quality_mean")
-    n_errored = int(completion.get("n_errored") or 0)
     itt_mean = None
     if n_attempted and mean is not None:
         scored_total = float(mean) * base["n_scored"]
-        itt_mean = round((scored_total + 0.0 * n_errored) / n_attempted, 4)
+        itt_mean = round(scored_total / n_attempted, 4)
     out = dict(base)
     out.update(
         {
             "quality_population_itt": "attempted_including_errors_as_zero",
+            "n_attempted_scorable": n_attempted,
             "quality_mean_itt": itt_mean,
             "quality_population_completed": "scored_only",
             "quality_mean_completed": mean,
@@ -622,7 +715,12 @@ def stamp_provenance(
     prov = {
         "dataset_revision": dataset_revision or base.get("dataset_revision"),
         "split": split or base.get("split"),
-        "draw_seed": draw_seed or base.get("draw_seed") or base.get("dataset_fingerprint"),
+        # 0 is a real draw seed; fall back only when it is unset.
+        "draw_seed": next(
+            (v for v in (draw_seed, base.get("draw_seed"), base.get("dataset_fingerprint"))
+             if not _absent(v)),
+            None,
+        ),
         "prompt_id": prompt_id or base.get("prompt_id") or base.get("prompt_version"),
         "metric_id": metric_id or base.get("metric_id"),
         "scorer_version": base.get("scorer_version") or SCORER_VERSION,
@@ -637,38 +735,76 @@ def stamp_provenance(
     return base
 
 
+def _absent(value: Any) -> bool:
+    # 0 is a real draw seed; only None / "" count as missing.
+    return value is None or (isinstance(value, str) and not value.strip())
+
+
+#: Provenance keys a comparison may leave unset on *both* legs (a full-split
+#: run has no draw seed). Set on one leg only is still refused.
+_OPTIONAL_PAIRED_KEYS: frozenset[str] = frozenset({"draw_seed"})
+
+
 def validate_comparison_provenance(
     left: Mapping[str, Any],
     right: Mapping[str, Any],
     *,
     require_cost_basis_if_cost: bool = True,
+    vary: Sequence[str] = (),
 ) -> None:
-    """Refuse exports when provenance keys differ (#22)."""
+    """Refuse exports when provenance keys differ (#22).
+
+    Every key in ``PROVENANCE_KEYS`` must be present on both legs and equal,
+    except:
+
+    * keys named in ``vary`` — the axis the comparison is about (for
+      local-vs-API serving, ``("serving_kind", "model_id")``) — which must be
+      present on both legs but may differ;
+    * ``draw_seed``, which may be absent on both legs (full split, no draw).
+
+    ``cost_basis`` must be one of ``COST_BASIS_VALUES`` on any leg that
+    carries one, and equal across legs when either leg carries cost.
+    """
+    if isinstance(vary, str):
+        vary = (vary,)  # a bare key name, not its characters
+    unknown_vary = sorted(set(vary) - PROVENANCE_KEYS)
+    if unknown_vary:
+        raise ValueError(f"vary names non-provenance keys: {unknown_vary}")
     lp = left.get("provenance") or left
     rp = right.get("provenance") or right
     missing: list[str] = []
     mismatched: list[str] = []
-    for key in PROVENANCE_KEYS:
+    for key in sorted(PROVENANCE_KEYS):
         lv, rv = lp.get(key), rp.get(key)
-        if not lv or not rv:
+        if key in _OPTIONAL_PAIRED_KEYS and _absent(lv) and _absent(rv):
+            continue
+        if _absent(lv) or _absent(rv):
             missing.append(key)
-        elif lv != rv:
+        elif key in vary:
+            continue
+        elif str(lv) != str(rv):
             mismatched.append(key)
     if missing or mismatched:
         raise ProvenanceExportError(
             f"Comparison export refused: missing={missing} mismatched={mismatched}"
         )
-    if require_cost_basis_if_cost:
-        if left.get("cost") or right.get("cost"):
-            lb, rb = lp.get("cost_basis"), rp.get("cost_basis")
-            if not lb or not rb:
-                raise ProvenanceExportError(
-                    "Comparison export refused: cost present but cost_basis missing"
-                )
-            if lb != rb:
-                raise ProvenanceExportError(
-                    f"Comparison export refused: cost_basis mismatch ({lb!r} vs {rb!r})"
-                )
+    lb, rb = lp.get("cost_basis"), rp.get("cost_basis")
+    invalid = [b for b in (lb, rb) if not _absent(b) and b not in COST_BASIS_VALUES]
+    if invalid:
+        raise ProvenanceExportError(
+            f"Comparison export refused: cost_basis {invalid[0]!r} is not one of "
+            f"{sorted(COST_BASIS_VALUES)}"
+        )
+    if not _absent(lb) and not _absent(rb) and lb != rb:
+        # Never compare USD on two different bases, cost block or not.
+        raise ProvenanceExportError(
+            f"Comparison export refused: cost_basis mismatch ({lb!r} vs {rb!r})"
+        )
+    if require_cost_basis_if_cost and (left.get("cost") or right.get("cost")):
+        if _absent(lb) or _absent(rb):
+            raise ProvenanceExportError(
+                "Comparison export refused: cost present but cost_basis missing"
+            )
 
 
 def normalize_serving_kind_token(kind: str | None) -> str | None:

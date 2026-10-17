@@ -72,6 +72,9 @@ class GridDocument:
     total_tokens: int | None = None
     error: str | None = None
     error_class: str | None = None
+    #: ``"unscorable"`` when the document has no extractable ground truth
+    #: (#16): it counts toward ``n`` / errors / cost but never toward quality.
+    status: str | None = None
 
 
 @dataclass(frozen=True)
@@ -149,7 +152,24 @@ def _doc(value: GridDocument | Mapping[str, Any]) -> GridDocument:
         total_tokens=_int(value.get("total_tokens")),
         error=value.get("error"),
         error_class=value.get("error_class"),
+        status=_doc_status(value),
     )
+
+
+def _doc_status(value: Mapping[str, Any]) -> str | None:
+    scores = value.get("scores")
+    found = [value.get("status")]
+    if isinstance(scores, Mapping):
+        found.append(scores.get("status"))
+    statuses = [str(s).strip().lower() for s in found if s]
+    # A run-level "completed" must not hide a score-level "unscorable" (#16).
+    if "unscorable" in statuses:
+        return "unscorable"
+    return statuses[0] if statuses else None
+
+
+def _is_unscorable(doc: GridDocument) -> bool:
+    return doc.status == "unscorable"
 
 
 def _experiment(value: GridExperiment | Mapping[str, Any]) -> GridExperiment:
@@ -258,7 +278,10 @@ def specialist_grid_rows(
     """Per experiment × specialist quality/cost rows (busy-window basis).
 
     ``score`` is the mean over scored documents; ``coverage`` the mean over
-    documents that carry one. ``p50_latency_seconds`` uses per-document
+    documents that carry one. Documents with ``status="unscorable"`` (no
+    ground truth, #16) are left out of both and counted in
+    ``n_unscorable``; a row with only unscorable documents has
+    ``quality_status="unproven"`` and ``score=None``. ``p50_latency_seconds`` uses per-document
     latencies. ``cost_per_ok_document`` is busy-window GPU cost / ok count
     (``None`` when no GPU seconds, no price, or no ok document). Available
     GPU seconds from all documents, including errors, contribute to cost.
@@ -287,8 +310,10 @@ def specialist_grid_rows(
                 f"metric_id mixed in one grid row ({exp_name} / {specialist}): "
                 + ", ".join(metric_ids)
             )
-        scores = [d.score for d in group if d.score is not None]
-        coverages = [d.coverage for d in group if d.coverage is not None]
+        scorable = [d for d in group if not _is_unscorable(d)]
+        n_unscorable = len(group) - len(scorable)
+        scores = [d.score for d in scorable if d.score is not None]
+        coverages = [d.coverage for d in scorable if d.coverage is not None]
         latencies = [d.latency_seconds for d in group if d.latency_seconds is not None]
         ok = sum(1 for d in group if d.ok is True)
         errored = sum(1 for d in group if _is_error(d))
@@ -301,6 +326,8 @@ def specialist_grid_rows(
             "metric_id": metric_ids[0] if metric_ids else None,
             "n": len(group),
             "n_scored": len(scores),
+            "n_unscorable": n_unscorable,
+            "quality_status": "unproven" if not scores and n_unscorable else "scored",
             "ok": ok if ok or errored else None,
             "errored": errored,
             "error_rate": round(errored / len(group), 6) if group else None,
@@ -521,7 +548,7 @@ def _fmt_score(row: Mapping[str, Any]) -> str:
     """
     score = row.get("score")
     if score is None:
-        return "n/a"
+        return "unproven" if row.get("quality_status") == "unproven" else "n/a"
     text = f"{float(score):.3f}"
     if row.get("coverage") is not None:
         text += f" ({float(row['coverage']) * 100:.0f}%)"
