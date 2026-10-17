@@ -18,8 +18,21 @@ Format based on Keep a Changelog; versioning is SemVer.
   `b40963bb…` (5,333 chars) → `253559fc…` (5,462 chars; −403 vs the 5,865-char
   `_v6` parent, recorded in `prompts/eval_environment_lineage.json`).
 
+### Fixed
+
+- The `doc:corporate_record` eval-bundle description (part of the "39
+  corporate_record rows" → 450 correction) now states the per-subclass schema +
+  unlabeled-field exclusions. The released 0.22.0 notes keep the wording they
+  shipped with; this correction happened after the v0.22.0 tag.
+
 ### Added
 
+- **`score_extraction(audit_predicted=…)`** — with it set,
+  `entity_list_audit` payloads include fields omitted from GT scoring (e.g.
+  predictions dropped by unlabeled alignment), so verification still surfaces
+  predicted entity facts when the GT side is unlabeled. Diagnostic only:
+  audit entries never produce false positives. Default `None` keeps the old
+  behavior (audit uses the alignment-replaced predictions).
 - `SubclassSchema.omit_entity_keys` / `.core_guidance` — data for the two new
   prompt clauses; `render_prompt_section()` now emits `certificate_of_formation`
   on its own line (no longer folded into `articles_of_incorporation`) and
@@ -238,10 +251,7 @@ Format based on Keep a Changelog; versioning is SemVer.
   sha `b40963bb…`): per-subclass key-entity sections generated from
   `corporate_record_schema`; `entity_name` is always the owning company.
   Diverges from vendored mailroom `frozen_v1` — upstream re-vendor pending.
-- Stale "39 corporate_record rows" corrected to 450 everywhere (corpus pin
-  docs, suite docstring, and the `doc:corporate_record` eval-bundle
-  description, which now states the per-subclass schema + unlabeled-field
-  exclusions); corpus pin docs now cite Hub tag v9.2.
+- Stale "39 corporate_record rows" corrected to 450; corpus pin docs now cite Hub tag v9.2.
 - `corporate_record_relabel` + `scripts/relabel_corporate_record_gt.py` — deterministic GT repair proposal (entity_name, record_type, grounded subject_matter, provenance-free keywords, subclass-conflict fixes); `audit_gt_rows` also flags `subclass_content_conflict`.
 - MAUD composite classes whose parts are themselves catalog classes (e.g.
   `General R&Ws, fundamental/Special R&Ws`) now canonicalize to the same sorted

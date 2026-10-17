@@ -216,10 +216,12 @@ Governance instruments. Do **not** emit `document_name`, `parties`,
 | `rights_instrument` | `rights_instrument` |
 | `subsidiary_list` · `indenture` · `board_resolution` · `officer_certificate` · `other` | `other` |
 
-Hub inventory has the 10 surfaces above except
-`certificate_of_formation` (scoring catalog keeps it as an LLC-formation
-alias of `articles_of_incorporation`). Corpus GT currently covers that
-Hub subset.
+Hub inventory has the 10 surfaces above except `certificate_of_formation`
+(no Hub rows; any would fold into `articles_of_incorporation` for
+`record_type`). It still gets its own explicit prompt line —
+`+organizers[], registered_agent; omit authorized_capital entirely, even
+when null` — because an LLC certificate has no capital-article share
+schedule. Corpus GT currently covers that Hub subset.
 
 **v0.19.1:** `subsidiary_list` keeps `filing_number` null unless an
 official filing/document number is on **this** record.

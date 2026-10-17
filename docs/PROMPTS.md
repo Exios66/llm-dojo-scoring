@@ -52,10 +52,17 @@ files and sha256-pinned on each record (hash over the loaded text plus a
 trailing newline, matching the sandbox lineage's normalization).
 
 Corporate-record and correspondence stems carry field-guidance corrections that
-eval-environment froze as the mutations `corporate_records_specialist_v6` and
-`correspondence_specialist_v7` (2026-10-16, #29; byte-identical, same digests).
+eval-environment froze as the mutations `corporate_records_specialist_v7` and
+`correspondence_specialist_v7` (2026-10-16, #29). The corporate `_v7` amendment
+extends `_v6`: it replaces the `certificate_of_formation` =
+"articles_of_incorporation with organizers instead of incorporators" prose with
+an explicit per-subclass line (`+organizers[], registered_agent; omit
+authorized_capital entirely, even when null`) and adds `subsidiary_list`
+guidance (`subject_matter` = the listing statement, `keywords` = subsidiary
+names); sha256 `253559fc…`, 5,462 chars (−403 vs the 5,865-char `_v6` parent).
 Their `source_key` names those mutation keys and their provenance comments keep
-the superseded v1 digests. eval-environment's default for both roles stays `_v1`;
+the superseded digests. eval-environment's default for both roles stays `_v1`
+(promoting the corrected text to the default-pin is a separate decision);
 select the corrected text there with `--prompt-version`. Other stems remain
 byte-identical to the frozen v1 source. Catalog digests identify the current text.
 
@@ -120,7 +127,7 @@ and `notes` (data-quality observations, usually empty).
 **Digests.** `sha256` here is eval-environment's: `sha256(text.encode("utf-8"))`
 over the raw text. The `production_prompts` catalog above hashes the text with a
 trailing newline ensured. They are equal for the specialist stems (those texts
-end in `"\n"`), so `correspondence_specialist_v7` / `corporate_records_specialist_v6`
+end in `"\n"`), so `correspondence_specialist_v7` / `corporate_records_specialist_v7`
 are byte-equal to `get_prompt(<role>, family="production_prompts").text` with the
 same digest. Prompts without a trailing newline (sorter, judges) would differ
 between the two conventions.
