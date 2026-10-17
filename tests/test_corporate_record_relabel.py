@@ -146,3 +146,19 @@ def test_relabel_rows_survives_malformed_gt():
 
     ((row, changes),) = list(relabel_rows([bad]))
     assert row == bad and changes == ["gt_unparseable"]
+
+
+def test_relabel_rows_survives_non_mapping_gt_fields():
+    """A list / int ``gt_fields`` raises ``TypeError`` inside :func:`relabel_row`;
+    the batch must report ``gt_unparseable`` and keep going, not abort."""
+    from llm_dojo_scoring.corporate_record_relabel import relabel_rows
+
+    bad_list = {"expected": "corporate_record", "expected_subclass": "bylaws", "gt_fields": ["not", "a", "mapping"]}
+    bad_int = {"expected": "corporate_record", "expected_subclass": "bylaws", "gt_fields": 42}
+    good = dict(_TEMPLATE_ROW)
+    out = list(relabel_rows([bad_list, good, bad_int]))
+    assert len(out) == 3
+    assert out[0][1] == ["gt_unparseable"] and out[0][0] == bad_list
+    assert "entity_name" in out[1][1]  # the good row was repaired
+    assert json.loads(out[1][0]["gt_fields"])["entity_name"] == "DentonX Inc"
+    assert out[2][1] == ["gt_unparseable"] and out[2][0] == bad_int

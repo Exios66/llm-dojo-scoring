@@ -154,6 +154,8 @@ def relabel_rows(rows):
     for row in rows:
         try:
             yield relabel_row(row)
-        except ValueError:
-            # Malformed gt_fields: leave the row untouched for the audit to flag.
+        except (TypeError, ValueError):
+            # Malformed gt_fields (including a non-string/non-mapping value
+            # such as a list or int): leave the row untouched so the audit
+            # flags it as ``gt_unparseable`` instead of aborting the batch.
             yield dict(row), ["gt_unparseable"]

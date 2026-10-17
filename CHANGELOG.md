@@ -217,7 +217,10 @@ Format based on Keep a Changelog; versioning is SemVer.
   sha `b40963bb…`): per-subclass key-entity sections generated from
   `corporate_record_schema`; `entity_name` is always the owning company.
   Diverges from vendored mailroom `frozen_v1` — upstream re-vendor pending.
-- Stale "39 corporate_record rows" corrected to 450; corpus pin docs now cite Hub tag v9.2.
+- Stale "39 corporate_record rows" corrected to 450 everywhere (corpus pin
+  docs, suite docstring, and the `doc:corporate_record` eval-bundle
+  description, which now states the per-subclass schema + unlabeled-field
+  exclusions); corpus pin docs now cite Hub tag v9.2.
 - `corporate_record_relabel` + `scripts/relabel_corporate_record_gt.py` — deterministic GT repair proposal (entity_name, record_type, grounded subject_matter, provenance-free keywords, subclass-conflict fixes); `audit_gt_rows` also flags `subclass_content_conflict`.
 - MAUD composite classes whose parts are themselves catalog classes (e.g.
   `General R&Ws, fundamental/Special R&Ws`) now canonicalize to the same sorted

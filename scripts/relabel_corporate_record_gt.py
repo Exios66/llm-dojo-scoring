@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pyarrow.parquet as pq
 
-from llm_dojo_scoring.corporate_record_relabel import relabel_row
+from llm_dojo_scoring.corporate_record_relabel import relabel_rows
 from llm_dojo_scoring.corporate_record_schema import audit_gt_rows
 
 
@@ -30,9 +30,11 @@ def main(argv: list[str]) -> int:
         return 2
     out_path, paths = Path(argv[1]), [Path(p) for p in argv[2:]]
     rows = [r for p in paths for r in pq.read_table(p).to_pylist() if r["expected"] == "corporate_record"]
+    # Batch repair: a malformed row is reported (`gt_unparseable`) and left
+    # untouched instead of aborting the whole run, matching
+    # ``relabel_rows``' documented behavior.
     fixed, counts = [], collections.Counter()
-    for row in rows:
-        new, changes = relabel_row(row)
+    for new, changes in relabel_rows(rows):
         fixed.append(new)
         counts.update(c.split(":")[0] if c.startswith("intent") else c for c in changes)
     with out_path.open("w", encoding="utf-8") as fh:
