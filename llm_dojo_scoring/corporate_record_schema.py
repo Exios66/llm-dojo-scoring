@@ -109,6 +109,13 @@ class SubclassSchema:
     entities: tuple[RecordEntity, ...] = ()
     notes: str = ""
     intent_review: str = ""  # why the pinned intent is debatable, if it is
+    #: Extension-entity keys the extraction must NOT emit at all — not even as
+    #: null / [] (rendered as the prompt's "; omit A entirely, even when null").
+    omit_entity_keys: tuple[str, ...] = ()
+    #: Per-core-field semantic guidance rendered into the prompt line
+    #: ("; subject_matter = ..., keywords = ...") for mappings the schema
+    #: structure alone cannot express (e.g. the subsidiary list schedule).
+    core_guidance: tuple[tuple[str, str], ...] = ()
 
     @property
     def core_not_applicable(self) -> tuple[str, ...]:
@@ -175,7 +182,10 @@ SUBCLASS_SCHEMAS: dict[str, SubclassSchema] = {
                 _E("registered_agent", "name", "Registered agent for service of process.",
                    "'Registered Agent' article", True),
             ),
-            "Hub inventory has no rows for this subclass; kept as an alias of articles_of_incorporation.",
+            "Hub inventory has no rows for this subclass; kept as an alias of "
+            "articles_of_incorporation. An LLC certificate has no capital-article share "
+            "schedule, so the prompt forbids emitting authorized_capital even as null.",
+            omit_entity_keys=("authorized_capital",),
         ),
         SubclassSchema(
             "charter_amendment", "Certificate of Amendment / Restated Charter",
@@ -223,6 +233,7 @@ SUBCLASS_SCHEMAS: dict[str, SubclassSchema] = {
             ),
             "entity_name is the parent/registrant. No signatories, filing_number or governing "
             "jurisdiction: a schedule is not executed or filed on its own.",
+            core_guidance=(("subject_matter", "the listing statement"), ("keywords", "subsidiary names")),
         ),
         SubclassSchema(
             "rights_instrument", "Rights / Warrant / Preferred / Specimen-Stock Instrument",
@@ -501,7 +512,8 @@ def corporate_record_json_schema(subclass: Any = None) -> dict[str, Any]:
 def render_subclass_block(subclass: Any) -> str:
     """One compact prompt line for a subclass (generated from the data).
 
-    ``subclass[ | alias]: record_type, intent; +extra keys [] = list; -inapplicable``.
+    ``subclass[ | alias]: record_type, intent; +extra keys [] = list;
+    omit A entirely, even when null; null = emit null/[]``.
     Descriptions and where-to-look hints stay in :data:`SUBCLASS_SCHEMAS`
     (docs / audit) and out of the model-visible prompt.
     """
@@ -510,6 +522,10 @@ def render_subclass_block(subclass: Any) -> str:
     line = f"- {s.subclass}: {s.record_type}, {s.intent}"
     if extras:
         line += f"; +{extras}"
+    if s.omit_entity_keys:
+        line += "; omit " + ", ".join(s.omit_entity_keys) + " entirely, even when null"
+    if s.core_guidance:
+        line += "; " + ", ".join(f"{k} = {v}" for k, v in s.core_guidance)
     if s.core_not_applicable:
         line += "; null " + ", ".join(s.core_not_applicable)
     return line
@@ -518,10 +534,13 @@ def render_subclass_block(subclass: Any) -> str:
 def render_prompt_section() -> str:
     """The per-subclass lines embedded in the specialist prompt.
 
-    ``certificate_of_formation`` (no Hub rows) is folded into
-    ``articles_of_incorporation`` to keep the prompt short.
+    Every class in :data:`SUBCLASS_SCHEMAS` gets its own line — including
+    ``certificate_of_formation`` (no Hub rows, but the frozen eval-environment
+    prompt carries its line) — in dict insertion order with the residual
+    ``other`` last. Byte-identical to the doc_subclass block of the frozen
+    corporate_records_specialist_v7 prompt.
     """
-    order = [k for k in SUBCLASS_SCHEMAS if k not in ("other", "certificate_of_formation")] + ["other"]
+    order = [k for k in SUBCLASS_SCHEMAS if k != "other"] + ["other"]
     return "\n".join(render_subclass_block(k) for k in order)
 
 

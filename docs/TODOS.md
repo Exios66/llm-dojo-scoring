@@ -19,11 +19,13 @@ because `_v2`… were already taken by GEPA mutations:
 ## `Exios66/local-mailroom-sandbox` — mirror the corrected stems
 
 Corporate line: the eval-environment `corporate_records_specialist_v7`
-(per-subclass entity schemas, sha `b40963bb…`) is authoritative. Corporate v7
+(per-subclass entity schemas, sha `253559fc…`) is authoritative. Corporate v7
 is **already frozen** in the sandbox lineage as a successor
 (`frozen_successors` → stem `corporate_records_specialist_subclass_v2`), so no
 new freeze is needed there — what remains is moving the default
-`specialists` row and mirroring the stem bytes itself.
+`specialists` row, mirroring the stem bytes itself, and re-freezing the
+`frozen_successors` entry to the coordinated-amendment bytes
+(`ec3bccc2…` → `253559fc…`).
 
 - [ ] Mirror the corrected bytes into
       `config/prompts/correspondence_specialist_simplified.txt` and
@@ -41,17 +43,18 @@ new freeze is needed there — what remains is moving the default
 
 ## Upstream blockers (tracked outside this repo)
 
-- [ ] eval-environment canonical prompt fix — the canonical prompt text needs
-      the `certificate_of_formation` wording fix (it is described as a real
-      subclass there while the dojo prompt folds it into
-      `articles_of_incorporation`); tracked in the eval-environment
-      coordination, referenced here so the sandbox mirror work does not
-      proceed until it lands.
+- [ ] eval-environment canonical prompt fix — the canonical prompt text must
+      carry the coordinated `certificate_of_formation` amendment (explicit
+      per-subclass line with the `omit authorized_capital` rule and the
+      `subsidiary_list` guidance — dojo sha `253559fc…`; the eval-environment
+      mutation currently sits at the intermediate `ec3bccc2…` bytes);
+      tracked in the eval-environment coordination, referenced here so the
+      sandbox mirror work does not proceed until it lands.
 - [ ] llm-mailroom re-vendor — bump the vendored llm-dojo-scoring snapshot
       (still v0.22.0: no `corporate_record_schema.py`, no unlabeled
       alignment, "39 corporate_record rows" suite docstring) and re-freeze
       the corporate prompt in `vendor/llm-mailroom/src/llm/frozen_v1/lineage.json`
-      (still the v6 digest `fe13501f…`) to the `b40963bb…` (v7) bytes. Until
+      (still the v6 digest `fe13501f…`) to the `253559fc…` (v7) bytes. Until
       then the sandbox/eval-env runtime keeps v0.22.0 scoring semantics
       regardless of any prompt bump.
 
@@ -68,7 +71,7 @@ new freeze is needed there — what remains is moving the default
 | Agent | `family` | `sha256` (prefix) |
 |---|---|---|
 | `contracts_specialist` | `production_prompts` | `d91de396…` |
-| `corporate_records_specialist` | `production_prompts` | `b40963bb…` (= eval-environment `_v7`) |
+| `corporate_records_specialist` | `production_prompts` | `253559fc…` (= eval-environment `_v7`) |
 | `correspondence_specialist` | `production_prompts` | `2b0b81ff…` (= eval-environment `_v7`) |
 | `insurance_claims_specialist` | `production_prompts` | `6c2776bc…` |
 | `merger_agreement_specialist` | `production_prompts` | `00323258…` |

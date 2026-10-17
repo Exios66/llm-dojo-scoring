@@ -5,6 +5,27 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Changed
+
+- **`corporate_records_specialist_v7` amendment coordinated across the four
+  repos.** The frozen eval-environment mutation text (the `production_prompts`
+  — and, body-identical, `production` — corporate-records bytes) replaces the
+  `certificate_of_formation` = "articles_of_incorporation with organizers
+  instead of incorporators" prose with an explicit per-subclass line
+  (`+organizers[], registered_agent; omit authorized_capital entirely, even
+  when null`) and adds `subsidiary_list` guidance (`subject_matter = the
+  listing statement, keywords = subsidiary names`). sha256
+  `b40963bb…` (5,333 chars) → `253559fc…` (5,462 chars; −403 vs the 5,865-char
+  `_v6` parent, recorded in `prompts/eval_environment_lineage.json`).
+
+### Added
+
+- `SubclassSchema.omit_entity_keys` / `.core_guidance` — data for the two new
+  prompt clauses; `render_prompt_section()` now emits `certificate_of_formation`
+  on its own line (no longer folded into `articles_of_incorporation`) and
+  reproduces the frozen doc_subclass block byte for byte. Catalog / lineage /
+  docs re-pinned to `253559fc…`.
+
 ## [0.22.0] - 2026-10-16
 
 ### Changed — breaking

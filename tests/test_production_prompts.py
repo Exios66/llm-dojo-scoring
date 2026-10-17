@@ -28,8 +28,8 @@ FROZEN_V1: dict[str, dict[str, object]] = {
     "corporate_records_specialist": {
         "eval_key": "corporate_records_specialist_v7",
         "sandbox_stem": "corporate_records_specialist_simplified",
-        "sha256": "b40963bb3c53bdaa7089513c1186dec87fac210b28093008941b3c8a39dab77a",
-        "chars": 5333,
+        "sha256": "253559fcb7ac6b36878453821a4fab0aa94228ad5add77d5aeabb06bb265134c",
+        "chars": 5462,
         "opening": "You are the corporate-records specialist.",
         "doc_bundle": "corporate_record",
     },
