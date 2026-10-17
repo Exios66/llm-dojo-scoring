@@ -2,7 +2,7 @@
 
 The sha256 values pin the current text. Corporate-records and correspondence carry the
 field-guidance corrections that eval-environment froze as mutations
-``corporate_records_specialist_v6`` / ``correspondence_specialist_v7`` (#29).
+``corporate_records_specialist_v7`` / ``correspondence_specialist_v7`` (#29).
 Source lineage comes from the sandbox
 ``config/prompts/eval_environment_lineage.json`` (``mailroom-dataset-v1``,
 frozen 2026-09-26T05:09:29+00:00). Network-free; no sandbox checkout needed.
@@ -14,7 +14,7 @@ import hashlib
 
 import pytest
 
-from llm_dojo_scoring.prompts import FAMILIES, get_prompt, list_prompts
+from llm_dojo_scoring.prompts import FAMILIES, get_prompt, get_prompt_version, list_prompts
 
 FROZEN_V1: dict[str, dict[str, object]] = {
     "contracts_specialist": {
@@ -26,10 +26,10 @@ FROZEN_V1: dict[str, dict[str, object]] = {
         "doc_bundle": "contract",
     },
     "corporate_records_specialist": {
-        "eval_key": "corporate_records_specialist_v6",
+        "eval_key": "corporate_records_specialist_v7",
         "sandbox_stem": "corporate_records_specialist_simplified",
-        "sha256": "fe13501f667fcd9f64f7dfbf8b0f124f81d9dd039f4109288b43f106f82b1399",
-        "chars": 5865,
+        "sha256": "253559fcb7ac6b36878453821a4fab0aa94228ad5add77d5aeabb06bb265134c",
+        "chars": 5462,
         "opening": "You are the corporate-records specialist.",
         "doc_bundle": "corporate_record",
     },
@@ -99,8 +99,7 @@ def test_frozen_v1_notes_pin_lineage_and_sandbox_stem():
 
 
 def test_frozen_v1_distinct_from_docclass():
-    # Since v0.20.0 the live ``production`` specialists ARE the frozen v1 bytes
-    # (re-vendored from mailroom); only the docclass lineage stays distinct.
+    # The evaluation stems remain distinct from the docclass lineage.
     for agent in FROZEN_V1:
         v1 = get_prompt(agent, family="production_prompts").text
         docclass = get_prompt(agent, family="docclass").text
@@ -122,7 +121,14 @@ LIVE = ("contracts_specialist", "corporate_records_specialist", "correspondence_
 
 def test_production_specialists_are_frozen_v1():
     for a in LIVE:
-        assert get_prompt(a).text == get_prompt(a, family="production_prompts").text
+        if a == "corporate_records_specialist":
+            # Mailroom still pins v6; evaluation v7 must not advance production.
+            text = get_prompt(a).text
+            assert text == get_prompt_version("corporate_records_specialist_v6").text
+            assert _frozen_sha(text) == "fe13501f667fcd9f64f7dfbf8b0f124f81d9dd039f4109288b43f106f82b1399"
+            assert text != get_prompt(a, family="production_prompts").text
+        else:
+            assert get_prompt(a).text == get_prompt(a, family="production_prompts").text
 
 
 def test_production_specialist_rows_say_frozen_v1():

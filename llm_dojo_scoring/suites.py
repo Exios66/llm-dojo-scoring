@@ -395,10 +395,12 @@ _HONEST_GAPS: dict[str, str] = {
     ),
     "corporate_records_specialist": (
         "HONEST GAP: no *external* extraction benchmark (CUAD/MAUD-grade "
-        "coverage is not claimed). The published merge covers 39 "
-        "corporate_record rows with record-type subclasses "
-        "(articles_of_incorporation, rights_instrument, …). Suite scores "
-        "typed-extraction field-micro P/R/F1/F2 plus that subclass catalog."
+        "coverage is not claimed). The published merge covers 450 "
+        "corporate_record rows in 10 record-shape subclasses with per-subclass "
+        "entity schemas (corporate_record_schema). Key-entity GT is unlabeled "
+        "on every row, so those fields are excluded rather than scored as "
+        "expected-empty. Suite scores field-micro P/R/F1/F2 on the labeled "
+        "fields (intent / subject_matter / keywords today)."
     ),
     "compliance_specialist": (
         "HONEST GAP: compliance_filing was RETIRED from the live llm-mailroom "
@@ -756,6 +758,13 @@ class ScoringSuite:
         ftypes = field_types or self.field_types
         doc_class = self.doc_type or self.name
         presence = kwargs.get("presence_expectations")
+        # The format layer requires the registered core only; subclass key
+        # entities are scored (when the dataset labels them) but never required.
+        required_ftypes = ftypes
+        if doc_class == "corporate_record" and ftypes:
+            from .corporate_record_schema import all_entity_field_types
+
+            ftypes = {**all_entity_field_types(), **ftypes}
 
         def _stamp(payload: dict[str, Any], mid: str) -> dict[str, Any]:
             # Same refusal as Emitter / score_archive_block (#17, #22): a
@@ -908,6 +917,50 @@ class ScoringSuite:
                 _gtm.normalize_field_values(item) if isinstance(item, dict) else item
                 for item in predicted
             ]
+        # corporate_record: key-entity fields the dataset leaves blank without
+        # documenting absence are *unlabeled*, not "expected empty". Drop them
+        # from both sides so a correct extraction is not scored as spurious
+        # fill. See llm_dojo_scoring.corporate_record_schema.
+        unlabeled: list[tuple[str, ...]] = []
+        audit_predictions = None
+        if doc_class == "corporate_record":
+            from .corporate_record_schema import align_unlabeled
+
+            # Alignment replaces dictionaries (and batch entries). Keep the
+            # original populated fields for verification against doc_text.
+            audit_predictions = (
+                list(predicted) if isinstance(predicted, list) else predicted
+            )
+            sub_kw = kwargs.get("doc_subclass") or kwargs.get("expected_subclass")
+            if isinstance(expected, list):
+                # ``unlabeled_fields`` on a batch payload is per-row and must
+                # stay aligned with the GT row order: a row whose prediction
+                # is missing (padded ``None``), whose model JSON does not
+                # parse, or whose GT object is unparseable gets no alignment
+                # at all and reports ``[]`` — never a skipped entry that
+                # would shift later rows out of alignment.
+                for idx in range(len(expected)):
+                    pred = (
+                        predicted[idx]
+                        if isinstance(predicted, list) and idx < len(predicted)
+                        else None
+                    )
+                    if isinstance(expected[idx], dict) and isinstance(pred, dict):
+                        sub = sub_kw[idx] if isinstance(sub_kw, list) and idx < len(sub_kw) else (
+                            None if isinstance(sub_kw, list) else sub_kw
+                        )
+                        expected[idx], predicted[idx], dropped = align_unlabeled(
+                            sub, parsed_expected[idx], expected[idx], pred
+                        )
+                    else:
+                        dropped = ()
+                    unlabeled.append(dropped)
+            elif isinstance(expected, dict) and isinstance(predicted, dict):
+                expected, predicted, dropped = align_unlabeled(
+                    None if isinstance(sub_kw, list) else sub_kw,
+                    parsed_one, expected, predicted,
+                )
+                unlabeled.append(dropped)
         format_predictions = raw_predicted
         if isinstance(expected, list) and isinstance(raw_predicted, list):
             # The gate covers exactly the GT rows: surplus predictions are
@@ -926,15 +979,17 @@ class ScoringSuite:
                 if isinstance(raw_predicted, str)
                 else kwargs.get("predicted_raw")
             ),
-            required_keys=list(ftypes.keys()) if ftypes else None,
+            required_keys=list(required_ftypes.keys()) if required_ftypes else None,
         )
         extras: dict[str, Any] = {}
         peeled_exp: list = []
         peeled_pred: list = []
         unscorable_rows: set[int] = set()
 
-        def _run(exp: Any, pred: Any, text: str | None):
-            return score_extraction(doc_class, ftypes, pred, exp, doc_text=text)
+        def _run(exp: Any, pred: Any, text: str | None, audit_pred: Any = None):
+            return score_extraction(
+                doc_class, ftypes, pred, exp, doc_text=text, audit_predicted=audit_pred,
+            )
 
         def _prf_one(exp: Any, pred: Any, result: ExtractionScoreResult) -> dict[str, Any]:
             if not isinstance(exp, dict):
@@ -1069,7 +1124,11 @@ class ScoringSuite:
                         )
                     )
                 else:
-                    extraction.append(_run(exp, pred, text))
+                    audit_pred = (
+                        audit_predictions[idx]
+                        if isinstance(audit_predictions, list) else None
+                    )
+                    extraction.append(_run(exp, pred, text, audit_pred))
             if saw_topic and topic_e is None:
                 topic_e, topic_p = topics_e, topics_p
             if saw_sent and sent_e is None:
@@ -1079,7 +1138,7 @@ class ScoringSuite:
         elif isinstance(expected, dict) and isinstance(predicted, dict):
             e2, p2, payload = peel_non_extraction_fields(expected, predicted)
             peeled_exp, peeled_pred = [e2], [p2]
-            extraction = _run(e2, p2, doc_text)
+            extraction = _run(e2, p2, doc_text, audit_predictions)
             if "content_topic" in payload and topic_e is None:
                 topic_e, topic_p = payload["content_topic"]
             if "sentiment_label" in payload and sent_e is None:
@@ -1087,7 +1146,7 @@ class ScoringSuite:
             if "maud" in payload and maud_e is None:
                 maud_e, maud_p = payload["maud"]
         else:
-            extraction = _run(expected, predicted, doc_text)
+            extraction = _run(expected, predicted, doc_text, audit_predictions)
 
         if topic_e is not None or topic_p is not None:
             extras.update(
@@ -1241,6 +1300,11 @@ class ScoringSuite:
                     **prf_payload,
                     **format_scores,
                     **batch_quality,
+                    **(
+                        {"unlabeled_fields": [list(u) for u in unlabeled]}
+                        if unlabeled
+                        else {}
+                    ),
                     "schema_promotion_gate": check_schema_promotion_gate(
                         format_scores.get("schema_valid"), doc_class=doc_class
                     ),
@@ -1272,6 +1336,15 @@ class ScoringSuite:
             "detail": extras,
             "metric_id": mid,
         }
+        if unlabeled:
+            # Same contract as the no-extras batch branch above:
+            # ``unlabeled_fields`` is per-row (list of lists, aligned with the
+            # GT row order) whenever *is_batch*, and a flat field list only on
+            # a single-document payload. A one-row batch therefore stays
+            # ``[[...]]`` instead of collapsing to a bare field list.
+            payload["unlabeled_fields"] = (
+                [list(u) for u in unlabeled] if is_batch else list(unlabeled[0])
+            )
         if isinstance(extraction, ExtractionScoreResult):
             # Single-document payload: flatten the document's own overall
             # score so consumers do not have to dig into the dataclass.

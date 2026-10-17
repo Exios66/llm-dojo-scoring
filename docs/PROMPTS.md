@@ -37,7 +37,7 @@ correctness arms.
 
 | `family` | Meaning |
 | --- | --- |
-| `production` (default) | Live mailroom prompt bodies, re-vendored verbatim by `scripts/sync_production_prompts.py` from a mailroom checkout (each row records `source_commit`). Sorter is `sorter_v14`. The five specialists are the frozen v1 bytes: they equal `production_prompts` (`version: v1`, `source_key: frozen_v1`). `reporter` is `kind: deterministic`. |
+| `production` (default) | Live mailroom prompt bodies, re-vendored verbatim by `scripts/sync_production_prompts.py` from a mailroom checkout (each row records `source_commit`). Sorter is `sorter_v14`. The specialists use mailroom’s freeze (`version: v1`, `source_key: frozen_v1`). Corporate records stays at `_v6` (`fe13501f…`); its `production_prompts` evaluation stem is `_v7` (`253559fc…`). The other four specialists equal `production_prompts`. `reporter` is `kind: deterministic`. |
 | `docclass` | Latest key from entity-extraction `src/prompts_docclass.py` (`sorter_docclass_v7`, `*_specialist_docclass_v1`, `reviewer_docclass_v1`, `judge_*_docclass_v1`, `arbiter_docclass_v1`, `boss_docclass_v1`). |
 | `production_prompts` | Frozen eval-environment **v1** specialist lineage (`mailroom-dataset-v1`, frozen 2026-09-26T05:09:29+00:00). Five sha256-locked stems; not grouped with `docclass`. |
 
@@ -52,17 +52,24 @@ files and sha256-pinned on each record (hash over the loaded text plus a
 trailing newline, matching the sandbox lineage's normalization).
 
 Corporate-record and correspondence stems carry field-guidance corrections that
-eval-environment froze as the mutations `corporate_records_specialist_v6` and
-`correspondence_specialist_v7` (2026-10-16, #29; byte-identical, same digests).
+eval-environment froze as the mutations `corporate_records_specialist_v7` and
+`correspondence_specialist_v7` (2026-10-16, #29). The corporate `_v7` amendment
+extends `_v6`: it replaces the `certificate_of_formation` =
+"articles_of_incorporation with organizers instead of incorporators" prose with
+an explicit per-subclass line (`+organizers[], registered_agent; omit
+authorized_capital entirely, even when null`) and adds `subsidiary_list`
+guidance (`subject_matter` = the listing statement, `keywords` = subsidiary
+names); sha256 `253559fc…`, 5,462 chars (−403 vs the 5,865-char `_v6` parent).
 Their `source_key` names those mutation keys and their provenance comments keep
-the superseded v1 digests. eval-environment's default for both roles stays `_v1`;
+the superseded digests. eval-environment's default for both roles stays `_v1`
+(promoting the corrected text to the default-pin is a separate decision);
 select the corrected text there with `--prompt-version`. Other stems remain
 byte-identical to the frozen v1 source. Catalog digests identify the current text.
 
 | Agent | Eval-environment key | Sandbox stem | `sha256` (prefix) |
 | --- | --- | --- | --- |
 | `contracts_specialist` | `contracts_specialist_v1` | `contracts_specialist_v33_simplified` | `d91de396…` |
-| `corporate_records_specialist` | `corporate_records_specialist_v6` (corrects `_v1`) | `corporate_records_specialist_simplified` | `fe13501f…` |
+| `corporate_records_specialist` | `corporate_records_specialist_v7` (extends `_v6`) | `corporate_records_specialist_simplified` | `253559fc…` |
 | `correspondence_specialist` | `correspondence_specialist_v7` (corrects `_v1`) | `correspondence_specialist_simplified` | `2b0b81ff…` |
 | `insurance_claims_specialist` | `insurance_claims_specialist_v1` | `insurance_claims_specialist_simplified` | `6c2776bc…` |
 | `merger_agreement_specialist` | `merger_agreement_specialist_v1` | `merger_agreement_specialist_simplified` | `00323258…` |
@@ -80,7 +87,7 @@ Field maps those stems emit (and the scorer grades) are documented in
 `mailroom-dataset-v1` lineage, not just the five specialist stems above: the
 archived production prompts (`<role>_v0`, plus `contracts_specialist_v33`), the
 frozen `<role>_v1` snapshot, and the GEPA / manual mutations (`<role>_v2` ...).
-40 versions, 15 roles, pinned to eval-environment commit `bdba24c`
+41 versions, 15 roles, pinned to eval-environment commit `b449a79`
 (`LINEAGE_SOURCE`). eval-environment's live `production` kind is not a frozen
 version and is not included. The texts are historical eval-environment bytes:
 the anti-priming rule below is not applied to them.
@@ -120,7 +127,7 @@ and `notes` (data-quality observations, usually empty).
 **Digests.** `sha256` here is eval-environment's: `sha256(text.encode("utf-8"))`
 over the raw text. The `production_prompts` catalog above hashes the text with a
 trailing newline ensured. They are equal for the specialist stems (those texts
-end in `"\n"`), so `correspondence_specialist_v7` / `corporate_records_specialist_v6`
+end in `"\n"`), so `correspondence_specialist_v7` / `corporate_records_specialist_v7`
 are byte-equal to `get_prompt(<role>, family="production_prompts").text` with the
 same digest. Prompts without a trailing newline (sorter, judges) would differ
 between the two conventions.
@@ -148,7 +155,7 @@ between the two conventions.
 | `arbiter` | v1 | `arbiter_v1` |
 | `boss` | v1 | `boss_v1` |
 | `contracts_specialist` | v0, v1, v2, v3, v33 | `contracts_specialist_v3` |
-| `corporate_records_specialist` | v0 to v6 | `corporate_records_specialist_v6` |
+| `corporate_records_specialist` | v0 to v7 | `corporate_records_specialist_v7` |
 | `correspondence_specialist` | v0 to v7 | `correspondence_specialist_v7` |
 | `insurance_claims_specialist` | v0 to v3 | `insurance_claims_specialist_v3` |
 | `intake` | v1 | `intake_v1` |

@@ -27,7 +27,8 @@ merger_agreement    MAUD (152 rows, consideration subclass + 22 question
 correspondence      Enron (110 rows, form + topic + sentiment) —
                     content_topic + sentiment_label accuracy / macro-F1
 due_diligence       zero rows in the published merge — extraction schema
-corporate_record    39 rows (record-type subclass) — no external
+corporate_record    450 rows (10 record-shape subclasses; per-subclass entity
+                    schemas, key-entity GT unlabeled) — no external
                     extraction benchmark
 compliance_filing   zero rows in the published merge — extraction schema
 court_opinion       zero rows in the published merge; LegalBench metrics
@@ -184,9 +185,10 @@ DOC_TYPE_BUNDLES: dict[str, Bundle] = {
         (
             "corporate_record",
             "Corporate records — no *external* extraction benchmark "
-            "(39-row GT is enough for field-micro P/R/F1/F2; do not claim "
-            "CUAD/MAUD-grade coverage). record_type is a typed name field "
-            "plus the subclass catalog.",
+            "(450-row GT in 10 record-shape subclasses; per-subclass entity "
+            "schemas; unlabeled key-entity fields are excluded from "
+            "scoring; do not claim CUAD/MAUD-grade coverage). record_type "
+            "is a typed name field plus the subclass catalog.",
             _EXTRACTION_BASE,
             {
                 "corporate_records_specialist": (

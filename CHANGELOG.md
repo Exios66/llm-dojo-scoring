@@ -5,6 +5,40 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Changed
+
+- **`corporate_records_specialist_v7` amendment coordinated across the four
+  repos.** The frozen eval-environment mutation text (the `production_prompts`
+  — and, body-identical, `production` — corporate-records bytes) replaces the
+  `certificate_of_formation` = "articles_of_incorporation with organizers
+  instead of incorporators" prose with an explicit per-subclass line
+  (`+organizers[], registered_agent; omit authorized_capital entirely, even
+  when null`) and adds `subsidiary_list` guidance (`subject_matter = the
+  listing statement, keywords = subsidiary names`). sha256
+  `b40963bb…` (5,333 chars) → `253559fc…` (5,462 chars; −403 vs the 5,865-char
+  `_v6` parent, recorded in `prompts/eval_environment_lineage.json`).
+
+### Fixed
+
+- The `doc:corporate_record` eval-bundle description (part of the "39
+  corporate_record rows" → 450 correction) now states the per-subclass schema +
+  unlabeled-field exclusions. The released 0.22.0 notes keep the wording they
+  shipped with; this correction happened after the v0.22.0 tag.
+
+### Added
+
+- **`score_extraction(audit_predicted=…)`** — with it set,
+  `entity_list_audit` payloads include fields omitted from GT scoring (e.g.
+  predictions dropped by unlabeled alignment), so verification still surfaces
+  predicted entity facts when the GT side is unlabeled. Diagnostic only:
+  audit entries never produce false positives. Default `None` keeps the old
+  behavior (audit uses the alignment-replaced predictions).
+- `SubclassSchema.omit_entity_keys` / `.core_guidance` — data for the two new
+  prompt clauses; `render_prompt_section()` now emits `certificate_of_formation`
+  on its own line (no longer folded into `articles_of_incorporation`) and
+  reproduces the frozen doc_subclass block byte for byte. Catalog / lineage /
+  docs re-pinned to `253559fc…`.
+
 ## [0.22.0] - 2026-10-16
 
 ### Changed — breaking
@@ -153,6 +187,16 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Added
 
+- eval-environment lineage re-synced (41 versions, commit `b449a79`) to include
+  `corporate_records_specialist_v7`, the production_prompts text with per-subclass
+  key entities (sha256 `b40963bb…`, 5865 → 5333 chars; supersedes `_v6`).
+- `corporate_record_schema` — per-subclass corporate-record entity schemas
+  (11 subclasses: applicable core fields, pinned `record_type`/`intent`,
+  subclass key entities such as `trustee`/`guarantors` for indentures or
+  `principal`/`attorneys_in_fact` for POAs), `scored_field_types`,
+  `corporate_record_json_schema`, `render_subclass_block`, and a GT label
+  audit (`audit_gt_rows`, `scripts/audit_corporate_record_labels.py`).
+  Reference: `docs/CORPORATE_RECORD_SCHEMA.md`.
 - **eval-environment prompt lineage.** `llm_dojo_scoring.prompts` now exports
   `list_prompt_versions`, `get_prompt_version`, `prompt_roles`, `prompt_chain`,
   `latest_prompt_version`, `default_prompt_version`, `diff_prompt_versions`,
@@ -197,6 +241,18 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+- `corporate_record` scoring: key-entity fields that GT leaves blank without a
+  documented absence are now *unlabeled* and excluded from both sides
+  (`unlabeled_fields` on the payload; `doc_subclass=` on `score` /
+  `score_document`). Previously a correct entity extraction scored precision
+  0.375 because the published GT labels none of the six entity fields on any
+  of the 450 rows.
+- `corporate_records_specialist` prompt (`production`, `production_prompts`,
+  sha `b40963bb…`): per-subclass key-entity sections generated from
+  `corporate_record_schema`; `entity_name` is always the owning company.
+  Diverges from vendored mailroom `frozen_v1` — upstream re-vendor pending.
+- Stale "39 corporate_record rows" corrected to 450; corpus pin docs now cite Hub tag v9.2.
+- `corporate_record_relabel` + `scripts/relabel_corporate_record_gt.py` — deterministic GT repair proposal (entity_name, record_type, grounded subject_matter, provenance-free keywords, subclass-conflict fixes); `audit_gt_rows` also flags `subclass_content_conflict`.
 - MAUD composite classes whose parts are themselves catalog classes (e.g.
   `General R&Ws, fundamental/Special R&Ws`) now canonicalize to the same sorted
   set as any reordering, so a reordered correct answer is no longer scored wrong.
