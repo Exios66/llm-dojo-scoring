@@ -352,9 +352,11 @@ consistency is degenerate on GT-shaped predictions.
    contracts stay `unscorable`.
 6. **Prompt freeze vs live `production` family.** Eval stems are
    `family="production_prompts"`. Since v0.20.0 the five `production`
-   specialists are re-vendored from live mailroom and **equal**
-   `production_prompts` v1 (`version: v1`, `source_key: frozen_v1`); the
-   retired `contracts_specialist_v32` body is gone. Do not mix the
+   specialists are re-vendored from live mailroom (`version: v1`,
+   `source_key: frozen_v1`). Corporate records stays on mailroom's v6 freeze
+   (`fe13501f…`), while `production_prompts` carries evaluation v7 (`253559fc…`);
+   the other four specialist bodies match across families. The retired
+   `contracts_specialist_v32` body is gone. Do not mix the
    `docclass` lineage into a comparison table without matching `prompt_id`.
 
 ## Import surface

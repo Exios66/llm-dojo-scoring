@@ -63,7 +63,8 @@ new freeze is needed there — what remains is moving the default
 - [x] Switch consumers that need the frozen eval-environment v1 specialist
       text to `get_prompt(<agent>, family="production_prompts")` instead of
       vendoring their own copy. (Done by llm-mailroom Task 2: specialists load
-      the frozen v1 bytes; the dojo `production` family now equals them.)
+      the frozen v1 bytes; the dojo `production` family follows that freeze.
+      Corporate production remains v6 until mailroom promotes evaluation v7.)
 - [x] Pin `llm-dojo-scoring @ v0.19.1` when adopting the corrected records. (Mailroom pin moves to v0.20.0 after this release.)
 
 ## Dojo reference pins (v0.19.1)
