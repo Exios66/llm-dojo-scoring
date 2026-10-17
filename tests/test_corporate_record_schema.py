@@ -224,6 +224,26 @@ def test_batch_unlabeled_fields_stay_aligned_across_unparseable_rows():
     assert short["unlabeled_fields"] == [[]]
 
 
+def test_one_row_batch_reports_unlabeled_fields_per_row_with_extras():
+    """Regression: with extras in play (presence scoring) a one-row batch
+    reports ``unlabeled_fields`` as a per-row list of lists, matching the
+    no-extras batch branch — it must not collapse to a bare field list just
+    because there is only one row."""
+    suite = get_suite("corporate_records_specialist")
+    out = suite.score(
+        [json.dumps(_GT)],
+        [_PRED],
+        doc_subclass=["articles_of_incorporation"],
+        presence_expectations={"agent_or_power": {"expected": False}},
+    )
+    assert out["unlabeled_fields"] == [list(unlabeled_fields("articles_of_incorporation", _GT))]
+    # The single-document payload keeps its flat shape.
+    single = suite.score_document(
+        json.dumps(_GT), _PRED, doc_subclass="articles_of_incorporation",
+    )
+    assert single["unlabeled_fields"] == list(unlabeled_fields("articles_of_incorporation", _GT))
+
+
 def test_audit_flags_published_label_defects():
     """Audit detects known label defects and aggregates only corporate rows."""
     gt = {
@@ -289,7 +309,13 @@ def test_certificate_of_formation_is_explicit_with_omit_clause():
     )
     section = render_prompt_section()
     assert "omit authorized_capital entirely, even when null" in section
-    assert "articles_of_incorporation with organizers instead of incorporators" not in section
+    # Guard the byte-locked production_prompts template file itself: the
+    # generated section is pure data and can never contain prose, so the
+    # regression (the old "organizers instead of incorporators" alias prose
+    # coming back) is only detectable in the frozen prompt text.
+    frozen = get_prompt("corporate_records_specialist", family="production_prompts").text
+    assert "articles_of_incorporation with organizers instead of incorporators" not in frozen
+    assert section in frozen
 
 
 def test_render_order_keeps_certificate_of_formation_between_articles_and_amendment():
@@ -306,6 +332,22 @@ def test_only_certificate_of_formation_may_omit_entity_keys():
     assert subs.omit_entity_keys == ("authorized_capital",)
     assert [s.subclass for s in SUBCLASS_SCHEMAS.values() if s.omit_entity_keys] == ["certificate_of_formation"]
     assert [s.subclass for s in SUBCLASS_SCHEMAS.values() if s.core_guidance] == ["subsidiary_list"]
+
+
+def test_omit_and_guidance_keys_are_schema_backed():
+    """Re-asserts the import-time drift guard: ``omit_entity_keys`` may only
+    name entities the subclass (or a close-alias sibling sharing its
+    ``record_type``) declares, and ``core_guidance`` targets applicable core
+    fields only."""
+    for schema in SUBCLASS_SCHEMAS.values():
+        family = {e.key for e in schema.entities} | {
+            e.key
+            for other in SUBCLASS_SCHEMAS.values()
+            if other.record_type == schema.record_type
+            for e in other.entities
+        }
+        assert set(schema.omit_entity_keys) <= family
+        assert {k for k, _ in schema.core_guidance} <= set(schema.core_applicable)
 
 
 def test_audit_flags_subclass_content_conflict_on_prose_subject():

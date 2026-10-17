@@ -953,7 +953,7 @@ class ScoringSuite:
                             sub, parsed_expected[idx], expected[idx], pred
                         )
                     else:
-                        dropped: tuple[str, ...] = ()
+                        dropped = ()
                     unlabeled.append(dropped)
             elif isinstance(expected, dict) and isinstance(predicted, dict):
                 expected, predicted, dropped = align_unlabeled(
@@ -1337,8 +1337,13 @@ class ScoringSuite:
             "metric_id": mid,
         }
         if unlabeled:
+            # Same contract as the no-extras batch branch above:
+            # ``unlabeled_fields`` is per-row (list of lists, aligned with the
+            # GT row order) whenever *is_batch*, and a flat field list only on
+            # a single-document payload. A one-row batch therefore stays
+            # ``[[...]]`` instead of collapsing to a bare field list.
             payload["unlabeled_fields"] = (
-                list(unlabeled[0]) if len(unlabeled) == 1 else [list(u) for u in unlabeled]
+                [list(u) for u in unlabeled] if is_batch else list(unlabeled[0])
             )
         if isinstance(extraction, ExtractionScoreResult):
             # Single-document payload: flatten the document's own overall

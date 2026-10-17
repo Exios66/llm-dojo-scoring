@@ -320,6 +320,28 @@ for _sc in SUBCLASS_SCHEMAS.values():
     _dup = {e.key for e in _sc.entities} & set(CORE_FIELDS)
     if _dup:
         raise RuntimeError(f"{_sc.subclass}: entity keys shadow core fields: {sorted(_dup)}")
+    # ``omit_entity_keys`` may only suppress a key the subclass (or a
+    # close-alias sibling sharing its record_type) actually declares —
+    # otherwise the "omit X entirely, even when null" prompt clause would
+    # reference an entity the schema never knows about.
+    _family = {e.key for e in _sc.entities} | {
+        e.key
+        for _other in SUBCLASS_SCHEMAS.values()
+        if _other.record_type == _sc.record_type
+        for e in _other.entities
+    }
+    _bad_omit = set(_sc.omit_entity_keys) - _family
+    if _bad_omit:
+        raise RuntimeError(
+            f"{_sc.subclass}: omit_entity_keys names undeclared entities: {sorted(_bad_omit)}"
+        )
+    # ``core_guidance`` targets core fields this subclass actually applies;
+    # guidance on a dropped core field would be dead prompt text.
+    _bad_guidance = {k for k, _ in _sc.core_guidance} - set(_sc.core_applicable)
+    if _bad_guidance:
+        raise RuntimeError(
+            f"{_sc.subclass}: core_guidance names inapplicable core fields: {sorted(_bad_guidance)}"
+        )
 del _sc
 
 # ---------------------------------------------------------------------------
@@ -519,6 +541,9 @@ def render_subclass_block(subclass: Any) -> str:
     """
     s = subclass_schema(subclass)
     extras = ", ".join(e.key + ("[]" if e.type.startswith("entity_list") else "") for e in s.entities)
+    # Clause order below — extras, omit, core_guidance, null-per-field —
+    # is FROZEN: it must match the byte-locked corporate_records_specialist_v7
+    # prompt (sha256 253559fc…). Reordering breaks the byte-lock.
     line = f"- {s.subclass}: {s.record_type}, {s.intent}"
     if extras:
         line += f"; +{extras}"
