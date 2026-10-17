@@ -35,7 +35,6 @@ from typing import Any, Iterable, Mapping
 
 from .corpus import DOC_TYPE_SUBCLASSES
 from .gt_metadata import (
-    ABSENT_PRESENCE_STATUSES,
     gt_presence_map,
     is_empty_value,
     parse_gt_fields,
@@ -51,6 +50,7 @@ __all__ = [
     "RecordEntity",
     "SubclassSchema",
     "align_unlabeled",
+    "all_entity_field_types",
     "audit_gt_row",
     "audit_gt_rows",
     "corporate_record_json_schema",
@@ -331,10 +331,28 @@ def entity_field_types(subclass: Any) -> dict[str, str]:
     return {e.key: e.type for e in subclass_schema(subclass).entities}
 
 
+# Only these two statuses document "expected empty"; ``pending_annotation``
+# means the label never ran (stale values must not score) and ``not_applicable``
+# means the field is outside the subclass — neither counts as a labeled entity.
+_DOCUMENTED_ABSENCE = frozenset({"schema_documented_absence", "not_applicable"})
+_UNLABELED_STATUSES = frozenset({"not_applicable", "pending_annotation"})
+
+
+def all_entity_field_types() -> dict[str, str]:
+    """Extension-entity field→type map across every subclass."""
+    out: dict[str, str] = {}
+    for sch in SUBCLASS_SCHEMAS.values():
+        for e in sch.entities:
+            out.setdefault(e.key, e.type)
+    return out
+
+
 def _labeled(presence: Mapping[str, str], gt: Mapping[str, Any], key: str) -> bool:
     status = presence.get(key)
     if status == "populated" or status == "schema_documented_absence":
         return True
+    if status in _UNLABELED_STATUSES:
+        return False
     return not is_empty_value(gt.get(key))
 
 
@@ -376,9 +394,13 @@ def unlabeled_fields(subclass: Any, gt: Mapping[str, Any] | str | None) -> tuple
     candidates = [f for f in ENTITY_CORE_FIELDS] + [e.key for e in schema.entities]
     out: list[str] = []
     for key in candidates:
+        status = presence.get(key)
+        if status == "pending_annotation":
+            out.append(key)
+            continue
         if not is_empty_value(parsed.get(key)):
             continue
-        if presence.get(key) in ABSENT_PRESENCE_STATUSES:
+        if status in _DOCUMENTED_ABSENCE:
             continue
         out.append(key)
     return tuple(out)
@@ -445,10 +467,20 @@ def corporate_record_json_schema(subclass: Any = None) -> dict[str, Any]:
         title = "CorporateRecordExtraction"
     else:
         schema = subclass_schema(subclass)
-        types = {f: DEFAULT_FIELD_TYPES["corporate_record"][f] for f in schema.core_applicable}
+        types = {f: DEFAULT_FIELD_TYPES["corporate_record"][f] for f in CORE_FIELDS}
         types.update({e.key: e.type for e in schema.entities})
         title = f"CorporateRecordExtraction[{schema.subclass}]"
     props = {k: _json_for(t) for k, t in types.items()}
+    if subclass is not None:
+        # The prompt says "null = emit null/[]": inapplicable core keys stay
+        # required but may only be empty.
+        for f in CORE_FIELDS:
+            if f not in schema.core_applicable:
+                props[f] = (
+                    {"type": ["array", "null"], "maxItems": 0}
+                    if types[f].startswith("entity_list") or f in ("keywords", "signatories")
+                    else {"type": "null"}
+                )
     if "record_type" in props:
         props["record_type"] = {"enum": [*RECORD_TYPES, None]}
     return {
@@ -492,8 +524,8 @@ def render_prompt_section() -> str:
 # label audit
 # ---------------------------------------------------------------------------
 
-_TEMPLATE_MARK = "(SEC EDGAR exhibit)"
-_ID_KEYWORD = re.compile(r"^(EX-[\w.\-]+|\d{10}-\d{2}-\d{6}|S-1(/A)?|8-K|10-[KQ](/A)?)$", re.I)
+_TEMPLATE_MARK = "(SEC EDGAR exhibit"
+_ID_KEYWORD = re.compile(r"^(EX-[\w.\-()]+|\d{10}-\d{2}-\d{6}|S-1(/A)?|8-K|10-[KQ](/A)?)$", re.I)
 _CIK_KEYWORD = re.compile(r"\(CIK \d+\)")
 
 

@@ -90,3 +90,59 @@ def test_relabeled_row_scores_entities_end_to_end():
         new["gt_fields"], wrong, doc_subclass="bylaws"
     )
     assert bad["extraction"].field_scores["entity_name"] < 1.0
+
+
+def _row(sub, gt):
+    return {"expected": "corporate_record", "expected_subclass": sub, "gt_fields": json.dumps(gt)}
+
+
+def test_relabel_is_idempotent():
+    once, _ = relabel_row(_TEMPLATE_ROW)
+    twice, changes = relabel_row(once)
+    assert twice == once
+    assert "keywords" not in changes and "record_type" not in changes
+
+
+def test_company_from_template_ticker_lists_and_codes():
+    tpl = "bylaws of {} (CIK 0000000001) (SEC EDGAR exhibit: EXHIBIT 4.2). X"
+    assert company_from_template(tpl.format("PureCycle Technologies, Inc. (PCT, PCTTU, PCTTW)")) == "PureCycle Technologies, Inc."
+    assert company_from_template(tpl.format("SOURCE ENERGY CORP /UT/")) == "SOURCE ENERGY CORP"
+    assert company_from_template(tpl.format("Foo Holdings (UK)")) == "Foo Holdings (UK)"
+
+
+def test_no_double_period_and_paren_exhibit_keywords():
+    gt = {
+        "intent": "entity_formation",
+        "subject_matter": "articles_of_incorporation of ClubCorp Holdings, Inc. (CIK 0001) (SEC EDGAR exhibit). X",
+        "keywords": json.dumps(["articles of incorporation", "EX-3.1(A)"]),
+    }
+    new, _ = relabel_row(_row("articles_of_incorporation", gt))
+    out = json.loads(new["gt_fields"])
+    assert out["subject_matter"] == "Articles of incorporation of ClubCorp Holdings, Inc."
+    assert json.loads(out["keywords"]) == ["Articles of incorporation", "ClubCorp Holdings, Inc."]
+
+
+def test_relabel_never_overwrites_stated_labels():
+    gt = {
+        "intent": "other",
+        "intent_source": "human_adjudicated",
+        "record_type": "rights_instrument",
+        "filing_number": "123",
+        "gt_presence": json.dumps({"filing_number": "populated"}),
+        "keywords": json.dumps(["indenture", "x"]),
+    }
+    new, changes = relabel_row(_row("indenture", gt))
+    out = json.loads(new["gt_fields"])
+    assert out["intent"] == "other" and out["record_type"] == "rights_instrument"
+    assert out["filing_number"] == "123"
+    assert json.loads(out["gt_presence"])["filing_number"] == "populated"
+    assert json.loads(out["keywords"]) == ["indenture", "x"]
+    assert "record_type" not in changes
+
+
+def test_relabel_rows_survives_malformed_gt():
+    bad = {"expected": "corporate_record", "expected_subclass": "bylaws", "gt_fields": "{not json"}
+    from llm_dojo_scoring.corporate_record_relabel import relabel_rows
+
+    ((row, changes),) = list(relabel_rows([bad]))
+    assert row == bad and changes == ["gt_unparseable"]

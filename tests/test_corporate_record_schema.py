@@ -138,6 +138,7 @@ def test_batch_scoring_aligns_unlabeled_per_row():
         doc_subclass=["articles_of_incorporation", "bylaws"],
     )
     assert out["extraction_precision"] == 1.0
+    assert len(out["unlabeled_fields"]) == 2
 
 
 def test_audit_flags_published_label_defects():
@@ -184,3 +185,38 @@ def test_audit_flags_subclass_content_conflict_on_prose_subject():
     assert not [d for d in audit_gt_row("bylaws", gt) if d.startswith("subclass_content")]
     template = {"subject_matter": "bylaws of Acme (CIK 1) (SEC EDGAR exhibit)."}
     assert not [d for d in audit_gt_row("indenture", template) if d.startswith("subclass_content")]
+
+
+def test_labeled_extension_entity_is_scored_both_ways():
+    suite = get_suite("corporate_records_specialist")
+    gt = dict(
+        _GT,
+        registered_agent="CT Corp",
+        gt_presence=json.dumps({"registered_agent": "populated"}),
+    )
+    sub = "articles_of_incorporation"
+    hit = suite.score_document(json.dumps(gt), dict(_PRED, registered_agent="CT Corp"), doc_subclass=sub)
+    assert hit["extraction"].field_scores["registered_agent"] == 1.0
+    assert hit["extraction_precision"] == hit["extraction_recall"] == 1.0
+    wrong = suite.score_document(json.dumps(gt), dict(_PRED, registered_agent="Other"), doc_subclass=sub)
+    assert wrong["extraction"].field_scores["registered_agent"] < 0.5
+    missing = {k: v for k, v in _PRED.items() if k != "registered_agent"}
+    assert suite.score_document(json.dumps(gt), missing, doc_subclass=sub)["extraction_recall"] < 1.0
+
+
+def test_pending_annotation_is_unlabeled_not_expected_empty():
+    gt = dict(_GT, gt_presence=json.dumps({"entity_name": "pending_annotation"}))
+    assert "entity_name" in unlabeled_fields("articles_of_incorporation", gt)
+    suite = get_suite("corporate_records_specialist")
+    out = suite.score_document(json.dumps(gt), _PRED, doc_subclass="articles_of_incorporation")
+    assert out["extraction_precision"] == 1.0
+    assert "entity_name" in out["unlabeled_fields"]
+
+
+def test_json_schema_accepts_prompt_compliant_output_for_inapplicable_keys():
+    from llm_dojo_scoring.corporate_record_schema import corporate_record_json_schema as js
+
+    sch = js("bylaws")
+    assert set(sch["required"]) >= set(CORE_FIELDS)
+    assert sch["properties"]["filing_number"] == {"type": "null"}
+    assert js("subsidiary_list")["properties"]["signatories"]["maxItems"] == 0
