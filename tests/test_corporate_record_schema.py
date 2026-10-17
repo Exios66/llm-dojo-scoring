@@ -266,12 +266,46 @@ def test_wrong_subclass_entity_is_flagged():
 def test_specialist_prompt_embeds_generated_subclass_schema(family):
     """Both prompt families embed generated subclass guidance within the size cap."""
     text = get_prompt("corporate_records_specialist", family=family).text
-    assert render_prompt_section() in text
+    section = render_prompt_section()
+    assert section in text
+    # The section sits as one contiguous block right after the "By doc_subclass"
+    # intro line — no other "- " prose lines between the rendered lines.
+    lines = text.splitlines()
+    first = lines.index(section.splitlines()[0])
+    assert lines[first : first + len(section.splitlines())] == section.splitlines()
+    assert lines[first - 1].startswith("By doc_subclass")
     for sub in SUBCLASS_SCHEMAS:
-        if sub != "certificate_of_formation":  # folded into articles_of_incorporation
-            assert render_subclass_block(sub) in text
+        assert render_subclass_block(sub) in text
     assert len(text) <= 5865  # never longer than the frozen v1 baseline
     assert "key_provisions" not in text.replace("Do not emit the retired key `key_provisions`", "")
+
+
+def test_certificate_of_formation_is_explicit_with_omit_clause():
+    """The frozen prompt names certificate_of_formation explicitly (no more
+    prose alias) and forbids emitting authorized_capital even as null."""
+    assert render_subclass_block("certificate_of_formation") == (
+        "- certificate_of_formation: articles_of_incorporation, entity_formation; "
+        "+organizers[], registered_agent; omit authorized_capital entirely, even when null"
+    )
+    section = render_prompt_section()
+    assert "omit authorized_capital entirely, even when null" in section
+    assert "articles_of_incorporation with organizers instead of incorporators" not in section
+
+
+def test_render_order_keeps_certificate_of_formation_between_articles_and_amendment():
+    lines = render_prompt_section().splitlines()
+    assert lines[0].startswith("- bylaws:")
+    assert lines[1].startswith("- articles_of_incorporation:")
+    assert lines[2].startswith("- certificate_of_formation:")
+    assert lines[3].startswith("- charter_amendment:")
+    assert lines[-1] == "- other: other, other"
+
+
+def test_only_certificate_of_formation_may_omit_entity_keys():
+    subs = SUBCLASS_SCHEMAS["certificate_of_formation"]
+    assert subs.omit_entity_keys == ("authorized_capital",)
+    assert [s.subclass for s in SUBCLASS_SCHEMAS.values() if s.omit_entity_keys] == ["certificate_of_formation"]
+    assert [s.subclass for s in SUBCLASS_SCHEMAS.values() if s.core_guidance] == ["subsidiary_list"]
 
 
 def test_audit_flags_subclass_content_conflict_on_prose_subject():

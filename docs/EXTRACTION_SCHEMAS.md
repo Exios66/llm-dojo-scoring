@@ -228,7 +228,7 @@ official filing/document number is on **this** record.
 `pipeline.extraction.field_micro_f1` / `_f2` / `_precision` / `_recall`. No CUAD/MAUD-grade external
 benchmark.
 
-**Prompt:** `corporate_records_specialist` `sha256 b40963bb…`
+**Prompt:** `corporate_records_specialist` `sha256 253559fc…`
 (locally corrected + per-subclass entity schemas; upstream eval-environment re-freeze tracked in
 [`TODOS.md`](TODOS.md)).
 
