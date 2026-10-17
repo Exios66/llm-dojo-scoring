@@ -14,7 +14,7 @@ import hashlib
 
 import pytest
 
-from llm_dojo_scoring.prompts import FAMILIES, get_prompt, list_prompts
+from llm_dojo_scoring.prompts import FAMILIES, get_prompt, get_prompt_version, list_prompts
 
 FROZEN_V1: dict[str, dict[str, object]] = {
     "contracts_specialist": {
@@ -99,8 +99,7 @@ def test_frozen_v1_notes_pin_lineage_and_sandbox_stem():
 
 
 def test_frozen_v1_distinct_from_docclass():
-    # Since v0.20.0 the live ``production`` specialists ARE the frozen v1 bytes
-    # (re-vendored from mailroom); only the docclass lineage stays distinct.
+    # The evaluation stems remain distinct from the docclass lineage.
     for agent in FROZEN_V1:
         v1 = get_prompt(agent, family="production_prompts").text
         docclass = get_prompt(agent, family="docclass").text
@@ -122,7 +121,14 @@ LIVE = ("contracts_specialist", "corporate_records_specialist", "correspondence_
 
 def test_production_specialists_are_frozen_v1():
     for a in LIVE:
-        assert get_prompt(a).text == get_prompt(a, family="production_prompts").text
+        if a == "corporate_records_specialist":
+            # Mailroom still pins v6; evaluation v7 must not advance production.
+            text = get_prompt(a).text
+            assert text == get_prompt_version("corporate_records_specialist_v6").text
+            assert _frozen_sha(text) == "fe13501f667fcd9f64f7dfbf8b0f124f81d9dd039f4109288b43f106f82b1399"
+            assert text != get_prompt(a, family="production_prompts").text
+        else:
+            assert get_prompt(a).text == get_prompt(a, family="production_prompts").text
 
 
 def test_production_specialist_rows_say_frozen_v1():

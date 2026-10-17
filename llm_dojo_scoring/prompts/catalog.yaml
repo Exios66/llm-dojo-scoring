@@ -45,8 +45,11 @@ prompts:
   doc_bundle: corporate_record
   source_repo: llm-mailroom
   source_key: frozen_v1
-  source_commit: 6ddde73bfca34f39b44e1db9966f4a04543795fa
+  source_commit: cb960a2c1ab323a7d9cb1ebf9e9aaf77652ca622
   template: corporate_records_specialist.production.md
+  notes: 'Live mailroom freeze: corporate_records_specialist_v6 (sha256 fe13501f…).
+    production_prompts carries eval-environment v7; promote it here only after
+    llm-mailroom updates its dependency and freeze.'
   priming: []
 - agent: correspondence_specialist
   family: production

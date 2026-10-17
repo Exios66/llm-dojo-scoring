@@ -282,10 +282,9 @@ def test_wrong_subclass_entity_is_flagged():
     assert "entity_wrong_subclass:trustee" in audit_gt_row("bylaws", gt)
 
 
-@pytest.mark.parametrize("family", ["production", "production_prompts"])
-def test_specialist_prompt_embeds_generated_subclass_schema(family):
-    """Both prompt families embed generated subclass guidance within the size cap."""
-    text = get_prompt("corporate_records_specialist", family=family).text
+def test_specialist_prompt_embeds_generated_subclass_schema():
+    """The evaluation prompt embeds generated subclass guidance within the size cap."""
+    text = get_prompt("corporate_records_specialist", family="production_prompts").text
     section = render_prompt_section()
     assert section in text
     # The section sits as one contiguous block right after the "By doc_subclass"
