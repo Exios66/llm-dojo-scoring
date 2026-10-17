@@ -25,6 +25,13 @@ from llm_dojo_scoring.corporate_record_schema import audit_gt_rows
 
 
 def main(argv: list[str]) -> int:
+    """Write repaired corporate rows to JSONL and print change and audit counts.
+
+    ``argv`` includes the program name, output path, and input parquet paths.
+    Return 2 with usage text if paths are missing, otherwise overwrite the
+    output and return 0 even if the audit finds defects. Malformed GT rows
+    are retained via :func:`relabel_rows`; file and parquet errors propagate.
+    """
     if len(argv) < 3:
         print(__doc__)
         return 2

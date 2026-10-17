@@ -63,7 +63,10 @@ _PHRASE = {
 
 
 def company_from_template(subject_matter: str) -> str | None:
-    """Company named in a template ``subject_matter``; ``None`` when not a template."""
+    """Return the company from an EDGAR template, or ``None`` if absent or empty.
+
+    Normalize whitespace and strip trailing ticker and EDGAR state suffixes.
+    """
     m = _TEMPLATE_RE.match(subject_matter or "")
     if not m:
         return None
@@ -80,7 +83,19 @@ def company_from_template(subject_matter: str) -> str | None:
 
 
 def relabel_row(row: Mapping[str, Any]) -> tuple[dict[str, Any], list[str]]:
-    """Return ``(new_row, changes)`` for one Hub ground-truth row."""
+    """Return ``(new_row, changes)`` for one Hub ground-truth row without mutation.
+
+    Repair templates and provenance keywords, resolve unambiguous subclass
+    conflicts, and fill invalid record types. Preserve valid record types
+    unless the subclass changes; repin intent only when ``intent_source`` is
+    empty or ``heuristic``. Mark empty, inapplicable core fields as
+    ``not_applicable`` unless their presence is ``populated``.
+
+    Corporate rows serialize ``gt_fields`` and nested containers as JSON;
+    other rows pass through as shallow copies. ``changes`` records label
+    repairs, excluding serialization and presence-only updates. Malformed
+    ``gt_fields`` raises ``TypeError`` or ``ValueError`` from :func:`parse_gt_fields`.
+    """
     new = dict(row)
     changes: list[str] = []
     if row.get("expected") != "corporate_record":
@@ -150,7 +165,12 @@ def relabel_row(row: Mapping[str, Any]) -> tuple[dict[str, Any], list[str]]:
 
 
 def relabel_rows(rows):
-    """Relabel every row; yields ``(new_row, changes)``."""
+    """Yield ``(new_row, changes)`` for each row in input order.
+
+    Catch ``TypeError`` and ``ValueError`` from :func:`relabel_row`, yielding
+    a shallow copy of the original row with ``["gt_unparseable"]`` instead.
+    Other errors propagate.
+    """
     for row in rows:
         try:
             yield relabel_row(row)
