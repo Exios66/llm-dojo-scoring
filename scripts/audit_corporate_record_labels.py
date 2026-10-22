@@ -3,7 +3,7 @@
 
 Usage::
 
-    python scripts/audit_corporate_record_labels.py PATH [PATH ...] [--json]
+    python scripts/audit_corporate_record_labels.py PATH [PATH ...] [--json] [--review-queue OUTPUT.jsonl]
 
 Each PATH is a mailroom-dataset ``ground_truth`` parquet (or a ``.bin`` HF
 cache copy) or a JSONL file with ``expected`` / ``expected_subclass`` /
@@ -19,13 +19,14 @@ import json
 import sys
 from pathlib import Path
 
-from llm_dojo_scoring.corporate_record_schema import audit_gt_rows
+from llm_dojo_scoring.corporate_record_schema import audit_gt_row, audit_gt_rows
 
 
-def _rows(path: Path):
-    """Yield nonblank JSONL records, or the three audit columns from parquet.
+def _rows(path: Path, *, include_context: bool = False):
+    """Yield JSONL records or parquet rows, projecting audit columns by default.
 
-    Non-``.jsonl`` paths require ``pyarrow``. File and parsing errors propagate.
+    Review queues retain all parquet columns for source context. Non-``.jsonl``
+    paths require ``pyarrow``. File and parsing errors propagate.
     """
     if path.suffix == ".jsonl":
         with path.open(encoding="utf-8") as fh:
@@ -35,7 +36,29 @@ def _rows(path: Path):
         return
     import pyarrow.parquet as pq  # optional dependency
 
-    yield from pq.read_table(path, columns=["expected", "expected_subclass", "gt_fields"]).to_pylist()
+    columns = None if include_context else ["expected", "expected_subclass", "gt_fields"]
+    yield from pq.read_table(path, columns=columns).to_pylist()
+
+
+def _review_rows(rows):
+    """Yield defective corporate rows and audit evidence without suggesting labels."""
+    for row in rows:
+        if row.get("expected") != "corporate_record":
+            continue
+        raw_gt = row.get("gt_fields")
+        try:
+            defects = audit_gt_row(row.get("expected_subclass"), {} if raw_gt is None else raw_gt)
+        except (TypeError, ValueError):
+            defects = ["gt_unparseable"]
+        if defects:
+            yield {
+                "row": dict(row),
+                "defects": defects,
+                "annotation_fields": [
+                    code.split(":", 1)[1]
+                    for code in defects if code.startswith("entity_unlabeled:")
+                ],
+            }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -44,13 +67,25 @@ def main(argv: list[str] | None = None) -> int:
     ``argv`` excludes the program name; ``None`` uses command-line arguments.
     Argument errors exit through argparse; file-reading and parsing errors
     propagate, while GT parse errors within a row are counted as ``gt_unparseable``.
+    An optional review queue preserves defective rows for human annotation;
+    its output must not already exist and never replaces an input file.
     """
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("paths", nargs="+", type=Path)
     ap.add_argument("--json", action="store_true", help="emit the report as JSON")
+    ap.add_argument("--review-queue", type=Path, help="write a new JSONL queue for human review")
     args = ap.parse_args(argv)
-    rows = [row for path in args.paths for row in _rows(path)]
+    if args.review_queue and args.review_queue.resolve() in {path.resolve() for path in args.paths}:
+        ap.error("--review-queue must not replace an input file")
+    rows = [
+        row for path in args.paths
+        for row in _rows(path, include_context=args.review_queue is not None)
+    ]
     report = audit_gt_rows(rows)
+    if args.review_queue:
+        with args.review_queue.open("x", encoding="utf-8") as queue:
+            for entry in _review_rows(rows):
+                queue.write(json.dumps(entry, ensure_ascii=False, default=str) + "\n")
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))
     else:
