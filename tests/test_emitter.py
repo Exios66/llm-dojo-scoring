@@ -26,6 +26,7 @@ PROV = {
 
 @pytest.fixture(autouse=True)
 def _clean():
+    """Reset registry caches and the default emitter around each test."""
     clear_registry_cache()
     reset_default_emitter()
     yield
@@ -34,6 +35,7 @@ def _clean():
 
 
 def _tiny_registry() -> Registry:
+    """Build a registry with one headline metric and one unaggregated log metric."""
     from llm_dojo_scoring.registry import MetricDef
 
     reg = Registry()
@@ -45,6 +47,7 @@ def _tiny_registry() -> Registry:
 
 
 def test_emit_score_roundtrip(tmp_path):
+    """Persist emitted scores with their value, agent, and metric identity."""
     sink = LocalManifestSink(tmp_path / "scores.jsonl")
     em = Emitter(sinks=[sink], registry=_tiny_registry())
     rec = em.emit_score("sorter", doc_id="d1", metric_name="f1_macro", value=0.9, run_id="r1", provenance=PROV)
@@ -55,12 +58,14 @@ def test_emit_score_roundtrip(tmp_path):
 
 
 def test_unknown_metric_fails_fast(tmp_path):
+    """Reject emission of metrics absent from the registry."""
     em = Emitter(sinks=[], registry=_tiny_registry())
     with pytest.raises(KeyError):
         em.emit_score("sorter", "d1", "not_a_metric", 1.0, provenance=PROV)
 
 
 def test_scorecard_tier_filtering_and_aggregation(tmp_path):
+    """Aggregate headline scores while keeping raw predictions out of dashboard tiers."""
     em = Emitter(sinks=[], registry=_tiny_registry())
     for i, v in enumerate([0.8, 0.9, 1.0]):
         em.emit_score("sorter", f"d{i}", "f1_macro", v, run_id="r1", provenance=PROV)
@@ -76,6 +81,7 @@ def test_scorecard_tier_filtering_and_aggregation(tmp_path):
 
 
 def test_scorecard_run_isolation(tmp_path):
+    """Keep scorecard aggregates isolated by run identifier."""
     em = Emitter(sinks=[], registry=_tiny_registry())
     em.emit_score("sorter", "d1", "f1_macro", 0.5, run_id="r1", provenance=PROV)
     em.emit_score("sorter", "d1", "f1_macro", 1.0, run_id="r2", provenance=PROV)
@@ -84,6 +90,7 @@ def test_scorecard_run_isolation(tmp_path):
 
 
 def test_compare_headlines_delta(tmp_path):
+    """Report headline deltas as the second run minus the first."""
     em = Emitter(sinks=[], registry=_tiny_registry())
     em.emit_score("a_agent", "d", "f1_macro", 0.5, provenance=PROV)
     em.emit_score("b_agent", "d", "f1_macro", 0.7, provenance=PROV)
@@ -92,6 +99,7 @@ def test_compare_headlines_delta(tmp_path):
 
 
 def test_sum_aggregation_for_cost(tmp_path):
+    """Sum emitted cost values instead of averaging them."""
     from llm_dojo_scoring.registry import MetricDef
 
     reg = Registry()
@@ -106,13 +114,17 @@ def test_sum_aggregation_for_cost(tmp_path):
 
 
 def test_langfuse_sink_uses_transport_alias():
+    """Send the registered transport alias and trace identifier to Langfuse."""
     captured = {}
 
     class _Client:
+        """Capture Langfuse score calls for transport alias assertions."""
         def score(self, **kwargs):
+            """Record the keyword arguments sent to the fake Langfuse client."""
             captured.update(kwargs)
 
         def flush(self):
+            """Accept flush calls without external side effects."""
             return None
 
     sink = LangfuseSink(client=_Client())
@@ -143,6 +155,7 @@ def test_langfuse_sink_inert_without_keys(monkeypatch):
 
 
 def test_local_sink_read_all(tmp_path):
+    """Deserialize manifest records with their original metric values."""
     sink = LocalManifestSink(tmp_path / "s.jsonl")
     em = Emitter(sinks=[sink], registry=_tiny_registry())
     em.emit_score("sorter", "d1", "f1_macro", 0.42, provenance=PROV)
@@ -151,6 +164,7 @@ def test_local_sink_read_all(tmp_path):
 
 
 def test_default_emitter_singleton():
+    """Reuse the default emitter until an explicit reset replaces it."""
     e1 = get_emitter()
     e2 = get_emitter()
     assert e1 is e2
@@ -159,6 +173,7 @@ def test_default_emitter_singleton():
 
 
 def test_register_metric_adhoc(tmp_path):
+    """Allow an ad hoc registered metric to appear in scorecards."""
     from llm_dojo_scoring.registry import MetricDef
 
     em = Emitter(sinks=[], registry=Registry())
@@ -176,10 +191,13 @@ def test_langfuse_sink_emit_failure_is_counted_and_loud(caplog):
     configured."""
 
     class _BrokenClient:
+        """Simulate a client that fails when emitting a score."""
         def score(self, **kwargs):
+            """Raise a transport error to exercise sink failure reporting."""
             raise RuntimeError("sink down")
 
         def flush(self):
+            """Allow flushing so the simulated failure remains limited to score emission."""
             return None
 
     from llm_dojo_scoring.emitter import SINK_EMIT_FAILURES, sink_failure_counts
@@ -197,10 +215,13 @@ def test_langfuse_sink_flush_failure_is_counted_and_loud(caplog):
     """A failed flush must count + log — buffered scores lost silently."""
 
     class _BrokenClient:
+        """Simulate a client whose buffered-score flush fails."""
         def score(self, **kwargs):
+            """Accept score calls without simulating an emission failure."""
             return None
 
         def flush(self):
+            """Raise a flush error to exercise failure counting and logging."""
             raise RuntimeError("flush down")
 
     from llm_dojo_scoring.emitter import sink_failure_counts

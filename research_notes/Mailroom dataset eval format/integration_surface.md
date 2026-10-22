@@ -1,5 +1,8 @@
 # Mailroom dataset eval format — integration surface map
 
+> Historical October 17, 2026 integration snapshot. Pins, branch states, and
+> line citations are not live status; see [the research index](README.md).
+
 Scope: every consumer of `Lucius-Morningstar/mailroom-dataset` and of the dojo scoring outputs across `/Users/morningstar/Desktop/Cold_Storage/{llm-dojo-scoring, eval-environment, local-mailroom-sandbox, Mailroom-Corpus-EDA}` plus `llm-mailroom` (the editable pipeline dependency of eval-environment). All citations are `file:line` inside these repos unless marked "live Hub" (verified via HuggingFace API on 2026-10-17). Read-only research; no files were modified.
 
 ## Which code loads the HF dataset or its files, at which pins?

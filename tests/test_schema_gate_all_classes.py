@@ -37,6 +37,7 @@ def _one_field_pair(doc_class: str) -> tuple[dict, dict, dict]:
 
 
 def test_every_live_class_has_a_gate():
+    """Provide schema promotion gates for every live document class."""
     assert set(SCHEMA_PROMOTION_GATES) == set(LIVE_DOC_TYPES)
     assert DEFAULT_INSURANCE_SCHEMA_GATE == DEFAULT_SCHEMA_GATE
 
@@ -56,6 +57,7 @@ def test_high_score_with_invalid_schema_fails_the_gate(doc_class):
 
 @pytest.mark.parametrize("doc_class", LIVE_DOC_TYPES)
 def test_schema_complete_prediction_passes_the_gate(doc_class):
+    """Pass the promotion gate for schema-complete predictions in each live class."""
     expected, _, full = _one_field_pair(doc_class)
     out = get_suite(_SPECIALIST_FOR[doc_class]).score_document(expected, full)
     assert out["schema_promotion_gate"]["passes"] is True
@@ -70,6 +72,7 @@ def test_batch_payload_carries_the_gate(doc_class):
 
 
 def test_gate_threshold_resolution():
+    """Apply class thresholds by default and honor explicit threshold overrides."""
     assert check_schema_promotion_gate(0.95, doc_class="contract")["passes"] is True
     assert check_schema_promotion_gate(0.95, doc_class="contract", threshold=0.99)[
         "passes"
@@ -95,6 +98,7 @@ def test_batch_format_layer_counts_missing_keys_per_item():
 
 
 def test_batch_format_layer_counts_unparseable_strings():
+    """Include malformed JSON predictions in batch parse and schema-validity rates."""
     from llm_dojo_scoring.scorecard_honesty import score_format_layer
 
     out = score_format_layer(
@@ -105,6 +109,7 @@ def test_batch_format_layer_counts_unparseable_strings():
 
 
 def test_empty_batch_fails_closed():
+    """Assign zero schema validity to a batch with no predictions."""
     from llm_dojo_scoring.scorecard_honesty import score_format_layer
 
     assert score_format_layer(predicted=[], required_keys=["a"])["schema_valid"] == 0.0
@@ -112,6 +117,7 @@ def test_empty_batch_fails_closed():
 
 @pytest.mark.parametrize("raw", ["[]", '[{"a": 1}]'])
 def test_parsed_non_object_fails_required_keys(raw):
+    """Require object keys only when specified, even for successfully parsed JSON."""
     from llm_dojo_scoring.scorecard_honesty import score_format_layer
 
     out = score_format_layer(predicted_raw=raw, required_keys=["a"])
@@ -122,6 +128,7 @@ def test_parsed_non_object_fails_required_keys(raw):
 @pytest.mark.parametrize("doc_class", LIVE_DOC_TYPES)
 @pytest.mark.parametrize("surplus_is_valid", [False, True])
 def test_batch_gate_ignores_surplus_predictions(doc_class, surplus_is_valid):
+    """Exclude predictions beyond the ground-truth rows from batch gate calculations."""
     expected, partial, full = _one_field_pair(doc_class)
     scored = partial if surplus_is_valid else full
     surplus = full if surplus_is_valid else partial
@@ -135,6 +142,7 @@ def test_batch_gate_ignores_surplus_predictions(doc_class, surplus_is_valid):
 
 @pytest.mark.parametrize("doc_class", LIVE_DOC_TYPES)
 def test_batch_gate_respects_doc_text_limit(doc_class):
+    """Apply the document-text limit consistently to extraction and schema gating."""
     expected, partial, full = _one_field_pair(doc_class)
     suite = get_suite(_SPECIALIST_FOR[doc_class])
     baseline = suite.score([expected], [full])
@@ -149,6 +157,7 @@ def test_batch_gate_respects_doc_text_limit(doc_class):
 
 @pytest.mark.parametrize("doc_class", LIVE_DOC_TYPES)
 def test_unscorable_document_carries_failing_gate_and_provenance(doc_class):
+    """Attach schema-gate results and provenance even when ground truth is unscorable."""
     _, _, full = _one_field_pair(doc_class)
     out = get_suite(_SPECIALIST_FOR[doc_class]).score_document(
         None, full, dataset_revision="test-revision", prompt_id="test-prompt"
@@ -165,6 +174,7 @@ def test_unscorable_document_carries_failing_gate_and_provenance(doc_class):
 
 @pytest.mark.parametrize("doc_class", LIVE_DOC_TYPES)
 def test_unscorable_document_with_malformed_answer_fails_gate(doc_class):
+    """Fail parsing and promotion for malformed predictions on unscorable ground truth."""
     out = get_suite(_SPECIALIST_FOR[doc_class]).score_document(None, "not json")
     assert out["status"] == "unscorable"
     assert out["parse_ok"] == 0.0

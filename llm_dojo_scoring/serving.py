@@ -164,6 +164,7 @@ _QUALITY_KEYS = (
 
 
 def _first(mapping: Mapping[str, Any] | None, *keys: str) -> Any:
+    """Return the first nonempty value found by direct or dotted key lookup."""
     if not mapping:
         return None
     for key in keys:
@@ -185,6 +186,7 @@ def _first(mapping: Mapping[str, Any] | None, *keys: str) -> Any:
 
 
 def _as_float(value: Any) -> float | None:
+    """Coerce numeric values to floats, rejecting blanks, booleans, and bad input."""
     if value is None or value == "":
         return None
     if isinstance(value, bool):
@@ -196,6 +198,7 @@ def _as_float(value: Any) -> float | None:
 
 
 def _as_int(value: Any) -> int | None:
+    """Coerce a float-compatible value to an integer, or return None if absent."""
     num = _as_float(value)
     if num is None:
         return None
@@ -203,6 +206,7 @@ def _as_int(value: Any) -> int | None:
 
 
 def _as_str(value: Any) -> str | None:
+    """Return a stripped string, or None for absent or blank values."""
     if value is None or value == "":
         return None
     return str(value).strip() or None
@@ -249,6 +253,7 @@ def _percentile(values: Sequence[float], p: float) -> float | None:
 
 
 def _mean(values: Sequence[float | None]) -> float | None:
+    """Average non-None values to six decimals, returning None for no samples."""
     xs = [float(v) for v in values if v is not None]
     if not xs:
         return None
@@ -256,6 +261,7 @@ def _mean(values: Sequence[float | None]) -> float | None:
 
 
 def _host(url: Any) -> str | None:
+    """Extract a hostname from a URL or a scheme-less host and path."""
     text = _as_str(url)
     if not text:
         return None
@@ -337,6 +343,7 @@ class ServingIdentity:
     n: int | None = None
 
     def as_dict(self) -> dict[str, Any]:
+        """Return the serving identity's dataclass fields as a dictionary."""
         return {k: getattr(self, k) for k in self.__dataclass_fields__}
 
 
@@ -359,6 +366,8 @@ class ServingObservation:
 
 @dataclass
 class ServingRun:
+    """Normalized run identity, observations, quality scores, costs, and data gaps."""
+
     identity: ServingIdentity
     observations: list[ServingObservation] = field(default_factory=list)
     scores: dict[str, Any] = field(default_factory=dict)
@@ -372,6 +381,7 @@ class ServingRun:
 
 
 def _identity_from(record: Mapping[str, Any]) -> ServingIdentity:
+    """Normalize serving identity aliases, preferring top-level record values."""
     serving = record.get("serving") if isinstance(record.get("serving"), Mapping) else {}
     vllm = record.get("vllm") if isinstance(record.get("vllm"), Mapping) else {}
     merged: dict[str, Any] = {}
@@ -409,6 +419,7 @@ def _identity_from(record: Mapping[str, Any]) -> ServingIdentity:
 
 
 def _observation_from(row: Mapping[str, Any]) -> ServingObservation:
+    """Normalize request telemetry and derive timings only from recorded inputs."""
     tokens = row.get("tokens") if isinstance(row.get("tokens"), Mapping) else {}
     usage = row.get("usage") if isinstance(row.get("usage"), Mapping) else {}
     timings = row.get("timings") if isinstance(row.get("timings"), Mapping) else {}
@@ -499,6 +510,7 @@ def _observation_from(row: Mapping[str, Any]) -> ServingObservation:
 
 
 def _request_rows(record: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    """Find the first nonempty request-row list, or treat the record as one row."""
     for key in ("requests", "observations", "generations", "timings", "per_call"):
         val = record.get(key)
         if isinstance(val, list) and val and isinstance(val[0], Mapping):
@@ -555,6 +567,7 @@ def normalize_serving_record(record: Mapping[str, Any] | ServingRun) -> ServingR
 
 
 def _derived(obs: ServingObservation) -> dict[str, float | None]:
+    """Calculate token rates where the recorded timings and token counts allow."""
     e2e = obs.e2e_latency_seconds
     ttft = obs.ttft_seconds
     prompt = obs.prompt_tokens
@@ -719,6 +732,7 @@ _LEG_IDENTITY_KEYS = (
 
 
 def _record_metric_id(raw: Mapping[str, Any]) -> str | None:
+    """Read a metric ID from the record or its nested quality mapping."""
     mid = raw.get("metric_id")
     q = raw.get("quality")
     if not mid and isinstance(q, Mapping):
@@ -727,6 +741,7 @@ def _record_metric_id(raw: Mapping[str, Any]) -> str | None:
 
 
 def _delta_map(local: Mapping[str, Any], api: Mapping[str, Any]) -> dict[str, Any]:
+    """Compare available serving metrics using local-minus-API deltas and ratios."""
     out: dict[str, Any] = {}
     for key in SERVING_METRIC_NAMES:
         a = _as_float(local.get(key))
@@ -749,6 +764,7 @@ _COST_NAMES = ("estimated_cost_usd", "cost_per_document", "prompt_tokens", "comp
 
 
 def _identity_dict(agg: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Copy an aggregate's identity, selecting the first entry when it is a list."""
     ident = (agg or {}).get("identity") or {}
     if isinstance(ident, list):
         ident = ident[0] if ident else {}
@@ -756,6 +772,7 @@ def _identity_dict(agg: Mapping[str, Any] | None) -> dict[str, Any]:
 
 
 def _metric_status(local: float | None, api: float | None, name: str) -> str:
+    """Classify a metric as missing, local-only, API-only, or compared."""
     if local is None and api is None:
         return "missing"
     if api is None:
@@ -766,6 +783,7 @@ def _metric_status(local: float | None, api: float | None, name: str) -> str:
 
 
 def _metric_note(name: str, status: str, gaps: Sequence[str]) -> str | None:
+    """Explain missing telemetry or return a matching recorded cost gap."""
     if status == "missing":
         if name == "ttft_seconds":
             return "TTFT not recorded — not inferred from e2e/n_tokens"
@@ -838,6 +856,7 @@ def serving_table_rows(
 
 
 def _cell(value: Any) -> str:
+    """Format a table value compactly, representing None and NaN as None."""
     if value is None:
         return "None"
     if isinstance(value, float):
@@ -930,6 +949,7 @@ def serving_cost_card(agg: Mapping[str, Any] | None) -> dict[str, Any]:
 
 
 def _cost_delta(local_cost: Mapping[str, Any], api_cost: Mapping[str, Any]) -> dict[str, Any]:
+    """Compare total and per-document costs without filling missing estimates."""
     a = _as_float(local_cost.get("estimated_cost_usd"))
     b = _as_float(api_cost.get("estimated_cost_usd"))
     pa = _as_float(local_cost.get("cost_per_document"))
@@ -1344,6 +1364,7 @@ def _refuse_mixed_leg(side: str, agg: Mapping[str, Any] | None) -> None:
 def _leg_provenance(
     agg: Mapping[str, Any], given: Mapping[str, Any] | None
 ) -> dict[str, Any]:
+    """Build one leg's provenance from its aggregate and non-None overrides."""
     ident = _identity_dict(agg)
     prov: dict[str, Any] = {
         "dataset_revision": ident.get("dataset_revision"),
@@ -1393,6 +1414,7 @@ def pair_comparable_runs(
     local, api, _ = split_local_api(records)
 
     def _key(rec: Mapping[str, Any]) -> tuple[Any, ...]:
+        """Group comparable records by task, prompt, dataset draw, and metric ID."""
         ident = _identity_from(rec)
         return (
             ident.task,

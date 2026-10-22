@@ -444,6 +444,7 @@ _COMPUTABLE_KINDS = frozenset(
 
 
 def _kind_for(profile: AgentProfile) -> str:
+    """Choose the scoring kind from an agent's name and declared tasks."""
     if profile.name == "intake" or "prepare" in profile.tasks or "normalize" in profile.tasks:
         return _KIND_INTAKE
     if profile.name in SPECIALIST_DOC_TYPES:
@@ -468,6 +469,7 @@ def _kind_for(profile: AgentProfile) -> str:
 
 
 def _task_key_for(profile: AgentProfile, kind: str) -> str | None:
+    """Resolve task keys for classification, review, court-opinion, and intake suites."""
     if profile.name == "sorter":
         return "docclass"
     if profile.name == "sorter_reviewer":
@@ -511,6 +513,7 @@ class ScoringSuite:
         return self.kind in _COMPUTABLE_KINDS
 
     def resolve_bundle(self, *, fallback: bool = False) -> Bundle:
+        """Delegate metric-bundle resolution and fallback handling to the profile."""
         return self.profile.resolve_bundle(fallback=fallback)
 
     def resolve_doc_bundle(
@@ -519,6 +522,7 @@ class ScoringSuite:
         *,
         fallback: bool = True,
     ) -> tuple[Bundle, bool]:
+        """Resolve a document bundle for the requested type or this suite's type."""
         return self.profile.resolve_doc_bundle(
             doc_type or self.doc_type, fallback=fallback
         )
@@ -553,6 +557,7 @@ class ScoringSuite:
         return names
 
     def headline_names(self) -> list[str]:
+        """Return the pruned headline metric names for this agent suite."""
         from .pruning import headline_metrics
 
         return headline_metrics(self.name)
@@ -778,6 +783,7 @@ class ScoringSuite:
             ftypes = {**all_entity_field_types(), **ftypes}
 
         def _stamp(payload: dict[str, Any], mid: str) -> dict[str, Any]:
+            """Validate caller metric and cost claims before stamping provenance."""
             # Same refusal as Emitter / score_archive_block (#17, #22): a
             # caller's metric_id or cost_basis is checked, never overridden.
             claimed = kwargs.get("metric_id")
@@ -998,11 +1004,13 @@ class ScoringSuite:
         unscorable_rows: set[int] = set()
 
         def _run(exp: Any, pred: Any, text: str | None, audit_pred: Any = None):
+            """Score one extraction using this suite's document class and field types."""
             return score_extraction(
                 doc_class, ftypes, pred, exp, doc_text=text, audit_predicted=audit_pred,
             )
 
         def _prf_one(exp: Any, pred: Any, result: ExtractionScoreResult) -> dict[str, Any]:
+            """Compute field-presence metrics, treating non-mapping predictions as misses."""
             if not isinstance(exp, dict):
                 return {}
             if not isinstance(pred, dict):
@@ -1399,6 +1407,7 @@ class ScoringSuite:
         }
 
     def _score_transcription(self, expected: Any, predicted: Any) -> dict[str, Any]:
+        """Combine exact-match and token-F1 scores with word and character ASR metrics."""
         from .asr import score_transcription
         from .classification import accuracy, exact_match
 
@@ -1437,11 +1446,13 @@ class ScoringSuite:
         *,
         raw_text: str | None = None,
     ) -> dict[str, Any]:
+        """Delegate intake scoring with optional raw source text."""
         from .intake import score_intake
 
         return score_intake(expected, predicted, raw_text=raw_text)
 
     def to_dict(self) -> dict[str, Any]:
+        """Serialize suite configuration, metric names, and corpus metadata."""
         return {
             "name": self.name,
             "title": self.title,
@@ -1463,6 +1474,7 @@ class ScoringSuite:
 
 
 def _suite_for_profile(profile: AgentProfile) -> ScoringSuite:
+    """Build a suite with corpus-aligned fields and specialist or auditor metadata."""
     kind = _kind_for(profile)
     doc_type = SPECIALIST_DOC_TYPES.get(profile.name) or profile.doc_bundle
     # Per-specialist auditors inherit the specialist's field types so
@@ -1537,6 +1549,7 @@ DEFAULT_SUITES: dict[str, ScoringSuite] = {
 
 
 def _resolve_suite_name(name: str) -> str:
+    """Resolve agent names and document aliases, raising KeyError for unknown suites."""
     if name in DEFAULT_SUITES:
         return name
     if name.startswith("agent:"):

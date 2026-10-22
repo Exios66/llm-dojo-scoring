@@ -169,6 +169,7 @@ def _macros_from_per_class(
 
 
 def _ci(per_row: list[float], *, seed: int, n_boot: int):
+    """Bootstrap a confidence interval from per-row scores with a fixed seed."""
     return bootstrap_ci(per_row, seed=seed, n_boot=n_boot)
 
 

@@ -72,6 +72,7 @@ def _doc(
     metric_names: tuple[str, ...],
     agent_overrides: dict[str, tuple[str, ...]] | None = None,
 ) -> Bundle:
+    """Construct a document-prefixed bundle with optional per-agent metric extras."""
     return Bundle(
         name=f"doc:{name}",
         description=description,
@@ -268,6 +269,7 @@ def get_doc_bundle(
 
 
 def list_doc_types() -> list[str]:
+    """Return supported document bundle types in sorted order."""
     return sorted(DOC_TYPE_BUNDLES)
 
 

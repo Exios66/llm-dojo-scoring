@@ -127,6 +127,7 @@ def test_correct_entity_extraction_not_penalized_on_unlabeled_gt():
 @pytest.mark.parametrize("batch", [False, True])
 @pytest.mark.parametrize("serialized", [False, True])
 def test_unlabeled_predictions_still_receive_document_audit(batch, serialized):
+    """Audit unlabeled predicted entities against document evidence outside extraction scores."""
     suite = get_suite("corporate_records_specialist")
     predicted = dict(_PRED, signatories=["Jane Doe", "Imaginary Goblin"])
     predictions = [predicted, dict(predicted, entity_name="Phantom Holdings")]
@@ -163,6 +164,7 @@ def test_unlabeled_predictions_still_receive_document_audit(batch, serialized):
 def test_unlabeled_prediction_audit_requires_verification_and_document(
     monkeypatch, verification, text,
 ):
+    """Skip entity audits unless verification and document text are both available."""
     from llm_dojo_scoring import field_scoring
 
     monkeypatch.setattr(field_scoring, "verification_enabled", lambda: verification)
@@ -320,6 +322,7 @@ def test_certificate_of_formation_is_explicit_with_omit_clause():
 
 
 def test_render_order_keeps_certificate_of_formation_between_articles_and_amendment():
+    """Preserve the intended subclass order in rendered corporate schema guidance."""
     lines = render_prompt_section().splitlines()
     assert lines[0].startswith("- bylaws:")
     assert lines[1].startswith("- articles_of_incorporation:")
@@ -329,6 +332,7 @@ def test_render_order_keeps_certificate_of_formation_between_articles_and_amendm
 
 
 def test_only_certificate_of_formation_may_omit_entity_keys():
+    """Restrict entity-key omissions and special core guidance to designated subclasses."""
     subs = SUBCLASS_SCHEMAS["certificate_of_formation"]
     assert subs.omit_entity_keys == ("authorized_capital",)
     assert [s.subclass for s in SUBCLASS_SCHEMAS.values() if s.omit_entity_keys] == ["certificate_of_formation"]
@@ -401,6 +405,7 @@ def test_json_schema_accepts_prompt_compliant_output_for_inapplicable_keys():
 @pytest.mark.parametrize("key", ["entity_name", "registered_agent"])
 @pytest.mark.parametrize("value", [None, "", "  ", "null", "N/A", [], "[]", {}, "{}"])
 def test_empty_entity_representations_remain_unlabeled(key, value):
+    """Recognize supported empty entity encodings as unlabeled ground truth."""
     assert key in unlabeled_fields("articles_of_incorporation", {key: value})
 
 
@@ -418,6 +423,7 @@ def test_empty_entity_representations_remain_unlabeled(key, value):
     ],
 )
 def test_extension_label_status_controls_scoring(status, value, scored, is_unlabeled):
+    """Use extension label status to decide whether a field is scorable or unlabeled."""
     gt = {"registered_agent": value, "gt_presence": {}}
     if status is not None:
         gt["gt_presence"]["registered_agent"] = status
@@ -428,6 +434,7 @@ def test_extension_label_status_controls_scoring(status, value, scored, is_unlab
 
 
 def test_alignment_drops_unlabeled_and_foreign_entities_without_mutation():
+    """Align extraction pairs by removing unlabeled and foreign fields without mutation."""
     gt = dict(_GT, registered_agent="CT Corporation")
     expected = dict(gt, principal="Unannotated principal")
     predicted = dict(_PRED, principal="Jane Doe")
@@ -447,12 +454,14 @@ def test_alignment_drops_unlabeled_and_foreign_entities_without_mutation():
 
 
 def test_alignment_preserves_labeled_entities_even_from_another_subclass():
+    """Keep explicitly labeled entities even when associated with another subclass."""
     gt = dict(_GT, trustee="BNY Mellon", gt_presence={"trustee": "populated"})
     expected, predicted, _ = align_unlabeled("bylaws", gt, gt, {"trustee": "BNY Mellon"})
     assert expected["trustee"] == predicted["trustee"] == "BNY Mellon"
 
 
 def test_alignment_returns_independent_dicts_when_no_fields_are_dropped():
+    """Return independent aligned mappings even when no filtering is necessary."""
     gt = {key: "Labeled" for key in CORE_FIELDS}
     expected, predicted, dropped = align_unlabeled("other", gt, gt, gt)
     assert dropped == ()
@@ -462,6 +471,7 @@ def test_alignment_returns_independent_dicts_when_no_fields_are_dropped():
 
 @pytest.mark.parametrize("subclass", [None, *SUBCLASS_SCHEMAS])
 def test_json_schema_validates_complete_empty_payloads(subclass):
+    """Accept complete empty schema payloads but reject extra, wrong, or missing fields."""
     jsonschema = pytest.importorskip("jsonschema")
     schema = corporate_record_json_schema(subclass)
     jsonschema.Draft202012Validator.check_schema(schema)
@@ -492,6 +502,7 @@ def test_json_schema_validates_complete_empty_payloads(subclass):
     ],
 )
 def test_json_schema_enforces_entity_types_and_inapplicable_core(subclass, key, valid, invalid):
+    """Reject invalid entity types and values for inapplicable core fields."""
     jsonschema = pytest.importorskip("jsonschema")
     schema = corporate_record_json_schema(subclass)
     payload = {
@@ -503,7 +514,9 @@ def test_json_schema_enforces_entity_types_and_inapplicable_core(subclass, key, 
     assert not validator.is_valid(dict(payload, **{key: invalid}))
 
 
-def test_audit_aggregates_clean_malformed_and_unknown_subclass_rows():
+@pytest.mark.parametrize("bad_gt", ["[]", [], 0, False])
+def test_audit_aggregates_clean_malformed_and_unknown_subclass_rows(bad_gt):
+    """Summarize malformed and unknown-subclass GT rows without mutating inputs."""
     clean = {
         "intent": "other",
         "gt_presence": {key: "schema_documented_absence" for key in CORE_FIELDS},
@@ -511,7 +524,7 @@ def test_audit_aggregates_clean_malformed_and_unknown_subclass_rows():
     rows = [
         {"expected": "corporate_record", "expected_subclass": "unknown", "gt_fields": clean},
         {"expected": "corporate_record", "expected_subclass": "other", "gt_fields": "{bad"},
-        {"expected": "corporate_record", "expected_subclass": "bylaws", "gt_fields": "[]"},
+        {"expected": "corporate_record", "expected_subclass": "bylaws", "gt_fields": bad_gt},
         {"expected": "contract", "gt_fields": "{bad"},
     ]
     before = deepcopy(rows)
@@ -530,6 +543,7 @@ def test_audit_aggregates_clean_malformed_and_unknown_subclass_rows():
 
 @pytest.mark.parametrize("key", ["entity_name", "registered_agent"])
 def test_stale_pending_entity_is_excluded_from_both_sides_of_suite_scoring(key):
+    """Exclude pending entities from expected and predicted extraction scores."""
     gt = dict(_GT, **{key: "Stale label"}, gt_presence={key: "pending_annotation"})
     out = get_suite("corporate_records_specialist").score_document(
         gt, _PRED, doc_subclass="articles_of_incorporation"
@@ -540,6 +554,7 @@ def test_stale_pending_entity_is_excluded_from_both_sides_of_suite_scoring(key):
 
 
 def test_documented_absence_of_extension_penalizes_prediction():
+    """Penalize extension hallucinations against documented absence without reducing recall."""
     gt = dict(_GT, registered_agent="", gt_presence={"registered_agent": "schema_documented_absence"})
     suite = get_suite("corporate_records_specialist")
     filled = suite.score_document(gt, _PRED, doc_subclass="articles_of_incorporation")
@@ -550,6 +565,7 @@ def test_documented_absence_of_extension_penalizes_prediction():
 
 
 def test_extension_entity_lists_use_list_scoring_without_expanding_format_requirements():
+    """Score extension entity lists without making them required schema fields."""
     gt = dict(_GT, incorporators='["Alice Brown", "David Smith"]', gt_presence={"incorporators": "populated"})
     suite = get_suite("corporate_records_specialist")
     core_pred = {key: value for key, value in _PRED.items() if key in CORE_FIELDS}
@@ -569,6 +585,7 @@ def test_extension_entity_lists_use_list_scoring_without_expanding_format_requir
 
 @pytest.mark.parametrize("subclass_kw", ["doc_subclass", "expected_subclass"])
 def test_batch_label_status_is_local_to_each_row_and_preserves_inputs(subclass_kw):
+    """Apply label statuses independently per batch row without mutating inputs."""
     rows = [
         dict(_GT, gt_presence={"registered_agent": "pending_annotation"}),
         dict(_GT, registered_agent="CT Corporation", gt_presence={"registered_agent": "populated"}),
@@ -589,6 +606,7 @@ def test_batch_label_status_is_local_to_each_row_and_preserves_inputs(subclass_k
 
 
 def test_batch_alignment_handles_invalid_gt_short_subclass_list_and_surplus_predictions():
+    """Keep alignment metadata stable for invalid GT and mismatched batch lengths."""
     out = get_suite("corporate_records_specialist").score(
         ["{bad GT", _GT, _GT], [_PRED, _PRED, _PRED, {"entity_name": "Surplus"}],
         doc_subclass=["bylaws", "articles_of_incorporation"],

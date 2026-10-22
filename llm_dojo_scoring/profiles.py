@@ -147,6 +147,7 @@ def _p(
     bundle: str | None = None,
     **kw: Any,
 ) -> AgentProfile:
+    """Construct a profile with its optional metrics bundle and extra settings."""
     return AgentProfile(name=name, title=title, tasks=tasks, metrics_bundle=bundle, **kw)
 
 
@@ -397,6 +398,7 @@ def load_profiles(path: str | Path | None = None) -> dict[str, AgentProfile]:
 
 
 def get_profile(name: str, *, path: str | Path | None = None) -> AgentProfile:
+    """Look up a loaded profile, listing known names in an unknown-name error."""
     try:
         return load_profiles(path)[name]
     except KeyError:
@@ -406,8 +408,10 @@ def get_profile(name: str, *, path: str | Path | None = None) -> AgentProfile:
 
 
 def list_profiles(*, path: str | Path | None = None) -> list[str]:
+    """Return sorted profile names from the selected profile catalog."""
     return sorted(load_profiles(path))
 
 
 def clear_profile_cache() -> None:
+    """Discard all cached profile catalogs so subsequent loads read them again."""
     _CACHE.clear()

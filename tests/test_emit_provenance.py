@@ -33,6 +33,7 @@ PROV = {
 
 
 def _registry() -> Registry:
+    """Build a minimal registry covering extraction, latency, and cost provenance."""
     reg = Registry()
     reg.metrics["extraction_overall_score"] = MetricDef(
         name="extraction_overall_score", tier=MetricTier.HEADLINE
@@ -48,6 +49,7 @@ def _registry() -> Registry:
 
 @pytest.mark.parametrize("dropped", EMIT_REQUIRED_PROVENANCE)
 def test_emit_refuses_each_missing_required_key(dropped):
+    """Reject incomplete provenance before adding records to the emitter."""
     em = Emitter(sinks=[], registry=_registry())
     prov = {k: v for k, v in PROV.items() if k != dropped}
     with pytest.raises(ProvenanceExportError, match=dropped):
@@ -57,6 +59,7 @@ def test_emit_refuses_each_missing_required_key(dropped):
 
 
 def test_emit_without_stamp_never_reaches_a_sink(tmp_path):
+    """Reject unstamped scores without creating a sink manifest."""
     sink = LocalManifestSink(tmp_path / "s.jsonl")
     em = Emitter(sinks=[sink], registry=_registry())
     with pytest.raises(ProvenanceExportError):
@@ -65,6 +68,7 @@ def test_emit_without_stamp_never_reaches_a_sink(tmp_path):
 
 
 def test_emit_stamps_scorer_version_and_canonical_metric_id(tmp_path):
+    """Stamp emitted scores with canonical identity, scorer version, and normalized serving kind."""
     sink = LocalManifestSink(tmp_path / "s.jsonl")
     em = Emitter(sinks=[sink], registry=_registry())
     em.emit_score("a", "d1", "extraction_overall_score", 0.7, provenance=PROV)
@@ -77,6 +81,7 @@ def test_emit_stamps_scorer_version_and_canonical_metric_id(tmp_path):
 
 
 def test_emit_accepts_a_stamped_scorecard():
+    """Accept a pre-stamped scorecard as the source of emission provenance."""
     em = Emitter(sinks=[], registry=_registry())
     card = stamp_provenance({"overall": 0.7}, **PROV)
     rec = em.emit_score("a", "d1", "extraction_overall_score", 0.7, provenance=card)
@@ -84,6 +89,7 @@ def test_emit_accepts_a_stamped_scorecard():
 
 
 def test_emit_reads_provenance_from_metadata():
+    """Read embedded provenance without discarding unrelated record metadata."""
     em = Emitter(sinks=[], registry=_registry())
     rec = em.emit_score("a", "d1", "extraction_overall_score", 0.7,
                         metadata={"provenance": PROV, "side": "api"})
@@ -92,6 +98,7 @@ def test_emit_reads_provenance_from_metadata():
 
 
 def test_unmapped_metric_gets_registry_identity_not_a_comparison_id():
+    """Assign registry identity to metrics without a canonical comparison mapping."""
     em = Emitter(sinks=[], registry=_registry())
     rec = em.emit_score("a", "d1", "ttft_seconds", 0.4, provenance=PROV)
     assert rec.metadata["provenance"]["metric_id"] == "registry:ttft_seconds"
@@ -99,6 +106,7 @@ def test_unmapped_metric_gets_registry_identity_not_a_comparison_id():
 
 @pytest.mark.parametrize("metric_id", ["cuad.clause_presence.micro_f1", "", 0, False])
 def test_contradicting_metric_id_is_refused(metric_id):
+    """Reject supplied identities that contradict the emitted canonical metric."""
     em = Emitter(sinks=[], registry=_registry())
     with pytest.raises(ProvenanceExportError, match="contradicts"):
         em.emit_score("a", "d1", "extraction_overall_score", 0.7,
@@ -109,6 +117,7 @@ def test_contradicting_metric_id_is_refused(metric_id):
 @pytest.mark.parametrize("stamped", [True, False])
 @pytest.mark.parametrize("metric_id", ["registry:e2e_latency_seconds", "", 0, False])
 def test_unmapped_metric_refuses_conflicting_identity(tmp_path, require_provenance, stamped, metric_id):
+    """Reject conflicting registry identities before recording or writing a score."""
     sink = LocalManifestSink(tmp_path / "scores.jsonl")
     em = Emitter(sinks=[sink], registry=_registry(), require_provenance=require_provenance)
     prov = {**PROV, "metric_id": metric_id}
@@ -121,6 +130,7 @@ def test_unmapped_metric_refuses_conflicting_identity(tmp_path, require_provenan
 
 
 def test_unmapped_metric_accepts_matching_identity():
+    """Accept an explicitly supplied matching registry metric identity."""
     em = Emitter(sinks=[], registry=_registry())
     rec = em.emit_score("a", "d1", "ttft_seconds", 0.4,
                         provenance={**PROV, "metric_id": "registry:ttft_seconds"})
@@ -128,6 +138,7 @@ def test_unmapped_metric_accepts_matching_identity():
 
 
 def test_cost_metric_requires_a_cost_basis():
+    """Require and preserve a declared cost basis when emitting USD metrics."""
     em = Emitter(sinks=[], registry=_registry())
     with pytest.raises(ProvenanceExportError, match="cost_basis"):
         em.emit_score("a", "d1", "estimated_cost_usd", 0.01, provenance=PROV)
@@ -140,6 +151,7 @@ def test_cost_metric_requires_a_cost_basis():
 
 
 def test_opt_out_still_records_what_was_given():
+    """Retain supplied provenance and scorer identity when strict requirements are disabled."""
     em = Emitter(sinks=[], registry=_registry(), require_provenance=False)
     rec = em.emit_score("a", "d1", "extraction_overall_score", 0.7)
     prov = rec.metadata["provenance"]
@@ -148,6 +160,7 @@ def test_opt_out_still_records_what_was_given():
 
 
 def test_two_emitted_records_pass_the_comparison_gate():
+    """Accept comparison provenance from two compatibly stamped emitted records."""
     em = Emitter(sinks=[], registry=_registry())
     a = em.emit_score("a", "d1", "extraction_overall_score", 0.7,
                       provenance={**PROV, "split": "test", "draw_seed": "42"})
@@ -160,6 +173,7 @@ def test_two_emitted_records_pass_the_comparison_gate():
 
 
 def test_empty_archive_block_has_a_null_stamp():
+    """Include a scorer stamp with null caller identity in empty archive blocks."""
     block = empty_archive_scoring_block()
     assert ARCHIVE_SCORING_KEYS[-1] == "provenance"
     assert block["provenance"]["scorer_version"] == SCORER_VERSION
@@ -167,6 +181,7 @@ def test_empty_archive_block_has_a_null_stamp():
 
 
 def test_archive_block_stamps_caller_provenance():
+    """Carry canonical metric identity and normalized caller provenance into archive scores."""
     block = score_archive_block(
         "insurance_claim", {"insurer": "Acme"}, {"insurer": "Acme"}, provenance=PROV
     )
@@ -177,6 +192,7 @@ def test_archive_block_stamps_caller_provenance():
 
 
 def test_archive_block_metric_id_follows_headline_method():
+    """Choose archive provenance identity from the headline scoring method."""
     block = score_archive_block(
         "contract", {}, {}, method="extraction_category_presence", provenance=PROV
     )
@@ -184,6 +200,7 @@ def test_archive_block_metric_id_follows_headline_method():
 
 
 def test_archive_block_refuses_contradicting_metric_id():
+    """Reject archive provenance that contradicts the selected headline metric."""
     with pytest.raises(ProvenanceExportError):
         score_archive_block(
             "insurance_claim", {}, {},

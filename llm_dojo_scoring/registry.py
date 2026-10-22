@@ -183,6 +183,7 @@ class MetricDef:
     ground_truth: str = ""
 
     def applies_to(self, agent: str) -> bool:
+        """Check whether the metric targets this agent or all agents."""
         return "ALL" in self.applicable_agents or agent in self.applicable_agents
 
 
@@ -195,6 +196,7 @@ class Registry:
     # -- lookups -------------------------------------------------------------
 
     def get(self, name: str) -> MetricDef:
+        """Look up a metric, listing known names when the name is unknown."""
         try:
             return self.metrics[name]
         except KeyError:
@@ -203,6 +205,7 @@ class Registry:
             ) from None
 
     def names(self) -> list[str]:
+        """Return all registered metric names in sorted order."""
         return sorted(self.metrics)
 
     # -- filtering -----------------------------------------------------------
@@ -232,17 +235,20 @@ class Registry:
         return sorted(out, key=lambda m: (m.tier, m.name))
 
     def names_for(self, *, max_tier: int | None = None, agent: str | None = None) -> list[str]:
+        """Return names of metrics matching the optional tier and agent filters."""
         return [m.name for m in self.filter(max_tier=max_tier, agent=agent)]
 
     # -- construction ----------------------------------------------------------
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> "Registry":
+        """Load metric definitions from a UTF-8 YAML registry file."""
         data = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
         return cls.from_dict(data)
 
     @classmethod
     def from_dict(cls, data: dict) -> "Registry":
+        """Build a registry, normalizing tiers and agents and validating GT labels."""
         reg = cls()
         for name, spec in (data.get("metrics") or {}).items():
             spec = dict(spec or {})

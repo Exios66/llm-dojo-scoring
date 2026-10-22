@@ -31,6 +31,7 @@ _RETIRED_OBLIGATION_FIELDS = {
 
 
 def test_default_field_types_drop_open_ended_obligation_dumps():
+    """Exclude retired open-ended obligation fields from default extraction scoring."""
     for doc_type in _PARED_LIVE:
         fields = set(DEFAULT_FIELD_TYPES[doc_type])
         leaked = fields & _RETIRED_OBLIGATION_FIELDS
@@ -52,6 +53,7 @@ def test_default_field_types_match_corpus_and_mailroom_pared_schema():
 
 
 def test_legacy_full_map_keeps_key_obligations_for_historical_rescoring():
+    """Retain retired obligation fields in legacy maps for historical score replay."""
     assert "key_obligations" in LEGACY_FULL_EXTRACTION_FIELD_TYPES["contract"]
     assert "termination_clauses" in LEGACY_FULL_EXTRACTION_FIELD_TYPES["contract"]
     assert "key_points" in LEGACY_FULL_EXTRACTION_FIELD_TYPES["correspondence"]
@@ -59,6 +61,7 @@ def test_legacy_full_map_keeps_key_obligations_for_historical_rescoring():
 
 
 def test_suite_score_emits_category_presence_from_kwargs():
+    """Forward category labels through suite scoring and emit their presence score."""
     suite = get_suite("contracts_specialist")
     predicted = {
         "parties": ["Acme Corp"],
@@ -83,6 +86,7 @@ def test_suite_score_emits_category_presence_from_kwargs():
 
 
 def test_partial_gt_defaults_prefer_checklists():
+    """Use checklist fields for partial ground truth and narrative fields for containment."""
     settings = FieldScoringSettings()
     assert "cuad_clauses" in settings.partial_gt_fields
     assert "claim_checklist" in settings.partial_gt_fields

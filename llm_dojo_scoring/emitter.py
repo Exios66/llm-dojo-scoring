@@ -83,6 +83,7 @@ class ScoreRecord:
     timestamp: float = field(default_factory=time.time)
 
     def as_dict(self) -> dict[str, Any]:
+        """Return all record fields as a JSON-serializable mapping."""
         return {
             "agent": self.agent,
             "metric": self.metric,
@@ -95,6 +96,7 @@ class ScoreRecord:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ScoreRecord":
+        """Construct a record from recognized fields, ignoring unknown keys."""
         known = {k: data[k] for k in ("agent", "metric", "value", "doc_id", "run_id", "metadata", "timestamp") if k in data}
         return cls(**known)
 
@@ -102,15 +104,20 @@ class ScoreRecord:
 class ScoreSink(Protocol):
     """Anything that accepts records and can flush."""
 
-    def emit(self, record: ScoreRecord) -> None: ...
+    def emit(self, record: ScoreRecord) -> None:
+        """Accept one score record for delivery or storage."""
+        ...
 
-    def flush(self) -> None: ...
+    def flush(self) -> None:
+        """Complete pending score deliveries before returning."""
+        ...
 
 
 class LocalManifestSink:
     """Append-only JSONL manifest. Network-free, always available."""
 
     def __init__(self, path: str | Path | None = None) -> None:
+        """Resolve the manifest path and create its parent directory."""
         self.path = Path(
             path
             or os.environ.get("LLM_DOJO_SCORING_MANIFEST")
@@ -119,13 +126,16 @@ class LocalManifestSink:
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
     def emit(self, record: ScoreRecord) -> None:
+        """Append one score record as a sorted-key JSON line."""
         with self.path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(record.as_dict(), sort_keys=True) + "\n")
 
     def flush(self) -> None:  # pragma: no cover - nothing buffered
+        """Do nothing because each record is written and closed immediately."""
         return None
 
     def read_all(self) -> list[ScoreRecord]:
+        """Read records in manifest order, returning an empty list if absent."""
         if not self.path.exists():
             return []
         out = []
@@ -147,6 +157,7 @@ class LangfuseSink:
     """
 
     def __init__(self, client: Any | None = None, *, strict: bool = False) -> None:
+        """Use an injected client or initialize the SDK, optionally raising on setup failure."""
         self._client = client
         self.available = True
         if self._client is None:
@@ -173,6 +184,7 @@ class LangfuseSink:
                     raise
 
     def emit(self, record: ScoreRecord) -> None:
+        """Send a score when available, logging and counting delivery failures."""
         if not self.available or self._client is None:
             return
         try:
@@ -197,6 +209,7 @@ class LangfuseSink:
             )
 
     def flush(self) -> None:
+        """Flush an available client, logging and counting failures without raising."""
         if self.available and self._client is not None:
             try:
                 self._client.flush()
@@ -212,6 +225,7 @@ class LangfuseSink:
 
 
 def _aggregate(values: list[Any], mode: str) -> Any:
+    """Apply sum, last-value, or numeric-mean aggregation with nonnumeric fallbacks."""
     if not values:
         return None
     numeric = [v for v in values if isinstance(v, (int, float))]
@@ -302,6 +316,7 @@ class Emitter:
         registry: Registry | None = None,
         require_provenance: bool = True,
     ) -> None:
+        """Configure score sinks, metric registry, and required provenance validation."""
         self.sinks: list[ScoreSink] = list(sinks) if sinks is not None else [LocalManifestSink()]
         self.registry = registry or load_registry()
         self.require_provenance = require_provenance
@@ -357,12 +372,14 @@ class Emitter:
         return record
 
     def flush(self) -> None:
+        """Flush each configured score sink in order."""
         for sink in self.sinks:
             sink.flush()
 
     # -- queries ---------------------------------------------------------------
 
     def _run_records(self, agent: str, run_id: str | None) -> list[ScoreRecord]:
+        """Select buffered records for an agent and optionally a specific run."""
         return [
             r
             for r in self._records
@@ -427,5 +444,6 @@ def get_emitter() -> Emitter:
 
 
 def reset_default_emitter() -> None:
+    """Discard the process-wide emitter so the next lookup creates a new one."""
     global _DEFAULT_EMITTER
     _DEFAULT_EMITTER = None

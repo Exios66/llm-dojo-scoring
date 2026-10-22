@@ -157,6 +157,7 @@ def _doc(value: GridDocument | Mapping[str, Any]) -> GridDocument:
 
 
 def _doc_status(value: Mapping[str, Any]) -> str | None:
+    """Resolve normalized document status, giving unscorable precedence over completion."""
     scores = value.get("scores")
     found = [value.get("status")]
     if isinstance(scores, Mapping):
@@ -169,6 +170,7 @@ def _doc_status(value: Mapping[str, Any]) -> str | None:
 
 
 def _is_unscorable(doc: GridDocument) -> bool:
+    """Return whether the document is explicitly marked unscorable."""
     return doc.status == "unscorable"
 
 

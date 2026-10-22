@@ -24,6 +24,7 @@ from llm_dojo_scoring.io import normalize_results_frame, read_workbook
 
 
 def main() -> int:
+    """Analyze a workbook, save supported plots, and write a Markdown evaluation report."""
     parser = argparse.ArgumentParser(description="Analyze a sorter results workbook.")
     parser.add_argument("workbook", help="Path to a results .xlsx")
     parser.add_argument("--metric", default="Subtype Accuracy")

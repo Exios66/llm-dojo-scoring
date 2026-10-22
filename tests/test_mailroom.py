@@ -84,6 +84,7 @@ def test_aligned_accuracy_merger_is_not_contract():
 
 
 def test_observation_types_match_mailroom_map():
+    """Map pipeline nodes to their tracing observation types."""
     assert observation_type_for("document-pipeline") == "chain"
     assert observation_type_for("classify-document") == "agent"
     assert observation_type_for("judge-verify") == "evaluator"
@@ -101,6 +102,7 @@ def test_observation_types_match_mailroom_map():
 
 
 def test_langfuse_score_transport_alias():
+    """Round-trip the transport score alias and retain registered pipeline metrics."""
     assert langfuse_score_name("extraction_overall_verified_precision") == (
         "extraction_verified_precision"
     )
@@ -131,6 +133,7 @@ def test_retired_suites_flagged_live_filter():
 
 
 def test_intake_clerk_profile_and_suite():
+    """Expose intake as a computable, ground-truth-backed normalization suite."""
     assert INTAKE_AGENT in list_profiles()
     profile = get_profile("intake")
     assert profile.ground_truth is True
@@ -142,6 +145,7 @@ def test_intake_clerk_profile_and_suite():
 
 
 def test_contract_suite_scores_hub_inventory_fields():
+    """Give a complete matching contract inventory full extraction credit."""
     suite = get_suite("contracts_specialist")
     for field in ("cuad_family", "merger_consideration", "cuad_clauses", "maud_clauses"):
         assert field in suite.field_types
@@ -174,6 +178,7 @@ def test_adjuster_null_is_not_a_requirement():
 
 
 def test_trace_identity_reads_v4_camelcase():
+    """Recover user, session, release, and trace name from camel-case metadata."""
     ident = trace_identity(
         {
             "id": "t1",

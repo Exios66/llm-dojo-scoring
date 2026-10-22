@@ -73,11 +73,13 @@ _SCORE_FIXTURES: dict[str, tuple[dict, dict]] = {
 
 
 def test_authority_blob_pin_is_verified():
+    """Pin the taxonomy fixture to the expected authority blob and source path."""
     assert _FIXTURE["authority_blob_sha1"] == _AUTHORITY_BLOB_SHA1
     assert _FIXTURE["authority"].endswith("src/config/taxonomy.yaml")
 
 
 def test_live_doc_type_roster_matches_authority():
+    """Keep the five live document classes aligned with the authority roster."""
     assert tuple(LIVE_DOC_TYPES) == _LIVE
     assert _LIVE == (
         "contract",
@@ -90,6 +92,7 @@ def test_live_doc_type_roster_matches_authority():
 
 @pytest.mark.parametrize("doc_type", _LIVE)
 def test_live_field_map_matches_mailroom_taxonomy(doc_type):
+    """Match live extraction field maps to the pinned mailroom taxonomy."""
     authority = _FIXTURE["doc_classes"][doc_type]
     assert DEFAULT_FIELD_TYPES[doc_type] == authority["field_types"]
     assert set(CORPUS_EXTRACTION_FIELDS[doc_type]) == set(authority["field_types"])
@@ -97,6 +100,7 @@ def test_live_field_map_matches_mailroom_taxonomy(doc_type):
 
 @pytest.mark.parametrize("doc_type", _LIVE)
 def test_each_live_specialist_has_its_own_suite(doc_type):
+    """Resolve a nonretired suite with authoritative fields for every live specialist."""
     specialist = _SPECIALIST_FOR[doc_type]
     assert specialist in LIVE_SPECIALISTS
     suite = get_suite(specialist)
@@ -108,6 +112,7 @@ def test_each_live_specialist_has_its_own_suite(doc_type):
 
 
 def test_merger_specialist_is_separate_from_contracts():
+    """Keep merger and contract extraction schemas distinct without class aliases."""
     assert EXTRACT_CLASS_ALIASES == {}
     assert resolve_extract_class("merger_agreement") == "merger_agreement"
     contract = DEFAULT_FIELD_TYPES["contract"]
@@ -121,6 +126,7 @@ def test_merger_specialist_is_separate_from_contracts():
 
 
 def test_compliance_filing_stays_retired():
+    """Exclude retired compliance filings from live labels, suites, and extraction resolution."""
     assert "compliance_filing" in RETIRED_DOC_CLASS_KEYS
     assert "compliance_filing" not in LIVE_DOC_CLASS_KEYS
     assert set(DOC_CLASS_KEYS) - set(RETIRED_DOC_CLASS_KEYS) == set(LIVE_DOC_CLASS_KEYS)
@@ -171,6 +177,7 @@ def test_extraction_schemas_doc_covers_live_field_maps():
 
 @pytest.mark.parametrize("doc_type", _LIVE)
 def test_metric_ids_cover_every_live_class(doc_type):
+    """Provide overall extraction and micro-F2 metric identities for each live class."""
     ids = metric_ids_for_class(doc_type)
     assert "pipeline.extraction.overall" in ids
     assert "pipeline.extraction.field_micro_f2" in ids
@@ -178,6 +185,7 @@ def test_metric_ids_cover_every_live_class(doc_type):
 
 
 def test_metric_id_mappings_cover_f2_and_content():
+    """Map extraction and correspondence content metrics to their allowed canonical identities."""
     assert (
         metric_id_for("extraction_f2", doc_class="insurance_claim")
         == "pipeline.extraction.field_micro_f2"
@@ -196,6 +204,7 @@ def test_metric_id_mappings_cover_f2_and_content():
 
 @pytest.mark.parametrize("doc_type", _LIVE)
 def test_score_document_emits_full_per_document_payload(doc_type):
+    """Emit complete per-document scores with valid metric identity and scorer provenance."""
     expected, predicted = _SCORE_FIXTURES[doc_type]
     suite = get_suite(_SPECIALIST_FOR[doc_type])
     out = suite.score_document(expected, predicted)
@@ -222,6 +231,7 @@ def test_score_document_emits_full_per_document_payload(doc_type):
 
 
 def test_plain_batch_emits_schema_and_parse():
+    """Include parse and schema metrics alongside perfect batch extraction scores."""
     expected, predicted = _SCORE_FIXTURES["contract"]
     out = get_suite("contracts_specialist").score([expected], [predicted])
     assert isinstance(out, dict)
@@ -231,12 +241,14 @@ def test_plain_batch_emits_schema_and_parse():
 
 
 def test_plain_single_doc_keeps_dataclass_api():
+    """Preserve the extraction dataclass return type for ordinary single-document scoring."""
     expected, predicted = _SCORE_FIXTURES["contract"]
     out = get_suite("contracts_specialist").score(expected, predicted)
     assert isinstance(out, ExtractionScoreResult)
 
 
 def test_insurance_single_document_carries_class_extras():
+    """Include insurance consistency, amount exactness, and schema-promotion diagnostics."""
     expected, predicted = _SCORE_FIXTURES["insurance_claim"]
     out = get_suite("insurance_claims_specialist").score_document(expected, predicted)
     assert out["determination_consistency"] == 1.0
@@ -245,6 +257,7 @@ def test_insurance_single_document_carries_class_extras():
 
 
 def test_correspondence_content_only_gt_is_scored_not_unscorable():
+    """Score topic-only correspondence GT without fabricating an overall extraction score."""
     out = get_suite("correspondence_specialist").score(
         {"content_topic": "legal_contracts"}, {"content_topic": "legal_contracts"}
     )
@@ -256,6 +269,7 @@ def test_correspondence_content_only_gt_is_scored_not_unscorable():
 
 
 def test_merger_maud_only_gt_is_scored_not_unscorable():
+    """Score merger MAUD-only GT rather than treating it as unscorable."""
     labels = {"No-Shop": "Yes"}
     out = get_suite("merger_agreement_specialist").score(
         {"maud_clause_labels": labels}, {"maud_clause_labels": labels}
@@ -266,6 +280,7 @@ def test_merger_maud_only_gt_is_scored_not_unscorable():
 
 
 def test_triage_only_contract_gt_stays_unscorable():
+    """Withhold contract scores when GT contains only triage metadata."""
     out = get_suite("contracts_specialist").score(
         {"contract_subtype": "nda"}, {"document_name": "Mutual NDA"}
     )
@@ -275,12 +290,14 @@ def test_triage_only_contract_gt_stays_unscorable():
 
 @pytest.mark.parametrize("suite_name", ["sorter", "archivist"])
 def test_score_document_rejects_non_extraction_suites(suite_name):
+    """Reject per-document extraction scoring on non-extraction suites."""
     with pytest.raises(TypeError, match="extraction"):
         get_suite(suite_name).score_document({}, {})
 
 
 @pytest.mark.parametrize("expected", [42, False, "[]", '"contract"', "null"])
 def test_score_document_wrong_gt_shape_fails_closed_with_provenance(expected):
+    """Return an unscorable schema error with preserved caller provenance for invalid GT."""
     result = get_suite("contracts_specialist").score_document(
         expected, {"governing_law": "Delaware"}, dataset_revision="fixture-revision",
     )
@@ -291,6 +308,7 @@ def test_score_document_wrong_gt_shape_fails_closed_with_provenance(expected):
 
 
 def test_score_document_partial_prediction_reports_distinct_f1_and_f2():
+    """Report distinct recall-weighted F-scores for partial predictions with consistent provenance."""
     suite = get_suite("contracts_specialist")
     kwargs = {
         "field_types": {"first_id": "id", "second_id": "id"},
@@ -314,6 +332,7 @@ def test_score_document_partial_prediction_reports_distinct_f1_and_f2():
 
 @pytest.mark.parametrize("predicted_sentiment,accuracy", [("positive", 1.0), ("negative", 0.0)])
 def test_sentiment_only_document_is_scored_without_fabricated_extraction_score(predicted_sentiment, accuracy):
+    """Score sentiment-only GT while leaving extraction fields and overall score empty."""
     result = get_suite("correspondence_specialist").score_document(
         {"sentiment_label": "positive"}, {"sentiment_label": predicted_sentiment},
     )
@@ -325,6 +344,7 @@ def test_sentiment_only_document_is_scored_without_fabricated_extraction_score(p
 
 @pytest.mark.parametrize("doc_type", ["contract", "corporate_record", "insurance_claim", "merger_agreement"])
 def test_content_metric_ids_are_rejected_outside_correspondence(doc_type):
+    """Reject correspondence content identities and unknown metrics for other classes."""
     assert not metric_id_allowed("pipeline.enron.sentiment_accuracy", doc_type)
     assert not metric_id_allowed("pipeline.enron.topic_f1_macro", doc_type)
     assert not metric_id_allowed("not.a.metric", doc_type)

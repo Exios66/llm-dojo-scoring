@@ -17,6 +17,7 @@ def _trace(session: str, *, subtype_ok: bool, subtype_ok_equiv: bool,
            expected: str = "license", confidence: float = 0.95,
            filename: str = "doc.pdf", ts: str = "2026-08-16T00:00:00Z",
            model: str = "qwen/qwen3.7-flash", prompt_version: str = "sorter_v13"):
+    """Build a synthetic sorter trace with configurable labels, outcomes, and run metadata."""
     return {
         "id": "t-" + session + filename,
         "name": "subtype_classification",
@@ -37,6 +38,7 @@ def _trace(session: str, *, subtype_ok: bool, subtype_ok_equiv: bool,
 
 
 def test_row_from_trace_sorter():
+    """Extract sorter labels, correctness flags, and filename from a trace."""
     row = ls.row_from_trace(_trace("run_a", subtype_ok=True, subtype_ok_equiv=True))
     assert row["expected_subtype"] == "license"
     assert row["subtype_ok"] is True
@@ -45,11 +47,13 @@ def test_row_from_trace_sorter():
 
 
 def test_row_from_trace_skips_non_sorter_output():
+    """Ignore traces that do not contain sorter output."""
     trace = {"id": "x", "sessionId": "s", "input": {}, "output": {"other": 1}}
     assert ls.row_from_trace(trace) is None
 
 
 def test_row_from_trace_docclass():
+    """Extract corporate subclass labels and correctness from document-class traces."""
     trace = {
         "id": "d", "sessionId": "s", "timestamp": "2026-08-16T00:00:00Z",
         "input": {"filename": "f", "prompt_version": "sorter_v6", "model": "m"},
@@ -66,6 +70,7 @@ def test_row_from_trace_docclass():
 
 
 def test_group_rows_by_session():
+    """Group converted trace rows by their experiment session identifier."""
     rows = [
         ("run_a", {"x": 1}),
         ("run_a", {"x": 2}),
@@ -77,6 +82,7 @@ def test_group_rows_by_session():
 
 
 def test_aggregate_run_schema_and_values():
+    """Aggregate run scores, confidence intervals, subtype details, and failure counts."""
     rows = [
         {"expected_subtype": "license", "contract_subtype": "license",
          "subtype_ok": True, "subtype_ok_equiv": True, "doc_type_ok": True,
@@ -104,6 +110,7 @@ def test_aggregate_run_schema_and_values():
 
 
 def test_records_to_sorter_frame_columns():
+    """Convert aggregated records into the standard sorter workbook columns."""
     rows = [{"expected_subtype": "license", "contract_subtype": "license",
              "subtype_ok": True, "subtype_ok_equiv": True, "doc_type_ok": True,
              "confidence": 0.95}]
@@ -117,6 +124,7 @@ def test_records_to_sorter_frame_columns():
 
 
 def test_fetch_run_records_uses_session_groups():
+    """Aggregate fetched traces independently for each session."""
     client = mock.Mock(spec=ls.LangfuseClient)
     client.list_traces.return_value = [
         _trace("run_a", subtype_ok=True, subtype_ok_equiv=True, filename="1.pdf"),
@@ -132,6 +140,7 @@ def test_fetch_run_records_uses_session_groups():
 
 
 def test_load_langfuse_config_env(monkeypatch):
+    """Read credentials, host, and project from Langfuse environment variables."""
     monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "pk-x")
     monkeypatch.setenv("LANGFUSE_SECRET_KEY", "sk-x")
     monkeypatch.setenv("LANGFUSE_HOST", "https://example.com")
@@ -144,6 +153,7 @@ def test_load_langfuse_config_env(monkeypatch):
 
 
 def test_load_langfuse_config_required(tmp_path, monkeypatch):
+    """Load quoted credentials from an explicitly supplied environment file."""
     monkeypatch.delenv("LANGFUSE_PUBLIC_KEY", raising=False)
     monkeypatch.delenv("LANGFUSE_SECRET_KEY", raising=False)
     env = tmp_path / "langfuse.env"
@@ -158,6 +168,7 @@ def test_load_langfuse_config_required(tmp_path, monkeypatch):
 
 
 def test_client_requires_credentials():
+    """Refuse client construction when required Langfuse credentials are empty."""
     with mock.patch.object(ls, "load_langfuse_config",
                            return_value=ls.LangfuseConfig(
                                "https://x", "", "")):
@@ -166,6 +177,7 @@ def test_client_requires_credentials():
 
 
 def test_sync_sorter_results_roundtrip(tmp_path):
+    """Write grouped sorter traces to a results workbook and codebook."""
     client = mock.Mock(spec=ls.LangfuseClient)
     client.list_traces.return_value = [
         _trace("run_a", subtype_ok=True, subtype_ok_equiv=True, filename="1.pdf"),
@@ -181,6 +193,7 @@ def test_sync_sorter_results_roundtrip(tmp_path):
 
 
 def test_sync_sorter_results_forwards_session(tmp_path):
+    """Forward the requested session and trace filters to the Langfuse client."""
     client = mock.Mock(spec=ls.LangfuseClient)
     client.list_traces.return_value = [
         _trace("run_a", subtype_ok=True, subtype_ok_equiv=True, filename="1.pdf"),
@@ -192,6 +205,7 @@ def test_sync_sorter_results_forwards_session(tmp_path):
 
 
 def test_row_from_trace_document_pipeline():
+    """Extract pipeline classification outcomes and release and user metadata."""
     trace = {
         "id": "abc",
         "name": "document-pipeline",
@@ -222,6 +236,7 @@ def test_row_from_trace_document_pipeline():
 
 
 def test_row_from_trace_pipeline_includes_intake_span():
+    """Merge intake observation statistics into converted document-pipeline rows."""
     trace = {
         "id": "abc",
         "name": "document-pipeline",
@@ -301,6 +316,7 @@ LIVE_ENABLED = os.environ.get("LLM_DOJO_SCORING_LANGFUSE_TEST") == "1" \
 @pytest.mark.skipif(not LIVE_ENABLED,
                     reason="set LLM_DOJO_SCORING_LANGFUSE_TEST=1 + keys for live test")
 def test_live_sync_sorter():
+    """Fetch live sorter sessions and convert them into a nonempty metric frame."""
     client = ls.LangfuseClient()
     records = ls.fetch_run_records(client, task=ls.SORTER_TRACE, max_items=2000)
     assert records

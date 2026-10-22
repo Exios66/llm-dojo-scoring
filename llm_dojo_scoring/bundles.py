@@ -52,6 +52,7 @@ class Bundle:
     agent_overrides: dict[str, tuple[str, ...]] = field(default_factory=dict)
 
     def metrics_for(self, agent: str | None = None) -> tuple[str, ...]:
+        """Return base metrics plus unique extras configured for the requested agent."""
         names = list(self.metric_names)
         if agent and agent in self.agent_overrides:
             for extra in self.agent_overrides[agent]:
@@ -327,6 +328,7 @@ def get_bundle(
 
 
 def list_bundles() -> list[str]:
+    """Return the built-in bundle names in sorted order."""
     return sorted(BUILTIN_BUNDLES)
 
 

@@ -97,10 +97,12 @@ _SENTIMENT_ALIASES: dict[str, str] = {
 }
 
 def _fold(value: Any) -> str:
+    """Normalize a label to lowercase words using the content alias separators."""
     return _ALIAS_RE.sub(" ", str(value or "").strip().lower()).strip()
 
 
 def _fold_key(value: Any) -> str:
+    """Convert a folded content label to an underscore-separated key."""
     return _fold(value).replace(" ", "_")
 
 
@@ -226,6 +228,7 @@ def _label_content_score(
     *,
     normalize,
 ) -> dict:
+    """Score paired normalized labels, retaining error predictions as failures."""
     pairs = []
     for e, p in zip(expected, predicted):
         if str(p).startswith(ERROR_PREFIX):
@@ -260,6 +263,7 @@ def _label_content_score(
 
 
 def _as_list(value: Any) -> list:
+    """Convert sequences to lists, wrap scalars, and map None to an empty list."""
     if value is None:
         return []
     if isinstance(value, (list, tuple)):
@@ -314,6 +318,7 @@ def score_correspondence_content(
 
 
 def _maybe_json(value: Any) -> Any:
+    """Decode JSON-looking strings, leaving malformed JSON and other values intact."""
     if isinstance(value, str):
         text = value.strip()
         if text.startswith("{") or text.startswith("["):

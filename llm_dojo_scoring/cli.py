@@ -16,6 +16,7 @@ import sys
 
 
 def _cli_sync(argv: list[str]) -> int:
+    """Parse sync options, optionally probe Phoenix, and export Langfuse results."""
     parser = argparse.ArgumentParser(
         prog="dojo-sync",
         description="Sync the dojo scoring pipeline with the live trace sinks "
@@ -85,6 +86,7 @@ def _cli_sync(argv: list[str]) -> int:
 
 
 def _cli_analyze(argv: list[str]) -> int:
+    """Load evaluation results and write a report with optional diagnostic plots."""
     parser = argparse.ArgumentParser(
         prog="dojo-analyze",
         description="Analyze an evaluation results workbook (or JSONL log): "
@@ -181,6 +183,7 @@ def _cli_analyze(argv: list[str]) -> int:
 
 
 def _cli_export(argv: list[str]) -> int:
+    """Parse export options and regenerate experiment workbooks and codebooks."""
     parser = argparse.ArgumentParser(
         prog="dojo-export",
         description="Regenerate per-task experiment performance workbooks + "
@@ -226,14 +229,17 @@ def _cli_export(argv: list[str]) -> int:
 
 
 def analyze_main(argv: list[str] | None = None) -> None:
+    """Run the analysis CLI and exit with its status code."""
     raise SystemExit(_cli_analyze(sys.argv[1:] if argv is None else argv))
 
 
 def export_main(argv: list[str] | None = None) -> None:
+    """Run the export CLI and exit with its status code."""
     raise SystemExit(_cli_export(sys.argv[1:] if argv is None else argv))
 
 
 def sync_main(argv: list[str] | None = None) -> None:
+    """Run the synchronization CLI and exit with its status code."""
     raise SystemExit(_cli_sync(sys.argv[1:] if argv is None else argv))
 
 

@@ -190,11 +190,13 @@ def test_relabel_rows_survives_non_mapping_gt_fields():
     ],
 )
 def test_company_template_boundaries(subject, company):
+    """Extract companies only from recognized corporate subject templates."""
     assert company_from_template(subject) == company
 
 
 @pytest.mark.parametrize("encoding", ["mapping", "json", "python_literal"])
 def test_relabel_accepts_gt_encodings_without_mutating_nested_metadata(encoding):
+    """Repair supported GT encodings idempotently without mutating source metadata."""
     gt = {
         "intent": "governance_rules", "intent_source": "human_adjudicated",
         "keywords": ["governance", "EX-3.2", "8-K", "0000000001-26-000001", "Acme (CIK 123)"],
@@ -218,6 +220,7 @@ def test_relabel_accepts_gt_encodings_without_mutating_nested_metadata(encoding)
 
 @pytest.mark.parametrize("source", [None, "", "heuristic", "human_adjudicated"])
 def test_conflict_repair_updates_schema_but_preserves_adjudicated_intent(source):
+    """Repair subclass conflicts while retaining explicitly adjudicated intent labels."""
     gt = {
         "intent": "entity_formation", "record_type": "articles_of_incorporation",
         "subject_matter": "Bylaws of Acme, Inc., governing annual meetings.",
@@ -246,6 +249,7 @@ def test_conflict_repair_updates_schema_but_preserves_adjudicated_intent(source)
     ],
 )
 def test_relabel_leaves_ambiguous_or_own_subclass_prose_for_review(subclass, subject):
+    """Leave ambiguous prose and matching subclass descriptions unchanged for review."""
     new, changes = relabel_row(_row(subclass, {"subject_matter": subject}))
     assert new["expected_subclass"] == subclass
     assert json.loads(new["gt_fields"])["subject_matter"] == subject
@@ -254,6 +258,7 @@ def test_relabel_leaves_ambiguous_or_own_subclass_prose_for_review(subclass, sub
 
 @pytest.mark.parametrize("record_type", [None, "", "indenture", "not_a_record"])
 def test_relabel_fills_invalid_record_type_without_inventing_entities(record_type):
+    """Repair invalid record types without fabricating absent entity values."""
     new, changes = relabel_row(_row("subsidiary_list", {"record_type": record_type}))
     gt = json.loads(new["gt_fields"])
     assert gt["record_type"] == "other"
@@ -266,6 +271,7 @@ def test_relabel_fills_invalid_record_type_without_inventing_entities(record_typ
 
 
 def test_relabel_preserves_stated_inapplicable_values_and_populated_status():
+    """Preserve stated values and explicit populated statuses during absence repair."""
     gt = {
         "signatories": ["Jane Doe"], "jurisdiction": "Delaware", "filing_number": "",
         "gt_presence": {"filing_number": "populated"},
@@ -279,6 +285,7 @@ def test_relabel_preserves_stated_inapplicable_values_and_populated_status():
 
 
 def test_keyword_repair_removes_only_provenance_and_keeps_business_terms():
+    """Remove provenance identifiers without stripping legitimate business keywords."""
     keywords = ["EX-3.1(A)", "10-Q/A", "S-1", "stock", "EX-3.1 provisions", "Series S-1 preferred"]
     new, _ = relabel_row(_row("rights_instrument", {"keywords": keywords}))
     assert json.loads(json.loads(new["gt_fields"])["keywords"]) == [
@@ -286,8 +293,9 @@ def test_keyword_repair_removes_only_provenance_and_keeps_business_terms():
     ]
 
 
-@pytest.mark.parametrize("bad_gt", ["{bad", "[]", "null", "42", ["not a mapping"], 42])
+@pytest.mark.parametrize("bad_gt", ["{bad", "[]", "null", "42", ["not a mapping"], 42, [], 0, False])
 def test_batch_relabel_continues_after_each_invalid_gt_shape(bad_gt):
+    """Continue past malformed GT rows without mutating any input rows."""
     bad = dict(_TEMPLATE_ROW, gt_fields=bad_gt)
     skipped = {"expected": "contract", "gt_fields": "{bad"}
     before = deepcopy((bad, skipped, _TEMPLATE_ROW))

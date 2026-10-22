@@ -47,6 +47,7 @@ _RW_QUESTION = "Accuracy of Target R&W Closing Condition"
 
 
 def test_catalog_fixture_matches_module():
+    """Keep catalog question classes and row counts aligned with the fixture."""
     data = json.loads(FIXTURE.read_text())
     assert data["rows"]["total"] == MAUD_CATALOG_ROWS == 152
     assert set(data["questions"]) == set(MAUD_QUESTION_KEYS)
@@ -55,6 +56,7 @@ def test_catalog_fixture_matches_module():
 
 
 def test_every_maud_question_has_a_populated_class_catalog():
+    """Expose all 22 populated question catalogs through supported agent aliases."""
     assert len(MAUD_ANSWER_CLASSES) == len(MAUD_QUESTION_KEYS) == 22
     for question in MAUD_QUESTION_KEYS:
         assert MAUD_ANSWER_CLASSES[question], question
@@ -74,6 +76,7 @@ def test_every_maud_question_has_a_populated_class_catalog():
 
 
 def test_variable_class_questions_are_flagged():
+    """Identify the four questions whose answer catalogs vary across agreements."""
     assert set(MAUD_VARIABLE_CLASS_QUESTIONS) == {
         "Accuracy of Target R&W Closing Condition",
         "Limitations on FTR Exercise",
@@ -86,6 +89,7 @@ def test_variable_class_questions_are_flagged():
 
 
 def test_parse_maud_labels_preserves_valid_classes():
+    """Preserve a row's answer and allowed classes when parsing labels."""
     labels = parse_maud_labels(
         {
             "No-Shop": {
@@ -114,6 +118,7 @@ def test_parse_maud_labels_preserves_valid_classes():
 
 def test_record_valid_classes_are_the_authority_not_the_union():
     # Row-level surface: this row recognizes only Yes/No.
+    """Validate against row-specific classes rather than the broader catalog union."""
     row_classes = ["Yes", "No"]
     assert is_valid_maud_answer("No-Shop", "Strict liability", row_classes) is False
     assert is_valid_maud_answer("No-Shop", "Yes", row_classes) is True
@@ -122,11 +127,13 @@ def test_record_valid_classes_are_the_authority_not_the_union():
 
 
 def test_unknown_question_without_catalog_fails_closed():
+    """Reject unknown questions unless an explicit answer catalog is supplied."""
     assert is_valid_maud_answer("Some Novel Question", "whatever") is False
     assert is_valid_maud_answer("Some Novel Question", "x", ["x"]) is True
 
 
 def test_typo_case_and_quote_variants_compare_equal():
+    """Canonicalize known spelling, capitalization, and quotation variants equally."""
     a = "General R&Ws, Capitalization R&Ws, Fundermental/Special R&Ws"
     b = "general r&ws, capitalization r&ws, fundamental/special r&ws"
     assert canonical_maud_class(_RW_QUESTION, a) == canonical_maud_class(
@@ -136,12 +143,14 @@ def test_typo_case_and_quote_variants_compare_equal():
 
 
 def test_component_wise_validity_for_combined_classes():
+    """Accept combined answers only when every component is an allowed class."""
     assert is_valid_maud_answer("No-Shop", "Yes") is True
     assert is_valid_maud_answer("No-Shop", "yes, no") is True
     assert is_valid_maud_answer("No-Shop", "yes, maybe") is False
 
 
 def test_yes_no_aliases_only_where_the_surface_has_yes_no():
+    """Restrict boolean aliases to questions that actually allow yes or no."""
     assert normalize_maud_answer("No-Shop", "YES") == "yes"
     assert normalize_maud_answer("No-Shop", "true") == "yes"
     # Specific Performance has no Yes/No surface.
@@ -149,6 +158,7 @@ def test_yes_no_aliases_only_where_the_surface_has_yes_no():
 
 
 def test_perfect_maud_prediction_is_not_penalized_and_paraphrase_is_invalid():
+    """Award exact catalog answers full credit but penalize off-catalog paraphrases."""
     expected = {
         "Type of Consideration": {
             "answer": "All Cash",
@@ -201,6 +211,7 @@ def test_perfect_maud_prediction_is_not_penalized_and_paraphrase_is_invalid():
 
 
 def test_merger_suite_perfect_maud_row_scores_1():
+    """Preserve perfect MAUD accuracy, presence, and validity through the merger suite."""
     suite = get_suite("merger_agreement")
     labels = {
         "Type of Consideration": {
@@ -229,6 +240,7 @@ def test_merger_suite_perfect_maud_row_scores_1():
 
 @pytest.mark.parametrize("value", [None, "", " \t\n", "...", ", ,"])
 def test_empty_or_punctuation_only_answers_are_invalid(value):
+    """Treat blank and punctuation-only responses as empty, invalid classes."""
     assert not is_maud_class("No-Shop", value)
     assert not is_valid_maud_answer("No-Shop", value)
     assert normalize_maud_answer("No-Shop", value) == ""
@@ -240,6 +252,7 @@ def test_empty_or_punctuation_only_answers_are_invalid(value):
      ("N", "no", "Yes"), ("false", "no", "Yes"), ("0", "no", "Yes")],
 )
 def test_alias_requires_its_corresponding_row_class(alias, canonical, opposite):
+    """Expand a boolean alias only when its canonical class exists in the row."""
     assert is_valid_maud_answer("No-Shop", alias, [canonical])
     assert normalize_maud_answer("No-Shop", alias, [canonical]) == canonical
     assert not is_valid_maud_answer("No-Shop", alias, [opposite])
@@ -247,6 +260,7 @@ def test_alias_requires_its_corresponding_row_class(alias, canonical, opposite):
 
 
 def test_class_index_canonicalizes_and_deduplicates_without_mutating_input():
+    """Build a deduplicated canonical class index without changing the input list."""
     classes = ["", "...", "  ‘FUNDERMENTAL’  R&Ws ", "'fundamental' R&Ws"]
     original = classes.copy()
     assert maud_class_index(_RW_QUESTION, classes) == {
@@ -258,6 +272,7 @@ def test_class_index_canonicalizes_and_deduplicates_without_mutating_input():
 
 @pytest.mark.parametrize("classes", [None, [], ()])
 def test_empty_row_catalog_uses_union(classes):
+    """Fall back to the known question catalog when row classes are absent or empty."""
     assert is_valid_maud_answer("No-Shop", "Strict liability", classes)
     assert not is_valid_maud_answer("Unknown question", "Yes", classes)
 
@@ -280,6 +295,7 @@ def test_empty_row_catalog_uses_union(classes):
     ],
 )
 def test_class_matching_boundaries(value, classes, canonical, valid):
+    """Distinguish whole comma-containing classes from valid multi-class answers."""
     assert canonical_maud_class("Custom question", value, classes) == canonical
     assert is_maud_class("Custom question", value, classes) is valid
 
@@ -289,6 +305,7 @@ def test_class_matching_boundaries(value, classes, canonical, valid):
     "Merger_Agreement_Specialist",
 ])
 def test_catalog_aliases_return_independent_dicts(doc_type):
+    """Resolve normalized document aliases to independently mutable catalog mappings."""
     catalog = maud_question_catalog(doc_type)
     assert catalog == MAUD_ANSWER_CLASSES
     catalog.pop("No-Shop")
@@ -297,12 +314,14 @@ def test_catalog_aliases_return_independent_dicts(doc_type):
 
 @pytest.mark.parametrize("doc_type", [None, "", "merger", "contracts", "unknown"])
 def test_invalid_document_types_fail_closed(doc_type):
+    """Raise a descriptive lookup error for unsupported MAUD document types."""
     with pytest.raises(KeyError, match="unknown MAUD document type"):
         maud_question_catalog(doc_type)
 
 
 @pytest.mark.parametrize("container", ["mapping", "json", "records", "tuple"])
 def test_parser_preserves_classes_across_supported_record_formats(container):
+    """Normalize supported label containers without mutating their answers or classes."""
     record = {"answer": [None, "", "Yes"], "valid_classes": [None, "", "Yes", "No"]}
     if container in ("mapping", "json"):
         payload = {"no shop": record}
@@ -325,6 +344,7 @@ def test_parser_preserves_classes_across_supported_record_formats(container):
     ([], None), (None, None), ([None, ""], None),
 ])
 def test_parser_filters_class_entries_and_keeps_scalar_class_whole(classes, expected):
+    """Filter empty class entries while preserving a scalar class as one option."""
     result = parse_maud_labels({"No-Shop": {"answer": "Yes", "valid_classes": classes}})
     assert result["No-Shop"].get("valid_classes") == expected
     if expected is None:
@@ -333,6 +353,7 @@ def test_parser_filters_class_entries_and_keeps_scalar_class_whole(classes, expe
 
 @pytest.mark.parametrize("second_answer", ["YES", "No"])
 def test_repeated_keys_union_classes_in_first_seen_order(second_answer):
+    """Merge repeated question catalogs in order and retain conflicting answers."""
     records = [
         {"question": "No-Shop", "answer": "Yes", "valid_classes": ["Yes", "No"]},
         {"key": "no shop", "answer": second_answer,
@@ -347,6 +368,7 @@ def test_repeated_keys_union_classes_in_first_seen_order(second_answer):
 
 
 def test_scoring_uses_each_rows_catalog_without_leaking_between_documents():
+    """Keep per-document answer validity tied to each document's own catalog."""
     expected = [
         {"No-Shop": {"answer": "Yes", "valid_classes": ["Yes", "No"]}},
         {"No-Shop": {"answer": "Strict liability", "valid_classes": ["Strict liability"]}},
@@ -361,6 +383,7 @@ def test_scoring_uses_each_rows_catalog_without_leaking_between_documents():
 
 @pytest.mark.parametrize("suite_name", ["contract", "merger_agreement", "contracts_specialist"])
 def test_prediction_cannot_override_expected_catalog(suite_name):
+    """Ignore prediction-supplied catalogs when validating against ground truth."""
     expected = {"maud_clause_labels": {
         "No-Shop": {"answer": "Yes", "valid_classes": ["Yes", "No"]},
     }}
@@ -374,6 +397,7 @@ def test_prediction_cannot_override_expected_catalog(suite_name):
 
 
 def test_scoring_normalizes_against_custom_gt_catalog():
+    """Use custom ground-truth classes to normalize otherwise unknown questions."""
     expected = {"Custom question": {"answer": "Yes", "valid_classes": ["Yes"]}}
     out = score_maud_extraction(expected, {"Custom question": "true"})
     assert out["maud_question_accuracy"] == 1.0
@@ -381,6 +405,7 @@ def test_scoring_normalizes_against_custom_gt_catalog():
 
 
 def test_validity_denominator_excludes_missing_ambiguous_and_extra_questions():
+    """Compute validity only over present, unambiguous ground-truth questions."""
     expected = {
         "No-Shop": {"answer": "Yes", "valid_classes": ["Yes", "No"]},
         "Knowledge Definition": {"answer": "Actual knowledge"},
@@ -404,12 +429,14 @@ def test_validity_denominator_excludes_missing_ambiguous_and_extra_questions():
 
 @pytest.mark.parametrize("prediction, expected_rate", [({}, None), ({"No-Shop": ""}, 0.0)])
 def test_no_prediction_differs_from_present_but_empty_answer(prediction, expected_rate):
+    """Report absent-answer validity as unknown and present empty answers as invalid."""
     out = score_maud_extraction({"No-Shop": {"answer": "Yes"}}, prediction)
     assert out["maud_valid_class_rate"] == expected_rate
     assert out["maud_question_accuracy"] == 0.0
 
 
 def test_identical_unknown_answers_do_not_imply_class_validity():
+    """Keep exact answer agreement separate from catalog validity for unknown questions."""
     labels = {"Custom question": {"answer": "Unlisted answer"}}
     out = score_maud_extraction(labels, labels)
     assert out["maud_question_accuracy"] == 1.0
@@ -417,6 +444,7 @@ def test_identical_unknown_answers_do_not_imply_class_validity():
 
 
 def test_multi_class_answer_is_order_insensitive():
+    """Canonicalize reordered multi-class answers to the same value."""
     classes = ["General R&Ws", "Capitalization R&Ws", "Other"]
     q = "Accuracy of Target R&W Closing Condition"
     assert canonical_maud_class(q, "Capitalization R&Ws, General R&Ws", classes) == (
@@ -434,6 +462,7 @@ def test_multi_class_answer_is_order_insensitive():
 def test_comparator_classes_do_not_collapse(question):
     # SAND-042 RCA: the fold stripped ">" so "> 5 business days" scored as
     # "5 business days" — two distinct annotator classes credited as one.
+    """Preserve the distinction between exact and greater-than matching-rights periods."""
     assert canonical_maud_class(question, "5 business days") != canonical_maud_class(
         question, "> 5 business days"
     )
@@ -446,6 +475,7 @@ def test_comparator_classes_do_not_collapse(question):
 
 def test_chunk_merged_prediction_drops_off_catalog_guess():
     # SAND-042 RCA: chunk 1 (preamble) guesses, a later chunk has the clause.
+    """Discard an off-catalog chunk guess when a valid answer is also present."""
     exp = {"No-Shop": {"answer": "Yes", "category": ""}}
     for order in (["not specified", "Yes"], ["Yes", "not specified"]):
         out = score_maud_extraction(exp, [f"No-Shop: {a}" for a in order])
@@ -454,6 +484,7 @@ def test_chunk_merged_prediction_drops_off_catalog_guess():
 
 
 def test_conflicting_in_catalog_prediction_is_wrong_and_counted():
+    """Count contradictory valid answers as a prediction conflict with no accuracy credit."""
     exp = {"No-Shop": {"answer": "Yes", "category": ""}}
     out = score_maud_extraction(exp, ["No-Shop: No", "No-Shop: Yes"])
     assert out["maud_question_accuracy"] == 0.0
@@ -462,6 +493,7 @@ def test_conflicting_in_catalog_prediction_is_wrong_and_counted():
 
 
 def test_single_space_fiduciary_question_parses():
+    """Normalize the fiduciary question's single-space spelling to its catalog key."""
     q = "Fiduciary exception:  Board determination (no-shop)"
     labels = parse_maud_labels(["Fiduciary exception: Board determination (no-shop): Yes"])
     assert set(labels) == {q}
@@ -469,6 +501,7 @@ def test_single_space_fiduciary_question_parses():
 
 
 def test_null_mapping_entry_is_unanswered_not_invalid():
+    """Exclude a null prediction from both presence and answer-validity denominators."""
     exp = {"No-Shop": {"answer": "Yes", "category": ""}}
     out = score_maud_extraction(exp, {"No-Shop": None})
     assert out["maud_clause_presence"] == 0.0
@@ -476,6 +509,7 @@ def test_null_mapping_entry_is_unanswered_not_invalid():
 
 
 def test_newline_joined_spans_parse_every_question():
+    """Parse each question from multiple clause lines joined inside one span."""
     labels = parse_maud_labels(["No-Shop: Yes\nSpecific Performance: Yes"])
     assert set(labels) == {"No-Shop", "Specific Performance"}
     assert labels["No-Shop"]["answer"] == "Yes"
@@ -484,6 +518,7 @@ def test_newline_joined_spans_parse_every_question():
 def test_composite_class_with_catalog_components_matches_any_order():
     # "General R&Ws, fundamental/Special R&Ws" is a class AND both parts are
     # classes; the GT (catalog order) and a reordered prediction must agree.
+    """Match reordered composite classes even when their components are catalog entries."""
     composite = "General R&Ws, fundamental/Special R&Ws"
     reordered = "fundamental/Special R&Ws, General R&Ws"
     assert canonical_maud_class(_RW_QUESTION, composite) == canonical_maud_class(
