@@ -8,8 +8,9 @@ Format based on Keep a Changelog; versioning is SemVer.
 ### Changed
 
 - **`corporate_records_specialist_v7` amendment coordinated across the four
-  repos.** The frozen eval-environment mutation text (the `production_prompts`
-  — and, body-identical, `production` — corporate-records bytes) replaces the
+  repos.** The frozen eval-environment mutation text — the `production_prompts`
+  corporate-records bytes; `production` stays on the llm-mailroom v6 freeze
+  (`fe13501f…`) — replaces the
   `certificate_of_formation` = "articles_of_incorporation with organizers
   instead of incorporators" prose with an explicit per-subclass line
   (`+organizers[], registered_agent; omit authorized_capital entirely, even

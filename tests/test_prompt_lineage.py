@@ -1,6 +1,6 @@
 """eval-environment prompt lineage — archived / frozen / mutation catalog.
 
-Synced from eval-environment b449a79 by ``scripts/sync_eval_environment_lineage.py``.
+Synced from eval-environment ``22d217ab`` by ``scripts/sync_eval_environment_lineage.py``.
 The texts are historical eval-environment bytes, so the anti-priming rule from
 ``docs/PROMPTS.md`` is deliberately not asserted here. Network-free.
 """

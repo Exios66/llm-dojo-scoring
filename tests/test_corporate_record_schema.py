@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 
 import pytest
 
@@ -11,6 +12,7 @@ from llm_dojo_scoring.corporate_record_schema import (
     CORE_FIELDS,
     RECORD_TYPES,
     SUBCLASS_SCHEMAS,
+    align_unlabeled,
     audit_gt_row,
     audit_gt_rows,
     corporate_record_json_schema,
@@ -394,3 +396,204 @@ def test_json_schema_accepts_prompt_compliant_output_for_inapplicable_keys():
     assert set(sch["required"]) >= set(CORE_FIELDS)
     assert sch["properties"]["filing_number"] == {"type": "null"}
     assert js("subsidiary_list")["properties"]["signatories"]["maxItems"] == 0
+
+
+@pytest.mark.parametrize("key", ["entity_name", "registered_agent"])
+@pytest.mark.parametrize("value", [None, "", "  ", "null", "N/A", [], "[]", {}, "{}"])
+def test_empty_entity_representations_remain_unlabeled(key, value):
+    assert key in unlabeled_fields("articles_of_incorporation", {key: value})
+
+
+@pytest.mark.parametrize(
+    "status,value,scored,is_unlabeled",
+    [
+        (None, "CT Corporation", True, False),
+        (None, "", False, True),
+        ("populated", "CT Corporation", True, False),
+        ("populated", "", True, True),
+        ("schema_documented_absence", "", True, False),
+        ("not_applicable", "", False, False),
+        ("pending_annotation", "", False, True),
+        ("pending_annotation", "Stale agent", False, True),
+    ],
+)
+def test_extension_label_status_controls_scoring(status, value, scored, is_unlabeled):
+    gt = {"registered_agent": value, "gt_presence": {}}
+    if status is not None:
+        gt["gt_presence"]["registered_agent"] = status
+    for raw in (gt, json.dumps(gt)):
+        types = scored_field_types("articles_of_incorporation", raw)
+        assert ("registered_agent" in types) is scored
+        assert ("registered_agent" in unlabeled_fields("articles_of_incorporation", raw)) is is_unlabeled
+
+
+def test_alignment_drops_unlabeled_and_foreign_entities_without_mutation():
+    gt = dict(_GT, registered_agent="CT Corporation")
+    expected = dict(gt, principal="Unannotated principal")
+    predicted = dict(_PRED, principal="Jane Doe")
+    before = deepcopy((gt, expected, predicted))
+
+    aligned_gt, aligned_pred, dropped = align_unlabeled(
+        "articles_of_incorporation", gt, expected, predicted
+    )
+
+    assert (gt, expected, predicted) == before
+    assert "entity_name" in dropped
+    assert "registered_agent" not in dropped
+    assert aligned_gt["registered_agent"] == aligned_pred["registered_agent"] == "CT Corporation"
+    assert "principal" not in aligned_gt and "principal" not in aligned_pred
+    assert "entity_name" not in aligned_gt and "entity_name" not in aligned_pred
+    assert aligned_gt["intent"] == aligned_pred["intent"] == "entity_formation"
+
+
+def test_alignment_preserves_labeled_entities_even_from_another_subclass():
+    gt = dict(_GT, trustee="BNY Mellon", gt_presence={"trustee": "populated"})
+    expected, predicted, _ = align_unlabeled("bylaws", gt, gt, {"trustee": "BNY Mellon"})
+    assert expected["trustee"] == predicted["trustee"] == "BNY Mellon"
+
+
+def test_alignment_returns_independent_dicts_when_no_fields_are_dropped():
+    gt = {key: "Labeled" for key in CORE_FIELDS}
+    expected, predicted, dropped = align_unlabeled("other", gt, gt, gt)
+    assert dropped == ()
+    assert expected == predicted == gt
+    assert expected is not gt and predicted is not gt and expected is not predicted
+
+
+@pytest.mark.parametrize("subclass", [None, *SUBCLASS_SCHEMAS])
+def test_json_schema_validates_complete_empty_payloads(subclass):
+    jsonschema = pytest.importorskip("jsonschema")
+    schema = corporate_record_json_schema(subclass)
+    jsonschema.Draft202012Validator.check_schema(schema)
+    payload = {
+        key: [] if "array" in spec.get("type", []) else None
+        for key, spec in schema["properties"].items()
+    }
+    validator = jsonschema.Draft202012Validator(schema)
+    validator.validate(payload)
+
+    # Every declared key is required, including empty extension entities.
+    for key in payload:
+        incomplete = {name: value for name, value in payload.items() if name != key}
+        assert not validator.is_valid(incomplete), key
+    assert not validator.is_valid(dict(payload, invented_entity="Acme"))
+    assert not validator.is_valid(dict(payload, record_type="indenture"))
+
+
+@pytest.mark.parametrize(
+    "subclass,key,valid,invalid",
+    [
+        ("bylaws", "filing_number", None, "12345"),
+        ("subsidiary_list", "signatories", [], ["Jane Doe"]),
+        ("subsidiary_list", "jurisdiction", None, "Delaware"),
+        ("powers_of_attorney", "attorneys_in_fact", ["Jane Doe"], "Jane Doe"),
+        ("rights_instrument", "exercise_price", "$10.00", 10),
+        ("indenture", "maturity_date", "2030-01-01", 20300101),
+    ],
+)
+def test_json_schema_enforces_entity_types_and_inapplicable_core(subclass, key, valid, invalid):
+    jsonschema = pytest.importorskip("jsonschema")
+    schema = corporate_record_json_schema(subclass)
+    payload = {
+        name: [] if "array" in spec.get("type", []) else None
+        for name, spec in schema["properties"].items()
+    }
+    validator = jsonschema.Draft202012Validator(schema)
+    validator.validate(dict(payload, **{key: valid}))
+    assert not validator.is_valid(dict(payload, **{key: invalid}))
+
+
+def test_audit_aggregates_clean_malformed_and_unknown_subclass_rows():
+    clean = {
+        "intent": "other",
+        "gt_presence": {key: "schema_documented_absence" for key in CORE_FIELDS},
+    }
+    rows = [
+        {"expected": "corporate_record", "expected_subclass": "unknown", "gt_fields": clean},
+        {"expected": "corporate_record", "expected_subclass": "other", "gt_fields": "{bad"},
+        {"expected": "corporate_record", "expected_subclass": "bylaws", "gt_fields": "[]"},
+        {"expected": "contract", "gt_fields": "{bad"},
+    ]
+    before = deepcopy(rows)
+    report = audit_gt_rows(iter(rows))
+    assert report == {
+        "n_rows": 3,
+        "totals": {"rows": 3, "gt_unparseable": 2},
+        "by_subclass": {
+            "other": {"rows": 2, "gt_unparseable": 1},
+            "bylaws": {"rows": 1, "gt_unparseable": 1},
+        },
+    }
+    assert rows == before
+    assert audit_gt_rows([]) == {"n_rows": 0, "totals": {}, "by_subclass": {}}
+
+
+@pytest.mark.parametrize("key", ["entity_name", "registered_agent"])
+def test_stale_pending_entity_is_excluded_from_both_sides_of_suite_scoring(key):
+    gt = dict(_GT, **{key: "Stale label"}, gt_presence={key: "pending_annotation"})
+    out = get_suite("corporate_records_specialist").score_document(
+        gt, _PRED, doc_subclass="articles_of_incorporation"
+    )
+    assert key in out["unlabeled_fields"]
+    assert key not in out["extraction"].field_scores
+    assert out["extraction_precision"] == out["extraction_recall"] == 1.0
+
+
+def test_documented_absence_of_extension_penalizes_prediction():
+    gt = dict(_GT, registered_agent="", gt_presence={"registered_agent": "schema_documented_absence"})
+    suite = get_suite("corporate_records_specialist")
+    filled = suite.score_document(gt, _PRED, doc_subclass="articles_of_incorporation")
+    empty = suite.score_document(gt, dict(_PRED, registered_agent=None), doc_subclass="articles_of_incorporation")
+    assert "registered_agent" not in filled["unlabeled_fields"]
+    assert filled["extraction_precision"] < empty["extraction_precision"] == 1.0
+    assert filled["extraction_recall"] == empty["extraction_recall"] == 1.0
+
+
+def test_extension_entity_lists_use_list_scoring_without_expanding_format_requirements():
+    gt = dict(_GT, incorporators='["Alice Brown", "David Smith"]', gt_presence={"incorporators": "populated"})
+    suite = get_suite("corporate_records_specialist")
+    core_pred = {key: value for key, value in _PRED.items() if key in CORE_FIELDS}
+    hit = suite.score_document(
+        gt, dict(core_pred, incorporators=["David Smith", "Alice Brown"]),
+        doc_subclass="articles_of_incorporation",
+    )
+    missing = suite.score_document(gt, core_pred, doc_subclass="articles_of_incorporation")
+    assert hit["extraction"].field_scores["incorporators"] == 1.0
+    assert hit["extraction_recall"] == 1.0
+    assert missing["extraction_recall"] < hit["extraction_recall"]
+    assert missing["schema_valid"] == 1.0
+    incomplete = {key: value for key, value in core_pred.items() if key != "entity_name"}
+    incomplete_score = suite.score_document(gt, incomplete, doc_subclass="articles_of_incorporation")
+    assert incomplete_score["schema_valid"] == round((len(CORE_FIELDS) - 1) / len(CORE_FIELDS), 4)
+
+
+@pytest.mark.parametrize("subclass_kw", ["doc_subclass", "expected_subclass"])
+def test_batch_label_status_is_local_to_each_row_and_preserves_inputs(subclass_kw):
+    rows = [
+        dict(_GT, gt_presence={"registered_agent": "pending_annotation"}),
+        dict(_GT, registered_agent="CT Corporation", gt_presence={"registered_agent": "populated"}),
+        dict(_GT, registered_agent="", gt_presence={"registered_agent": "schema_documented_absence"}),
+    ]
+    predictions = [deepcopy(_PRED) for _ in rows]
+    before = deepcopy((rows, predictions))
+    suite = get_suite("corporate_records_specialist")
+    out = suite.score(rows, predictions, **{subclass_kw: ["articles_of_incorporation"] * 3})
+    assert (rows, predictions) == before
+    assert "registered_agent" in out["unlabeled_fields"][0]
+    assert "registered_agent" not in out["unlabeled_fields"][1]
+    assert "registered_agent" not in out["unlabeled_fields"][2]
+    assert out["extraction_precision"] < 1.0
+    predictions[2]["registered_agent"] = None
+    repaired = suite.score(rows, predictions, **{subclass_kw: "articles_of_incorporation"})
+    assert repaired["extraction_precision"] == repaired["extraction_recall"] == 1.0
+
+
+def test_batch_alignment_handles_invalid_gt_short_subclass_list_and_surplus_predictions():
+    out = get_suite("corporate_records_specialist").score(
+        ["{bad GT", _GT, _GT], [_PRED, _PRED, _PRED, {"entity_name": "Surplus"}],
+        doc_subclass=["bylaws", "articles_of_incorporation"],
+    )
+    assert out["unlabeled_fields"] == [
+        [], list(unlabeled_fields("articles_of_incorporation", _GT)),
+        list(unlabeled_fields(None, _GT)),
+    ]
