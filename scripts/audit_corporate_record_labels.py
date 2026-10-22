@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -38,6 +39,20 @@ def _rows(path: Path, *, include_context: bool = False):
 
     columns = None if include_context else ["expected", "expected_subclass", "gt_fields"]
     yield from pq.read_table(path, columns=columns).to_pylist()
+
+
+def _json_safe(value):
+    """Return ``value`` with non-finite floats replaced by their string form.
+
+    Keeps queue lines strict JSON while preserving the original evidence.
+    """
+    if isinstance(value, float) and not math.isfinite(value):
+        return str(value)
+    if isinstance(value, dict):
+        return {key: _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    return value
 
 
 def _review_rows(rows):
@@ -85,7 +100,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.review_queue:
         with args.review_queue.open("x", encoding="utf-8") as queue:
             for entry in _review_rows(rows):
-                queue.write(json.dumps(entry, ensure_ascii=False, default=str) + "\n")
+                queue.write(json.dumps(_json_safe(entry), ensure_ascii=False, default=str, allow_nan=False) + "\n")
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))
     else:

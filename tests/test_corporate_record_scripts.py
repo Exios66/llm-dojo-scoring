@@ -98,6 +98,24 @@ def test_review_queue_parquet_retains_document_identity(tmp_path, capsys, parque
     assert json.loads(queue.read_text(encoding="utf-8"))["row"] == row
 
 
+def test_review_queue_emits_strict_json_for_non_finite_values(tmp_path, capsys):
+    """NaN/Infinity in source context must not produce non-standard JSON tokens."""
+    script = load_script("audit_corporate_record_labels")
+    row = dict(_clean_row(), gt_fields="{bad", score=float("nan"), nested=[float("inf"), {"x": float("-inf")}])
+    source = _jsonl(tmp_path / "source.jsonl", [row])
+    queue = tmp_path / "review.jsonl"
+    assert script.main([str(source), "--review-queue", str(queue)]) == 1
+    capsys.readouterr()
+
+    def reject(token):
+        """Fail on any bare NaN/Infinity constant."""
+        raise AssertionError(token)
+
+    entry = json.loads(queue.read_text(encoding="utf-8"), parse_constant=reject)
+    assert entry["row"]["score"] == "nan"
+    assert entry["row"]["nested"] == ["inf", {"x": "-inf"}]
+
+
 @pytest.mark.parametrize("same_input", [True, False])
 def test_review_queue_refuses_to_overwrite_existing_files(tmp_path, same_input):
     """Protect input data and any preexisting review artifact from replacement."""
