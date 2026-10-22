@@ -52,6 +52,7 @@ def _public_prf(
     expected_events: int,
     entity_list_f1: float | None = None,
 ) -> dict[str, Any]:
+    """Package extraction precision, recall, F1, F2, and event counts for export."""
     f1 = fbeta(precision, recall, beta=1.0)
     f2 = fbeta(precision, recall, beta=2.0)
     out: dict[str, Any] = {

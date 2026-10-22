@@ -25,12 +25,14 @@ _SCORED_PHRASES = (
 
 
 def test_list_prompts_covers_every_default_profile():
+    """Provide a prompt catalog entry for every default agent profile."""
     catalog_agents = {rec.agent for rec in list_prompts()}
     missing = set(DEFAULT_PROFILES) - catalog_agents
     assert not missing, f"profiles missing from prompt catalog: {sorted(missing)}"
 
 
 def test_get_prompt_production_and_docclass():
+    """Keep production and historical docclass sorter records distinct and populated."""
     sorter = get_prompt("sorter")
     assert sorter.family == "production"
     assert sorter.kind == "llm"
@@ -43,6 +45,7 @@ def test_get_prompt_production_and_docclass():
 
 
 def test_intake_is_deterministic_empty_text():
+    """Represent deterministic intake with no LLM body and normalization notes."""
     rec = get_prompt("intake")
     assert rec.kind == "deterministic"
     assert rec.text == ""
@@ -50,12 +53,14 @@ def test_intake_is_deterministic_empty_text():
 
 
 def test_archivist_is_procedural_empty_text():
+    """Represent archival work as procedural with no model-visible prompt."""
     rec = get_prompt("archivist")
     assert rec.kind == "procedural"
     assert rec.text == ""
 
 
 def test_local_vs_api_is_procedural_empty_text():
+    """Use a procedural serving-bundle record for local-versus-API evaluation."""
     rec = get_prompt("local_vs_api")
     assert rec.kind == "procedural"
     assert rec.text == ""
@@ -63,6 +68,7 @@ def test_local_vs_api_is_procedural_empty_text():
 
 
 def test_proposed_auditors_have_no_llm_body():
+    """Keep proposed specialist auditors body-free and assigned to audit metrics."""
     for agent in (
         "corporate_records_auditor",
         "due_diligence_auditor",
@@ -78,6 +84,7 @@ def test_proposed_auditors_have_no_llm_body():
 
 
 def test_contract_auditor_and_audit_agent_share_contracts_audit_v0():
+    """Reuse the populated contracts-audit source for both auditor aliases."""
     audit = get_prompt("audit_agent")
     contract = get_prompt("contract_auditor")
     assert audit.kind == "llm" and contract.kind == "llm"
@@ -87,6 +94,7 @@ def test_contract_auditor_and_audit_agent_share_contracts_audit_v0():
 
 
 def test_unknown_prompt_raises():
+    """Reject unknown agents and unsupported agent/family combinations."""
     with pytest.raises(KeyError):
         get_prompt("not_an_agent")
     with pytest.raises(KeyError):
@@ -94,6 +102,7 @@ def test_unknown_prompt_raises():
 
 
 def test_judge_completeness_alias():
+    """Share the judge body with its completeness alias while retaining other judges."""
     judge = get_prompt("judge")
     completeness = get_prompt("judge-completeness")
     assert completeness.text == judge.text
@@ -104,6 +113,7 @@ def test_judge_completeness_alias():
 def test_colloquial_priming_flagged_not_rewritten():
     # Since v0.20.0 the production body is frozen v1, which carries none of the
     # colloquial words; the flag therefore lives only where the words still do.
+    """Flag precision priming only in the historical prompt where that wording remains."""
     rec = get_prompt("contracts_specialist")
     assert rec.priming == ()
     assert "precision" not in rec.text.lower()
@@ -144,6 +154,7 @@ def test_llm_templates_omit_t0_t1_registry_ids():
 
 
 def test_metrics_bundle_is_metadata_not_required_in_text():
+    """Keep extraction metric identifiers in catalog metadata, not specialist text."""
     rec = get_prompt("insurance_claims_specialist")
     assert rec.metrics_bundle == "extraction"
     assert rec.doc_bundle == "insurance_claim"
@@ -152,6 +163,7 @@ def test_metrics_bundle_is_metadata_not_required_in_text():
 
 
 def test_families_and_record_shape():
+    """Expose typed prompt records with consistent family keys and filtered listing."""
     rec = get_prompt("sorter")
     assert rec.family in FAMILIES
     assert isinstance(rec, PromptRecord)

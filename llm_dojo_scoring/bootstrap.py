@@ -32,6 +32,7 @@ def _clean(values: list[Any]) -> list[float]:
 
 
 def _resample_means(values: list[float], n_boot: int, seed: int, rng: random.Random) -> list[float]:
+    """Draw bootstrap sample means with replacement using the supplied RNG."""
     n = len(values)
     return [
         sum(values[i] for i in (rng.randrange(n) for _ in range(n))) / n
@@ -97,6 +98,7 @@ def delta_significance(
     mean_b = sum(b) / len(b)
 
     def _sample_mean(values: list[float]) -> float:
+        """Return the mean of one same-sized bootstrap resample."""
         n = len(values)
         return sum(values[rng.randrange(n)] for _ in range(n)) / n
 

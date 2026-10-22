@@ -1,3 +1,4 @@
+"""Check reproducible taxonomy fixture generation and validation of authority inputs."""
 import json
 import subprocess
 
@@ -24,12 +25,14 @@ doc_classes:
 
 
 def _write(tmp_path):
+    """Write the synthetic authority taxonomy to a temporary YAML file."""
     path = tmp_path / "taxonomy.yaml"
     path.write_bytes(TAXONOMY.encode())
     return path
 
 
 def test_blob_sha1_equals_git_hash_object(tmp_path):
+    """Compute the authority blob identifier exactly as Git hashes the source bytes."""
     gen = load_script("gen_taxonomy_fixture")
     path = _write(tmp_path)
     expected = subprocess.run(
@@ -39,6 +42,7 @@ def test_blob_sha1_equals_git_hash_object(tmp_path):
 
 
 def test_field_types_round_trip_and_roster_order(tmp_path):
+    """Preserve authority document order, field types, and specialist schema metadata."""
     gen = load_script("gen_taxonomy_fixture")
     fixture = gen.build_fixture(_write(tmp_path))
     assert fixture["live_doc_types"] == ["correspondence", "contract"]
@@ -66,6 +70,7 @@ def test_field_types_round_trip_and_roster_order(tmp_path):
     ],
 )
 def test_duplicate_mapping_keys_are_rejected(tmp_path, taxonomy, duplicate_key):
+    """Reject taxonomy YAML containing duplicate mapping keys."""
     gen = load_script("gen_taxonomy_fixture")
     path = tmp_path / "taxonomy.yaml"
     path.write_text(taxonomy, encoding="utf-8")
@@ -75,6 +80,7 @@ def test_duplicate_mapping_keys_are_rejected(tmp_path, taxonomy, duplicate_key):
 
 @pytest.mark.parametrize("taxonomy", ["version: 1\n", "", "[]", "scalar"])
 def test_missing_doc_classes_has_clear_error(tmp_path, taxonomy):
+    """Explain missing document-class mappings in invalid taxonomy inputs."""
     gen = load_script("gen_taxonomy_fixture")
     path = tmp_path / "taxonomy.yaml"
     path.write_text(taxonomy, encoding="utf-8")
@@ -83,6 +89,7 @@ def test_missing_doc_classes_has_clear_error(tmp_path, taxonomy):
 
 
 def test_check_ignores_captured_at_only(tmp_path):
+    """Ignore capture timestamps during drift checks while detecting substantive changes."""
     gen = load_script("gen_taxonomy_fixture")
     tax, out = _write(tmp_path), tmp_path / "fixture.json"
     assert gen.main(["--taxonomy", str(tax), "--out", str(out)]) == 0

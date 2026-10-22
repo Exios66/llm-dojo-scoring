@@ -245,6 +245,7 @@ def _as_text_and_payload(value: Any) -> tuple[str | None, dict]:
 
 
 def _gold_from(expected: Any, *, raw_text: str | None = None) -> tuple[str, dict, bool, dict]:
+    """Derive normalized gold text, normalization stats, messiness, and span metadata."""
     source = raw_text if raw_text is not None else expected
     if isinstance(source, dict):
         raw = source.get("raw") or source.get("raw_text") or source.get("text") or ""
@@ -260,12 +261,14 @@ def _gold_from(expected: Any, *, raw_text: str | None = None) -> tuple[str, dict
 
 
 def _flag_match(pred: Any, gold: Any) -> float | None:
+    """Compare boolean flag values, returning None when either value is missing."""
     if pred is None or gold is None:
         return None
     return 1.0 if bool(pred) == bool(gold) else 0.0
 
 
 def _int_match(pred: Any, gold: Any) -> float | None:
+    """Compare integer-convertible values, treating invalid conversions as mismatches."""
     if pred is None or gold is None:
         return None
     try:
@@ -275,10 +278,12 @@ def _int_match(pred: Any, gold: Any) -> float | None:
 
 
 def _mean(values: list[float]) -> float:
+    """Return the four-decimal mean, or zero for an empty sample."""
     return round(sum(values) / len(values), 4) if values else 0.0
 
 
 def _score_one(expected: Any, predicted: Any, *, raw_text: str | None = None) -> dict:
+    """Score one intake prediction against normalized gold text and preparation metadata."""
     gold_text, gold_stats, gold_messy, gold_payload = _gold_from(
         expected, raw_text=raw_text
     )

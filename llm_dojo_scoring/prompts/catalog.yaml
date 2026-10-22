@@ -45,8 +45,11 @@ prompts:
   doc_bundle: corporate_record
   source_repo: llm-mailroom
   source_key: frozen_v1
-  source_commit: 6ddde73bfca34f39b44e1db9966f4a04543795fa
+  source_commit: cb960a2c1ab323a7d9cb1ebf9e9aaf77652ca622
   template: corporate_records_specialist.production.md
+  notes: 'Live mailroom freeze: corporate_records_specialist_v6 (sha256 fe13501f…).
+    production_prompts carries eval-environment v7; promote it here only after
+    llm-mailroom updates its dependency and freeze.'
   priming: []
 - agent: correspondence_specialist
   family: production
@@ -540,12 +543,15 @@ prompts:
   metrics_bundle: extraction
   doc_bundle: corporate_record
   source_repo: LLM-Mailroom-Services/eval-environment
-  source_key: corporate_records_specialist_v6
+  source_key: corporate_records_specialist_v7
   template: corporate_records_specialist.production_prompts.md
-  sha256: fe13501f667fcd9f64f7dfbf8b0f124f81d9dd039f4109288b43f106f82b1399
-  notes: 'Byte-identical to eval-environment mutation corporate_records_specialist_v6
-    (2026-10-16, #29), the field-guidance correction of frozen v1 (mailroom-dataset-v1,
-    2026-09-26; v1 sha256 484e64dd…); sandbox stem corporate_records_specialist_simplified.'
+  sha256: 253559fcb7ac6b36878453821a4fab0aa94228ad5add77d5aeabb06bb265134c
+  notes: 'Byte-identical to eval-environment mutation corporate_records_specialist_v7
+    (2026-10-17), which adds per-subclass key entities (generated from corporate_record_schema)
+    to _v6 (#29 field-guidance correction of frozen v1, mailroom-dataset-v1, sha256 484e64dd…),
+    now amended to coordinate: explicit certificate_of_formation line (organizers, registered_agent;
+    omit authorized_capital entirely, even when null) replaces the organizer/incorporator prose,
+    and subsidiary_list gains subject_matter/keywords guidance; sandbox stem corporate_records_specialist_simplified.'
   priming: []
 - agent: correspondence_specialist
   family: production_prompts

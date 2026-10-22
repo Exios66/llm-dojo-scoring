@@ -28,6 +28,7 @@ from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES
 
 
 def test_unscorable_triage_only_contracts_gt_not_zero():
+    """Mark triage-only ground truth unscorable rather than reporting zero extraction quality."""
     gt = {"contract_subtype": "license", "doc_type": "contract"}
     pred = {
         "parties": ["Acme Corp"],
@@ -53,6 +54,7 @@ def test_unscorable_triage_only_contracts_gt_not_zero():
 
 
 def test_metric_id_mismatch_incomparable():
+    """Mark serving quality comparisons incomparable when their metric IDs disagree."""
     with pytest.raises(IncomparableMetricsError):
         assert_comparable_metric_ids(
             "cuad.clause_presence.micro_f1",
@@ -65,6 +67,7 @@ def test_metric_id_mismatch_incomparable():
 
 
 def test_schema_valid_gate_insurance():
+    """Fail insurance promotion when parsed predictions lack required schema fields."""
     fmt = score_format_layer(
         predicted_raw='{"claim_number": "CLM-1"}',
         required_keys=["claim_number", "claimed_amount", "insurer"],
@@ -316,6 +319,7 @@ def test_modal_serving_kind_not_local():
 
 
 def test_provenance_export_refusal():
+    """Refuse comparison export when the two legs use different draw seeds."""
     left = stamp_provenance(
         {},
         dataset_revision="ed7576b",

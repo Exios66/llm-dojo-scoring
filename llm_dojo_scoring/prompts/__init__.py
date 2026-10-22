@@ -78,18 +78,22 @@ class PromptRecord:
 
     @property
     def key(self) -> tuple[str, str]:
+        """Return the agent and family pair identifying this catalog entry."""
         return (self.agent, self.family)
 
 
 def _pkg_root():
+    """Return the resource root for installed prompt data and templates."""
     return resources.files("llm_dojo_scoring.prompts")
 
 
 def _strip_provenance(raw: str) -> str:
+    """Remove one leading provenance comment and following blank lines."""
     return _PROVENANCE_COMMENT.sub("", raw, count=1).lstrip("\n")
 
 
 def _load_template(name: str | None) -> str:
+    """Read model-visible template text, or return empty text without a name."""
     if not name:
         return ""
     path = _pkg_root().joinpath("templates", name)
@@ -97,6 +101,7 @@ def _load_template(name: str | None) -> str:
 
 
 def _record_from_row(row: dict) -> PromptRecord:
+    """Validate a catalog row and load template text only for LLM roles."""
     kind = str(row.get("kind") or "llm")
     if kind not in KINDS:
         raise ValueError(f"unknown prompt kind {kind!r}")
@@ -128,6 +133,7 @@ def _record_from_row(row: dict) -> PromptRecord:
 
 @lru_cache(maxsize=1)
 def _catalog() -> tuple[PromptRecord, ...]:
+    """Load and cache prompt records in their YAML catalog order."""
     raw = _pkg_root().joinpath("catalog.yaml").read_text(encoding="utf-8")
     data = yaml.safe_load(raw) or {}
     rows = data.get("prompts") or []
@@ -177,4 +183,5 @@ def get_prompt(agent: str, family: str = "production") -> PromptRecord:
 
 
 def iter_prompts() -> Iterable[PromptRecord]:
+    """Return an iterator over every cached prompt catalog entry."""
     return iter(_catalog())

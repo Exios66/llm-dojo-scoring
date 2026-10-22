@@ -51,6 +51,7 @@ _FIXTURE = Path(__file__).parent / "fixtures" / "taxonomy_field_types.json"
 # ---------------------------------------------------------------------------
 
 def _type_ok(value, name: str) -> bool:
+    """Recognize the JSON Schema primitive types used by the local validator."""
     return {
         "string": isinstance(value, str),
         "null": value is None,
@@ -61,6 +62,7 @@ def _type_ok(value, name: str) -> bool:
 
 
 def _validate(value, schema, path="$") -> list[str]:
+    """Collect path-qualified errors for the emitted subset of JSON Schema."""
     errors: list[str] = []
     types = schema.get("type")
     if types is not None:
@@ -129,12 +131,14 @@ def _gt_shaped(**overrides) -> dict:
 # ---------------------------------------------------------------------------
 
 def test_forty_one_unique_categories_match_corpus_constants():
+    """Pin all 41 distinct CUAD categories to the corpus catalog."""
     assert len(CUAD_CATEGORIES) == 41
     assert len(set(CUAD_CATEGORY_NAMES)) == 41
     assert set(CUAD_CATEGORY_NAMES) == set(CUAD_CLAUSE_CATEGORIES)
 
 
 def test_category_names_and_order_match_frozen_prompt_list():
+    """Keep CUAD category ordering aligned with the frozen production prompt."""
     text = get_prompt("contracts_specialist", family="production_prompts").text
     block = text.split("CUAD clause category names", 1)[1].split("\n", 1)[1].split("\n\n", 1)[0]
     prompt_names = tuple(n.strip() for n in block.rstrip(".").split(";"))
@@ -142,6 +146,7 @@ def test_category_names_and_order_match_frozen_prompt_list():
 
 
 def test_category_metadata_is_well_formed():
+    """Require valid category groups, answer formats, questions, and field references."""
     for cat in CUAD_CATEGORIES:
         assert cat.group in CUAD_GROUPS
         assert cat.answer_format in CUAD_ANSWER_FORMATS
@@ -156,6 +161,7 @@ def test_category_metadata_is_well_formed():
 
 
 def test_span_categories_and_field_mapping():
+    """Pin which CUAD categories use spans and map to extraction fields."""
     span = {c.name for c in CUAD_CATEGORIES if c.is_span}
     assert {"Document Name", "Parties", "Agreement Date", "Effective Date", "Expiration Date",
             "Renewal Term", "Notice Period To Terminate Renewal", "Governing Law",
@@ -174,6 +180,7 @@ def test_span_categories_and_field_mapping():
 
 
 def test_known_cuad_descriptions_are_verbatim():
+    """Preserve authoritative wording for selected CUAD category descriptions."""
     assert cuad_category("Document Name").description == "The name of the contract"
     assert cuad_category("Expiration Date").description == "On what date will the contract's initial term expire?"
     assert cuad_category("Governing Law").description == (
@@ -204,11 +211,13 @@ def test_known_cuad_descriptions_are_verbatim():
     ("Notice Period", "Notice Period To Terminate Renewal"),
 ])
 def test_category_alias_lookup(alias, canonical):
+    """Resolve common abbreviations and formatting variants to canonical categories."""
     assert cuad_category(alias).name == canonical
     assert canonical_cuad_category(alias) == canonical
 
 
 def test_every_category_resolves_by_its_own_name_and_unknown_fails_closed():
+    """Resolve every canonical category and reject unknown category names."""
     for name in CUAD_CATEGORY_NAMES:
         assert cuad_category(name).name == name
         assert cuad_category(name.upper()).name == name
@@ -225,6 +234,7 @@ def test_every_category_resolves_by_its_own_name_and_unknown_fails_closed():
 # ---------------------------------------------------------------------------
 
 def test_families_match_corpus_subclass_catalog():
+    """Align CUAD families and unique surface forms with corpus subclasses."""
     assert len(CUAD_FAMILIES) == 26
     assert CUAD_FAMILY_KEYS[:-1] == tuple(CONTRACT_SUBTYPE_KEYS) == DOC_TYPE_SUBCLASSES["contract"]
     assert CUAD_FAMILY_KEYS[-1] == "other"
@@ -237,6 +247,7 @@ def test_families_match_corpus_subclass_catalog():
 
 
 def test_family_salient_categories_are_valid_and_nonempty():
+    """Require defined families to have unique valid salient categories and definitions."""
     valid = set(CUAD_CATEGORY_NAMES)
     for fam in CUAD_FAMILIES:
         assert set(fam.salient) <= valid
@@ -268,6 +279,7 @@ def test_family_salient_cover_prompt_executive_brief():
 
 
 def test_family_hints_do_not_touch_scored_field_map():
+    """Keep family-specific extraction hints outside the scored field map."""
     for fam in CUAD_FAMILIES:
         for hint in fam.family_fields:
             assert hint.informs is None or hint.informs in DEFAULT_FIELD_TYPES["contract"]
@@ -277,6 +289,7 @@ def test_family_hints_do_not_touch_scored_field_map():
 
 
 def test_cuad_family_lookup_normalizes_surfaces_and_unknowns():
+    """Resolve family aliases and objects while falling back to other for unknowns."""
     assert cuad_family("License_Agreements").key == "license"
     assert cuad_family("Joint Venture _ Filing").key == "joint_venture"
     assert cuad_family("Non_Compete_Non_Solicit").key == "non_compete_no_solicit"
@@ -292,6 +305,7 @@ def test_cuad_family_lookup_normalizes_surfaces_and_unknowns():
 # ---------------------------------------------------------------------------
 
 def test_field_descriptor_matches_default_field_types_and_fixture():
+    """Align contract field descriptors with defaults, corpus order, and taxonomy fixtures."""
     assert CONTRACT_FIELD_TYPES == DEFAULT_FIELD_TYPES["contract"]
     assert len(CONTRACT_EXTRACTION_FIELDS) == 11
     assert tuple(f.name for f in CONTRACT_EXTRACTION_FIELDS) == CORPUS_EXTRACTION_FIELDS["contract"]
@@ -300,6 +314,7 @@ def test_field_descriptor_matches_default_field_types_and_fixture():
 
 
 def test_field_empty_values_follow_empty_field_contract():
+    """Return independent empty lists for list fields and null for scalar fields."""
     for f in CONTRACT_EXTRACTION_FIELDS:
         assert f.description.strip()
         assert f.is_list == f.scoring_type.startswith("entity_list")
@@ -309,6 +324,7 @@ def test_field_empty_values_follow_empty_field_contract():
 
 
 def test_default_field_types_untouched_by_import():
+    """Preserve the default contract field order after importing schema descriptors."""
     assert list(DEFAULT_FIELD_TYPES["contract"]) == list(CORPUS_EXTRACTION_FIELDS["contract"])
 
 
@@ -317,6 +333,7 @@ def test_default_field_types_untouched_by_import():
 # ---------------------------------------------------------------------------
 
 def test_questions_without_family_follow_cuad_order():
+    """Render standard and specialist questions in canonical category order."""
     qs = cuad_questions()
     assert [c for c, _ in qs] == list(CUAD_CATEGORY_NAMES)
     assert all(q.startswith("Highlight the parts (if any)") for _, q in qs)
@@ -329,6 +346,7 @@ def test_questions_without_family_follow_cuad_order():
 
 @pytest.mark.parametrize("family", CUAD_FAMILY_KEYS)
 def test_questions_put_salient_categories_first(family):
+    """Prioritize family-salient questions without losing or duplicating categories."""
     qs = cuad_questions(family)
     names = [c for c, _ in qs]
     salient = list(salient_categories(family))
@@ -340,12 +358,14 @@ def test_questions_put_salient_categories_first(family):
 
 
 def test_license_family_leads_with_license_grant():
+    """Lead license questions with the grant and other license-specific provisions."""
     names = [c for c, _ in cuad_questions("License_Agreements")]
     assert names[0] == "License Grant"
     assert names.index("Non-Transferable License") < names.index("Document Name")
 
 
 def test_render_question_block():
+    """Render family headings, salient groups, field hints, and requested subsets."""
     plain = render_cuad_question_block()
     assert "Salient" not in plain and "Contract family" not in plain
     for name in CUAD_CATEGORY_NAMES:
@@ -367,6 +387,7 @@ def test_render_question_block():
 # ---------------------------------------------------------------------------
 
 def test_json_schema_shape():
+    """Require scored and trace fields with strict types, enums, and clause patterns."""
     schema = cuad_json_schema()
     props = schema["properties"]
     assert schema["additionalProperties"] is False
@@ -385,12 +406,14 @@ def test_json_schema_shape():
 
 
 def test_json_schema_scored_only_variant():
+    """Exclude trace fields from the scored-only contract schema."""
     schema = cuad_json_schema(include_trace=False)
     assert list(schema["properties"]) == list(CORPUS_EXTRACTION_FIELDS["contract"])
     assert schema["required"] == list(CORPUS_EXTRACTION_FIELDS["contract"])
 
 
 def test_json_schema_accepts_gt_shaped_examples():
+    """Accept representative GT-shaped payloads and all supported clause categories."""
     schema = cuad_json_schema()
     scored = cuad_json_schema(include_trace=False)
     empty = _gt_shaped(
@@ -420,16 +443,19 @@ def test_json_schema_accepts_gt_shaped_examples():
     {"unknown_key": 1},
 ])
 def test_json_schema_rejects_malformed(bad):
+    """Reject malformed contract values using the generated schema."""
     assert _validate(_gt_shaped(**bad), cuad_json_schema()) != []
 
 
 def test_json_schema_rejects_missing_required():
+    """Report missing required clause fields during schema validation."""
     payload = _gt_shaped()
     del payload["cuad_clauses"]
     assert any("cuad_clauses" in e for e in _validate(payload, cuad_json_schema()))
 
 
 def test_json_schema_agrees_with_jsonschema_when_installed():
+    """Cross-check local schema validation against the optional jsonschema library."""
     jsonschema = pytest.importorskip("jsonschema")
     schema = cuad_json_schema()
     validator = jsonschema.Draft7Validator(schema)
@@ -442,6 +468,7 @@ def test_json_schema_agrees_with_jsonschema_when_installed():
 
 
 def test_reference_doc_covers_every_category_and_family():
+    """Keep reference documentation complete for every CUAD category and family."""
     doc = (Path(__file__).parent.parent / "docs" / "CUAD_SCHEMA.md").read_text(encoding="utf-8")
     for cat in CUAD_CATEGORIES:
         assert f"`{cat.name}`" in doc and cat.description.replace("|", "\\|") in doc
@@ -452,6 +479,7 @@ def test_reference_doc_covers_every_category_and_family():
 def test_cuad_family_unknown_normalized_subtype_falls_back_to_other(monkeypatch):
     # configure_from_taxonomy() can register a custom subtype that
     # normalize_subtype returns verbatim; it has no CUAD family.
+    """Fall back to other when subtype normalization yields an uncataloged family."""
     import llm_dojo_scoring.cuad_schema as cs
 
     monkeypatch.setattr(cs, "normalize_subtype", lambda _name: "custom")

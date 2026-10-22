@@ -737,6 +737,7 @@ def test_validate_rejects_unknown_pipeline_nodes():
 
 
 def test_canonical_json_preserves_mailroom_spacing_escaping_and_default_str():
+    """Pin canonical JSON formatting for Unicode and non-JSON scalar values."""
     payload = {"z": "café", "a": {"amount": Decimal("12.50"), "ok": True}}
     assert canonical_json(payload) == (
         '{"a": {"amount": "12.50", "ok": true}, "z": "caf\\u00e9"}'
@@ -750,6 +751,7 @@ def test_canonical_json_preserves_mailroom_spacing_escaping_and_default_str():
     0,
 ])
 def test_archive_hash_timestamp_variants_match_mailroom(timestamp):
+    """Match mailroom audit hashes across datetime, string, and numeric timestamps."""
     kwargs = dict(
         prev_hash="a" * 64, doc_id="doc-unicode", entry_id="entry-1",
         matter_id="M", actor="archivist", timestamp=timestamp, event="archived",
@@ -761,6 +763,7 @@ def test_archive_hash_timestamp_variants_match_mailroom(timestamp):
 
 
 def test_archive_hash_ignores_mapping_order_but_detects_nested_content_changes():
+    """Keep hashes order-independent while detecting changes inside nested detail mappings."""
     kwargs = dict(
         prev_hash="", doc_id="doc-1", entry_id="entry-1", matter_id="M",
         actor="archivist", timestamp="2026-10-02T23:55:00+00:00", event="archived",
@@ -775,6 +778,7 @@ def test_archive_hash_ignores_mapping_order_but_detects_nested_content_changes()
 
 @pytest.mark.parametrize("empty", ["[]", "{}", " N/A ", "null"])
 def test_archive_empty_metadata_does_not_create_false_negatives(empty):
+    """Treat absent and empty archive metadata consistently during scoring."""
     block = score_archive_block(
         doc_class="insurance_claim", expected={"claim_number": "CLM-1", "denial_reasons": empty},
         predicted={"claim_number": "CLM-1"},

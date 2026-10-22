@@ -20,11 +20,13 @@ NEW_PROFILES = [
 
 
 def test_new_review_audit_profiles_registered():
+    """Register the reviewer, specialist auditors, and arbiter profiles."""
     for name in NEW_PROFILES:
         assert name in DEFAULT_PROFILES, f"missing profile: {name}"
 
 
 def test_sorter_reviewer_profile_shape():
+    """Assign classification and review tasks with the classification metric bundle."""
     p = get_profile("sorter_reviewer")
     assert p.tasks == ("classify", "review")
     assert p.metrics_bundle == "classification"
@@ -43,6 +45,7 @@ def test_specialist_auditor_profiles_share_shape():
 
 
 def test_arbiter_profile_shape():
+    """Use verification and review metrics without requiring arbiter ground truth."""
     p = get_profile("arbiter")
     assert p.tasks == ("verify", "review")
     assert p.metrics_bundle == "audit"
@@ -50,6 +53,7 @@ def test_arbiter_profile_shape():
 
 
 def test_all_profile_bundles_resolve():
+    """Resolve every profile's primary and optional fallback metric bundle."""
     for name, p in DEFAULT_PROFILES.items():
         get_bundle(p.metrics_bundle)  # raises on unknown bundle
         if p.fallback_bundle:
@@ -58,6 +62,7 @@ def test_all_profile_bundles_resolve():
 
 def test_preexisting_profiles_untouched():
     # The v0.5.x registry must survive the additions unchanged.
+    """Preserve existing audit, judge, and extraction profile configuration."""
     aa = get_profile("audit_agent")
     assert aa.tasks == ("verify", "review")
     assert aa.metrics_bundle == "audit"

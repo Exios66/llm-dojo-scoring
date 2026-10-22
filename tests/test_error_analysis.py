@@ -1,3 +1,4 @@
+"""Exercise sorter run rankings, diagnostic summaries, trends, and reliability analysis."""
 import pandas as pd
 import pytest
 
@@ -7,10 +8,12 @@ from llm_dojo_scoring.io import normalize_results_frame
 
 @pytest.fixture
 def df(sorter_frame) -> pd.DataFrame:
+    """Normalize the shared synthetic sorter frame for analysis tests."""
     return normalize_results_frame(sorter_frame)
 
 
 def test_best_run(df):
+    """Select the highest-accuracy eligible run and honor minimum sample size."""
     best = ea.best_run(df)
     assert best["Experiment Name"] == "qwen3.7-flash_sorter_v13_subtype_langfuse"
     assert best["Subtype Accuracy"] == pytest.approx(0.9430)
@@ -18,11 +21,13 @@ def test_best_run(df):
 
 
 def test_runner_up(df):
+    """Select the next-best prompt version after the champion run."""
     runner = ea.runner_up(df)
     assert runner["Prompt Version"] == "v14"
 
 
 def test_prompt_version_summary(df):
+    """Aggregate run counts and accuracy statistics by prompt version."""
     summary = ea.prompt_version_summary(df)
     assert list(summary.columns) == [
         "prompt_version", "n_runs", "mean", "best", "worst", "spread", "best_run", "best_n",
@@ -35,12 +40,14 @@ def test_prompt_version_summary(df):
 
 
 def test_model_summary(df):
+    """Group repeated sorter runs under their normalized model name."""
     summary = ea.model_summary(df)
     qwen = summary[summary["model"] == "Qwen 3.7-Flash"].iloc[0]
     assert qwen["n_runs"] == 6
 
 
 def test_metric_trend(df):
+    """Preserve every run and its confidence interval in metric trends."""
     trend = ea.metric_trend(df)
     assert "lo" in trend.columns and "hi" in trend.columns
     assert len(trend) == len(df)
@@ -50,6 +57,7 @@ def test_metric_trend(df):
 
 
 def test_failure_mode_summary(df):
+    """Aggregate failure counts by mode and normalize their proportions."""
     modes = ea.failure_mode_summary(df)
     assert list(modes.index) == ["equivalent_family", "family_confusion",
                                  "function_over_form", "other_fallback"]
@@ -58,24 +66,28 @@ def test_failure_mode_summary(df):
 
 
 def test_per_subtype_summary(df):
+    """Expose weaker subtype means relative to well-performing subtypes."""
     summary = ea.per_subtype_summary(df)
     assert "franchise" in summary.index
     assert summary.loc["franchise", "mean"] < summary.loc["license", "mean"]
 
 
 def test_subtype_hotspots(df):
+    """Limit hotspot output and prioritize the weakest subtype scores."""
     hotspots = ea.subtype_hotspots(df, k=3)
     assert len(hotspots) == 3
     assert hotspots.iloc[0].name in ("franchise", "hosting")
 
 
 def test_regression_alerts(df):
+    """Identify the expected score regressions in synthetic sorter runs."""
     alerts = ea.regression_alerts(df, threshold=0.005)
     # v13 0.9430 -> rerun 0.9350 = -0.008 (flagged); v12 0.9234 -> bug 0.88 = -0.0434
     assert len(alerts) == 2
 
 
 def test_reliability_assessment(df):
+    """Summarize run count, confidence-interval coverage, and median uncertainty."""
     rel = ea.reliability_assessment(df)
     assert rel["n_runs"] == 8
     # halves: v9 .0289, v12 .0236, v13 .022, gpt .0278, deepseek .025,
@@ -85,11 +97,13 @@ def test_reliability_assessment(df):
 
 
 def test_require_metric_raises(df):
+    """Reject analysis when the requested metric is unavailable."""
     with pytest.raises(ValueError):
         ea.require_metric(df, "No Such Metric")
 
 
 def test_real_workbook_analysis(real_artifacts):
+    """Analyze reference workbook rankings, failure counts, and subtype coverage."""
     from llm_dojo_scoring.io import read_workbook
 
     result = read_workbook(real_artifacts["results"])

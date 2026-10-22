@@ -28,6 +28,7 @@ from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES, get_suite, suite_for_do
 
 
 def test_native_doc_types_match_config_and_corpus_union():
+    """Partition native document types into corpus-present and corpus-absent classes."""
     assert set(NATIVE_DOC_TYPES) == set(DOC_CLASS_KEYS)
     assert "insurance_claim" in DOC_CLASS_KEYS
     assert set(CORPUS_DOC_TYPES).isdisjoint(CORPUS_ABSENT_DOC_TYPES)
@@ -35,6 +36,7 @@ def test_native_doc_types_match_config_and_corpus_union():
 
 
 def test_every_corpus_subclass_surface_normalizes():
+    """Map every corpus subclass surface into its allowed canonical vocabulary."""
     for doc_type, surfaces in CORPUS_SUBCLASS_SURFACES.items():
         allowed = set(DOC_TYPE_SUBCLASSES[doc_type])
         for surface in surfaces:
@@ -43,6 +45,7 @@ def test_every_corpus_subclass_surface_normalizes():
 
 
 def test_cuad_folder_labels_normalize_to_canonical_families():
+    """Normalize CUAD folder spellings and equivalent contract families."""
     assert normalize_corpus_subclass("contract", "License_Agreements") == "license"
     assert normalize_corpus_subclass("contract", "Joint Venture _ Filing") == "joint_venture"
     assert normalize_corpus_subclass("contract", "Non_Compete_Non_Solicit") == "non_compete_no_solicit"
@@ -51,6 +54,7 @@ def test_cuad_folder_labels_normalize_to_canonical_families():
 
 
 def test_maud_consideration_and_insurance_source_table_are_distinct():
+    """Keep merger consideration labels separate from insurance source-table subclasses."""
     assert normalize_corpus_subclass("merger_agreement", "All Cash") == "all_cash"
     assert normalize_corpus_subclass("merger_agreement", "mixed_cash_stock_election") == (
         "mixed_cash_stock_election"
@@ -70,6 +74,7 @@ def test_correspondence_and_corporate_record_subclasses():
     # (Enron labeler enum) is not in the v9 GT vocabulary and left the catalog
     # (DMR-071: the dataset pin is the source of truth) — it now normalizes
     # to the sanctioned `other` fallback.
+    """Pin correspondence and corporate subclass vocabularies and unknown-label fallback."""
     assert tuple(DOC_TYPE_SUBCLASSES["correspondence"]) == (
         "email", "memo", "letter", "notice", "demand", "attorney_demand",
         "press_release", "meeting_request", "other",
@@ -94,6 +99,7 @@ def test_correspondence_and_corporate_record_subclasses():
 
 
 def test_specialist_suite_fields_match_corpus_extraction_schema():
+    """Align each specialist field map with the corpus extraction schema."""
     for doc_type, fields in CORPUS_EXTRACTION_FIELDS.items():
         suite = suite_for_doc_type(doc_type)
         assert suite.doc_type == doc_type
@@ -105,6 +111,7 @@ def test_specialist_suite_fields_match_corpus_extraction_schema():
 
 
 def test_specialist_suites_bind_corpus_subclasses_and_differentiators():
+    """Bind corpus-aware suites to their class subclasses and differentiators."""
     for doc_type in CORPUS_DOC_TYPES:
         suite = get_suite(doc_type)
         assert suite.in_corpus is True
@@ -134,6 +141,7 @@ def test_merger_agreement_rebinds_maud_not_cuad():
 
 
 def test_absent_corpus_types_are_honest():
+    """Declare zero-row corpus gaps without inventing coverage or subclasses."""
     for doc_type in CORPUS_ABSENT_DOC_TYPES:
         schema = suite_schema(doc_type)
         assert schema["in_corpus"] is False
@@ -147,6 +155,7 @@ def test_absent_corpus_types_are_honest():
 
 
 def test_insurance_gt_fields_are_on_the_suite():
+    """Expose insurance GT fields with appropriate scoring types and source subclasses."""
     suite = get_suite("insurance_claim")
     for field in (
         "claim_number", "policy_number", "insurer", "insured_party",
@@ -161,6 +170,7 @@ def test_insurance_gt_fields_are_on_the_suite():
 
 
 def test_contract_suite_has_cuad_clause_surface_and_document_name():
+    """Expose contract document names, clause surfaces, and category-presence metrics."""
     suite = get_suite("contract")
     assert "document_name" in suite.field_types
     assert "cuad_family" in suite.field_types
@@ -172,6 +182,7 @@ def test_contract_suite_has_cuad_clause_surface_and_document_name():
 
 
 def test_sorter_in_corpus_and_normalizes_across_types():
+    """Normalize sorter subclasses only when the relevant document type is supplied."""
     sorter = get_suite("sorter")
     assert sorter.in_corpus is True
     assert sorter.task_key == "docclass"
@@ -185,6 +196,7 @@ def test_sorter_in_corpus_and_normalizes_across_types():
 
 
 def test_correspondence_topics_and_cuad_maud_catalogs_are_complete():
+    """Pin correspondence topic and MAUD category and question catalog sizes."""
     from llm_dojo_scoring.corpus import CORRESPONDENCE_TOPICS, MAUD_CLAUSE_CATEGORIES
 
     assert len(CORRESPONDENCE_TOPICS) == 11
@@ -206,6 +218,7 @@ def test_correspondence_topics_and_cuad_maud_catalogs_are_complete():
 
 
 def test_suite_schema_export():
+    """Export corpus membership, subclasses, and extraction fields in suite schemas."""
     schema = suite_schema("insurance_claim")
     assert schema["in_corpus"] is True
     assert schema["subclasses"] == list(DOC_TYPE_SUBCLASSES["insurance_claim"])

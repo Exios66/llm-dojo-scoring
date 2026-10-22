@@ -23,6 +23,7 @@ _FAIL_COLOR = "#C00000"
 
 
 def _sorted_metric(frame: pd.DataFrame, metric: str) -> pd.DataFrame:
+    """Select rows with a usable metric and sort them from highest to lowest."""
     return ea.require_metric(frame, metric).sort_values(metric, ascending=False)
 
 

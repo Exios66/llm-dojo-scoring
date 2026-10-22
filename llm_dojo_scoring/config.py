@@ -281,6 +281,7 @@ DEFAULT_MODEL_DISPLAY: dict[str, str] = {
 
 @dataclass
 class FieldScoringSettings:
+    """Thresholds, embedding options, and field policies for extraction scoring."""
     ambiguous_band: tuple[float, float] = (0.5, 0.85)
     bipartite_match_threshold: float = 0.6
     embedding_enabled: bool = False
@@ -378,10 +379,12 @@ class Settings:
 
     @property
     def contract_subtype_keys(self) -> list[str]:
+        """Return configured contract subtype keys in configuration order."""
         return [s["key"] for s in self.contract_subtypes]
 
     @property
     def subtype_unknown(self) -> str:
+        """Return the canonical unknown-subtype token."""
         return SUBTYPE_UNKNOWN
 
     def equivalent_subtypes(self, a: str, b: str) -> bool:
@@ -505,6 +508,7 @@ def load_settings(path: str | Path | None = None) -> Settings:
 
 
 def _load_from_path(path: Path) -> Settings:
+    """Load YAML overrides onto a fresh default settings object."""
     settings = Settings()
     with Path(path).open(encoding="utf-8") as fh:
         data = yaml.safe_load(fh) or {}

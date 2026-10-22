@@ -53,16 +53,19 @@ class SyncError(RuntimeError):
 
 
 def sha256(text: str) -> str:
+    """Return the hexadecimal SHA-256 digest of the UTF-8 prompt text."""
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def _git(root: Path, *args: str) -> str:
+    """Run a Git command in the source checkout and return stripped stdout."""
     return subprocess.run(
         ["git", "-C", str(root), *args], check=True, capture_output=True, text=True,
     ).stdout.strip()
 
 
 def _split_key(key: str) -> tuple[str, int]:
+    """Extract a role and integer version from a key ending in _v<N>."""
     m = _KEY_RE.match(key)
     if not m:
         raise SyncError(f"key {key!r} does not end in _v<N>")
@@ -104,6 +107,7 @@ def _versions_map(path: Path, literals: dict[str, str]) -> dict[str, str]:
 
 
 def _verified(key: str, text: str, recorded: dict) -> tuple[str, int]:
+    """Validate recorded digest and character or byte length, returning text metadata."""
     digest = sha256(text)
     if recorded.get("sha256") and recorded["sha256"] != digest:
         raise SyncError(f"{key}: sha256 mismatch (recorded {recorded['sha256']}, text {digest})")
@@ -118,6 +122,7 @@ def _verified(key: str, text: str, recorded: dict) -> tuple[str, int]:
 # --------------------------------------------------------------------------- changes
 
 def _heading(line: str) -> bool:
+    """Recognize short Markdown, colon-terminated, or uppercase non-bullet headings."""
     s = line.strip()
     if not s or len(s) > 100:
         return False
@@ -148,6 +153,7 @@ def _blocks(text: str) -> dict[str, str]:
 
 
 def _excerpt(lines: list[str]) -> list[str]:
+    """Select bounded nonblank diff lines, truncating overly long lines."""
     out = []
     for ln in lines:
         s = ln.rstrip()
@@ -160,6 +166,7 @@ def _excerpt(lines: list[str]) -> list[str]:
 
 
 def _heading_counts(text: str) -> dict[str, int]:
+    """Count occurrences of each recognized heading in prompt text."""
     counts: dict[str, int] = {}
     for line in text.splitlines():
         if _heading(line):
@@ -215,6 +222,7 @@ def summarize_changes(against: str, old: str, new: str) -> dict:
 
 def _entry(key: str, lineage: str, *, parent, supersedes, memo, anchor_head,
            created_at, source, text, digest) -> dict:
+    """Construct a normalized lineage entry with parsed role and version metadata."""
     role, version = _split_key(key)
     return {
         "key": key, "role": role, "version": version, "lineage": lineage,
@@ -225,6 +233,7 @@ def _entry(key: str, lineage: str, *, parent, supersedes, memo, anchor_head,
 
 
 def build(eval_env: Path) -> dict:
+    """Build and validate frozen, archived, and mutation lineage with change summaries."""
     prompts = eval_env / "prompts"
     code = eval_env / "src" / "evals" / "prompts"
     frozen_m = json.loads((prompts / "manifest.json").read_text(encoding="utf-8"))
@@ -237,6 +246,7 @@ def build(eval_env: Path) -> dict:
     entries: dict[str, dict] = {}
 
     def add(e: dict) -> None:
+        """Register a lineage entry, rejecting duplicate version keys."""
         if e["key"] in entries:
             raise SyncError(f"duplicate key {e['key']}")
         entries[e["key"]] = e
@@ -327,10 +337,12 @@ def build(eval_env: Path) -> dict:
 
 
 def render(doc: dict) -> str:
+    """Serialize the lineage catalog as sorted, indented UTF-8-friendly JSON."""
     return json.dumps(doc, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Sync or check lineage from a clean source checkout, reporting validation failures."""
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--eval-env", required=True, type=Path, help="eval-environment checkout")
     ap.add_argument("--check", action="store_true", help="exit 1 if the vendored JSON drifted")
@@ -365,6 +377,7 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         cur = json.loads(cur_text)
         def strip(d: dict) -> dict:
+            """Remove source commit and sync timestamp before comparing catalog content."""
             return {k: v for k, v in d.items() if k not in ("source_commit", "synced_at")}
 
         if strip(cur) != strip(doc):

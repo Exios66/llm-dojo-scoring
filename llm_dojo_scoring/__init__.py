@@ -252,6 +252,14 @@ from .maud_schema import (
     parse_maud_clause,
     render_maud_question_block,
 )
+from .corporate_record_schema import (
+    SUBCLASS_SCHEMAS as CORPORATE_RECORD_SUBCLASS_SCHEMAS,
+    audit_gt_rows as audit_corporate_record_labels,
+    corporate_record_json_schema,
+    render_subclass_block as render_corporate_record_block,
+    scored_field_types as corporate_record_field_types,
+    subclass_schema as corporate_record_subclass_schema,
+)
 from .schema_contract import contract_empty_payload, contract_violations
 from .mailroom import (
     EXTRACT_CLASS_ALIASES,
@@ -384,6 +392,9 @@ __all__ = [
     "MAUD_CONSIDERATION_SUBCLASSES", "MAUD_QUESTIONS", "maud_answers_to_clauses",
     "maud_json_schema", "maud_question", "maud_questions", "parse_maud_clause",
     "render_maud_question_block",
+    "CORPORATE_RECORD_SUBCLASS_SCHEMAS", "audit_corporate_record_labels",
+    "corporate_record_json_schema", "render_corporate_record_block",
+    "corporate_record_field_types", "corporate_record_subclass_schema",
     "contract_empty_payload", "contract_violations",
     "parse_gt_fields", "scoring_gt_fields", "normalize_field_values",
     "parse_json_container", "is_empty_value", "gt_presence_map",

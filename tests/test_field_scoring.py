@@ -9,6 +9,7 @@ from llm_dojo_scoring.gt_metadata import ANNOTATION_KEYS
 
 @pytest.mark.parametrize("key", sorted(ANNOTATION_KEYS))
 def test_annotations_never_score_or_enter_factuality_audit_even_with_explicit_map(key):
+    """Exclude annotation keys from extraction scores and factuality audits despite explicit maps."""
     result = fs.score_extraction(
         doc_class="insurance_claim",
         expected={"claim_number": "CLM-1", key: "expected annotation"},
@@ -24,6 +25,7 @@ def test_annotations_never_score_or_enter_factuality_audit_even_with_explicit_ma
 
 @pytest.mark.parametrize("empty", ["[]", "{}", " N/A ", "null"])
 def test_empty_serialized_prediction_does_not_enter_factuality_audit(empty):
+    """Skip empty serialized predictions when auditing otherwise perfect extractions."""
     result = fs.score_extraction(
         doc_class="insurance_claim",
         expected={"claim_number": "CLM-1"},
@@ -36,6 +38,7 @@ def test_empty_serialized_prediction_does_not_enter_factuality_audit(empty):
 
 
 def test_stringified_entity_lists_match_native_lists_without_mutating_records():
+    """Match serialized and native entity lists without modifying either input record."""
     expected = {"reference_ids": '["A-1", "B-2"]'}
     predicted = {"reference_ids": '["B-2", "A-1"]'}
     result = fs.score_extraction(
@@ -53,12 +56,14 @@ def test_stringified_entity_lists_match_native_lists_without_mutating_records():
 # ---------------------------------------------------------------------------
 
 def test_id_field():
+    """Compare normalized identifiers while rejecting different identifier values."""
     assert fs.score_id_field("ABC-123", "ABC-123") == 1.0
     assert fs.score_id_field("ABC-123", "ABC-124") == 0.0
     assert fs.score_id_field("", "") == 1.0
 
 
 def test_money_field():
+    """Compare normalized monetary values while rejecting materially different amounts."""
     assert fs.score_money_field("$250,001", "$250001") == 1.0
     assert fs.score_money_field("$250,001", "$250,000") == 0.0
     assert fs.score_money_field("2M", "$2,000,000") == 1.0
@@ -66,17 +71,20 @@ def test_money_field():
 
 
 def test_name_field():
+    """Tolerate name punctuation and containment while penalizing unrelated entities."""
     assert fs.score_name_field("Goosehead Insurance Agency, LLC", "Goosehead Insurance Agency LLC") == 1.0
     assert fs.score_name_field("FRANCHISE AGREEMENT", "Goosehead Insurance Agency, LLC Franchise Agreement") == 1.0
     assert fs.score_name_field("BETA", "SOVEREIGN STATE BANK OF OHIO") < 0.8
 
 
 def test_free_text_field():
+    """Award exact free-text matches and reject empty predictions for populated GT."""
     assert fs.score_free_text_field("termination upon 90 days notice", "termination upon 90 days notice") == 1.0
     assert fs.score_free_text_field("", "something") == 0.0
 
 
 def test_containment_field():
+    """Give partial credit for contained spans and zero for missing predictions."""
     assert fs.score_containment_field("the laws of the State of Delaware", "the laws of the State of Delaware") == 1.0
     assert fs.score_containment_field("", "the laws of the State of Delaware") == 0.0
     partial = fs.score_containment_field("the State of Delaware", "the laws of the State of Delaware")
@@ -84,6 +92,7 @@ def test_containment_field():
 
 
 def test_date_field():
+    """Normalize date formats, grade near misses, and recognize blank template dates."""
     assert fs.score_date_field("March 3, 2024", "03/03/2024") == 1.0
     assert fs.score_date_field("2024-03-03", "March 3, 2024") == 1.0
     assert fs.score_date_field("March 3, 2024", "March 1, 2024") == 0.67  # within 45 days
@@ -100,12 +109,14 @@ def test_date_field():
 # ---------------------------------------------------------------------------
 
 def test_entity_list_exact():
+    """Award perfect F1 and overall list score for matching entities."""
     score = fs.score_entity_list("name", ["Alpha Corp"], ["Alpha Corp"])
     assert score.f1 == 1.0
     assert score.score == 1.0
 
 
 def test_entity_list_reorder_and_extra():
+    """Ignore entity ordering while reducing precision for extra predictions."""
     score = fs.score_entity_list(
         "name",
         ["Beta LLC", "Alpha LLC", "Extra Corp"],
@@ -117,12 +128,14 @@ def test_entity_list_reorder_and_extra():
 
 
 def test_entity_list_empty_sides():
+    """Treat two empty lists as perfect and missing expected entities as zero recall."""
     assert fs.score_entity_list("name", [], []).f1 == 1.0
     assert fs.score_entity_list("name", [], ["a"]).recall == 0.0
 
 
 def test_entity_list_partial_gt_role_words():
     # partial-GT: role-word label matched by mere presence of a named party
+    """Allow role-word expansions when scoring partially labeled entity lists."""
     score = fs.score_entity_list("name", ["Shipper Co."], ["Shipper"], partial_gt=True)
     assert score.score == 1.0  # recall
 
@@ -130,6 +143,7 @@ def test_entity_list_partial_gt_role_words():
 def test_entity_list_partial_gt_precision_capped_at_1():
     # hub#38: role-word credits are bounded — an all-role-word expected list
     # vs a single named party must never inflate precision beyond 1.0.
+    """Keep partial-GT list precision and recall bounded by one."""
     score = fs.score_entity_list(
         "name", ["ACME Corp"], ["Seller", "Buyer"], partial_gt=True
     )
@@ -141,6 +155,7 @@ def test_entity_list_partial_gt_contained_items_credit_capped():
     # hub#38: contained-label credits are bounded — a 1-item prediction whose
     # tokens contain an expected 3-6-token label gets the credit, but the
     # composite may not exceed min(n_pred, n_exp).
+    """Cap credit when multiple contained items match partial ground truth."""
     score = fs.score_entity_list(
         "clause",
         ["indemnification obligations of the seller"],
@@ -155,6 +170,7 @@ def test_entity_list_partial_gt_mixed_case_bounded():
     # hub#38: mixed role-word + real-entity expected list vs a single
     # predicted entity — matched starts at the Hungarian hit, gets role
     # credits, then clamps to min(n_pred, n_exp) = 1.
+    """Limit mixed-case partial matches to available predicted entities."""
     score = fs.score_entity_list(
         "name", ["ACME Corp"], ["Seller", "ACME Corp", "Buyer"], partial_gt=True
     )
@@ -166,6 +182,7 @@ def test_entity_list_partial_gt_mixed_case_bounded():
 def test_entity_list_partial_gt_property_precision_recall_bounded():
     # hub#38: for random (pred, exp) pairs with partial_gt, precision and
     # recall stay within [0, 1].
+    """Keep partial-GT precision and recall within unit bounds across generated lists."""
     import random
 
     pool = [
@@ -184,6 +201,7 @@ def test_entity_list_partial_gt_property_precision_recall_bounded():
 
 
 def test_entity_list_to_dict():
+    """Serialize entity-list counts and matched totals."""
     d = fs.score_entity_list("name", ["A"], ["A"]).to_dict()
     assert d["n_predicted"] == 1
     assert d["matched"] == 1
@@ -194,6 +212,7 @@ def test_entity_list_to_dict():
 # ---------------------------------------------------------------------------
 
 def test_audit_list_field_grounded_and_hallucinated():
+    """Distinguish document-grounded list items from hallucinated predictions."""
     doc = "Alpha Corp and Beta LLC agree that the effective date is March 1 2024."
     audit = fs.audit_list_field("free_text", ["Alpha Corp and Beta LLC agree"],
                                 ["Alpha Corp and Beta LLC agree"], doc)
@@ -206,12 +225,14 @@ def test_audit_list_field_grounded_and_hallucinated():
 
 
 def test_audit_scalar_field_date():
+    """Verify a scalar date against supporting document text."""
     doc = "Executed on 04-01-06."
     audit = fs.audit_scalar_field("date", "2006-04-01", "4/1/2006", doc)
     assert audit["true_items"] == 1
 
 
 def test_verify_list_items():
+    """Return per-item grounding flags for present and absent document entities."""
     doc = "the parties shall terminate upon ninety days notice"
     flags = fs.verify_list_items(["ninety days notice"], doc)
     assert flags == [True]
@@ -220,6 +241,7 @@ def test_verify_list_items():
 
 
 def test_score_category_presence():
+    """Match expected clause presence without requiring nonexistent categories."""
     expectations = {
         "Anti-Assignment": {"expected": True, "answer": "shall not assign", "field": "cuad_clauses"},
         "Non-Existent": {"expected": False, "answer": "", "field": "cuad_clauses"},
@@ -234,6 +256,7 @@ def test_score_category_presence():
 
 
 def test_score_category_presence_defaults_field_to_cuad_clauses():
+    """Use CUAD clauses as the default field for category-presence scoring."""
     expectations = {
         "Anti-Assignment": {"expected": True, "answer": "shall not assign"},
     }
@@ -247,6 +270,7 @@ def test_score_category_presence_defaults_field_to_cuad_clauses():
 
 
 def test_disaggregate_clause_spans():
+    """Split concatenated categorized clause spans without losing their content."""
     merged = [
         "NEITHER PARTY SHALL, WITHOUT THE PRIOR WRITTEN CONSENT OF THE OTHER PARTY, "
         "ASSIGN THIS AGREEMENT; the Company shall not solicit or hire any employee; "
@@ -260,6 +284,7 @@ def test_disaggregate_clause_spans():
 
 
 def test_disaggregate_clause_spans_single_passes_through():
+    """Preserve standalone spans and return empty lists for absent input."""
     assert fs.disaggregate_clause_spans(["a single standalone clause"]) == [
         "a single standalone clause"
     ]
@@ -334,6 +359,7 @@ FIELD_TYPES = {
 
 
 def test_score_extraction_null_date_rule():
+    """Treat an empty prediction as correct for an unfilled template date."""
     result = fs.score_extraction(
         "contract", FIELD_TYPES,
         {"document_name": "A", "effective_date": None},
@@ -344,6 +370,7 @@ def test_score_extraction_null_date_rule():
 
 
 def test_score_extraction_overall_and_ambiguity():
+    """Average field scores and flag borderline date matches for judge review."""
     result = fs.score_extraction(
         "contract", FIELD_TYPES,
         {"document_name": "Franchise Agreement", "effective_date": "2024-03-01"},
@@ -358,6 +385,7 @@ def test_score_extraction_overall_and_ambiguity():
 
 
 def test_score_extraction_missing_field_zero():
+    """Assign zero credit to an omitted expected extraction field."""
     result = fs.score_extraction(
         "contract", FIELD_TYPES,
         {"document_name": "A"},
@@ -367,6 +395,7 @@ def test_score_extraction_missing_field_zero():
 
 
 def test_score_extraction_entity_list_scores_and_audit():
+    """Expose entity-list match details and document-grounding audits in extraction results."""
     result = fs.score_extraction(
         "contract", FIELD_TYPES,
         {"parties": ["Acme LLC"], "key_obligations": ["deliver quarterly reports"]},
@@ -406,6 +435,7 @@ def test_score_extraction_skips_confidence_reasoning_and_empty_lists():
 
 
 def test_score_extraction_to_dict_serializable():
+    """Serialize overall extraction and nested entity-list scores as plain data."""
     result = fs.score_extraction("contract", FIELD_TYPES,
                                  {"parties": ["Acme"]}, {"parties": ["Acme"]})
     d = result.to_dict()
@@ -414,12 +444,14 @@ def test_score_extraction_to_dict_serializable():
 
 
 def test_get_field_types_from_taxonomy():
+    """Read field types from supplied taxonomy and return an empty map without it."""
     taxonomy = {"doc_classes": [{"key": "contract", "field_types": {"a": "date"}}]}
     assert fs.get_field_types("contract", taxonomy) == {"a": "date"}
     assert fs.get_field_types("contract") == {}
 
 
 def test_heuristic_field_type():
+    """Infer date, money, identifier, and entity-list types from field names and values."""
     assert fs._heuristic_field_type("effective_date", "x") == "date"
     assert fs._heuristic_field_type("contract_value", "x") == "money"
     assert fs._heuristic_field_type("docket_number", "x") == "id"
@@ -427,6 +459,7 @@ def test_heuristic_field_type():
 
 
 def test_cms_claim_type_token_matches_health_gt():
+    """Treat CMS source-table tokens as compatible with health GT but not unrelated claims."""
     from llm_dojo_scoring import get_suite
 
     suite = get_suite("insurance_claims_specialist")

@@ -71,6 +71,7 @@ _SUBCLASS = (
 
 
 def _m(citation: str, inclusion: str, ground_truth: str) -> dict[str, str]:
+    """Build citation, inclusion-policy, and ground-truth metadata for a metric."""
     return {
         "citation": citation,
         "inclusion": inclusion,

@@ -64,6 +64,7 @@ FIDUCIARY = "Fiduciary exception:  Board determination (no-shop)"
 
 
 def _is_type(value: Any, name: str) -> bool:
+    """Check supported JSON types while excluding booleans from numeric values."""
     if name == "null":
         return value is None
     if name == "string":
@@ -78,6 +79,7 @@ def _is_type(value: Any, name: str) -> bool:
 
 
 def valid(schema: dict[str, Any], value: Any) -> bool:
+    """Validate the schema subset used by MAUD object and clause-line predictions."""
     import re
 
     if "enum" in schema and value not in schema["enum"]:
@@ -128,6 +130,7 @@ def _gt_labels(pick: int = 0) -> dict[str, dict[str, Any]]:
 
 
 def _doc_fields() -> dict[str, Any]:
+    """Build populated merger document fields shared by prediction fixtures."""
     return {
         "document_name": "Agreement and Plan of Merger",
         "parties": ["Acme Parent Inc.", "Acme Merger Sub Inc.", "Target Corp."],
@@ -145,17 +148,20 @@ def _doc_fields() -> dict[str, Any]:
 
 
 def test_22_questions_match_hub_keys_in_order():
+    """Keep typed question records in the same order as the 22 Hub keys."""
     assert len(MAUD_QUESTIONS) == 22
     assert tuple(q.name for q in MAUD_QUESTIONS) == tuple(MAUD_QUESTION_KEYS)
     assert all(isinstance(q, MaudQuestion) for q in MAUD_QUESTIONS)
 
 
 def test_records_are_frozen():
+    """Prevent mutation of catalog question records."""
     with pytest.raises(dataclasses.FrozenInstanceError):
         MAUD_QUESTIONS[0].name = "x"  # type: ignore[misc]
 
 
 def test_valid_classes_are_exactly_the_catalog_never_invented():
+    """Require every question's allowed classes to match its source catalog exactly."""
     catalog = maud_question_catalog("merger_agreement")
     for q in MAUD_QUESTIONS:
         assert set(q.valid_classes) <= set(MAUD_ANSWER_CLASSES[q.name])
@@ -164,11 +170,13 @@ def test_valid_classes_are_exactly_the_catalog_never_invented():
 
 
 def test_variable_flag_matches_catalog_module():
+    """Mirror the catalog's four agreement-dependent class flags."""
     assert {q.name for q in MAUD_QUESTIONS if q.variable} == set(MAUD_VARIABLE_CLASS_QUESTIONS)
     assert len(MAUD_VARIABLE_CLASS_QUESTIONS) == 4
 
 
 def test_every_gt_class_in_fixture_is_representable():
+    """Represent, parse, and render every ground-truth class in the catalog fixture."""
     data = json.loads(FIXTURE.read_text())
     assert set(data["questions"]) == {q.name for q in MAUD_QUESTIONS}
     for name, entry in data["questions"].items():
@@ -181,6 +189,7 @@ def test_every_gt_class_in_fixture_is_representable():
 
 
 def test_answer_type_is_derived_from_composite_classes():
+    """Mark questions with composite answer classes as multi-label."""
     multi = {q.name for q in MAUD_QUESTIONS if q.answer_type == "multi_label"}
     assert multi == {
         "Accuracy of Target R&W Closing Condition",
@@ -195,12 +204,14 @@ def test_answer_type_is_derived_from_composite_classes():
 
 
 def test_groups_are_maud_taxonomy_and_cover_all_seven():
+    """Assign questions to exactly the seven documented MAUD taxonomy groups."""
     assert {q.group for q in MAUD_QUESTIONS} == set(MAUD_CLAUSE_CATEGORIES)
     assert maud_question("MAE Definition").group == "Material Adverse Effect"
     assert maud_question("Type of Consideration").group == "General Information"
 
 
 def test_every_question_has_explanation_sections_and_verbatim_options():
+    """Provide explanations, source sections, uncertainty notes, and verbatim prompt options."""
     for q in MAUD_QUESTIONS:
         assert q.explanation and q.sections, q.name
         assert q.uncertain == bool(q.note)
@@ -211,6 +222,7 @@ def test_every_question_has_explanation_sections_and_verbatim_options():
 
 
 def test_prompt_classes_drop_only_scorer_typo_twins():
+    """Remove only duplicate typo variants from model-visible answer options."""
     rw = maud_question("Accuracy of Target R&W Closing Condition")
     assert len(rw.valid_classes) - len(rw.prompt_classes) == 2
     assert not any("Fundermental" in c for c in rw.prompt_classes)
@@ -220,6 +232,7 @@ def test_prompt_classes_drop_only_scorer_typo_twins():
 
 
 def test_lookup_is_case_space_and_smart_quote_insensitive():
+    """Normalize question lookup spelling and reject names outside the catalog."""
     assert maud_question(" no-shop ").name == "No-Shop"
     assert maud_question("fiduciary exception: board determination (no-shop)").name == FIDUCIARY
     assert maud_question(FIDUCIARY.upper()).name == FIDUCIARY
@@ -229,6 +242,7 @@ def test_lookup_is_case_space_and_smart_quote_insensitive():
 
 
 def test_maud_questions_ordering_and_subclass_priority():
+    """Preserve question coverage while moving subclass-priority questions first."""
     assert [q.name for q in maud_questions()] == list(MAUD_QUESTION_KEYS)
     for sub in MAUD_CONSIDERATION_SUBCLASSES:
         ordered = maud_questions(sub.token)
@@ -243,6 +257,7 @@ def test_maud_questions_ordering_and_subclass_priority():
 
 
 def test_subclass_tokens_match_corpus_and_config():
+    """Keep the five consideration tokens aligned across schema, corpus, and config."""
     tokens = tuple(s.token for s in MAUD_CONSIDERATION_SUBCLASSES)
     assert tokens == tuple(MAUD_CONSIDERATION_TYPES) == DOC_TYPE_SUBCLASSES["merger_agreement"]
     assert len(tokens) == 5
@@ -250,6 +265,7 @@ def test_subclass_tokens_match_corpus_and_config():
 
 
 def test_type_of_consideration_classes_map_to_tokens_per_the_scorer():
+    """Map each consideration class to its scorer token without inventing an Other class."""
     classes = MAUD_ANSWER_CLASSES["Type of Consideration"]
     assert set(MAUD_TYPE_OF_CONSIDERATION_TO_TOKEN) == set(classes)
     for cls, token in MAUD_TYPE_OF_CONSIDERATION_TO_TOKEN.items():
@@ -261,10 +277,12 @@ def test_type_of_consideration_classes_map_to_tokens_per_the_scorer():
 
 
 def tokens_without_other() -> list[str]:
+    """Return consideration tokens backed by actual MAUD answer classes."""
     return [t for t in MAUD_CONSIDERATION_TYPES if t != "other"]
 
 
 def test_family_equivalence_matches_scorer():
+    """Match mixed-consideration family equivalence to the scorer's subclass rules."""
     by_token = {s.token: s for s in MAUD_CONSIDERATION_SUBCLASSES}
     assert by_token["mixed_cash_stock"].equivalent_to == ("mixed_cash_stock_election",)
     assert by_token["mixed_cash_stock_election"].equivalent_to == ("mixed_cash_stock",)
@@ -275,6 +293,7 @@ def test_family_equivalence_matches_scorer():
 
 
 def test_entity_hints_are_documentation_only():
+    """Keep unscored subclass entity hints outside live extraction field maps."""
     live = dict(DEFAULT_FIELD_TYPES["merger_agreement"])
     hint_names = set()
     for sub in MAUD_CONSIDERATION_SUBCLASSES:
@@ -287,6 +306,7 @@ def test_entity_hints_are_documentation_only():
 
 
 def test_unknown_subclass_fails_closed():
+    """Reject unsupported consideration subclass names."""
     with pytest.raises(ValueError):
         consideration_subclass("stock-ish")
 
@@ -295,6 +315,7 @@ def test_unknown_subclass_fails_closed():
 
 
 def test_extraction_schema_has_parity_with_scored_field_map():
+    """Align typed merger fields, empty values, and suite scoring with the corpus schema."""
     assert MergerAgreementExtraction.field_types == DEFAULT_FIELD_TYPES["merger_agreement"]
     assert tuple(f.name for f in MergerAgreementExtraction.fields) == CORPUS_EXTRACTION_FIELDS["merger_agreement"]
     assert dict(get_suite("merger_agreement").field_types) == MergerAgreementExtraction.field_types
@@ -313,11 +334,13 @@ ALL_PAIRS = [(q.name, cls) for q in MAUD_QUESTIONS for cls in q.valid_classes]
 
 
 def test_pair_count_is_the_catalog_size():
+    """Enumerate exactly the catalog's 265 question-and-class pairs."""
     assert len(ALL_PAIRS) == sum(len(v) for v in MAUD_ANSWER_CLASSES.values()) == 265
 
 
 @pytest.mark.parametrize("name", [q.name for q in MAUD_QUESTIONS])
 def test_every_rendered_line_round_trips_through_the_real_scorer(name):
+    """Round-trip every rendered catalog answer through parsing and perfect scoring."""
     q = maud_question(name)
     labels = {name: {"answer": "", "valid_classes": list(q.valid_classes)}}
     for cls in q.valid_classes:
@@ -336,6 +359,7 @@ def test_every_rendered_line_round_trips_through_the_real_scorer(name):
 
 
 def test_perfect_prediction_built_from_schema_gets_full_credit_via_merger_suite():
+    """Score schema-derived answers for all 22 merger questions without penalties."""
     suite = get_suite("merger_agreement")
     labels = _gt_labels()
     expected = {**_doc_fields(), "maud_clause_labels": labels}
@@ -353,6 +377,7 @@ def test_perfect_prediction_built_from_schema_gets_full_credit_via_merger_suite(
 
 @pytest.mark.parametrize("pick", [1, 2, 5])
 def test_other_gt_answers_also_round_trip_via_object_shape(pick):
+    """Preserve full credit for alternative catalog answers in object predictions."""
     labels = _gt_labels(pick)
     answers = {n: rec["answer"] for n, rec in labels.items()}
     clauses = maud_answers_to_clauses(answers, strict=True)
@@ -365,12 +390,14 @@ def test_other_gt_answers_also_round_trip_via_object_shape(pick):
 
 
 def test_null_answers_are_dropped_before_the_scorer():
+    """Omit null and empty answers and ignore clause lines without question separators."""
     answers = {"No-Shop": "Yes", "Knowledge Definition": None, "MAE Definition": ""}
     assert maud_answers_to_clauses(answers) == ["No-Shop: Yes"]
     assert maud_clauses_to_answers(["No-Shop: Yes", "free text, no colon"]) == {"No-Shop": "Yes"}
 
 
 def test_answers_to_clauses_strict_and_passthrough():
+    """Pass unknown answers through by default but reject them in strict mode."""
     assert maud_answers_to_clauses({"No-Shop": "maybe"}) == ["No-Shop: maybe"]
     with pytest.raises(ValueError):
         maud_answers_to_clauses({"No-Shop": "maybe"}, strict=True)
@@ -399,6 +426,7 @@ def test_answers_to_clauses_strict_and_passthrough():
     ],
 )
 def test_parse_maud_clause_accepts(line, expected):
+    """Parse supported bullet, quote, spacing, and consideration-token variants."""
     assert parse_maud_clause(line) == expected
 
 
@@ -408,6 +436,7 @@ def test_parse_maud_clause_accepts(line, expected):
      "Exchange ratio: 0.5 shares", "Type of Consideration: Other", "Specific Performance: Yes"],
 )
 def test_parse_maud_clause_rejects_off_vocabulary(line):
+    """Reject malformed lines, unknown questions, and answers outside their vocabulary."""
     assert parse_maud_clause(line) is None
 
 
@@ -421,6 +450,7 @@ def test_double_space_name_is_what_the_scorer_needs():
 
 
 def test_scorer_fold_collisions_are_reported_not_hidden():
+    """Expose catalog normalization collisions without conflating distinct time periods."""
     collisions = scorer_fold_collisions()
     # The genuine '5' vs '> 5 business days' collision is fixed in maud._fold;
     # only intended equivalences ('> 5' ≡ 'Greater than 5', typo twins) remain.
@@ -433,6 +463,7 @@ def test_scorer_fold_collisions_are_reported_not_hidden():
 
 
 def test_scorer_ambiguous_classes_are_catalog_classes():
+    """Restrict reported ambiguous composites to existing catalog classes."""
     flagged = scorer_ambiguous_classes()
     for name, classes in flagged.items():
         assert set(classes) <= set(maud_question(name).valid_classes)
@@ -440,6 +471,7 @@ def test_scorer_ambiguous_classes_are_catalog_classes():
 
 
 def test_category_mismatches_audit():
+    """Report incorrect taxonomy groups while accepting correctly categorized labels."""
     ok = {q.name: {"category": q.group} for q in MAUD_QUESTIONS}
     assert category_mismatches(ok) == []
     bad = {"No-Shop": {"category": "Remedies"}, "Unknown": {"category": "x"}}
@@ -452,6 +484,7 @@ def test_category_mismatches_audit():
 @pytest.mark.parametrize("shape", ["object", "lines"])
 @pytest.mark.parametrize("subclass", [None, "all_cash", "mixed_cash_stock_election", "other"])
 def test_block_lists_every_allowed_answer_verbatim(shape, subclass):
+    """Render all catalog options with shape guidance and agreement-variation notices."""
     block = render_maud_question_block(subclass, shape=shape)
     assert "[22/22]" in block
     for q in MAUD_QUESTIONS:
@@ -468,6 +501,7 @@ def test_block_lists_every_allowed_answer_verbatim(shape, subclass):
 
 
 def test_block_options_and_priority():
+    """Honor question subsets, subclass priorities, and optional chunk instructions."""
     block = render_maud_question_block("all_stock", questions=["Knowledge Definition", "No-Shop"])
     assert "[1/2] Knowledge Definition" in block and "[priority for all_stock deals]" in block
     assert "MAE Definition" not in block
@@ -480,6 +514,7 @@ def test_block_options_and_priority():
 
 
 def _object_prediction(labels: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """Combine labeled answers with document fields and required reasoning metadata."""
     return {
         "reasoning": {"summary": "s", "entries": [{"field": "parties", "evidence": "e", "section_ref": None}]},
         **_doc_fields(),
@@ -489,6 +524,7 @@ def _object_prediction(labels: dict[str, dict[str, Any]]) -> dict[str, Any]:
 
 
 def _lines_prediction(labels: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """Convert the object prediction fixture to the clause-line representation."""
     pred = _object_prediction(labels)
     del pred["maud_answers"]
     pred["maud_clauses"] = [maud_clause_line(n, rec["answer"]) for n, rec in labels.items()]
@@ -496,6 +532,7 @@ def _lines_prediction(labels: dict[str, dict[str, Any]]) -> dict[str, Any]:
 
 
 def test_schema_accepts_gt_shaped_predictions_both_shapes():
+    """Accept catalog-derived object and line predictions, including unanswered questions."""
     obj_schema = maud_json_schema("object")
     lines_schema = maud_json_schema("lines")
     for pick in (0, 3):
@@ -516,6 +553,7 @@ def test_schema_accepts_gt_shaped_predictions_both_shapes():
 
 
 def test_schema_rejects_off_vocabulary_answers_and_names():
+    """Reject invalid keys, answer classes, document formats, and duplicate clause lines."""
     obj_schema = maud_json_schema("object")
     lines_schema = maud_json_schema("lines")
     labels = _gt_labels()
@@ -563,6 +601,7 @@ def test_schema_rejects_off_vocabulary_answers_and_names():
 
 
 def test_schema_shapes_keys_and_size():
+    """Keep object and line grammars complete, serializable, and bounded in size."""
     obj = maud_json_schema("object")
     lines = maud_json_schema("lines")
     assert "maud_answers" in obj["properties"] and "maud_clauses" not in obj["properties"]
@@ -586,6 +625,7 @@ def test_schema_shapes_keys_and_size():
 
 
 def test_schema_row_classes_and_question_subset_narrow_the_grammar():
+    """Restrict generated grammars to requested questions and valid row-specific classes."""
     name = "MAE Definition"
     narrow = maud_json_schema("object", full=False, questions=[name, "No-Shop"], row_classes={name: ["Yes", "No"]})
     assert set(narrow["properties"]) == {name, "No-Shop"}
@@ -600,6 +640,7 @@ def test_schema_row_classes_and_question_subset_narrow_the_grammar():
 
 
 def test_schema_agrees_with_jsonschema_library_when_installed():
+    """Cross-check generated schemas and fixture validity with the JSON Schema validator."""
     jsonschema = pytest.importorskip("jsonschema")
     labels = _gt_labels()
     for shape, build in (("object", _object_prediction), ("lines", _lines_prediction)):
