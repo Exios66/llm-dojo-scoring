@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
+
+import pytest
 
 from llm_dojo_scoring import get_suite
-from llm_dojo_scoring.corporate_record_relabel import company_from_template, relabel_row
+from llm_dojo_scoring.corporate_record_relabel import company_from_template, relabel_row, relabel_rows
 from llm_dojo_scoring.corporate_record_schema import audit_gt_row
 
 _TEMPLATE_ROW = {
@@ -173,3 +176,123 @@ def test_relabel_rows_survives_non_mapping_gt_fields():
     assert "entity_name" in out[1][1]  # the good row was repaired
     assert json.loads(out[1][0]["gt_fields"])["entity_name"] == "DentonX Inc"
     assert out[2][1] == ["gt_unparseable"] and out[2][0] == bad_int
+
+
+@pytest.mark.parametrize(
+    "subject,company",
+    [
+        ("  bylaws of Acme\n  Holdings (ACME) /DE/ (CIK 123) (SEC EDGAR exhibit).", "Acme Holdings"),
+        ("bylaws of Acme /DE/ (ACME) (CIK 123) (SEC EDGAR exhibit: EX-3.2).", "Acme"),
+        ("bylaws of Acme (LLC) (CIK 123) (SEC EDGAR exhibit).", "Acme (LLC)"),
+        ("bylaws of Acme (CIK 123).", None),
+        ("Narrative mentioning bylaws of Acme (CIK 123) (SEC EDGAR exhibit).", None),
+        ("", None),
+    ],
+)
+def test_company_template_boundaries(subject, company):
+    assert company_from_template(subject) == company
+
+
+@pytest.mark.parametrize("encoding", ["mapping", "json", "python_literal"])
+def test_relabel_accepts_gt_encodings_without_mutating_nested_metadata(encoding):
+    gt = {
+        "intent": "governance_rules", "intent_source": "human_adjudicated",
+        "keywords": ["governance", "EX-3.2", "8-K", "0000000001-26-000001", "Acme (CIK 123)"],
+        "gt_presence": {"claim_number": "not_applicable"},
+        "label_evidence": {"source": "manual"},
+    }
+    raw = gt if encoding == "mapping" else json.dumps(gt) if encoding == "json" else repr(gt)
+    row = dict(_TEMPLATE_ROW, gt_fields=raw, document_id="synthetic-1")
+    before = deepcopy(row)
+    new, changes = relabel_row(row)
+    result = json.loads(new["gt_fields"])
+    assert row == before
+    assert new["document_id"] == "synthetic-1"
+    assert json.loads(result["keywords"]) == ["governance"]
+    assert json.loads(result["label_evidence"]) == {"source": "manual"}
+    assert json.loads(result["gt_presence"])["claim_number"] == "not_applicable"
+    assert "keywords" in changes
+    twice, repeated_changes = relabel_row(new)
+    assert twice == new and repeated_changes == []
+
+
+@pytest.mark.parametrize("source", [None, "", "heuristic", "human_adjudicated"])
+def test_conflict_repair_updates_schema_but_preserves_adjudicated_intent(source):
+    gt = {
+        "intent": "entity_formation", "record_type": "articles_of_incorporation",
+        "subject_matter": "Bylaws of Acme, Inc., governing annual meetings.",
+    }
+    if source is not None:
+        gt["intent_source"] = source
+    new, changes = relabel_row(_row("articles_of_incorporation", gt))
+    result = json.loads(new["gt_fields"])
+    assert new["expected_subclass"] == "bylaws"
+    assert result["record_type"] == "bylaws"
+    assert json.loads(result["gt_presence"])["filing_number"] == "not_applicable"
+    if source == "human_adjudicated":
+        assert result["intent"] == "entity_formation"
+        assert not any(change.startswith("intent:") for change in changes)
+    else:
+        assert result["intent"] == "governance_rules"
+        assert "intent:entity_formation->governance_rules" in changes
+    assert result.get("intent_source") == source
+
+
+@pytest.mark.parametrize(
+    "subclass,subject",
+    [
+        ("articles_of_incorporation", "Organizational minutes approving the bylaws of Acme."),
+        ("bylaws", "Bylaws of Acme attached to a secretary's certificate."),
+    ],
+)
+def test_relabel_leaves_ambiguous_or_own_subclass_prose_for_review(subclass, subject):
+    new, changes = relabel_row(_row(subclass, {"subject_matter": subject}))
+    assert new["expected_subclass"] == subclass
+    assert json.loads(new["gt_fields"])["subject_matter"] == subject
+    assert not any(change.startswith("expected_subclass:") for change in changes)
+
+
+@pytest.mark.parametrize("record_type", [None, "", "indenture", "not_a_record"])
+def test_relabel_fills_invalid_record_type_without_inventing_entities(record_type):
+    new, changes = relabel_row(_row("subsidiary_list", {"record_type": record_type}))
+    gt = json.loads(new["gt_fields"])
+    assert gt["record_type"] == "other"
+    assert "record_type" in changes
+    assert json.loads(gt["gt_presence"]) == {
+        "record_type": "populated", "signatories": "not_applicable",
+        "jurisdiction": "not_applicable", "filing_number": "not_applicable",
+    }
+    assert not {"entity_name", "effective_date", "subsidiaries", "subsidiary_jurisdictions"} & gt.keys()
+
+
+def test_relabel_preserves_stated_inapplicable_values_and_populated_status():
+    gt = {
+        "signatories": ["Jane Doe"], "jurisdiction": "Delaware", "filing_number": "",
+        "gt_presence": {"filing_number": "populated"},
+    }
+    new, _ = relabel_row(_row("subsidiary_list", gt))
+    result = json.loads(new["gt_fields"])
+    assert json.loads(result["signatories"]) == ["Jane Doe"]
+    assert result["jurisdiction"] == "Delaware"
+    assert result["filing_number"] == ""
+    assert json.loads(result["gt_presence"]) == {"filing_number": "populated", "record_type": "populated"}
+
+
+def test_keyword_repair_removes_only_provenance_and_keeps_business_terms():
+    keywords = ["EX-3.1(A)", "10-Q/A", "S-1", "stock", "EX-3.1 provisions", "Series S-1 preferred"]
+    new, _ = relabel_row(_row("rights_instrument", {"keywords": keywords}))
+    assert json.loads(json.loads(new["gt_fields"])["keywords"]) == [
+        "stock", "EX-3.1 provisions", "Series S-1 preferred",
+    ]
+
+
+@pytest.mark.parametrize("bad_gt", ["{bad", "[]", "null", "42", ["not a mapping"], 42])
+def test_batch_relabel_continues_after_each_invalid_gt_shape(bad_gt):
+    bad = dict(_TEMPLATE_ROW, gt_fields=bad_gt)
+    skipped = {"expected": "contract", "gt_fields": "{bad"}
+    before = deepcopy((bad, skipped, _TEMPLATE_ROW))
+    results = list(relabel_rows(iter([bad, skipped, _TEMPLATE_ROW])))
+    assert results[0] == (bad, ["gt_unparseable"])
+    assert results[1] == (skipped, [])
+    assert json.loads(results[2][0]["gt_fields"])["entity_name"] == "DentonX Inc"
+    assert (bad, skipped, _TEMPLATE_ROW) == before

@@ -151,8 +151,7 @@ Adding a **new parquet config** (analogous to `fixtures`/`bundles`/`streams`) to
 2. `manifest.txt` `configs:` summary line + new `sha256:` rows for each shard — [live Hub manifest.txt]; the flat manifest parser is `mailroom_eda.download.py:47` — must not break.
 3. New local JSONL sidecar registry: `v9_2_revision.py:85-93` lists its card/file-set expectations (`ground_truth_hardened.jsonl`, `README.md`, `manifest.txt`, `bundles.jsonl`, `streams.jsonl`, `fixtures.jsonl`); the setup sections in EDA `docs/dataset-cards/mailroom-dataset.md` (card's §Load examples only `default` and `ground_truth` configs) — [src/mailroom_eda/v9_2_revision.py:85-93], [docs/dataset-cards/mailroom-dataset.md:164-166]
 4. Producer build constants: `v9_build.py` `V9_VERSION`, `v9/.` "file list/shards", output section line 942-944 files registry; `GT_*`/top-level column lists in `hardened.py` (rows 53-59) — [src/mailroom_eda/v9_build.py], [src/mailroom_eda/hardened.py]
-5. `docs/plans/v9.2-relations-provenance-revision.md`/v9.1 plan gates re-verify sha pin — [docs/plans/v9.2-relations-provenance-revision.md:741-	JOptionPane
-904]
+5. `docs/plans/v9.2-relations-provenance-revision.md`/v9.1 plan gates re-verify sha pin — [docs/plans/v9.2-relations-provenance-revision.md:741-904]
 6. The EDA `AGENTS.md` mentions the pin and sidecars (`ground_truth_hardened.jsonl`, `bundles.jsonl`, `streams.jsonl`, `fixtures.jsonl`, `manifest.txt`) — [Mailroom-Corpus-EDA/AGENTS.md:250-263]
 
 **llm-mailroom (pipeline, editable dependency of eval-environment):**

@@ -727,9 +727,20 @@ class ScoringSuite:
         Return a single ``ExtractionScoreResult`` when there are no extras and
         ``detailed`` is false; otherwise return a dictionary with provenance.
         Invalid or nonempty unscorable single-document GT returns an unscorable
-        dictionary. Paired lists are scored only through their shared length;
-        a list of ``doc_text`` values can further limit extraction results.
+        dictionary. Batches pad missing predictions with ``None`` and ignore
+        surplus predictions; a list of ``doc_text`` values can further limit
+        extraction results.
         Explicit presence expectations override labels derived from Hub GT.
+
+        Corporate-record dictionary pairs exclude unlabeled entities from both
+        sides using ``doc_subclass`` (or ``expected_subclass``), which may be a
+        per-row list for batches. Scorable dictionary payloads report
+        ``unlabeled_fields``; batch rows without a dictionary pair report ``[]``.
+        Extension entities are scored when labeled but are not added to the
+        format layer's required keys.
+
+        Dictionary payloads raise ``ProvenanceExportError`` for a conflicting
+        caller-supplied ``metric_id`` or an unsupported ``cost_basis``.
         """
         from .content_scoring import (
             peel_non_extraction_fields,

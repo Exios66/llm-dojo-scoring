@@ -87,7 +87,7 @@ Field maps those stems emit (and the scorer grades) are documented in
 `mailroom-dataset-v1` lineage, not just the five specialist stems above: the
 archived production prompts (`<role>_v0`, plus `contracts_specialist_v33`), the
 frozen `<role>_v1` snapshot, and the GEPA / manual mutations (`<role>_v2` ...).
-41 versions, 15 roles, pinned to eval-environment commit `b449a79`
+43 versions, 15 roles, pinned to eval-environment commit `22d217ab`
 (`LINEAGE_SOURCE`). eval-environment's live `production` kind is not a frozen
 version and is not included. The texts are historical eval-environment bytes:
 the anti-priming rule below is not applied to them.
@@ -157,12 +157,12 @@ between the two conventions.
 | `contracts_specialist` | v0, v1, v2, v3, v33 | `contracts_specialist_v3` |
 | `corporate_records_specialist` | v0 to v7 | `corporate_records_specialist_v7` |
 | `correspondence_specialist` | v0 to v7 | `correspondence_specialist_v7` |
-| `insurance_claims_specialist` | v0 to v3 | `insurance_claims_specialist_v3` |
+| `insurance_claims_specialist` | v0 to v4 | `insurance_claims_specialist_v4` |
 | `intake` | v1 | `intake_v1` |
 | `judge` | v1 | `judge_v1` |
 | `judge-classification` | v1 | `judge-classification_v1` |
 | `judge-correctness` | v1 | `judge-correctness_v1` |
-| `merger_agreement_specialist` | v1 to v3 | `merger_agreement_specialist_v3` |
+| `merger_agreement_specialist` | v1 to v4 | `merger_agreement_specialist_v4` |
 | `pipeline_quality` | v1 | `pipeline_quality_v1` |
 | `pipeline_verdict` | v1 | `pipeline_verdict_v1` |
 | `sorter` | v1 to v4 | `sorter_v4` |

@@ -100,6 +100,13 @@ class RecordEntity:
 
 @dataclass(frozen=True)
 class SubclassSchema:
+    """One corporate-record subclass: applicable core fields, entities, and prompt clauses.
+
+    ``omit_entity_keys`` and ``core_guidance`` are the two clauses the field
+    list alone cannot express. ``intent_review`` is set when the pinned
+    ``intent`` is kept for score comparability but is debatable.
+    """
+
     subclass: str
     label: str
     record_type: str
@@ -119,11 +126,11 @@ class SubclassSchema:
 
     @property
     def core_not_applicable(self) -> tuple[str, ...]:
-        """Return inapplicable core fields in their canonical order."""
+        """Core fields outside this subclass, in ``CORE_FIELDS`` order."""
         return tuple(f for f in CORE_FIELDS if f not in self.core_applicable)
 
     def entity(self, key: str) -> RecordEntity:
-        """Look up an extension entity by key, raising KeyError if absent."""
+        """Return the extension entity with this key; raise ``KeyError`` if absent."""
         for ent in self.entities:
             if ent.key == key:
                 return ent
@@ -135,7 +142,7 @@ _ALL = CORE_FIELDS
 
 
 def _s(*names: str) -> tuple[str, ...]:
-    """Select named core fields in their canonical order."""
+    """Select known core fields from *names* in ``CORE_FIELDS`` order."""
     return tuple(f for f in CORE_FIELDS if f in names)
 
 
@@ -384,7 +391,10 @@ def all_entity_field_types() -> dict[str, str]:
 
 
 def _labeled(presence: Mapping[str, str], gt: Mapping[str, Any], key: str) -> bool:
-    """Determine label availability from explicit status, then the GT value."""
+    """Whether a field has a value or an explicit populated/absence label.
+
+    ``not_applicable`` and ``pending_annotation`` override any stored value.
+    """
     status = presence.get(key)
     if status == "populated" or status == "schema_documented_absence":
         return True
@@ -399,6 +409,9 @@ def scored_field_types(subclass: Any, gt: Mapping[str, Any] | str | None = None)
     Applicable core fields always; extension entities only when *gt* labels
     them (a populated value or ``gt_presence`` ``populated`` /
     ``schema_documented_absence``). Without *gt* only the core is returned.
+    ``not_applicable`` and ``pending_annotation`` exclude extension fields
+    even when a value is stored. Malformed *gt* raises ``TypeError`` or
+    ``ValueError`` from :func:`parse_gt_fields`.
     """
     schema = subclass_schema(subclass)
     out = {f: DEFAULT_FIELD_TYPES["corporate_record"][f] for f in schema.core_applicable}
@@ -417,13 +430,16 @@ def scored_field_types(subclass: Any, gt: Mapping[str, Any] | str | None = None)
 
 
 def unlabeled_fields(subclass: Any, gt: Mapping[str, Any] | str | None) -> tuple[str, ...]:
-    """Key-entity fields the GT leaves blank without documenting absence.
+    """Return unlabeled entity fields from the core and the current subclass.
 
     A blank entity field is *expected empty* only when ``gt_presence`` says
     ``schema_documented_absence`` / ``not_applicable``. A blank with no such
     statement is **unlabeled**: the annotation never ran, so neither a filled
-    nor an empty prediction may be scored against it. Fields not applicable to
-    the subclass are always unlabeled-or-absent (never required events).
+    nor an empty prediction may be scored against it. ``pending_annotation``
+    is unlabeled even with a stored value; ``populated`` alone does not make
+    a blank value labeled. Subclass applicability alone does not exclude a
+    field. ``None`` means empty GT; malformed GT raises ``TypeError`` or
+    ``ValueError`` from :func:`parse_gt_fields`.
     """
     schema = subclass_schema(subclass)
     parsed = parse_gt_fields(gt) if gt is not None else {}
@@ -453,7 +469,10 @@ def align_unlabeled(
 
     *gt* is the raw (pre-scoping) Hub metadata, so documented absences are
     still visible. Predicted extension keys the dataset does not label are
-    dropped too, so emitting subclass entities never counts as spurious fill.
+    dropped too, including keys from other subclasses. Return new dictionaries
+    without mutating the inputs. ``dropped`` contains only :func:`unlabeled_fields`
+    results, not every removed extension key. Malformed *gt* raises ``TypeError``
+    or ``ValueError`` from :func:`parse_gt_fields`.
     """
     dropped = unlabeled_fields(subclass, gt)
     parsed = parse_gt_fields(gt) if gt is not None else {}
@@ -492,14 +511,20 @@ _TYPE_JSON: dict[str, dict[str, Any]] = {
 
 
 def _json_for(field_type: str) -> dict[str, Any]:
-    """Map a scoring type to an array or nullable scalar JSON schema."""
+    """Return string-array schemas for entity lists, nullable strings otherwise."""
     if field_type.startswith("entity_list"):
         return {"type": "array", "items": {"type": "string"}}
     return dict(_TYPE_JSON.get(field_type, {"type": ["string", "null"]}))
 
 
 def corporate_record_json_schema(subclass: Any = None) -> dict[str, Any]:
-    """JSON Schema (draft 2020-12) for one subclass; core only when ``None``."""
+    """JSON Schema (draft 2020-12) for one subclass; core only when ``None``.
+
+    All declared keys are required and additional keys are rejected. A subclass
+    adds its extension keys and restricts inapplicable core fields to null
+    (null or an empty array for list fields). ``record_type`` accepts any
+    ``RECORD_TYPES`` token or null, rather than only the subclass's mapped token.
+    """
     if subclass is None:
         types = dict(DEFAULT_FIELD_TYPES["corporate_record"])
         title = "CorporateRecordExtraction"
@@ -579,7 +604,7 @@ _CIK_KEYWORD = re.compile(r"\(CIK \d+\)")
 
 
 def _keywords(gt: Mapping[str, Any]) -> list[str]:
-    """Return keyword list items as strings, or an empty list for other values."""
+    """Return stringified keyword list items, or ``[]`` for a non-list value."""
     value = parse_json_container(gt.get("keywords"))
     return [str(v) for v in value] if isinstance(value, list) else []
 
@@ -616,7 +641,8 @@ def _subject_conflicts(subclass: str, subject: str) -> list[str]:
 def audit_gt_row(subclass: Any, gt: Mapping[str, Any] | str) -> list[str]:
     """Label defects for one Hub row. ``[]`` means the row is clean.
 
-    Codes: ``entity_unlabeled:<field>`` (blank, absence undocumented),
+    Codes: ``entity_unlabeled:<field>`` (blank with absence undocumented, or
+    ``pending_annotation`` even with a stored value),
     ``subject_matter_template`` (provenance boilerplate, not a description),
     ``keywords_provenance_ids`` (exhibit/accession/CIK strings, not document
     terms), ``intent_mismatch`` (differs from the subclass pin),
@@ -625,6 +651,9 @@ def audit_gt_row(subclass: Any, gt: Mapping[str, Any] | str) -> list[str]:
     ``subclass_content_conflict:<subclass>`` (prose ``subject_matter`` names a
     different record shape than ``expected_subclass`` — the per-subclass schema
     would be applied to the wrong document shape).
+
+    Malformed *gt* raises ``TypeError`` or ``ValueError`` from
+    :func:`parse_gt_fields`; this function does not convert it to a defect code.
     """
     s = subclass_schema(subclass)
     parsed = parse_gt_fields(gt)
@@ -651,11 +680,13 @@ def audit_gt_row(subclass: Any, gt: Mapping[str, Any] | str) -> list[str]:
 
 @dataclass
 class _Audit:
+    """Running row and per-subclass defect counts for :func:`audit_gt_rows`."""
+
     n_rows: int = 0
     by_subclass: dict[str, dict[str, int]] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        """Return row counts, per-subclass defects, and summed defect totals."""
+        """Return row and per-subclass counts with totals summed across subclasses."""
         totals: dict[str, int] = {}
         for counts in self.by_subclass.values():
             for code, n in counts.items():
@@ -669,7 +700,9 @@ def audit_gt_rows(rows: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     Each row needs ``expected`` (doc class), ``expected_subclass`` and
     ``gt_fields``; non-``corporate_record`` rows are skipped. Returns
     ``{"n_rows", "totals", "by_subclass"}`` with defect-code counts; the
-    per-subclass ``rows`` count is under the ``"rows"`` key.
+    ``"rows"`` key counts rows in both totals and each subclass. Missing or
+    unknown subclasses use ``other``. ``TypeError`` or ``ValueError`` from a
+    row's audit becomes a ``gt_unparseable`` defect and processing continues.
     """
     audit = _Audit()
     for row in rows:
