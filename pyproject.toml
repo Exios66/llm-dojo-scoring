@@ -7,7 +7,7 @@ name = "llm-dojo-scoring"
 version = "0.22.0"
 description = "Dedicated scoring, error-analysis, visualization, and interpretation suite for LLM document pipelines (llm-mailroom / local-mailroom-sandbox)"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 dependencies = [
     "pandas>=2.0.0",
