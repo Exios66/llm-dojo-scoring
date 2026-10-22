@@ -66,6 +66,23 @@ Pinned intents the schema flags for review (`SubclassSchema.intent_review`): `ch
 
 ## Known limits of the repaired labels
 
+For the human annotation work tracked in #52, export a local review queue:
+
+```bash
+python scripts/audit_corporate_record_labels.py ground_truth.jsonl --review-queue review.jsonl
+```
+
+Each queue entry retains the original row (including document identity and
+source context), audit defect codes, and the unlabeled entity fields requiring
+attention. Clean and non-corporate rows are excluded. The audit still exits 1
+when defects exist, including when a queue was successfully written. Existing
+output files and inputs are never overwritten. Parquet review queues read all
+columns to retain source context; ordinary audits still project audit columns.
+Queues may contain source text and should remain local/private. This is a
+review aid, not repaired ground truth: no labels are invented, no input is
+mutated, and nothing is published to the Hub. Human adjudication is still
+required before #52 can close.
+
 - `entity_name` comes from the EDGAR filer metadata in the template `subject_matter`, not from document text; ~25% differ from the in-document name (mostly `CO`/`Company` style). Treat it as the registrant, not a verbatim string.
 - `DOC-85c7b49cdac19586` (organizational minutes approving bylaws) matches two subclass cues and is deliberately not auto-reassigned; it is probably `board_resolution`.
 - All 450 intents remain `intent_source: heuristic`; the relabel never overrides an adjudicated intent, `record_type`, or a populated `filing_number`.
