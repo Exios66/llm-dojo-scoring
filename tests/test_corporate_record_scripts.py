@@ -59,6 +59,88 @@ def _jsonl(path, rows):
     return path
 
 
+def test_review_queue_preserves_context_and_never_generates_labels(tmp_path, capsys):
+    """Export only defective corporate rows with original GT and source context."""
+    script = load_script("audit_corporate_record_labels")
+    pending = {
+        "document_id": "synthetic-cafe", "text": "Café corporate source text.",
+        "expected": "corporate_record", "expected_subclass": "bylaws",
+        "gt_fields": {"intent": "governance_rules", "intent_source": "heuristic"},
+    }
+    malformed = dict(pending, document_id="synthetic-malformed", gt_fields=False)
+    rows = [_clean_row(), pending, {"expected": "contract"}, malformed]
+    before = deepcopy(rows)
+    source = _jsonl(tmp_path / "source.jsonl", rows)
+    source_bytes = source.read_bytes()
+    queue = tmp_path / "review.jsonl"
+
+    assert script.main([str(source), "--json", "--review-queue", str(queue)]) == 1
+    assert json.loads(capsys.readouterr().out)["n_rows"] == 3
+    entries = [json.loads(line) for line in queue.read_text(encoding="utf-8").splitlines()]
+    assert [entry["row"] for entry in entries] == [pending, malformed]
+    assert "intent_heuristic" in entries[0]["defects"]
+    assert "entity_name" in entries[0]["annotation_fields"]
+    assert entries[1]["defects"] == ["gt_unparseable"]
+    assert entries[1]["annotation_fields"] == []
+    assert source.read_bytes() == source_bytes and rows == before
+
+
+def test_review_queue_parquet_retains_document_identity(tmp_path, capsys, parquet_reader):
+    """Read all parquet columns only when human review needs source context."""
+    script = load_script("audit_corporate_record_labels")
+    row = dict(_clean_row(), document_id="synthetic-parquet", gt_fields="{bad")
+    parquet_reader.return_value = SimpleNamespace(to_pylist=lambda: [row])
+    source = tmp_path / "source.parquet"
+    queue = tmp_path / "review.jsonl"
+    assert script.main([str(source), "--review-queue", str(queue)]) == 1
+    capsys.readouterr()
+    parquet_reader.assert_called_once_with(source, columns=None)
+    assert json.loads(queue.read_text(encoding="utf-8"))["row"] == row
+
+
+def test_review_queue_emits_strict_json_for_non_finite_values(tmp_path, capsys):
+    """NaN/Infinity in source context must not produce non-standard JSON tokens."""
+    script = load_script("audit_corporate_record_labels")
+    row = dict(_clean_row(), gt_fields="{bad", score=float("nan"), nested=[float("inf"), {"x": float("-inf")}])
+    source = _jsonl(tmp_path / "source.jsonl", [row])
+    queue = tmp_path / "review.jsonl"
+    assert script.main([str(source), "--review-queue", str(queue)]) == 1
+    capsys.readouterr()
+
+    def reject(token):
+        """Fail on any bare NaN/Infinity constant."""
+        raise AssertionError(token)
+
+    entry = json.loads(queue.read_text(encoding="utf-8"), parse_constant=reject)
+    assert entry["row"]["score"] == "nan"
+    assert entry["row"]["nested"] == ["inf", {"x": "-inf"}]
+
+
+@pytest.mark.parametrize("same_input", [True, False])
+def test_review_queue_refuses_to_overwrite_existing_files(tmp_path, same_input):
+    """Protect input data and any preexisting review artifact from replacement."""
+    script = load_script("audit_corporate_record_labels")
+    source = _jsonl(tmp_path / "source.jsonl", [_clean_row()])
+    queue = source if same_input else tmp_path / "review.jsonl"
+    if not same_input:
+        queue.write_text("previous review", encoding="utf-8")
+    before = queue.read_bytes()
+    error = SystemExit if same_input else FileExistsError
+    with pytest.raises(error):
+        script.main([str(source), "--review-queue", str(queue)])
+    assert queue.read_bytes() == before
+
+
+def test_review_queue_clean_input_produces_empty_file(tmp_path, capsys):
+    """A clean dataset creates an empty queue and keeps the successful exit code."""
+    script = load_script("audit_corporate_record_labels")
+    source = _jsonl(tmp_path / "source.jsonl", [_clean_row()])
+    queue = tmp_path / "review.jsonl"
+    assert script.main([str(source), "--review-queue", str(queue)]) == 0
+    assert "totals: clean" in capsys.readouterr().out
+    assert queue.read_bytes() == b""
+
+
 def test_audit_jsonl_reports_all_input_files_and_skips_other_classes(tmp_path, capsys):
     """Aggregate corporate audit failures across files while ignoring other document classes."""
     script = load_script("audit_corporate_record_labels")
