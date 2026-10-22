@@ -101,7 +101,8 @@ def relabel_row(row: Mapping[str, Any]) -> tuple[dict[str, Any], list[str]]:
     changes: list[str] = []
     if row.get("expected") != "corporate_record":
         return new, changes
-    gt = parse_gt_fields(row.get("gt_fields") or {})
+    raw_gt = row.get("gt_fields")
+    gt = parse_gt_fields({} if raw_gt is None else raw_gt)
     presence = dict(gt_presence_map(gt))
     sub = subclass_schema(row.get("expected_subclass")).subclass
 

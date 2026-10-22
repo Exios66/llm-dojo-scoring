@@ -16,12 +16,14 @@ verifier = load_script("verify_gt_penalties")
 
 @pytest.mark.parametrize("script", [generator, verifier], ids=["catalog", "replay"])
 def test_local_split_requires_existing_file(script, tmp_path):
+    """Raise for a missing local split instead of silently loading another source."""
     with pytest.raises(SystemExit, match="missing parquet for split 'test'"):
         script._load_split("test", tmp_path, "unused-revision")
 
 
 @pytest.mark.parametrize("script", [generator, verifier], ids=["catalog", "replay"])
 def test_local_split_reads_documented_path(script, tmp_path, mocker):
+    """Read the local split from its documented Parquet path."""
     path = tmp_path / "test" / "test-00000-of-00001.parquet"
     path.parent.mkdir()
     path.touch()
@@ -33,6 +35,7 @@ def test_local_split_reads_documented_path(script, tmp_path, mocker):
 
 @pytest.mark.parametrize("script", [generator, verifier], ids=["catalog", "replay"])
 def test_hub_split_forwards_pinned_revision(script, monkeypatch, mocker):
+    """Pass the pinned dataset revision through Hub split loading."""
     hub = ModuleType("huggingface_hub")
     hub.hf_hub_download = mocker.Mock(return_value="cached.parquet")
     monkeypatch.setitem(sys.modules, "huggingface_hub", hub)
@@ -48,6 +51,7 @@ def test_hub_split_forwards_pinned_revision(script, monkeypatch, mocker):
 
 
 def test_perfect_prediction_omits_empty_values_and_presence_annotations():
+    """Drop empty fields and presence annotations while preserving meaningful zero/false values."""
     fields = {
         "cuad_clause_labels": {"Governing Law": [{"text": "Delaware"}]},
         "missing": None, "blank": " ", "placeholder": "n/a", "empty_json": "[]",
@@ -64,11 +68,13 @@ def test_perfect_prediction_omits_empty_values_and_presence_annotations():
 
 @pytest.mark.parametrize("labels", [None, "", "not JSON", "[]", [], 42])
 def test_invalid_label_containers_are_ignored(labels):
+    """Ignore MAUD labels with unsupported container types."""
     assert verifier._maud_labels({"maud_clause_labels": labels}) == {}
 
 
 @pytest.mark.parametrize("encoded", [False, True])
 def test_maud_labels_accepts_mapping_or_json(encoded):
+    """Read equivalent MAUD label mappings from dictionaries and JSON strings."""
     labels = {"No-Shop": {"answer": "Yes"}}
     value = json.dumps(labels) if encoded else labels
     assert verifier._maud_labels({"maud_clause_labels": value}) == labels
@@ -76,6 +82,7 @@ def test_maud_labels_accepts_mapping_or_json(encoded):
 
 @pytest.mark.parametrize("encoded", [False, True])
 def test_class_check_reports_row_catalog_violation(encoded):
+    """Append a row-specific class violation without overwriting prior failures."""
     classes = ["Yes", "No"]
     labels = {
         "No-Shop": {"answer": "Strict liability",
@@ -95,6 +102,7 @@ def test_class_check_reports_row_catalog_violation(encoded):
 
 @pytest.fixture
 def replay_frame(monkeypatch):
+    """Provide a synthetic scored/unscorable replay frame with patched split loading."""
     frame = pd.DataFrame([
         {"expected_specialist": "contracts_specialist", "gt_fields": json.dumps({
             "parties": ["Acme"],
@@ -112,6 +120,7 @@ def replay_frame(monkeypatch):
 
 
 def test_replay_perfect_row_and_unscorable_row(replay_frame):
+    """Replay perfect ground truth without penalties while counting unscorable rows separately."""
     report = verifier.verify_split("test", None, "synthetic-revision")
     assert report["split"] == "test"
     assert report["failures"] == []
@@ -127,6 +136,7 @@ def test_replay_perfect_row_and_unscorable_row(replay_frame):
 
 
 def test_replay_detects_invalid_gt_even_when_prediction_is_identical(replay_frame):
+    """Flag off-catalog ground truth despite an identical replay prediction."""
     fields = json.loads(replay_frame.loc[0, "gt_fields"])
     fields["maud_clause_labels"]["No-Shop"]["answer"] = "Strict liability"
     replay_frame.loc[0, "gt_fields"] = json.dumps(fields)
@@ -141,6 +151,7 @@ def test_replay_detects_invalid_gt_even_when_prediction_is_identical(replay_fram
 
 @pytest.mark.parametrize("metric", verifier.MAUD_PARITY_METRICS)
 def test_replay_reports_missing_parity_metrics(replay_frame, mocker, metric):
+    """Report missing MAUD parity outputs as replay failures."""
     suite = mocker.Mock(field_types={})
     scores = {name: 1.0 for name in verifier.MAUD_PARITY_METRICS if name != metric}
     suite.score_document.return_value = scores
@@ -157,6 +168,7 @@ def test_replay_reports_missing_parity_metrics(replay_frame, mocker, metric):
     "maud_parity_fail", "maud_class_mismatch", "detail-only",
 ])
 def test_cli_fails_for_penalty_counts_or_failure_details(monkeypatch, mocker, failure):
+    """Exit unsuccessfully for any replay penalty or failure detail across pinned splits."""
     totals = dict.fromkeys([
         "fn", "fp", "spurious", "f1_fail", "presence_fail",
         "maud_parity_fail", "maud_class_mismatch",

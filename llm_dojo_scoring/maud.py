@@ -418,12 +418,14 @@ _YES_NO_ALIASES = {
 
 
 def _canon(text: object) -> str:
+    """Normalize smart quotes, the known fundamental typo, and whitespace in a class label."""
     value = str(text or "").translate(_SMART_QUOTES)
     value = _TYPO.sub("fundamental", value)
     return " ".join(value.split())
 
 
 def _fold(text: object) -> str:
+    """Canonicalize a label, expand comparator symbols, and fold it to lowercase words."""
     value = _canon(text).lower()
     for pattern, words in _COMPARATORS:
         value = pattern.sub(words, value)
@@ -453,6 +455,7 @@ def maud_class_index(
 
 
 def _components(value: str) -> list[str]:
+    """Split a comma-separated answer into nonempty stripped components."""
     return [part.strip() for part in value.split(",") if part.strip()]
 
 

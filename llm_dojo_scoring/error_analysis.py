@@ -31,10 +31,12 @@ FAILURE_COLUMNS = [
 
 
 def _num(frame: pd.DataFrame, column: str) -> pd.Series:
+    """Convert a frame column to numeric values, coercing invalid entries to NaN."""
     return pd.to_numeric(frame[column], errors="coerce")
 
 
 def require_metric(frame: pd.DataFrame, metric: str) -> pd.DataFrame:
+    """Validate a metric column and return a copy containing only numeric metric rows."""
     if metric not in frame.columns:
         raise ValueError(
             f"metric '{metric}' not in frame columns: {list(frame.columns)[:20]}..."

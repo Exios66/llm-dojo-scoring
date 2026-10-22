@@ -1,3 +1,4 @@
+"""Check experiment log persistence, nested lookup, record dates, and Git snapshots."""
 import json
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from llm_dojo_scoring.experiment import (
 
 
 def test_append_and_load(tmp_path):
+    """Preserve experiment append order and attach timestamps to logged records."""
     log = tmp_path / "log.jsonl"
     append_experiment({"experiment_name": "a", "n_rows": 10}, log)
     append_experiment({"experiment_name": "b", "n_rows": 20}, log)
@@ -22,6 +24,7 @@ def test_append_and_load(tmp_path):
 
 
 def test_dotted_get():
+    """Resolve nested dictionary paths and return defaults for missing keys."""
     record = {"scores": {"sorter": {"subtype_accuracy": 0.9}}}
     assert dotted_get(record, "scores.sorter.subtype_accuracy") == 0.9
     assert dotted_get(record, "missing.path") is None
@@ -29,10 +32,12 @@ def test_dotted_get():
 
 
 def test_record_date():
+    """Normalize timestamp dates to midnight while retaining missing-date semantics."""
     assert record_date({"timestamp": "2026-08-15T12:00:00+00:00"}).isoformat() == "2026-08-15T00:00:00"
     assert record_date({"timestamp": None}) is None
 
 
 def test_git_snapshot_runs():
+    """Include commit identity and dirty status in a repository snapshot."""
     snap = git_snapshot()
     assert "commit" in snap and "dirty" in snap

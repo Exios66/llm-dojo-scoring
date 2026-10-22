@@ -387,6 +387,7 @@ class CuadFamily:
 
 
 def _ff(name: str, description: str, informs: str | None = None) -> FamilyField:
+    """Construct a family-specific field with an optional scored-field association."""
     return FamilyField(name, description, informs)
 
 
@@ -703,6 +704,7 @@ class CuadField:
 
     @property
     def is_list(self) -> bool:
+        """Return whether the field uses a list-valued empty representation."""
         return self.empty_kind == "list"
 
 
@@ -802,6 +804,7 @@ _KEY_RE = re.compile(r"[^a-z0-9]")
 
 
 def _key(value: Any) -> str:
+    """Build a case-insensitive lookup key by removing configured separators."""
     return _KEY_RE.sub("", str(value).strip().lower())
 
 
@@ -920,6 +923,7 @@ def _ordered(family: Any) -> list[CuadCategory]:
 
 
 def _question(cat: CuadCategory, style: str) -> str:
+    """Select original CUAD or specialist wording, rejecting unknown styles."""
     if style == "cuad":
         return cat.question
     if style == "specialist":
@@ -959,6 +963,7 @@ def render_cuad_question_block(
     wanted = None if categories is None else {cuad_category(c).name for c in categories}
 
     def line(cat: CuadCategory) -> str:
+        """Render a category question with its optional scored-field tag."""
         tag = f" [also {cat.field}]" if cat.field else ""
         return f"- {cat.name}{tag}: {_question(cat, style)}"
 

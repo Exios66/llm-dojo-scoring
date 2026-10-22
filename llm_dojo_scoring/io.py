@@ -43,6 +43,7 @@ class ResultSet:
 
     @property
     def n_runs(self) -> int:
+        """Return the number of run rows in the results frame."""
         return len(self.frame)
 
     def metric_columns(self) -> list[str]:
@@ -55,6 +56,7 @@ class ResultSet:
 
 
 def _infer_kind(frame: pd.DataFrame, path: Path) -> str:
+    """Infer sorter, sweep, extraction, or unknown from result column names."""
     cols = [str(c).lower() for c in frame.columns]
     joined = " ".join(cols)
     if "notes" in joined and "subtype accuracy" in joined:

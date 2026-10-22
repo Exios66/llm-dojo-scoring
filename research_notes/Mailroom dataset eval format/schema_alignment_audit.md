@@ -1,5 +1,9 @@
 # Extraction-schema alignment audit — corporate-record (and other record-type) schemas across llm-dojo-scoring, eval-environment, local-mailroom-sandbox, Mailroom-Corpus-EDA
 
+> Historical evidence, not current branch or review status. The inspected
+> snapshots below are superseded; use [the research index](README.md) for
+> current contract and follow-up pointers.
+
 Repo/branch snapshots audited (read-only; 2026-10-17):
 
 - `llm-dojo-scoring` @ `feat/corporate-record-subclass-schemas`, HEAD `e592ab0` (branch adds `corporate_record_schema.py` + unlabeled scoring)

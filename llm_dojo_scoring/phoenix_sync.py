@@ -42,11 +42,14 @@ def phoenix_available(base_url: str = DEFAULT_PHOENIX_URL, timeout: float = 3.0)
 
 @dataclass
 class PhoenixStatus:
+    """Sink reachability and optional client error for a Phoenix endpoint."""
+
     available: bool
     base_url: str
     client_error: str | None = None
 
     def describe(self) -> str:
+        """Describe sink reachability and how to start an unavailable sink."""
         if self.available:
             return f"Phoenix sink reachable at {self.base_url}."
         return (f"Phoenix sink not reachable at {self.base_url} — start it "
@@ -68,12 +71,14 @@ class PhoenixClient:
     """
 
     def __init__(self, base_url: str = DEFAULT_PHOENIX_URL):
+        """Normalize the endpoint and try to initialize an available client."""
         self.base_url = base_url.rstrip("/")
         self._client: Any = None
         self.error: str | None = None
         self._load()
 
     def _load(self) -> None:
+        """Probe the sink and load a modern or legacy client, recording failures."""
         if not phoenix_available(self.base_url):
             self.error = f"no Phoenix sink at {self.base_url}"
             return
@@ -98,9 +103,11 @@ class PhoenixClient:
 
     @property
     def ready(self) -> bool:
+        """Return whether a Phoenix Python client was initialized."""
         return self._client is not None
 
     def _spans_modern(self, project: str, limit: int | None) -> Optional[list[dict]]:
+        """Fetch project spans through the modern client and optionally limit rows."""
         df = self._client.spans.get_spans_dataframe(project_name=project)
         if df is None or df.empty:
             return []
@@ -108,6 +115,7 @@ class PhoenixClient:
         return records[:limit] if limit else records
 
     def _spans_legacy(self, project: str, limit: int | None) -> Optional[list[dict]]:
+        """Fetch project spans through the legacy client and optionally limit rows."""
         df = self._client.get_spans_dataframe(project_name=project)
         if df is None or df.empty:
             return []
@@ -132,6 +140,7 @@ class PhoenixClient:
             return None
 
     def describe(self) -> str:
+        """Describe client readiness or the recorded initialization error."""
         if self.ready:
             return f"Phoenix client connected to {self.base_url}."
         return f"Phoenix client unavailable: {self.error or 'unknown reason'}."

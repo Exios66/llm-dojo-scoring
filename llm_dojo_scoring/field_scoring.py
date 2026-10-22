@@ -93,18 +93,22 @@ def canonical_claim_type(predicted: Any, expected: Any) -> Any:
 
 
 def get_ambiguous_band() -> tuple[float, float]:
+    """Return the configured global half-open judge-review score band."""
     return get_settings().field_scoring.ambiguous_band
 
 
 def get_bipartite_match_threshold() -> float:
+    """Return the minimum similarity used for bipartite entity matching."""
     return get_settings().field_scoring.bipartite_match_threshold
 
 
 def get_embedding_model() -> str:
+    """Return the configured local sentence-transformer model name."""
     return get_settings().field_scoring.embedding_model
 
 
 def get_embedding_rescue_below() -> float:
+    """Return the string-score threshold below which embedding rescue is attempted."""
     return get_settings().field_scoring.embedding_rescue_below
 
 
@@ -115,6 +119,7 @@ def get_presence_embedding_threshold() -> float:
 
 
 def embedding_enabled() -> bool:
+    """Return whether embedding-based scoring is enabled in settings."""
     return get_settings().field_scoring.embedding_enabled
 
 
@@ -174,6 +179,7 @@ def warm_embedding_model(blocking: bool = False) -> None:
     log = logging.getLogger(__name__)
 
     def _run() -> None:
+        """Warm the embedding matcher, logging failures without interrupting scoring."""
         try:
             _get_embedding()
         except Exception as exc:  # scoring degrades to string-only
@@ -261,6 +267,7 @@ def _containment_tokens(text: str) -> set[str]:
 
 
 def _seq_ratio(a: str, b: str) -> float:
+    """Return sequence similarity, scoring two empty strings as an exact match."""
     if not a and not b:
         return 1.0
     if not a or not b:
@@ -398,6 +405,7 @@ def score_money_field(pred, exp, embedding=None) -> float:
 
 
 def _jaro_winkler(a: str, b: str) -> float:
+    """Return Jaro-Winkler similarity, falling back to sequence matching on failure."""
     if not a or not b:
         return 0.0
     try:
@@ -540,6 +548,7 @@ def _date_expected_is_null(exp: str) -> bool:
 def _date_phrase_contained(container: str, target: str) -> bool:
     """True when a date phrase stated in ``target`` appears in ``container``."""
     def norm(text: str) -> str:
+        """Lowercase a date phrase and collapse non-alphanumeric separators to spaces."""
         return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", str(text).lower())).strip()
 
     nc = norm(container)
@@ -573,6 +582,7 @@ def _date_phrase_contained(container: str, target: str) -> bool:
 
 @dataclass
 class EntityListScore:
+    """Entity-list matching counts and precision, recall, and F1 for one field."""
     field_name: str
     precision: float
     recall: float
@@ -589,6 +599,7 @@ class EntityListScore:
         return self.recall if self.partial_gt else self.f1
 
     def to_dict(self) -> dict:
+        """Serialize rounded list metrics and reconstruct predicted and expected counts."""
         return {
             "field": self.field_name,
             "precision": round(self.precision, 4),
@@ -631,6 +642,7 @@ _ROLE_WORDS = {
 
 
 def _is_role_word(text: str) -> bool:
+    """Recognize short phrases consisting entirely of generic party-role words."""
     tokens = _tokenize(str(text))
     return 1 <= len(tokens) <= 3 and all(t in _ROLE_WORDS for t in tokens)
 
@@ -678,6 +690,7 @@ def score_entity_list(element_type: str, pred, exp, embedding=None,
         pred_token_lists = [_tokenize(str(p)) for p in pred_items]
 
         def _label_contained(label: str) -> bool:
+            """Check whether a three-to-six-token label occurs contiguously in a prediction."""
             label_tokens = _tokenize(str(label))
             if not label_tokens:
                 return False
@@ -1055,18 +1068,21 @@ class _EmbeddingMatcher:
 
     @classmethod
     def get(cls) -> "_EmbeddingMatcher":
+        """Return the singleton matcher, creating it under the class lock."""
         with cls._lock:
             if cls._instance is None:
                 cls._instance = cls()
             return cls._instance
 
     def __init__(self) -> None:
+        """Initialize unloaded local and remote backends and an empty vector cache."""
         self._model = None
         self._model_loaded = False
         self._client = None
         self._vectors: dict[str, object] = {}
 
     def _load_local(self) -> None:
+        """Attempt local model loading once, retaining None when loading fails."""
         if self._model_loaded:
             return
         self._model_loaded = True
@@ -1078,6 +1094,7 @@ class _EmbeddingMatcher:
             self._model = None
 
     def _load_remote(self) -> None:
+        """Initialize the remote embedding client when an API key is available."""
         if self._client is not None:
             return
         api_key = os.environ.get("OPENROUTER_API_KEY")
@@ -1094,6 +1111,7 @@ class _EmbeddingMatcher:
             self._client = None
 
     def _embed(self, text: str):
+        """Produce a unit-normalized local or remote embedding, or None without a backend."""
         import numpy as np
 
         if self._model is not None:
@@ -1111,6 +1129,7 @@ class _EmbeddingMatcher:
         return vector
 
     def similarity(self, a: str, b: str) -> Optional[float]:
+        """Return cached embedding cosine clipped to [0, 1], or None on unavailability."""
         if not embedding_enabled():
             return None
         try:
@@ -1136,6 +1155,7 @@ class _EmbeddingMatcher:
 
 
 def _get_embedding() -> Optional[_EmbeddingMatcher]:
+    """Return the shared embedding matcher when enabled, or None on failure."""
     if not embedding_enabled():
         return None
     try:
@@ -1193,6 +1213,7 @@ LIST_PREFIX = "entity_list"
 
 
 def is_entity_list(field_type: str) -> bool:
+    """Recognize the entity-list field type and its element-type suffix variants."""
     return field_type == LIST_PREFIX or field_type.startswith(LIST_PREFIX + ":")
 
 
@@ -1249,6 +1270,7 @@ def get_field_types(doc_class: str, taxonomy: dict | None = None) -> dict[str, s
 
 @dataclass
 class ExtractionScoreResult:
+    """Per-document field scores, judge-review candidates, and list factuality audits."""
     doc_class: str
     field_scores: dict[str, float]
     overall_score: Optional[float]
@@ -1262,6 +1284,7 @@ class ExtractionScoreResult:
 
     @property
     def needs_judge_review(self) -> bool:
+        """Return whether any field score requires judge review."""
         return bool(self.ambiguous_fields)
 
     @property

@@ -34,6 +34,7 @@ DETERMINISTIC = {"reporter"}
 
 
 def _git_head(mailroom: Path) -> str:
+    """Return the HEAD commit hash of the mailroom checkout."""
     return subprocess.run(
         ["git", "-C", str(mailroom), "rev-parse", "HEAD"],
         check=True, capture_output=True, text=True,
@@ -46,10 +47,12 @@ def _body(text: str) -> str:
 
 
 def _render(source_key: str, text: str) -> str:
+    """Prefix a normalized prompt body with its mailroom source-key provenance."""
     return f"<!-- provenance: llm-mailroom {source_key} -->\n\n{_body(text)}"
 
 
 def _split_blocks(lines: list[str]) -> tuple[list[str], list[list[str]]]:
+    """Split catalog lines into a header and agent-entry blocks."""
     head: list[str] = []
     blocks: list[list[str]] = []
     for ln in lines:
@@ -63,6 +66,7 @@ def _split_blocks(lines: list[str]) -> tuple[list[str], list[list[str]]]:
 
 
 def _field(block: list[str], key: str) -> str | None:
+    """Read a two-space-indented scalar field from an agent catalog block."""
     for ln in block:
         m = re.match(rf"^  {re.escape(key)}: (.*)$", ln)
         if m:
@@ -71,6 +75,7 @@ def _field(block: list[str], key: str) -> str | None:
 
 
 def _set_field(block: list[str], key: str, value: str, after: str | None = None) -> None:
+    """Replace a scalar field or insert it after an anchor, modifying the block."""
     for i, ln in enumerate(block):
         if re.match(rf"^  {re.escape(key)}: ", ln):
             block[i] = f"  {key}: {value}"
@@ -84,6 +89,7 @@ def _set_field(block: list[str], key: str, value: str, after: str | None = None)
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Vendor live mailroom production prompts and metadata, or report content drift."""
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--mailroom", required=True, type=Path, help="llm-mailroom checkout")
     ap.add_argument("--check", action="store_true", help="exit 1 if the vendored copy drifted")

@@ -25,6 +25,7 @@ from llm_dojo_scoring.tasks import score_task
 
 
 def test_extraction_binary_metrics_perfect_insurance_schema():
+    """Give a fully correct insurance extraction perfect field-level precision and recall."""
     field_map = DEFAULT_FIELD_TYPES["insurance_claim"]
     expected = {
         "claim_number": "CLM-99",
@@ -50,6 +51,7 @@ def test_extraction_binary_metrics_perfect_insurance_schema():
 
 
 def test_extraction_binary_metrics_miss_is_fn_not_soft_mean():
+    """Count incorrect field predictions as false negatives and false positives."""
     field_map = DEFAULT_FIELD_TYPES["corporate_record"]
     expected = {
         "entity_name": "Acme Holdings",
@@ -75,6 +77,7 @@ def test_extraction_binary_metrics_miss_is_fn_not_soft_mean():
 
 
 def test_extraction_binary_metrics_partial_list_is_fn_plus_unmatched_fp():
+    """Penalize incomplete entity lists with missed fields and unmatched predicted entities."""
     field_map = DEFAULT_FIELD_TYPES["insurance_claim"]
     expected = {
         "insurer": "Acme",
@@ -98,6 +101,7 @@ def test_extraction_binary_metrics_partial_list_is_fn_plus_unmatched_fp():
 
 def test_extraction_f2_is_van_rijsbergen_beta_2():
     # P=1, R=0.5 → F2 = 5PR/(4P+R) = 2.5/4.5
+    """Apply the standard beta-two formula to the recall-weighted F score."""
     assert fbeta(1.0, 0.5, beta=2.0) == round(5 * 1.0 * 0.5 / (4 * 1.0 + 0.5), 4)
 
 
@@ -107,6 +111,7 @@ def test_extraction_f2_is_van_rijsbergen_beta_2():
 
 
 def test_determination_consistency_approved_empty_reasons():
+    """Accept an approved claim without denial reasons as structurally consistent."""
     assert determination_consistency(
         {},
         {"coverage_determination": "approved", "denial_reasons": []},
@@ -114,6 +119,7 @@ def test_determination_consistency_approved_empty_reasons():
 
 
 def test_determination_consistency_denied_empty_reasons_fails():
+    """Reject a denied claim that supplies no denial reason."""
     assert determination_consistency(
         {},
         {"coverage_determination": "denied", "denial_reasons": []},
@@ -121,6 +127,7 @@ def test_determination_consistency_denied_empty_reasons_fails():
 
 
 def test_determination_consistency_denied_with_reasons():
+    """Accept a denied claim supported by an explicit denial reason."""
     assert determination_consistency(
         {},
         {
@@ -131,6 +138,7 @@ def test_determination_consistency_denied_with_reasons():
 
 
 def test_amount_exactness_after_money_normalize():
+    """Compare amounts exactly after normalizing currency strings and numeric values."""
     assert amount_exactness(
         {"claimed_amount": 1500.0},
         {"claimed_amount": "$1,500.00"},
@@ -143,6 +151,7 @@ def test_amount_exactness_after_money_normalize():
 
 
 def test_insurance_batch_score_attaches_consistency_and_prf():
+    """Attach batch extraction F scores, amount exactness, and determination consistency."""
     expected = [
         {
             "claim_number": "CLM-1",
@@ -181,6 +190,7 @@ def test_insurance_batch_score_attaches_consistency_and_prf():
 
 
 def test_single_doc_extraction_still_returns_dataclass():
+    """Preserve the extraction result dataclass for single-document suite scoring."""
     result = get_suite("contracts_specialist").score(
         {"governing_law": "Delaware"},
         {"governing_law": "Delaware"},
@@ -195,6 +205,7 @@ def test_single_doc_extraction_still_returns_dataclass():
 
 
 def test_score_task_docclass_f1_macro_matches_macro_prf():
+    """Use macro classification PRF in docclass results alongside type accuracy."""
     expected = ["contract", "insurance_claim", "court_opinion", "correspondence"]
     predicted = ["contract", "insurance_claim", "correspondence", "correspondence"]
     out = score_task("docclass", expected, predicted)
@@ -209,6 +220,7 @@ def test_score_task_docclass_f1_macro_matches_macro_prf():
 
 
 def test_score_task_docclass_subclass_macros():
+    """Include subclass macro precision, recall, and F1 in hierarchical classification."""
     out = score_task(
         "docclass",
         ["contract", "merger_agreement", "insurance_claim", "correspondence"],
@@ -224,6 +236,7 @@ def test_score_task_docclass_subclass_macros():
 
 
 def test_score_task_pipeline_fills_f1_macro():
+    """Populate pipeline macro F1 from the same classification PRF calculation."""
     out = score_task("pipeline", ["contract", "insurance_claim"], ["contract", "correspondence"])
     prf = macro_prf(["contract", "insurance_claim"], ["contract", "correspondence"])
     assert out["f1_macro"] == prf["f1_macro"]
@@ -253,6 +266,7 @@ def test_headline_metrics_specialists_include_extraction_f1():
 
 
 def test_headline_metrics_insurance_includes_extraction_f2():
+    """Include recall-weighted F2 among insurance extraction headlines."""
     head = headline_metrics("insurance_claims_specialist")
     assert "extraction_f2" in head
     assert "extraction_overall_score" in head
@@ -260,6 +274,7 @@ def test_headline_metrics_insurance_includes_extraction_f2():
 
 
 def test_headline_metrics_correspondence_includes_topic_macro_f1():
+    """Include topic macro F1 alongside correspondence extraction headlines."""
     head = headline_metrics("correspondence_specialist")
     assert "content_topic_f1_macro" in head
     assert "extraction_overall_score" in head
@@ -267,10 +282,12 @@ def test_headline_metrics_correspondence_includes_topic_macro_f1():
 
 
 def test_headline_metrics_sorter_unchanged():
+    """Keep sorter headlines limited to accuracy and macro F1."""
     assert headline_metrics("sorter") == ["accuracy", "f1_macro"]
 
 
 def test_headline_metrics_local_vs_api_ttft_and_throughput():
+    """Use latency and throughput headlines with GPU diagnostics instead of accuracy."""
     head = headline_metrics("local_vs_api")
     assert "ttft_seconds" in head
     assert "tokens_per_second" in head
@@ -281,6 +298,7 @@ def test_headline_metrics_local_vs_api_ttft_and_throughput():
 
 
 def test_dashboard_includes_extraction_precision_recall():
+    """Expose precision, recall, F2, and entity-list F1 in extraction dashboards."""
     core = dashboard_metrics("contracts_specialist")
     assert "extraction_precision" in core
     assert "extraction_recall" in core
@@ -289,6 +307,7 @@ def test_dashboard_includes_extraction_precision_recall():
 
 
 def test_extraction_bundle_lists_new_names():
+    """Include structural insurance checks and correspondence topic F1 in metric bundles."""
     names = bundle_metric_names("extraction", agent="insurance_claims_specialist")
     assert "determination_consistency" in names
     assert "amount_exactness" in names

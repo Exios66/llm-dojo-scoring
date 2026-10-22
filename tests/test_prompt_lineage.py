@@ -82,6 +82,7 @@ ALL_KEYS = ARCHIVED | FROZEN | MUTATIONS
 
 
 def _sha(text: str) -> str:
+    """Compute the SHA-256 digest of the exact UTF-8 prompt text."""
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
@@ -105,6 +106,7 @@ def test_source_metadata():
 
 @pytest.mark.parametrize("v", list_prompt_versions(), ids=lambda v: v.key)
 def test_entry_integrity(v: PromptVersion):
+    """Validate prompt digests, lengths, version keys, and required provenance metadata."""
     assert v.sha256 == _sha(v.text)
     assert v.chars == len(v.text)
     m = re.fullmatch(r"(.+)_v(\d+)", v.key)
@@ -118,6 +120,7 @@ def test_entry_integrity(v: PromptVersion):
 
 
 def test_lineage_specific_links():
+    """Enforce parent, supersession, and source conventions for each lineage type."""
     for v in list_prompt_versions(lineage="mutation"):
         parent = get_prompt_version(v.parent)
         assert parent.role == v.role and parent.version == v.version - 1
@@ -133,6 +136,7 @@ def test_lineage_specific_links():
 
 
 def test_list_sorted_and_filtered():
+    """Return prompt versions in stable role/version order with requested filters applied."""
     vs = list_prompt_versions()
     assert [(v.role, v.version) for v in vs] == sorted((v.role, v.version) for v in vs)
     assert [v.version for v in list_prompt_versions(role="correspondence_specialist")] == list(range(8))
@@ -142,6 +146,7 @@ def test_list_sorted_and_filtered():
 
 
 def test_roles_including_hyphens():
+    """List all 15 roles in sorted order without losing hyphenated judge names."""
     roles = prompt_roles()
     assert roles == sorted(roles)
     assert {"judge-classification", "judge-correctness", "sorter_reviewer"} <= set(roles)
@@ -163,6 +168,7 @@ def test_chain_v0_to_tip(role, tip, length):
 
 
 def test_chain_of_root_and_unknown():
+    """Resolve known prompt chains and reject unknown lineage lookups."""
     assert [v.key for v in prompt_chain("sorter_reviewer_v1")] == ["sorter_reviewer_v1"]
     assert [v.key for v in prompt_chain("sorter")] == [
         "sorter_v1", "sorter_v2", "sorter_v3", "sorter_v4",
@@ -172,6 +178,7 @@ def test_chain_of_root_and_unknown():
 
 
 def test_latest_prefers_frozen_and_mutation_over_archived():
+    """Choose current frozen or mutation heads rather than historical archived versions."""
     assert latest_prompt_version("sorter").key == "sorter_v4"
     # archived contracts_specialist_v33 (a re-keyed v0) must not win on number.
     assert latest_prompt_version("contracts_specialist").key == "contracts_specialist_v3"
@@ -185,6 +192,7 @@ def test_latest_prefers_frozen_and_mutation_over_archived():
 
 
 def test_v33_listed_and_explicit_chain_works():
+    """Keep the archived contracts v33 discoverable through explicit version lookups."""
     assert "contracts_specialist_v33" in {v.key for v in list_prompt_versions(role="contracts_specialist")}
     assert [v.key for v in prompt_chain("contracts_specialist_v33")] == ["contracts_specialist_v33"]
     v33, v0 = (get_prompt_version(k) for k in ("contracts_specialist_v33", "contracts_specialist_v0"))
@@ -193,6 +201,7 @@ def test_v33_listed_and_explicit_chain_works():
 
 
 def test_default_is_frozen_v1():
+    """Resolve bare roles to their frozen-v1 baseline rather than the latest mutation."""
     for role in prompt_roles():
         d = default_prompt_version(role)
         assert d.key == f"{role}_v1" and d.lineage == "frozen"
@@ -201,6 +210,7 @@ def test_default_is_frozen_v1():
 
 
 def test_unknown_key_suggests_close_matches():
+    """Suggest the matching correspondence version for a misspelled prompt key."""
     with pytest.raises(KeyError) as ei:
         get_prompt_version("correspondence_specialist_v77")
     assert "correspondence_specialist_v7" in str(ei.value)
@@ -229,12 +239,14 @@ def test_corrected_records_equal_production_prompts_catalog(key, role):
 
 
 def test_digest_conventions_differ_for_unterminated_text():
+    """Hash lineage text exactly rather than adding the frozen catalog's newline."""
     sorter = get_prompt_version("sorter_v1")
     assert not sorter.text.endswith("\n")
     assert sorter.sha256 == _sha(sorter.text) != _sha(sorter.text + "\n")
 
 
 def test_diff_prompt_versions():
+    """Produce labeled unified prompt diffs and support explicit comparison baselines."""
     d = diff_prompt_versions("correspondence_specialist_v6", "correspondence_specialist_v7")
     lines = d.splitlines()
     assert lines[0] == "--- correspondence_specialist_v6"
@@ -252,6 +264,7 @@ def test_diff_prompt_versions():
 
 
 def test_changes_summary_shape():
+    """Summarize prompt changes with baseline, line counts, and changed sections."""
     ch = get_prompt_version("sorter_v2").changes
     assert ch["against"] == "sorter_v1"
     assert (ch["lines_added"], ch["lines_removed"]) == (12, 0)
@@ -264,6 +277,7 @@ def test_changes_summary_shape():
 
 
 def test_frozen_v1_changes_are_against_archived_v0():
+    """Compare frozen contracts v1 against its longer archived-v0 predecessor."""
     ch = get_prompt_version("contracts_specialist_v1").changes
     assert ch["against"] == "contracts_specialist_v0" and ch["chars_delta"] < 0
 
@@ -282,6 +296,7 @@ def test_data_file_is_deterministic_and_packaged():
 
 
 def test_package_data_declares_json():
+    """Include prompt JSON resources in setuptools package data."""
     import pathlib
 
     tomllib = pytest.importorskip("tomllib")  # py311+
@@ -292,6 +307,7 @@ def test_package_data_declares_json():
 
 
 def test_clear_prompt_cache_reloads_lineage():
+    """Reload equal but newly allocated lineage records after clearing the cache."""
     before = list_prompt_versions()
     clear_prompt_cache()
     after = list_prompt_versions()
@@ -299,6 +315,7 @@ def test_clear_prompt_cache_reloads_lineage():
 
 
 def test_reexported_from_package():
+    """Expose lineage APIs through the prompts package's public exports."""
     for name in (
         "PromptVersion", "LINEAGE_SOURCE", "list_prompt_versions", "get_prompt_version",
         "prompt_roles", "prompt_chain", "latest_prompt_version", "default_prompt_version",
@@ -308,6 +325,7 @@ def test_reexported_from_package():
 
 
 def test_sorter_chain_is_explicit():
+    """Preserve the explicit frozen-to-mutation sorter ancestry through v4."""
     chain = prompt_chain("sorter")
     assert [v.key for v in chain] == ["sorter_v1", "sorter_v2", "sorter_v3", "sorter_v4"]
     assert [v.lineage for v in chain] == ["frozen", "mutation", "mutation", "mutation"]
@@ -327,6 +345,7 @@ def test_sorter_chain_is_explicit():
 
 def test_sorter_v3_duplicated_corporate_record_block_is_recorded():
     # Known upstream defect: sorter_v3 carries its corporate_record block twice.
+    """Retain and annotate the historical duplicate corporate-record block in sorter v3."""
     v3 = get_prompt_version("sorter_v3")
     heading = 'CORPORATE RECORD SUBCLASS (only when doc_type is "corporate_record"):'
     assert v3.text.count(heading) == 2
@@ -336,11 +355,13 @@ def test_sorter_v3_duplicated_corporate_record_block_is_recorded():
 
 
 def test_notes_only_where_expected():
+    """Attach lineage warning notes only to the known affected prompt versions."""
     flagged = {v.key for v in list_prompt_versions() if v.changes and v.changes["notes"]}
     assert flagged == {"sorter_v2", "sorter_v3", "sorter_v4", "merger_agreement_specialist_v4"}
 
 
 def test_sorter_v4_drops_the_duplicate_block_and_matches_production():
+    """Remove the duplicated sorter section and match the current production body."""
     v4 = get_prompt_version("sorter_v4")
     assert v4.parent == "sorter_v3" and v4.lineage == "mutation" and v4.version == 4
     assert v4.text.count("CORPORATE RECORD SUBCLASS") == 1

@@ -21,6 +21,9 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+- Corporate label repair and audit no longer treat malformed falsey GT values
+  (`[]`, `0`, `False`) as empty mappings. Text audit summaries retain
+  wrong-subclass entity defects instead of reporting those rows as clean.
 - The `doc:corporate_record` eval-bundle description (part of the "39
   corporate_record rows" → 450 correction) now states the per-subclass schema +
   unlabeled-field exclusions. The released 0.22.0 notes keep the wording they
@@ -28,6 +31,8 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Added
 
+- Complete explicit Python docstrings, including private/nested helpers,
+  scripts, examples, and tests, with a repository-wide regression gate.
 - **`score_extraction(audit_predicted=…)`** — with it set,
   `entity_list_audit` payloads include fields omitted from GT scoring (e.g.
   predictions dropped by unlabeled alignment), so verification still surfaces
@@ -39,6 +44,14 @@ Format based on Keep a Changelog; versioning is SemVer.
   on its own line (no longer folded into `articles_of_incorporation`) and
   reproduces the frozen doc_subclass block byte for byte. Catalog / lineage /
   docs re-pinned to `253559fc…`.
+
+### Removed
+
+- The superseded research issue inventory; GitHub and `docs/TODOS.md` remain
+  the live follow-up sources. Retained research is marked as historical.
+- The one-off MCP push-queue helper and encoded Digital-Mailroom feeder-resync
+  bundle. Its target commit `357ac5be` is already an ancestor of
+  Digital-Mailroom `main`; the recovery payload remains available in Git history.
 
 ## [0.22.0] - 2026-10-16
 

@@ -57,6 +57,7 @@ def display_prompt_version(record: dict) -> str | None:
 
 
 def _date(record: dict):
+    """Convert a record timestamp to naive UTC midnight, or None when unavailable."""
     ts = record.get("timestamp")
     if not ts:
         return None
@@ -69,6 +70,7 @@ def _date(record: dict):
 
 
 def _ci(record: dict, path: str, key: str):
+    """Read a confidence-interval entry from a dictionary at the dotted path."""
     ci = dotted_get(record, path)
     if isinstance(ci, dict):
         return ci.get(key)
@@ -76,6 +78,7 @@ def _ci(record: dict, path: str, key: str):
 
 
 def _tok(record: dict, key: str):
+    """Read a token count, preferring sorter-specific counts over top-level counts."""
     tok = record.get("tokens") or {}
     if "sorter" in tok and isinstance(tok["sorter"], dict) and key in tok["sorter"]:
         return tok["sorter"].get(key)
@@ -83,6 +86,7 @@ def _tok(record: dict, key: str):
 
 
 def _tok_str(record: dict, key: str) -> str | None:
+    """Render a parameter as text, preserving explicit boolean values."""
     val = dotted_get(record, f"parameters.{key}")
     if val is None:
         return None
@@ -92,6 +96,7 @@ def _tok_str(record: dict, key: str) -> str | None:
 
 
 def _avg_rate(record: dict, path: str):
+    """Average numeric values in a score mapping, or return None without values."""
     d = dotted_get(record, f"scores.{path}")
     if isinstance(d, dict) and d:
         vals = [v for v in d.values() if isinstance(v, (int, float))]
@@ -508,6 +513,7 @@ _COL_WIDTHS = {"DATE": 12, "Experiment Name": 46, "SAMPLE (n)": 10, "MODEL": 20,
 
 
 def _width(header: str) -> float:
+    """Choose a worksheet column width from its header and metric category."""
     if header in _COL_WIDTHS:
         return _COL_WIDTHS[header]
     if header.startswith("Accuracy") or header.startswith("H Rate") or header.startswith("Diag"):
@@ -588,10 +594,12 @@ def write_compact_codebook_sheet(wb: openpyxl.Workbook, columns: list[dict]) -> 
 # ---------------------------------------------------------------------------
 
 def sorter_records(records: list[dict]) -> list[dict]:
+    """Select subtype-classification records while preserving input order."""
     return [r for r in records if r.get("task") == "subtype_classification"]
 
 
 def extraction_records(records: list[dict]) -> list[dict]:
+    """Select contract-entity-extraction records while preserving input order."""
     return [r for r in records if r.get("task") == "contract_entity_extraction"]
 
 
@@ -616,6 +624,7 @@ def champion_prompt_version(records: list[dict], task: str = "subtype_classifica
         return None
 
     def score(r: dict) -> float:
+        """Read the champion metric as a float, defaulting missing or invalid values to zero."""
         val = dotted_get(r, metric_path)
         try:
             return float(val or 0.0)

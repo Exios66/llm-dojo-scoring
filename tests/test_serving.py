@@ -20,6 +20,7 @@ from llm_dojo_scoring.serving import (
 
 
 def test_ttft_from_timestamps():
+    """Derive first-token latency, end-to-end time, and token timing from timestamps."""
     run = score_serving_run(
         {
             "provider": "ollama",
@@ -44,6 +45,7 @@ def test_ttft_from_timestamps():
 
 
 def test_ttft_none_when_missing_not_inferred_from_e2e():
+    """Leave first-token and decode timing unknown when only end-to-end latency exists."""
     run = score_serving_run(
         {
             "provider": "ollama",
@@ -60,6 +62,7 @@ def test_ttft_none_when_missing_not_inferred_from_e2e():
 
 
 def test_explicit_ttft_seconds_used():
+    """Honor an explicit first-token latency and calculate decode timing from available data."""
     run = score_serving_run(
         {
             "provider": "vllm",
@@ -73,6 +76,7 @@ def test_explicit_ttft_seconds_used():
 
 
 def test_gpu_utilization_percent_normalized_and_stripped_on_api():
+    """Normalize local GPU percentages and omit GPU telemetry from API runs."""
     local = score_serving_run(
         {
             "provider": "vllm",
@@ -102,6 +106,7 @@ def test_gpu_utilization_percent_normalized_and_stripped_on_api():
 
 
 def test_local_ollama_cost_is_none():
+    """Leave unpriced local inference cost unknown and disclose the gap."""
     run = score_serving_run(
         {
             "provider": "ollama",
@@ -116,6 +121,7 @@ def test_local_ollama_cost_is_none():
 
 
 def test_compare_serving_deltas_and_identity():
+    """Compare local/API serving metrics while retaining run identity and quality deltas."""
     local = {
         "provider": "ollama",
         "model": "qwen3:8b",
@@ -152,6 +158,7 @@ def test_compare_serving_deltas_and_identity():
 
 
 def test_split_and_pair_comparable_runs():
+    """Separate unknown serving kinds and pair comparable local/API identities."""
     records = [
         {
             "provider": "ollama",
@@ -178,6 +185,7 @@ def test_split_and_pair_comparable_runs():
 
 
 def test_get_suite_local_vs_api_routes_to_compare():
+    """Dispatch the computable serving suite to local/API comparison without ground truth."""
     suite = get_suite("local_vs_api")
     assert suite.kind == "serving"
     assert suite.computable is True
@@ -192,6 +200,7 @@ def test_get_suite_local_vs_api_routes_to_compare():
 
 
 def test_serving_metrics_do_not_apply_to_sorter():
+    """Restrict serving telemetry to serving agents rather than the document sorter."""
     reg = load_registry()
     assert not reg.get("ttft_seconds").applies_to("sorter")
     assert not reg.get("gpu_utilization").applies_to("sorter")
@@ -203,6 +212,7 @@ def test_serving_metrics_do_not_apply_to_sorter():
 
 
 def test_serving_t0_t1_have_citation_and_ground_truth_none():
+    """Document core serving metrics as non-ground-truth measurements with sources."""
     reg = load_registry()
     for name in (
         "ttft_seconds",
@@ -222,6 +232,7 @@ def test_serving_t0_t1_have_citation_and_ground_truth_none():
 
 
 def test_identity_tags_are_t3():
+    """Keep serving identity metadata at log tier and applicable to serving comparisons."""
     reg = load_registry()
     for name in (
         "serving_kind",
@@ -237,16 +248,19 @@ def test_identity_tags_are_t3():
 
 
 def test_expand_serving_family():
+    """Expand the serving family to include the local-versus-API agent."""
     assert "local_vs_api" in expand_agent_families(["SERVING"])
 
 
 def test_canonical_keys_document_ttft_and_quantization():
+    """Expose first-token, quantization, and GPU fields in canonical serving keys."""
     assert "ttft_seconds" in CANONICAL_SERVING_KEYS
     assert "quantization" in CANONICAL_SERVING_KEYS
     assert "gpu_utilization" in CANONICAL_SERVING_KEYS
 
 
 def test_multi_request_percentiles():
+    """Aggregate request latency percentiles and error rates over multiple requests."""
     run = score_serving_run(
         {
             "provider": "vllm",
@@ -271,6 +285,7 @@ def test_kind_field_is_not_used_for_serving_kind():
 
 
 def test_scoring_table_includes_missing_elements_as_none():
+    """Retain every serving metric with explicit missing or one-sided comparison status."""
     from llm_dojo_scoring.serving import SERVING_METRIC_NAMES, serving_table_rows
 
     out = compare_serving(
@@ -305,6 +320,7 @@ def test_scoring_table_includes_missing_elements_as_none():
 
 
 def test_scorecard_and_cost_calculations():
+    """Build serving headlines, dashboard, identity, and derived cost measurements."""
     from llm_dojo_scoring.cost import estimate_cost
     from llm_dojo_scoring.serving import serving_card_markdown
 
@@ -351,6 +367,7 @@ def test_scorecard_and_cost_calculations():
 
 
 def test_emit_serving_scorecard_separates_local_and_api_runs():
+    """Emit distinct local and API scorecards with their own metric values."""
     from llm_dojo_scoring.emitter import Emitter
     from llm_dojo_scoring.serving import emit_serving_scorecard
 
@@ -399,6 +416,7 @@ def test_emit_serving_scorecard_separates_local_and_api_runs():
 def test_emit_serving_scorecard_validates_all_provenance_before_emitting(
     tmp_path, mocker, invalid_side, invalid_field
 ):
+    """Reject incomplete provenance before writing any serving records to sinks."""
     from llm_dojo_scoring.emitter import Emitter, LocalManifestSink
     from llm_dojo_scoring.scorecard_honesty import ProvenanceExportError
     from llm_dojo_scoring.serving import emit_serving_scorecard

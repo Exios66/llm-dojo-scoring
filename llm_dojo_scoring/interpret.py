@@ -20,28 +20,33 @@ INTERP_EQUIV = ea.EQUIV_METRIC
 
 @dataclass
 class InterpretationNote:
+    """One categorized interpretation finding with severity, headline, and detail."""
     kind: str            # winner | significance | version | model | hotspot | failure | reliability | cost | regression
     severity: str        # info | warning | critical
     headline: str
     detail: str = ""
 
     def to_dict(self) -> dict:
+        """Serialize the finding as plain text fields."""
         return {"kind": self.kind, "severity": self.severity,
                 "headline": self.headline, "detail": self.detail}
 
 
 @dataclass
 class Interpretation:
+    """Evaluation findings together with their run-level summary."""
     notes: list[InterpretationNote] = field(default_factory=list)
     summary: dict = field(default_factory=dict)
 
     def by_severity(self) -> dict[str, list[InterpretationNote]]:
+        """Group notes into info, warning, and critical buckets in their original order."""
         out = {"info": [], "warning": [], "critical": []}
         for note in self.notes:
             out[note.severity].append(note)
         return out
 
     def to_dict(self) -> dict:
+        """Serialize the summary and each interpretation note."""
         return {
             "summary": self.summary,
             "notes": [n.to_dict() for n in self.notes],
@@ -49,6 +54,7 @@ class Interpretation:
 
 
 def _pct(value, digits: int = 2) -> str:
+    """Format a fraction as a percentage, using n/a for missing or NaN values."""
     if value is None or value != value:  # NaN guard
         return "n/a"
     return f"{value * 100:.{digits}f}%"

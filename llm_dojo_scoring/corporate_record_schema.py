@@ -710,7 +710,8 @@ def audit_gt_rows(rows: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
             continue
         sub = subclass_schema(row.get("expected_subclass")).subclass
         try:
-            defects = audit_gt_row(sub, row.get("gt_fields") or {})
+            raw_gt = row.get("gt_fields")
+            defects = audit_gt_row(sub, {} if raw_gt is None else raw_gt)
         except (TypeError, ValueError):
             defects = ["gt_unparseable"]
         audit.n_rows += 1
@@ -719,4 +720,3 @@ def audit_gt_rows(rows: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
         for code in defects:
             counts[code] = counts.get(code, 0) + 1
     return audit.to_dict()
-

@@ -185,6 +185,11 @@ pip install -e ".[dev]"
 python -m pytest
 ```
 
+Docstrings are required for every Python module, class, and function, including
+private helpers, nested definitions, scripts, examples, and tests. Run the
+repository-wide coverage gate with
+`python -m pytest tests/test_docstring_coverage.py`.
+
 ## CLI Reference
 
 <div align="center">

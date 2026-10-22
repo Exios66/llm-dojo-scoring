@@ -27,6 +27,7 @@ from llm_dojo_scoring.suites import (
 
 
 def test_every_profile_has_a_dedicated_suite():
+    """Keep suite names in one-to-one correspondence with agent profiles."""
     assert set(DEFAULT_SUITES) == set(DEFAULT_PROFILES)
     assert set(list_suites()) == set(list_profiles())
 
@@ -52,11 +53,13 @@ def test_get_suite_accepts_agent_and_doc_type_aliases():
 
 
 def test_unknown_suite_lists_known_names():
+    """Include available suite names in errors for unknown suite lookups."""
     with pytest.raises(KeyError, match="known agents"):
         get_suite("podcast_transcriber")
 
 
 def test_every_suite_bundle_validates_against_registry():
+    """Resolve each nonempty agent bundle entirely through registered metrics."""
     for name, suite in DEFAULT_SUITES.items():
         bundle = suite.materialize_bundle()
         assert bundle.name == f"agent:{name}"
@@ -68,6 +71,7 @@ def test_every_suite_bundle_validates_against_registry():
 
 
 def test_specialist_suites_embed_mailroom_field_types():
+    """Use the configured document field map in every computable extraction suite."""
     for agent, doc_type in SPECIALIST_DOC_TYPES.items():
         suite = get_suite(agent)
         assert suite.kind == "extraction"
@@ -78,6 +82,7 @@ def test_specialist_suites_embed_mailroom_field_types():
 
 
 def test_local_vs_api_suite_is_serving_and_computable():
+    """Expose serving measurements and their timing caveat through a computable suite."""
     suite = get_suite("local_vs_api")
     assert suite.kind == "serving"
     assert suite.computable is True
@@ -90,6 +95,7 @@ def test_local_vs_api_suite_is_serving_and_computable():
 
 
 def test_sorter_suite_is_classification_and_computable():
+    """Configure sorter classification with docclass routing and registered headline metrics."""
     suite = get_suite("sorter")
     assert suite.kind == "classification"
     assert suite.task_key == "docclass"
@@ -98,6 +104,7 @@ def test_sorter_suite_is_classification_and_computable():
 
 
 def test_sorter_score_doc_class_labels():
+    """Compute exact label accuracy and sample count through the sorter suite."""
     result = score_suite(
         "sorter",
         expected=["contract", "insurance_claim", "court_opinion"],
@@ -110,6 +117,7 @@ def test_sorter_score_doc_class_labels():
 
 
 def test_sorter_score_hierarchical_corpus_subclasses():
+    """Score corpus document types and subclasses separately through hierarchical routing."""
     result = score_suite(
         "sorter",
         expected=["contract", "merger_agreement", "insurance_claim", "correspondence"],
@@ -124,6 +132,7 @@ def test_sorter_score_hierarchical_corpus_subclasses():
 
 
 def test_contracts_specialist_score_uses_field_types():
+    """Use contract entity-list field scoring and give matching extractions full credit."""
     expected = {
         "parties": ["Acme Corp", "Beta LLC"],
         "effective_date": "2024-03-03",
@@ -141,6 +150,7 @@ def test_contracts_specialist_score_uses_field_types():
 
 
 def test_insurance_claims_specialist_score_money_and_id():
+    """Normalize insurance amounts and identifiers before assigning extraction credit."""
     expected = {
         "claim_number": "CLM-99",
         "claimed_amount": 1500.0,
@@ -157,6 +167,7 @@ def test_insurance_claims_specialist_score_money_and_id():
 
 
 def test_every_specialist_score_empty_expected_is_safe():
+    """Return unknown overall quality and no field scores when ground truth is empty."""
     for agent in SPECIALIST_AGENTS:
         result = get_suite(agent).score({}, {"confidence": 0.9})
         assert result.overall_score is None
@@ -164,6 +175,7 @@ def test_every_specialist_score_empty_expected_is_safe():
 
 
 def test_audit_suite_disagreement_from_extraction_score():
+    """Derive audit disagreement from the underlying extraction score."""
     reference = {"entity_name": "Acme Holdings", "filing_number": "A-1"}
     auditor = {"entity_name": "Acme Holdings", "filing_number": "A-1"}
     out = get_suite("corporate_records_auditor").score(reference, auditor)
@@ -176,6 +188,7 @@ def test_audit_suite_disagreement_from_extraction_score():
 
 
 def test_transcription_suite_uses_existing_token_f1():
+    """Produce perfect token, word, and character scores for matching transcriptions."""
     out = get_suite("pdf_transcriber").score(
         "the parties agree to terminate",
         "the parties agree to terminate",
@@ -188,6 +201,7 @@ def test_transcription_suite_uses_existing_token_f1():
 
 
 def test_emit_only_suites_raise_without_metrics():
+    """Require emitted metrics and separate registered names from skipped unknown metrics."""
     with pytest.raises(TypeError, match="emit-only"):
         get_suite("reporter").score(None, None)
     with pytest.raises(TypeError, match="emit-only"):
@@ -202,6 +216,7 @@ def test_emit_only_suites_raise_without_metrics():
 
 
 def test_honest_gaps_documented_not_invented():
+    """Disclose unsupported suite capabilities without claiming gaps for implemented scorers."""
     for agent in (
         "insurance_claims_specialist",
         "due_diligence_specialist",
@@ -217,6 +232,7 @@ def test_honest_gaps_documented_not_invented():
 
 
 def test_contracts_and_court_have_real_benchmark_extras():
+    """Expose contract similarity and court LegalBench extras with appropriate caveats."""
     contracts = set(get_suite("contracts_specialist").metric_names())
     court = set(get_suite("court_opinions_specialist").metric_names())
     assert {"jaccard_similarity", "laziness_rate"} <= contracts
@@ -226,6 +242,7 @@ def test_contracts_and_court_have_real_benchmark_extras():
 
 
 def test_insurance_specialist_is_on_extraction_metrics():
+    """Apply extraction, field-presence, and date metrics to the insurance specialist."""
     reg = load_registry()
     assert reg.get("extraction_overall_score").applies_to("insurance_claims_specialist")
     assert reg.get("field_presence").applies_to("insurance_claims_specialist")
@@ -234,6 +251,7 @@ def test_insurance_specialist_is_on_extraction_metrics():
 
 
 def test_expand_agent_families_covers_insurance():
+    """Expand agent families to include insurance specialists, auditors, and reviewers."""
     assert "insurance_claims_specialist" in expand_agent_families(["SPECIALISTS"])
     assert "insurance_claims_auditor" in expand_agent_families(["AUDITORS"])
     assert "sorter_reviewer" in expand_agent_families(["CLASSIFIERS"])
@@ -242,6 +260,7 @@ def test_expand_agent_families_covers_insurance():
 
 
 def test_doc_type_aliases_cover_all_eight_classes():
+    """Retain suite aliases for all eight historical document classes."""
     expected = {
         "contract",
         "corporate_record",
@@ -256,6 +275,7 @@ def test_doc_type_aliases_cover_all_eight_classes():
 
 
 def test_suite_to_dict_is_json_safe():
+    """Serialize suite metadata with JSON-compatible metric lists and nullable gaps."""
     d = get_suite("sorter").to_dict()
     assert d["name"] == "sorter"
     assert d["computable"] is True

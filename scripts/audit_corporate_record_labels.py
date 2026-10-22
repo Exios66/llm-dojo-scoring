@@ -59,7 +59,10 @@ def main(argv: list[str] | None = None) -> int:
         def fmt(counts: dict[str, int]) -> str:
             """Summarize defects, grouping conflicts and unlabeled entity fields."""
             ent = {k.split(":", 1)[1]: v for k, v in counts.items() if k.startswith("entity_unlabeled:")}
-            rest = {k: v for k, v in counts.items() if k != "rows" and ":" not in k}
+            rest = {
+                k: v for k, v in counts.items()
+                if k != "rows" and not k.startswith(("entity_unlabeled:", "subclass_content_conflict:"))
+            }
             parts = [f"{k}={v}" for k, v in sorted(rest.items())]
             conflict = sum(v for k, v in counts.items() if k.startswith("subclass_content_conflict:"))
             if conflict:

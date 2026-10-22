@@ -1,3 +1,4 @@
+"""Check token-price lookup, estimated costs, and cost provenance conventions."""
 import pytest
 
 from llm_dojo_scoring.cost import (
@@ -10,6 +11,7 @@ from llm_dojo_scoring.cost import (
 
 
 def test_price_for_known_and_prefix():
+    """Resolve known and dated model prices while declining unknown identifiers."""
     assert price_for("qwen/qwen3.7-flash") == (0.03, 0.13)
     assert price_for("qwen/qwen3.7-flash-20260727") == (0.03, 0.13)
     assert price_for("unknown/model") is None
@@ -18,6 +20,7 @@ def test_price_for_known_and_prefix():
 
 def test_estimate_cost():
     # 1M prompt tokens in + 1M completion out for qwen -> 0.03 + 0.13
+    """Price prompt and completion tokens while declining unknown or empty usage."""
     assert estimate_cost(1_000_000, 1_000_000, "qwen/qwen3.7-flash") == pytest.approx(0.16)
     assert estimate_cost(100, 50, "unknown/model") is None
     assert estimate_cost(0, 0, "qwen/qwen3.7-flash") is None

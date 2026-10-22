@@ -14,6 +14,7 @@ generator = load_script("gen_maud_catalog")
 
 
 def test_scan_unions_classes_and_counts_only_merger_rows():
+    """Union MAUD answer classes and distinct class sets using merger rows only."""
     frame = pd.DataFrame([
         {"expected": "contract", "gt_fields": "not JSON: must be ignored"},
         {"expected": "merger_agreement", "gt_fields": json.dumps({
@@ -42,6 +43,7 @@ def test_scan_unions_classes_and_counts_only_merger_rows():
 
 @pytest.fixture
 def catalog_splits(monkeypatch):
+    """Provide synthetic MAUD splits while isolating import-path and loader changes."""
     labels = {q: {"valid_classes": ["Zulu", "alpha"]} for q in MAUD_QUESTION_KEYS}
     frames = {
         "test": pd.DataFrame([{"expected": "merger_agreement", "gt_fields": json.dumps({
@@ -58,6 +60,7 @@ def catalog_splits(monkeypatch):
 
 
 def test_build_artifacts_contains_sorted_union_counts_and_provenance(catalog_splits):
+    """Generate sorted MAUD class unions with row counts and source provenance."""
     module, fixture_text = generator.build_artifacts(None, "synthetic-revision", "2026-01-02")
     fixture = json.loads(fixture_text)
     assert fixture["rows"] == {"total": 2, "test": 1, "train": 1}
@@ -82,6 +85,7 @@ def test_build_artifacts_contains_sorted_union_counts_and_provenance(catalog_spl
 
 
 def test_build_artifacts_rejects_incomplete_catalog(catalog_splits):
+    """Reject generated catalogs that omit required MAUD questions."""
     catalog_splits["test"].loc[0, "gt_fields"] = "{}"
     with pytest.raises(SystemExit, match="catalog incomplete, missing questions:.*Type of Consideration"):
         generator.build_artifacts(None, "revision", "date")
@@ -89,6 +93,7 @@ def test_build_artifacts_rejects_incomplete_catalog(catalog_splits):
 
 @pytest.mark.parametrize("stale", [None, "module", "fixture"])
 def test_check_mode_detects_drift_without_writing(monkeypatch, tmp_path, capsys, stale):
+    """Detect stale catalog artifacts in check mode without changing either file."""
     module_path, fixture_path = tmp_path / "maud.py", tmp_path / "classes.json"
     module_path.write_text("stale" if stale == "module" else "module\n")
     fixture_path.write_text("stale" if stale == "fixture" else "fixture\n")
@@ -103,6 +108,7 @@ def test_check_mode_detects_drift_without_writing(monkeypatch, tmp_path, capsys,
 
 
 def test_write_mode_forwards_options_and_writes_both_artifacts(monkeypatch, tmp_path, mocker):
+    """Forward generation options and write both module and fixture artifacts."""
     module_path, fixture_path = tmp_path / "maud.py", tmp_path / "classes.json"
     monkeypatch.setattr(generator, "ROOT", tmp_path)
     monkeypatch.setattr(generator, "MODULE_PATH", module_path)

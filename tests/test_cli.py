@@ -1,3 +1,4 @@
+"""Check Markdown reports and CLI analysis and export workflows."""
 import pytest
 
 from llm_dojo_scoring.cli import _cli_analyze, _cli_export
@@ -7,10 +8,12 @@ from llm_dojo_scoring.io import normalize_results_frame
 
 @pytest.fixture
 def df(sorter_frame):
+    """Normalize synthetic sorter results for report generation."""
     return normalize_results_frame(sorter_frame)
 
 
 def test_build_report_markdown(df):
+    """Include the winning run and all core analysis sections in Markdown."""
     text = build_report(df)
     assert "# Evaluation Report" in text
     assert "## Verdicts" in text
@@ -22,6 +25,7 @@ def test_build_report_markdown(df):
 
 
 def test_build_report_writes_file(df, tmp_path):
+    """Write a report that records whether the requested target is met."""
     out = tmp_path / "report.md"
     build_report(df, path=str(out), target=0.94)
     assert out.exists()
@@ -30,12 +34,14 @@ def test_build_report_writes_file(df, tmp_path):
 
 
 def test_build_report_with_plots(df, tmp_path):
+    """Embed supplied plot paths as Markdown images."""
     plot_paths = {"metric_ci": str(tmp_path / "dojo_metric_ci.png")}
     text = build_report(df, plot_paths=plot_paths)
     assert "![metric_ci]" in text
 
 
 def test_cli_analyze_xlsx(tmp_path):
+    """Analyze an exported workbook into a winning-run report and plots."""
     import os
 
     from llm_dojo_scoring.export import sorter_columns, write_workbook
@@ -101,6 +107,7 @@ def test_cli_analyze_langfuse_sync(tmp_path):
 
 
 def test_cli_export(tmp_path):
+    """Export logged sorter experiments as a results workbook and codebook."""
     from llm_dojo_scoring.experiment import append_experiment
 
     log = tmp_path / "log.jsonl"

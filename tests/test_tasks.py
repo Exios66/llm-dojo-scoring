@@ -25,6 +25,7 @@ from llm_dojo_scoring.tasks import (
 
 
 def test_task_kind_routing():
+    """Resolve task aliases to the appropriate scoring kind."""
     assert task_kind("subtype") == "subtype"
     assert task_kind("maud_docclass") == "docclass"
     assert task_kind("maud_question") == "maud_question"
@@ -40,6 +41,7 @@ def test_task_kind_routing():
 # --- MAUD ---------------------------------------------------------------
 
 def test_normalize_maud_consideration():
+    """Canonicalize MAUD consideration spelling and mixed cash/stock variants."""
     assert normalize_maud_consideration("All Cash") == "all_cash"
     assert normalize_maud_consideration("all-cash") == "all_cash"
     assert normalize_maud_consideration("Mixed Cash & Stock") == "mixed_cash_stock"
@@ -50,6 +52,7 @@ def test_normalize_maud_consideration():
 
 
 def test_maud_docclass_doc_type_and_subclass():
+    """Separate document-type accuracy, exact subclass accuracy, and family equivalence."""
     expected_dt = ["merger_agreement"] * 4
     predicted_dt = ["merger_agreement", "merger_agreement", "merger_agreement", "contract"]
     expected_sub = ["all_cash", "all_stock", "mixed_cash_stock", "all_cash"]
@@ -64,6 +67,7 @@ def test_maud_docclass_doc_type_and_subclass():
 
 
 def test_maud_question_score():
+    """Compute normalized MAUD answer accuracy, class counts, and confidence intervals."""
     expected = ["All Cash", "All Stock", "Other", "All Cash"]
     predicted = ["all cash", "all_stock", "mixed cash and stock", "all_cash"]
     s = maud_question_score(expected, predicted)
@@ -76,6 +80,7 @@ def test_maud_question_score():
 # --- LegalBench ----------------------------------------------------------
 
 def test_normalize_legalbench():
+    """Normalize boolean-style LegalBench answers while preserving other labels."""
     assert normalize_legalbench("Yes") == "yes"
     assert normalize_legalbench("No.") == "no"
     assert normalize_legalbench("TRUE") == "yes"
@@ -83,6 +88,7 @@ def test_normalize_legalbench():
 
 
 def test_legalbench_score():
+    """Combine normalized LegalBench accuracy with class-specific and binary PRF metrics."""
     expected = ["yes", "no", "yes", "no", "yes"]
     predicted = ["yes", "yes", "yes", "no", "no"]
     s = legalbench_score(expected, predicted)
@@ -97,6 +103,7 @@ def test_legalbench_score():
 # --- Multiclass / court opinions -----------------------------------------
 
 def test_multiclass_score():
+    """Report micro and macro accuracy with a multiclass confusion matrix."""
     expected = ["a", "b", "c", "a", "b"]
     predicted = ["a", "b", "c", "b", "b"]
     s = multiclass_score(expected, predicted)
@@ -107,6 +114,7 @@ def test_multiclass_score():
 
 
 def test_court_opinion_score():
+    """Route court-opinion predictions through their classification scorer."""
     expected = ["court_opinion"] * 3
     predicted = ["court_opinion", "court_opinion", "contract"]
     s = court_opinion_score(expected, predicted)
@@ -118,6 +126,7 @@ def test_court_opinion_score():
 # --- Chained -------------------------------------------------------------
 
 def test_chained_composite_and_summary():
+    """Combine sorter and specialist quality with configurable composite weights."""
     assert chained_composite(1.0, 0.9) == round(0.25 * 1.0 + 0.75 * 0.9, 4)
     assert chained_composite(1.0, 0.9, weights=(0.5, 0.5)) == 0.95
     s = chained_summary(sorter_exact=1.0, sorter_subtype=0.6,
@@ -130,6 +139,7 @@ def test_chained_composite_and_summary():
 
 
 def test_score_task_dispatcher_and_chained_guard():
+    """Dispatch supported task kinds and refuse incomplete chained-scoring input."""
     assert score_task("doc_class", ["contract", "contract"], ["contract", "contract"])["exact_match"] == 1.0
     assert score_task("multiclass", ["a", "b"], ["a", "a"])["exact_match"] == 0.5
     assert normalize_task_answer("legalbench", "Yes") == "yes"
@@ -147,6 +157,7 @@ ANTI = "NEITHER PARTY SHALL, WITHOUT THE PRIOR WRITTEN CONSENT OF THE OTHER PART
 
 
 def test_get_jaccard_mirrors_contracteval():
+    """Match ContractEval token normalization and empty-set Jaccard behavior."""
     assert get_jaccard(ANTI, ANTI.lower()) == 1.0
     assert get_jaccard("a b c", "a b") == 2 / 3
     # The degenerate both-empty case mirrors Evaluation.py exactly (1.0), and
@@ -157,6 +168,7 @@ def test_get_jaccard_mirrors_contracteval():
 
 
 def test_said_no_related_and_classified():
+    """Recognize abstention phrases and distinguish clause classifications."""
     assert said_no_related("No related clause.") is True
     assert said_no_related("No related clause") is True
     assert said_no_related("no related clause found here") is True
@@ -168,6 +180,7 @@ def test_said_no_related_and_classified():
 
 
 def test_contracteval_metrics_confusion():
+    """Count ContractEval true and false positives and negatives with derived rates."""
     m = contracteval_metrics(
         [[ANTI], [ANTI], [], [], [ANTI, "SECOND"]],
         [ANTI, "no related clause", "no related clause", "a fabricated clause", ANTI],
@@ -195,6 +208,7 @@ def test_contracteval_metrics_confusion():
 
 
 def test_contracteval_metrics_own_denominator():
+    """Compute false abstention rate using only positive ground-truth clause pairs."""
     m = contracteval_metrics([[ANTI], []], ["no related clause", "no related clause"],
                              positive_denominator=None)
     assert m["n_positive"] == 1
@@ -211,6 +225,7 @@ def test_contracteval_metrics_scale_free():
 
 
 def test_score_task_contracteval_dispatch():
+    """Route ContractEval tasks to the benchmark-specific confusion scorer."""
     m = score_task("contracteval", [[ANTI], []], [ANTI, "no related clause"],
                    categories=["Anti-Assignment", "Anti-Assignment"])
     assert m["kind"] == "contracteval"
