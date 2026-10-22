@@ -1,3 +1,4 @@
+"""Check sorter failure categorization, subtype accuracy, and confusion counts."""
 import pytest
 
 from llm_dojo_scoring.failure_modes import (
@@ -11,6 +12,7 @@ from llm_dojo_scoring.failure_modes import (
 
 def _row(doc_type_ok=True, subtype_ok=False, subtype_ok_equiv=False,
          contract_subtype="license", expected_subtype="license"):
+    """Build a sorter outcome with configurable correctness flags and subtype labels."""
     return {
         "doc_type_ok": doc_type_ok,
         "subtype_ok": subtype_ok,
@@ -21,6 +23,7 @@ def _row(doc_type_ok=True, subtype_ok=False, subtype_ok_equiv=False,
 
 
 def test_classify_failure_modes():
+    """Distinguish successful, document-type, fallback, equivalent, and family outcomes."""
     assert classify_failure(_row(subtype_ok=True)) == "ok"
     assert classify_failure(_row(doc_type_ok=False)) == "function_over_form"
     assert classify_failure(_row(contract_subtype="other")) == "other_fallback"
@@ -29,11 +32,13 @@ def test_classify_failure_modes():
 
 
 def test_classify_docclass_failure():
+    """Separate document-type mistakes from subclass mistakes."""
     assert classify_docclass_failure({"doc_type_ok": False}) == "doc_type_miss"
     assert classify_docclass_failure({"doc_type_ok": True}) == "subclass_miss"
 
 
 def test_summarize_failures():
+    """Count successes and each failure category across sorter outcomes."""
     rows = [
         _row(subtype_ok=True),
         _row(doc_type_ok=False),
@@ -52,6 +57,7 @@ def test_summarize_failures():
 
 
 def test_per_subtype_accuracy():
+    """Report strict and equivalence-aware accuracy with per-subtype sample counts."""
     rows = [
         _row(subtype_ok=True, expected_subtype="license"),
         _row(subtype_ok=False, subtype_ok_equiv=True, expected_subtype="license"),
@@ -65,6 +71,7 @@ def test_per_subtype_accuracy():
 
 
 def test_confusion_from_rows():
+    """Build sorted subtype confusion counts from expected and predicted rows."""
     rows = [
         {"expected_subtype": "license", "contract_subtype": "license"},
         {"expected_subtype": "license", "contract_subtype": "franchise"},

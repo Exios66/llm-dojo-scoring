@@ -2,8 +2,8 @@
 
 Grounded in the published Hugging Face dataset
 ``Lucius-Morningstar/mailroom-dataset`` (default + ``ground_truth`` configs;
-3,302 rows: 2,979 train / 323 test at the v9 GT-closure revision
-``46a4d3c2`` — the v9 successor of the frozen v8 ``mailroom-corpus``
+3,302 rows: 2,979 train / 323 test; current pin Hub tag ``v9.2`` (same rows
+as the v9 GT-closure revision ``46a4d3c2``, v9.1 ``ed7576b6``) — the v9 successor of the frozen v8 ``mailroom-corpus``
 baseline).
 
 This module is the single source mapping each mailroom document class to:

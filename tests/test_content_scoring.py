@@ -27,6 +27,7 @@ from llm_dojo_scoring.gt_metadata import ANNOTATION_KEYS
 
 
 def test_peeling_annotations_preserves_trace_fields_and_content_payload():
+    """Separate annotations and content labels without losing prediction trace fields."""
     expected = {key: "annotation" for key in ANNOTATION_KEYS}
     expected.update(sender="Alice", content_topic="legal_contracts")
     predicted = {key: "different annotation" for key in ANNOTATION_KEYS}
@@ -40,6 +41,7 @@ def test_peeling_annotations_preserves_trace_fields_and_content_payload():
 
 
 def test_normalize_content_topic_aliases():
+    """Canonicalize topic aliases and pin the supported correspondence vocabulary."""
     assert normalize_content_topic("Legal Contracts") == "legal_contracts"
     assert normalize_content_topic("hr-personnel") == "hr_personnel"
     assert normalize_content_topic("IT Systems") == "it_systems"
@@ -52,6 +54,7 @@ def test_normalize_content_topic_aliases():
 
 
 def test_normalize_sentiment_aliases():
+    """Canonicalize sentiment abbreviations into the three supported labels."""
     assert normalize_sentiment_label("POS") == "positive"
     assert normalize_sentiment_label("Neg") == "negative"
     assert normalize_sentiment_label("neu") == "neutral"
@@ -61,6 +64,7 @@ def test_normalize_sentiment_aliases():
 
 
 def test_content_topic_perfect_and_mismatch():
+    """Compute topic accuracy and per-class scores for perfect and mixed predictions."""
     expected = ["legal_contracts", "scheduling", "hr_personnel"]
     perfect = score_content_topic(expected, expected)
     assert perfect["content_topic_accuracy"] == 1.0
@@ -74,6 +78,7 @@ def test_content_topic_perfect_and_mismatch():
 
 
 def test_sentiment_macro_f1_on_imbalance():
+    """Reflect an imbalanced sentiment error in aggregate and per-class scores."""
     expected = ["negative", "negative", "positive"]
     predicted = ["negative", "neutral", "positive"]
     out = score_sentiment(expected, predicted)
@@ -83,6 +88,7 @@ def test_sentiment_macro_f1_on_imbalance():
 
 
 def test_score_task_routes_enron_keys():
+    """Route Enron topic and sentiment task aliases to their dedicated scorers."""
     topics = score_task(
         "enron_topic",
         ["legal_contracts"],
@@ -94,6 +100,7 @@ def test_score_task_routes_enron_keys():
 
 
 def test_correspondence_suite_scores_content_without_polluting_extraction():
+    """Score correspondence labels separately from extraction fields and evidence."""
     expected = {
         "sender": "Jeffrey Skilling",
         "recipient": "Kenneth Lay",
@@ -117,6 +124,7 @@ def test_correspondence_suite_scores_content_without_polluting_extraction():
 
 
 def test_correspondence_extraction_only_still_returns_dataclass():
+    """Retain the extraction-only result type while exposing content metrics."""
     expected = {"sender": "A", "recipient": "B"}
     predicted = {"sender": "A", "recipient": "B"}
     out = get_suite("correspondence_specialist").score(expected, predicted)
@@ -132,6 +140,7 @@ def test_correspondence_extraction_only_still_returns_dataclass():
 
 
 def test_correspondence_kwargs_topic_sentiment():
+    """Score explicit topic and sentiment keyword pairs independently."""
     out = get_suite("correspondence_specialist").score(
         {"sender": "A"},
         {"sender": "A"},
@@ -145,6 +154,7 @@ def test_correspondence_kwargs_topic_sentiment():
 
 
 def test_peel_leaves_extraction_fields():
+    """Retain sender fields while separating topic and MAUD payloads."""
     exp, pred, payload = peel_non_extraction_fields(
         {"sender": "A", "content_topic": "regulatory", "maud_clause_labels": {}},
         {"sender": "B", "content_topic": "regulatory"},
@@ -156,6 +166,7 @@ def test_peel_leaves_extraction_fields():
 
 
 def test_parse_maud_labels_from_json_and_spans():
+    """Parse MAUD mappings and spans without splitting colons inside question names."""
     labels = parse_maud_labels({
         "Type of Consideration": {
             "answer": "All Cash",
@@ -176,6 +187,7 @@ def test_parse_maud_labels_from_json_and_spans():
 
 
 def test_maud_extraction_exact_presence_valid_class():
+    """Separate MAUD answer accuracy, presence, valid classes, and category accuracy."""
     expected = {
         "Type of Consideration": {"answer": "All Cash", "category": "General Information"},
         "No-Shop": {"answer": "Yes", "category": "Deal Protection and Related Provisions"},
@@ -199,6 +211,7 @@ def test_maud_extraction_exact_presence_valid_class():
 
 
 def test_maud_extraction_from_clause_spans_and_task_router():
+    """Score matching MAUD spans through task routing and the scoring alias."""
     expected = [
         "Type of Consideration: All Stock",
         "No-Shop: Yes",
@@ -214,12 +227,14 @@ def test_maud_extraction_from_clause_spans_and_task_router():
 
 
 def test_normalize_maud_question_and_consideration_answer():
+    """Canonicalize MAUD question names and question-specific answer labels."""
     assert normalize_maud_question_key("type of consideration") == "Type of Consideration"
     assert normalize_maud_answer("Type of Consideration", "All Cash") == "all_cash"
     assert normalize_maud_answer("No-Shop", "YES") == "yes"
 
 
 def test_merger_suite_scores_maud_labels_and_has_no_honest_gap():
+    """Expose computable MAUD metrics without treating clause labels as extraction fields."""
     suite = get_suite("merger_agreement")
     assert suite.honest_gap is None
     names = set(suite.metric_names())

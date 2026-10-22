@@ -74,6 +74,7 @@ def _intake_fields_from_trace(trace: dict, out: dict, meta: dict) -> dict:
             break
 
     def _first(*vals):
+        """Return the first non-None value, preserving false and zero."""
         for val in vals:
             if val is not None:
                 return val
@@ -112,6 +113,7 @@ _DEFAULT_PAGE_SIZE = 50
 
 @dataclass(frozen=True)
 class LangfuseConfig:
+    """Langfuse endpoint, credentials, and optional project and SDK settings."""
     base_url: str
     public_key: str
     secret_key: str
@@ -151,6 +153,7 @@ def _load_dotenv(path: Path) -> None:
 
 
 def _discover_env_file() -> Path | None:
+    """Find the first recognized credential file in working, config, or home directories."""
     cwd = Path.cwd()
     for name in _ENV_FILES:
         candidates = [cwd / name, cwd / "config" / name, Path.home() / name]
@@ -172,10 +175,12 @@ def load_langfuse_config(env_file: str | Path | None = None) -> LangfuseConfig:
             _load_dotenv(found)
 
     def get(name: str, default: str = "") -> str:
+        """Read an environment value, using the default for missing or empty strings."""
         value = os.environ.get(name)
         return value if value not in (None, "") else default
 
     def get_int(name: str) -> int | None:
+        """Read an optional integer environment setting, returning None for invalid values."""
         raw = get(name)
         if not raw:
             return None
@@ -185,6 +190,7 @@ def load_langfuse_config(env_file: str | Path | None = None) -> LangfuseConfig:
             return None
 
     def get_float(name: str) -> float | None:
+        """Read an optional float environment setting, returning None for invalid values."""
         raw = get(name)
         if not raw:
             return None
@@ -223,6 +229,7 @@ class LangfuseClient:
 
     def __init__(self, config: LangfuseConfig | None = None,
                  max_retries: int = 8, min_interval: float = 1.0):
+        """Resolve credentials and configure Basic authentication, retries, and throttling."""
         self.config = config or load_langfuse_config()
         if not self.config.public_key or not self.config.secret_key:
             raise ValueError(
@@ -248,6 +255,7 @@ class LangfuseClient:
         self._last_request_ts = time.monotonic()
 
     def _request(self, path: str, params: dict[str, Any] | None = None) -> dict:
+        """Fetch authenticated JSON with throttling and retries for rate limits or network errors."""
         url = self.config.base_url + path
         if params:
             url += "?" + urllib.parse.urlencode(
@@ -309,19 +317,23 @@ class LangfuseClient:
     def list_traces(self, name: str | None = None, session: str | None = None,
                     max_items: int | None = None, from_ts: str | None = None,
                     to_ts: str | None = None) -> list[dict]:
+        """Fetch traces matching optional name, session, and timestamp filters."""
         params = {"name": name, "sessionId": session, "fromTimestamp": from_ts,
                   "toTimestamp": to_ts}
         return self.fetch_all("/api/public/traces", params, max_items=max_items)
 
     def get_trace(self, trace_id: str) -> dict:
+        """Fetch a single trace by its identifier."""
         return self._request(f"/api/public/traces/{trace_id}")
 
     def list_scores(self, trace_id: str | None = None, name: str | None = None,
                     max_items: int | None = None) -> list[dict]:
+        """Fetch scores matching optional trace and score-name filters."""
         params = {"traceId": trace_id, "name": name}
         return self.fetch_all("/api/public/scores", params, max_items=max_items)
 
     def get_session(self, session_id: str) -> list[dict]:
+        """Fetch all traces belonging to a session."""
         return self.list_traces(session=session_id)
 
 

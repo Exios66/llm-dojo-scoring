@@ -167,17 +167,20 @@ _MAILROOM_SCORE_NAMES = (
 
 def test_package_version_is_semver_patch_or_newer():
     # Keep the consumer pin docs honest: published package version matches.
+    """Require a numeric package version at least as new as the consumer baseline."""
     parts = dojo.__version__.split(".")
     assert len(parts) >= 2
     assert tuple(int(p) for p in parts[:2]) >= (0, 12)
 
 
 def test_top_level_consumer_exports_present():
+    """Preserve every top-level symbol imported by downstream consumers."""
     missing = [name for name in _TOP_LEVEL if not hasattr(dojo, name)]
     assert not missing, f"missing top-level exports: {missing}"
 
 
 def test_module_attrs_used_by_dependents():
+    """Preserve module-level attributes referenced by dependent applications."""
     for mod_name, attrs in _MODULE_ATTRS.items():
         mod = importlib.import_module(f"llm_dojo_scoring.{mod_name}")
         missing = [a for a in attrs if not hasattr(mod, a)]
@@ -185,12 +188,14 @@ def test_module_attrs_used_by_dependents():
 
 
 def test_mailroom_score_names_in_registry():
+    """Require all mailroom score names to resolve in the metric registry."""
     reg = load_registry()
     missing = [n for n in _MAILROOM_SCORE_NAMES if n not in reg.metrics]
     assert not missing, f"registry missing mailroom score names: {missing}"
 
 
 def test_mailroom_t0_t1_have_citation_and_ground_truth():
+    """Require citations and declared ground-truth policies for core mailroom metrics."""
     reg = load_registry()
     for name in _MAILROOM_SCORE_NAMES:
         m = reg.get(name)
@@ -206,6 +211,7 @@ def test_mailroom_t0_t1_have_citation_and_ground_truth():
 
 
 def test_local_vs_api_surface_for_sandbox_and_mailroom():
+    """Preserve serving comparison tables, scorecards, and costs for consumers."""
     suite = dojo.get_suite("local_vs_api")
     assert suite.kind == "serving"
     out = dojo.compare_serving(
@@ -224,6 +230,7 @@ def test_jellyfish_is_importable_core_dependency():
 
 
 def test_release_version_is_0_22_0():
+    """Pin the package version to the expected compatibility release."""
     assert dojo.__version__ == "0.22.0"
 
 
@@ -289,6 +296,7 @@ _MAILROOM_MODULE_ATTRS: dict[str, tuple[str, ...]] = {
 def test_mailroom_import_surface_resolves():
     # Mailroom does `from llm_dojo_scoring import <name>`; a name that only
     # survives in a submodule would still break that import.
+    """Resolve all top-level and module-level imports used by mailroom."""
     missing = [name for name in _MAILROOM_TOP_LEVEL if not hasattr(dojo, name)]
     assert not missing, f"missing mailroom top-level imports: {missing}"
     for mod_name, attrs in _MAILROOM_MODULE_ATTRS.items():
@@ -300,6 +308,7 @@ def test_mailroom_import_surface_resolves():
 def test_readme_release_pins_match_version():
     # Release commits bump the README badge and install pins with the version
     # (as v0.19.1 did); a stale pin sends new consumers to the old release.
+    """Keep README release references aligned with the package version."""
     readme = (Path(__file__).resolve().parent.parent / "README.md").read_text(encoding="utf-8")
     pins = set(re.findall(r"(?:release-|releases/tag/|\.git@|\.\.\.@)v(\d+\.\d+\.\d+)", readme))
     assert pins == {dojo.__version__}, pins
@@ -307,6 +316,7 @@ def test_readme_release_pins_match_version():
 
 def test_mailroom_relations_matcher_methods_exist():
     # relations.py still calls these until it moves to embed_texts.
+    """Preserve private embedding methods still called by mailroom relations."""
     from llm_dojo_scoring.field_scoring import _EmbeddingMatcher
 
     assert callable(getattr(_EmbeddingMatcher, "_embed", None))
@@ -356,6 +366,7 @@ def test_sandbox_local_vs_api_emit_call_shape(tmp_path):
     from llm_dojo_scoring.serving import compare_serving
 
     def rec(**kw):
+        """Build a serving record with dataset provenance and caller-supplied overrides."""
         base = {
             "prompt_version": "mailroom-default",
             "task": "sorter",

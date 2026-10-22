@@ -18,12 +18,14 @@ from .config import CONTRACT_SUBTYPE_LABELS
 
 
 def _pct(value, digits: int = 2) -> str:
+    """Format a fractional value as a percentage, using n/a for missing values."""
     if value is None or value != value:
         return "n/a"
     return f"{value * 100:.{digits}f}%"
 
 
 def _md_table(frame: pd.DataFrame, max_rows: int = 40) -> str:
+    """Render a bounded Markdown table with compact floats and a truncation note."""
     if frame is None or frame.empty:
         return "_no data_"
     head = frame.head(max_rows)

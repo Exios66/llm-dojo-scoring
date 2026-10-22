@@ -1,3 +1,4 @@
+"""Check experiment metadata parsing and workbook, codebook, and log ingestion."""
 import pandas as pd
 import pytest
 
@@ -12,6 +13,7 @@ from llm_dojo_scoring.io import (
 
 
 def test_parse_experiment_name():
+    """Extract model, prompt version, dimension, and suffix from varied run names."""
     parts = parse_experiment_name("qwen3.7-flash_sorter_v12_subtype_langfuse")
     assert parts["model_slug"] == "qwen3.7-flash"
     assert parts["prompt_version"] == "v12"
@@ -31,12 +33,14 @@ def test_parse_experiment_name():
 
 
 def test_display_model():
+    """Format known model identifiers while preserving unknown names and nulls."""
     assert display_model("qwen/qwen3.7-flash") == "Qwen 3.7-Flash"
     assert display_model("custom/model") == "custom/model"
     assert display_model(None) is None
 
 
 def test_normalize_results_frame(sorter_frame):
+    """Add canonical metadata columns and numeric metrics to sorter workbook rows."""
     df = normalize_results_frame(sorter_frame)
     assert "date" in df.columns
     assert "model" in df.columns
@@ -48,6 +52,7 @@ def test_normalize_results_frame(sorter_frame):
 
 
 def test_read_workbook_real_artifact(real_artifacts):
+    """Read reference sorter runs with their codebook and diagnostic columns."""
     result = read_workbook(real_artifacts["results"])
     assert result.kind == "sorter"
     assert result.n_runs == 31
@@ -59,11 +64,13 @@ def test_read_workbook_real_artifact(real_artifacts):
 
 
 def test_read_codebook_real_artifact(real_artifacts):
+    """Preserve the reference codebook column schema during ingestion."""
     codebook = read_codebook(real_artifacts["codebook"])
     assert list(codebook.columns) == ["Variable", "Description", "Type", "Source", "Example / Values"]
 
 
 def test_load_log(tmp_path):
+    """Load experiment logs and apply task filters without losing run identity."""
     log = tmp_path / "log.jsonl"
     log.write_text(
         '{"experiment_name": "a", "task": "subtype_classification", "n_rows": 5}\n'
@@ -77,6 +84,7 @@ def test_load_log(tmp_path):
 
 
 def test_normalize_results_frame_sweep_real(real_artifacts):
+    """Recognize reference sweep workbooks and preserve model and notes columns."""
     result = read_workbook(real_artifacts["sweep"])
     assert result.kind == "sweep"
     df = normalize_results_frame(result.frame)

@@ -31,7 +31,10 @@ AUTHORITY = "Exios66/llm-mailroom@main:src/config/taxonomy.yaml"
 
 
 class _UniqueKeySafeLoader(yaml.SafeLoader):
+    """Safe YAML loader that rejects duplicate mapping keys."""
+
     def construct_mapping(self, node, deep=False):
+        """Construct a mapping and raise ConstructorError if a key appears twice."""
         mapping = super().construct_mapping(node, deep=deep)
         seen = set()
         for key_node, _ in node.value:
@@ -46,6 +49,7 @@ class _UniqueKeySafeLoader(yaml.SafeLoader):
 
 
 def build_fixture(taxonomy_path: Path) -> dict:
+    """Read taxonomy YAML and build a field-map fixture with source content hashes."""
     data = Path(taxonomy_path).read_bytes()
     taxonomy = yaml.load(data, Loader=_UniqueKeySafeLoader)
     if not isinstance(taxonomy, dict) or "doc_classes" not in taxonomy:
@@ -70,10 +74,12 @@ def build_fixture(taxonomy_path: Path) -> dict:
 
 
 def _dump(fixture: dict) -> str:
+    """Serialize a fixture as sorted, indented JSON with a final newline."""
     return json.dumps(fixture, indent=2, sort_keys=True) + "\n"
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Write the taxonomy fixture or check for drift while ignoring its capture date."""
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--taxonomy", required=True, type=Path)
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)

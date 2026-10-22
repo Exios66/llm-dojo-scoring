@@ -107,10 +107,12 @@ def _r2(pairs: list[tuple[float, float]]) -> float | None:
 
 
 def _mean(values: list[float]) -> float | None:
+    """Return the four-decimal mean, or None for an empty sample."""
     return round(sum(values) / len(values), 4) if values else None
 
 
 def _median(values: list[float]) -> float | None:
+    """Return the four-decimal median, or None for an empty sample."""
     if not values:
         return None
     ordered = sorted(values)
@@ -233,10 +235,12 @@ def extraction_diagnostics(rows: list[dict], field_types: dict[str, str],
                 money_err[field].append(abs(pred_usd - exp_usd))
 
     def _rate(flags_: list[str], flag: str) -> float | None:
+        """Return the rounded fraction of matching flags, or None without observations."""
         return round(sum(1 for f in flags_ if f == flag) / len(flags_), 4) \
             if flags_ else None
 
     def _field_bucket(bucket: dict[str, list[float]]) -> dict[str, float]:
+        """Average each nonempty collection of per-field diagnostic values."""
         return {f: _mean(v) for f, v in bucket.items() if v}
 
     metrics: dict = {

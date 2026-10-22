@@ -1,3 +1,4 @@
+"""Exercise label normalization, failure filtering, and classification score aggregation."""
 import pytest
 
 from llm_dojo_scoring.classification import (
@@ -17,11 +18,13 @@ from llm_dojo_scoring.classification import (
 
 
 def test_normalize_label_json():
+    """Canonicalize document-type labels embedded in JSON responses."""
     assert normalize_label('{"doc_type": "Contract"}') == "contract"
     assert normalize_label('{"doc_type": "Corporate Record"}') == "corporate_record"
 
 
 def test_normalize_label_regex_fallback():
+    """Recognize known document labels in prose while preserving unknown text."""
     assert normalize_label("This is a contract agreement") == "contract"
     assert normalize_label("Contract Amendment to a Merger Agreement") == "merger_agreement"
     assert normalize_label("court opinion") == "court opinion"
@@ -30,16 +33,19 @@ def test_normalize_label_regex_fallback():
 
 
 def test_exact_match():
+    """Compare canonical labels rather than raw case or related category names."""
     assert exact_match("Contract", "contract") == 1.0
     assert exact_match("License Agreement", "contract") == 0.0
 
 
 def test_failure_sentinel():
+    """Identify error-prefixed predictions without flagging successful labels."""
     assert failure("ERROR: parse failed", "contract") == 1.0
     assert failure("contract", "contract") == 0.0
 
 
 def test_accuracy_and_macro():
+    """Distinguish sample-weighted accuracy from the mean of per-class accuracies."""
     exp = ["contract", "contract", "license", "license", "license"]
     pred = ["contract", "contract", "contract", "license", "license"]
     assert accuracy(exp, pred) == 0.8
@@ -47,6 +53,7 @@ def test_accuracy_and_macro():
 
 
 def test_per_class_stats_skips_failures():
+    """Exclude failed predictions from per-class counts and correct totals."""
     exp = ["contract", "contract", "license"]
     pred = ["contract", "ERROR: fail", "license"]
     stats = per_class_stats(exp, pred)
@@ -56,6 +63,7 @@ def test_per_class_stats_skips_failures():
 
 
 def test_accuracy_skips_error_rows_like_siblings():
+    """Exclude error rows consistently from micro and macro accuracy."""
     exp = ["contract", "contract", "license"]
     pred = ["contract", "ERROR: fail", "license"]
     assert accuracy(exp, pred) == 1.0
@@ -63,6 +71,7 @@ def test_accuracy_skips_error_rows_like_siblings():
 
 
 def test_confusion_matrix():
+    """Count expected-versus-predicted labels and derive diagonal accuracy."""
     exp = ["a", "a", "b", "b"]
     pred = ["a", "b", "b", "b"]
     matrix, labels = confusion_matrix(exp, pred, labels=["a", "b"])
@@ -71,6 +80,7 @@ def test_confusion_matrix():
 
 
 def test_top_confusions():
+    """Report off-diagonal mistakes with their expected and predicted labels."""
     matrix, labels = confusion_matrix(
         ["a", "a", "b"], ["a", "b", "a"], labels=["a", "b"]
     )
@@ -79,6 +89,7 @@ def test_top_confusions():
 
 
 def test_binary_metrics():
+    """Derive equal precision, recall, F1, and F2 from balanced confusion counts."""
     out = binary_metrics(
         [True, True, False, False], [True, False, True, False], positive="true"
     )
@@ -88,6 +99,7 @@ def test_binary_metrics():
 
 
 def test_macro_prf_unweighted_mean():
+    """Expose macro precision and F-scores with compatible aggregate aliases."""
     from llm_dojo_scoring.classification import macro_prf
 
     exp = ["contract", "contract", "insurance_claim"]
@@ -100,11 +112,13 @@ def test_macro_prf_unweighted_mean():
 
 
 def test_class_distribution():
+    """Merge case variants when counting label frequencies."""
     counts = class_distribution(["contract", "Contract", "license"])
     assert counts == {"contract": 2, "license": 1}
 
 
 def test_confusion_matrix_extends_explicit_labels_with_observed():
+    """Preserve observed classes omitted from the explicit label list."""
     exp = ["a", "a", "c"]
     pred = ["a", "b", "c"]
     matrix, labels = confusion_matrix(exp, pred, labels=["a", "b"])
@@ -113,6 +127,7 @@ def test_confusion_matrix_extends_explicit_labels_with_observed():
 
 
 def test_macro_prf_normalize_false_not_all_zero():
+    """Compute nonzero macro scores when label normalization is disabled."""
     from llm_dojo_scoring.classification import macro_prf
 
     exp = ["yes", "no", "yes"]

@@ -25,10 +25,12 @@ _PARTIAL = {"partial", "partially_approved", "partially_denied"}
 
 
 def _norm(value: Any) -> str:
+    """Lowercase a label and replace spaces and hyphens with underscores."""
     return str(value or "").strip().lower().replace(" ", "_").replace("-", "_")
 
 
 def _is_empty(value: Any) -> bool:
+    """Recognize empty markers, blank strings, and recursively empty sequences."""
     if value in _EMPTY:
         return True
     if isinstance(value, str) and not value.strip():

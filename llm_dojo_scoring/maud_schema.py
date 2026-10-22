@@ -119,10 +119,12 @@ def _squash(text: object) -> str:
 
 
 def _qkey(text: object) -> str:
+    """Normalize question lookup text with folded case, quotes, and whitespace."""
     return _squash(text).lower()
 
 
 def _akey(text: object) -> str:
+    """Normalize answer lookup text, also correcting the known fundamental typo."""
     return _TYPO.sub("fundamental", _squash(text)).lower()
 
 
@@ -199,6 +201,7 @@ def _derive_answer_type(classes: Sequence[str]) -> AnswerType:
 
 
 def _class_index(name: str) -> dict[str, str]:
+    """Map normalized answer keys to their first catalog spelling for a question."""
     index: dict[str, str] = {}
     for cls in MAUD_ANSWER_CLASSES[name]:
         index.setdefault(_akey(cls), cls)
@@ -422,6 +425,7 @@ _SPEC: dict[str, tuple[str, str, tuple[str, ...], str]] = {
 def _tailored_question(
     name: str, explanation: str, classes: Sequence[str], variable: bool
 ) -> str:
+    """Render question-specific instructions listing exact allowed answers and abstention."""
     options = "\n".join(f"  - {cls}" for cls in classes)
     vary = (
         "\nThe allowed set varies by agreement: pick the listed answer that fits "
@@ -439,6 +443,7 @@ def _tailored_question(
 
 
 def _build_questions() -> tuple[MaudQuestion, ...]:
+    """Build ordered question records from the catalog classes and curated specifications."""
     out: list[MaudQuestion] = []
     for name in MAUD_QUESTION_KEYS:
         group, explanation, sections, note = _SPEC[name]
@@ -585,6 +590,7 @@ _SUBCLASS_DEFS: dict[str, tuple[str, tuple[str, ...]]] = {
 
 
 def _build_subclasses() -> tuple[ConsiderationSubclass, ...]:
+    """Build consideration subclasses with catalog classes, equivalences, and entity hints."""
     class_by_token = {v: k for k, v in MAUD_TYPE_OF_CONSIDERATION_TO_TOKEN.items()}
     out: list[ConsiderationSubclass] = []
     for token in MAUD_CONSIDERATION_TYPES:
@@ -644,6 +650,7 @@ def maud_questions(subclass: str | None = None) -> list[MaudQuestion]:
 
 @dataclass(frozen=True)
 class EntityField:
+    """An extraction field definition with its type, empty value, and description."""
     name: str
     type: str
     #: ``None`` (unstated scalar) or ``[]`` (unstated list), per the frozen prompt.
@@ -653,15 +660,18 @@ class EntityField:
 
 @dataclass(frozen=True)
 class EntitySchema:
+    """An ordered extraction field schema associated with a document type."""
     name: str
     doc_type: str
     fields: tuple[EntityField, ...]
 
     @property
     def field_types(self) -> dict[str, str]:
+        """Return field names mapped to their declared scoring types in schema order."""
         return {f.name: f.type for f in self.fields}
 
     def empty_prediction(self) -> dict[str, Any]:
+        """Build an empty prediction with fresh lists and None for scalar fields."""
         return {f.name: ([] if f.empty == [] else None) for f in self.fields}
 
 
@@ -699,6 +709,7 @@ MergerAgreementExtraction = EntitySchema(
 
 
 def _parity_problems() -> list[str]:
+    """Report merger-agreement field type, order, and count mismatches with live schemas."""
     problems: list[str] = []
     live = DEFAULT_FIELD_TYPES["merger_agreement"]
     mine = MergerAgreementExtraction.field_types
@@ -740,6 +751,7 @@ def maud_clause_line(question: str, answer: str) -> str:
 
 
 def _consideration_class(name: str, answer: object) -> str | None:
+    """Resolve a known consideration answer to its MAUD class, or None."""
     if name != "Type of Consideration":
         return None
     try:
@@ -967,6 +979,7 @@ def render_maud_question_block(
 
 
 def _scalar_schema(field_type: str) -> dict[str, Any]:
+    """Build nullable string JSON Schema, restricting dates to ISO-shaped strings."""
     if field_type == "date":
         return {"type": ["string", "null"], "pattern": r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$"}
     return {"type": ["string", "null"]}
@@ -1016,6 +1029,7 @@ def maud_json_schema(
         narrowed[q.name] = verbatim
 
     def classes_of(q: MaudQuestion) -> list[str]:
+        """Return narrowed answer classes when available, otherwise the full question catalog."""
         return narrowed.get(q.name, list(q.valid_classes))
 
     if shape == "object":

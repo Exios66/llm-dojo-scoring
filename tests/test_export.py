@@ -24,6 +24,7 @@ PER_SUB = ["license", "franchise", "reseller", "distributor"]
 
 def _sorter_record(name: str, acc: float, n: int = 509, model: str = "qwen/qwen3.7-flash",
                    version: str = "sorter_v13", note: str | None = None) -> dict:
+    """Build a sorter experiment record with configurable accuracy and run metadata."""
     record = {
         "type": "experiment",
         "task": "subtype_classification",
@@ -70,6 +71,7 @@ def _sorter_record(name: str, acc: float, n: int = 509, model: str = "qwen/qwen3
 
 @pytest.fixture
 def records() -> list[dict]:
+    """Provide three sorter runs spanning prompt versions and model providers."""
     return [
         _sorter_record("qwen3.7-flash_sorter_v12_subtype_langfuse", 0.92, version="sorter_v12"),
         _sorter_record("qwen3.7-flash_sorter_v13_subtype_langfuse", 0.9430, version="sorter_v13"),
@@ -79,6 +81,7 @@ def records() -> list[dict]:
 
 
 def test_sorter_columns_length_and_headers():
+    """Pin the sorter export width and core, subtype, failure, and cost headers."""
     cols = sorter_columns()
     assert len(cols) == 114
     assert cols[0]["header"] == "DATE"
@@ -90,11 +93,13 @@ def test_sorter_columns_length_and_headers():
 
 
 def test_dotted_get():
+    """Resolve nested sorter scores and return null for missing export fields."""
     assert dotted_get(_sorter_record("x", 0.9), "scores.sorter.subtype_accuracy") == 0.9
     assert dotted_get(_sorter_record("x", 0.9), "nope") is None
 
 
 def test_workbook_round_trip(tmp_path, records):
+    """Preserve run count, scores, and normalized model labels through workbook export."""
     wb = tmp_path / "Sorter_Experiment_Results.xlsx"
     write_workbook(str(wb), "Eval Results", sorter_columns(), records, codebook_sheet=True)
     result = read_workbook(wb)
@@ -110,6 +115,7 @@ def test_workbook_round_trip(tmp_path, records):
 
 
 def test_codebook_round_trip(tmp_path):
+    """Export a readable codebook covering every sorter workbook column."""
     cb = tmp_path / "Sorter_Experiment_Codebook.csv"
     write_codebook(str(cb), sorter_columns())
     df = read_codebook(cb)
@@ -118,6 +124,7 @@ def test_codebook_round_trip(tmp_path):
 
 
 def test_sweep_workbook(tmp_path, records):
+    """Export champion-prompt model comparisons with their notes intact."""
     path, n = build_sweep_workbook(
         records, outdir=str(tmp_path),
         notes={"qwen3.7-flash_sorter_v13_subtype_langfuse": "champion"},
@@ -131,12 +138,14 @@ def test_sweep_workbook(tmp_path, records):
 
 
 def test_sweep_picks_champion_prompt(records):
+    """Choose the prompt version belonging to the best sorter run."""
     from llm_dojo_scoring.export import champion_prompt_version
 
     assert champion_prompt_version(records) == "v13"
 
 
 def test_sorter_records_filter(records):
+    """Separate sorter experiments from extraction records."""
     from llm_dojo_scoring.export import extraction_records
 
     assert len(sorter_records(records)) == 3
@@ -144,6 +153,7 @@ def test_sorter_records_filter(records):
 
 
 def test_extraction_columns_smoke():
+    """Include extraction, hallucination, and diagnostic metrics in the export schema."""
     cols = extraction_columns()
     assert len(cols) == 141
     assert "Overall Extraction" in [c["header"] for c in cols]
@@ -152,6 +162,7 @@ def test_extraction_columns_smoke():
 
 
 def test_load_records_jsonl(tmp_path, records):
+    """Load every experiment appended to a JSONL export log."""
     log = tmp_path / "log.jsonl"
     with open(log, "w", encoding="utf-8") as fh:
         for r in records:

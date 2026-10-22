@@ -335,6 +335,7 @@ _CONTRACT_EMPTY_GT = {
 
 
 def test_parse_json_container_round_trips_containers():
+    """Decode serialized lists and mappings without changing their contents."""
     assert parse_json_container("[]") == []
     assert parse_json_container("{}") == {}
     assert parse_json_container('["Bylaws", "stockholders"]') == ["Bylaws", "stockholders"]
@@ -342,6 +343,7 @@ def test_parse_json_container_round_trips_containers():
 
 
 def test_parse_json_container_leaves_scalars_and_prose():
+    """Preserve scalar text, prose, nulls, and already-decoded containers."""
     assert parse_json_container("41") == "41"
     assert parse_json_container("Bylaws of Revenue.com") == "Bylaws of Revenue.com"
     assert parse_json_container(None) is None
@@ -349,6 +351,7 @@ def test_parse_json_container_leaves_scalars_and_prose():
 
 
 def test_is_empty_value_treats_stringified_containers_and_null_tokens():
+    """Recognize serialized empty containers and null tokens without masking populated values."""
     for empty in (None, "", "   ", "[]", "{}", "null", "none", "N/A", "n/a", "n.a.", [], {}):
         assert is_empty_value(empty), empty
     for value in (0, 0.0, False, "0", "41", "not_applicable", ["x"], {"k": "v"}):
@@ -356,6 +359,7 @@ def test_is_empty_value_treats_stringified_containers_and_null_tokens():
 
 
 def test_parse_gt_fields_accepts_json_and_python_repr():
+    """Decode JSON and Python-literal GT mappings including serialized presence metadata."""
     from_json = parse_gt_fields('{"intent": "request", "keywords": "[]"}')
     assert from_json == {"intent": "request", "keywords": []}
     from_repr = parse_gt_fields("{'intent': 'request', 'keywords': '[]'}")
@@ -366,6 +370,7 @@ def test_parse_gt_fields_accepts_json_and_python_repr():
 
 
 def test_parse_gt_fields_rejects_garbage():
+    """Reject unparseable ground-truth field payloads."""
     with pytest.raises(ValueError):
         parse_gt_fields("not a metadata string")
     with pytest.raises(TypeError):
@@ -378,6 +383,7 @@ def test_parse_gt_fields_rejects_garbage():
 
 
 def test_scoring_gt_fields_keeps_only_class_surface_and_drops_annotation():
+    """Scope GT to class extraction fields while excluding annotation metadata."""
     suite = get_suite("corporate_records_specialist")
     scoped = scoring_gt_fields(
         _CORPORATE_GT, field_types=suite.field_types, drop_unmapped=True
@@ -388,6 +394,7 @@ def test_scoring_gt_fields_keeps_only_class_surface_and_drops_annotation():
 
 
 def test_scoring_gt_fields_blanks_documented_absence():
+    """Blank explicitly absent fields while preserving populated insurance labels."""
     suite = get_suite("insurance_claims_specialist")
     scoped = scoring_gt_fields(
         _INSURANCE_GT, field_types=suite.field_types, drop_unmapped=True
@@ -419,6 +426,7 @@ def test_every_live_class_keeps_its_own_schema_fields(suite_name):
 
 
 def test_hub_row_never_scores_another_class_fields():
+    """Exclude fields belonging to other document classes from hub-row scoring."""
     suite = get_suite("corporate_records_specialist")
     gt = dict(_CORPORATE_GT)
     gt["sender"] = "Pat"          # correspondence schema
@@ -431,6 +439,7 @@ def test_hub_row_never_scores_another_class_fields():
 
 
 def test_presence_expectations_from_cuad_labels():
+    """Derive positive and negative clause-presence labels from populated CUAD ground truth."""
     labels = parse_gt_fields(_CONTRACT_PRESENCE_GT)[CUAD_PRESENCE_KEY]
     expectations = presence_expectations_from_cuad_labels(labels)
     assert expectations["Governing Law"]["expected"] is True
@@ -440,6 +449,7 @@ def test_presence_expectations_from_cuad_labels():
 
 
 def test_presence_expectations_skip_placeholder_spans():
+    """Ignore placeholder clause spans while retaining scorable evidence and absences."""
     labels = {
         "Parties": [{"start": 1, "text": "____________________"}],
         "Anti-Assignment": [{"start": 2, "text": "."}],
@@ -487,6 +497,7 @@ def test_na_date_values_are_not_required_events():
 
 
 def test_corporate_hub_row_perfect_prediction_has_no_penalty():
+    """Score labeled corporate fields perfectly without penalizing unlabeled entities."""
     suite = get_suite("corporate_records_specialist")
     out = suite.score_document(json.dumps(_CORPORATE_GT), _CORPORATE_PRED)
     assert out.get("status") != "unscorable"
@@ -502,6 +513,7 @@ def test_corporate_hub_row_perfect_prediction_has_no_penalty():
 
 
 def test_insurance_hub_row_perfect_prediction_has_no_penalty():
+    """Score populated insurance fields without including documented inapplicable labels."""
     suite = get_suite("insurance_claims_specialist")
     out = suite.score_document(json.dumps(_INSURANCE_GT), _INSURANCE_PRED)
     assert out.get("status") != "unscorable"
@@ -533,6 +545,7 @@ def test_insurance_hub_row_perfect_prediction_has_no_penalty():
 
 
 def test_correspondence_hub_row_scores_content_without_penalty():
+    """Score correspondence content and labeled extraction independently without false penalties."""
     suite = get_suite("correspondence_specialist")
     out = suite.score_document(json.dumps(_CORRESPONDENCE_GT), _CORRESPONDENCE_PRED)
     assert out.get("status") != "unscorable"
@@ -558,6 +571,7 @@ def test_insurance_spurious_absence_fill_is_still_an_fp():
 
 
 def test_contract_presence_only_row_uses_presence_not_zero_f1():
+    """Use clause-presence scores without fabricating extraction F-scores for presence-only GT."""
     suite = get_suite("contracts_specialist")
     out = suite.score_document(json.dumps(_CONTRACT_PRESENCE_GT), _CONTRACT_PRESENCE_PRED)
     assert out.get("status") != "unscorable"
@@ -569,6 +583,7 @@ def test_contract_presence_only_row_uses_presence_not_zero_f1():
 
 
 def test_contract_zero_populated_row_is_unscorable():
+    """Mark contracts without extractable GT as unscorable with no overall score."""
     suite = get_suite("contracts_specialist")
     out = suite.score_document(json.dumps(_CONTRACT_EMPTY_GT), {"cuad_clauses": []})
     assert out["status"] == "unscorable"
@@ -622,22 +637,26 @@ def test_mispassed_label_string_fails_closed_without_crashing():
 
 @pytest.mark.parametrize("raw", ['["field"]', '"contract"', "null", "true", "42"])
 def test_parse_gt_fields_rejects_valid_json_with_wrong_shape(raw):
+    """Reject valid JSON values that are not GT mappings."""
     with pytest.raises(ValueError, match="must decode to a mapping"):
         parse_gt_fields(raw)
 
 
 @pytest.mark.parametrize("raw", [None, [], 0, False])
 def test_parse_gt_fields_rejects_non_mapping_inputs(raw):
+    """Reject nonmapping native inputs to GT parsing."""
     with pytest.raises(TypeError, match="must be a mapping or string"):
         parse_gt_fields(raw)
 
 
 @pytest.mark.parametrize("raw", ["[broken]", "{broken}", "[1,]", "{'key': 'value'}", '"quoted"', "true"])
 def test_container_parser_preserves_malformed_containers_and_json_scalars(raw):
+    """Leave malformed container strings and serialized scalars unchanged."""
     assert parse_json_container(raw) == raw
 
 
 def test_normalize_field_values_preserves_scalars_and_does_not_mutate_input():
+    """Normalize container strings and field keys without modifying scalar values or inputs."""
     record = {1: ' ["Alice", "Bob"] ', "amount": "0", "enabled": False}
     original = deepcopy(record)
     assert normalize_field_values(record) == {
@@ -648,12 +667,14 @@ def test_normalize_field_values_preserves_scalars_and_does_not_mutate_input():
 
 @pytest.mark.parametrize("raw", [None, "not json", "[]", "null", [], 42])
 def test_invalid_presence_map_is_ignored(raw):
+    """Ignore presence metadata that cannot be interpreted as a mapping."""
     assert gt_presence_map({GT_PRESENCE_KEY: raw}) == {}
 
 
 @pytest.mark.parametrize("status", sorted(ABSENT_PRESENCE_STATUSES))
 @pytest.mark.parametrize("stringified", [False, True])
 def test_absent_status_suppresses_stale_fields_and_presence_without_mutation(status, stringified):
+    """Suppress stale values and clause evidence for explicitly absent fields without mutation."""
     presence = {"governing_law": status, CUAD_PRESENCE_KEY: status}
     fields = {
         "governing_law": "Delaware",
@@ -669,6 +690,7 @@ def test_absent_status_suppresses_stale_fields_and_presence_without_mutation(sta
 
 
 def test_scoping_retains_declared_content_extras_but_never_annotation_fields():
+    """Retain allowed content extras while excluding annotation keys under all scoping modes."""
     fields = {
         "sender": "Alice", "content_topic": "legal_contracts",
         "claim_number": "CLM-1", "token_estimate": 200,
@@ -683,6 +705,7 @@ def test_scoping_retains_declared_content_extras_but_never_annotation_fields():
 
 
 def test_presence_uses_first_scorable_span_and_custom_field():
+    """Use the first usable evidence span and respect a custom clause field."""
     labels = {
         "Governing Law": json.dumps([
             {"text": "[*]"}, {"start": 4}, "malformed span",
@@ -698,6 +721,7 @@ def test_presence_uses_first_scorable_span_and_custom_field():
 
 
 def test_pending_labels_become_scorable_when_backfilled():
+    """Enable clause-presence scoring after pending GT labels are backfilled."""
     suite = get_suite("contracts_specialist")
     fields = {
         "governing_law": "",
@@ -714,6 +738,7 @@ def test_pending_labels_become_scorable_when_backfilled():
 
 
 def test_pending_annotation_only_document_is_unscorable():
+    """Withhold scores when GT contains only pending labels and annotations."""
     result = get_suite("contracts_specialist").score_document(
         {
             CUAD_PRESENCE_KEY: {"Governing Law": [{"text": "Delaware law applies."}]},
@@ -726,6 +751,7 @@ def test_pending_annotation_only_document_is_unscorable():
 
 
 def test_batch_presence_keeps_pending_and_populated_rows_aligned():
+    """Align pending and populated presence rows without inventing extraction F-scores."""
     label = {"Governing Law": [{"text": "Delaware law applies."}]}
     expected = [
         {CUAD_PRESENCE_KEY: label, GT_PRESENCE_KEY: {CUAD_PRESENCE_KEY: status}}
@@ -741,6 +767,7 @@ def test_batch_presence_keeps_pending_and_populated_rows_aligned():
 
 
 def test_batch_annotation_only_row_is_unscorable_and_aligned():
+    """Retain an unscorable placeholder for annotation-only GT within mixed batches."""
     label = {"Governing Law": [{"text": "Delaware law applies."}]}
     expected = [
         {
@@ -764,6 +791,7 @@ def test_batch_annotation_only_row_is_unscorable_and_aligned():
 
 
 def test_batch_presence_only_row_does_not_leak_spurious_field_micro():
+    """Keep presence-only rows from contaminating field-level batch precision and F1."""
     label = {"Governing Law": [{"text": "Delaware law applies."}]}
     expected = [
         {"parties": ["Acme"]},

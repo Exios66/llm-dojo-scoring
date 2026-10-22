@@ -15,6 +15,7 @@ from llm_dojo_scoring.tasks import score_task
 
 
 def test_identical_strings_are_zero_error():
+    """Give identical transcripts zero word and character error and perfect accuracy."""
     ref = "The parties agree to terminate."
     assert word_error_rate(ref, ref) == 0.0
     assert character_error_rate(ref, ref) == 0.0
@@ -23,15 +24,18 @@ def test_identical_strings_are_zero_error():
 
 def test_one_substitution_wer_is_one_over_n():
     # 4 words; one substitution → 0.25
+    """Count one substituted word as one error over the reference length."""
     assert word_error_rate("the parties agree today", "the parties agree tomorrow") == 0.25
 
 
 def test_case_and_punctuation_are_normalized():
+    """Ignore letter case and punctuation when comparing transcripts."""
     assert word_error_rate("Hello, WORLD!", "hello world") == 0.0
     assert character_error_rate("ABC", "abc") == 0.0
 
 
 def test_empty_reference_conventions():
+    """Pin error-rate conventions when either transcript is empty."""
     assert word_error_rate("", "") == 0.0
     assert word_error_rate("hello", "") == 1.0
     assert character_error_rate("", "") == 0.0
@@ -40,15 +44,18 @@ def test_empty_reference_conventions():
 
 def test_insertions_can_push_wer_above_one():
     # ref has 1 word; hyp has 3 → 2 insertions / 1 = 2.0
+    """Allow insertion-heavy word error rates above one while clamping accuracy to zero."""
     assert word_error_rate("one two three", "one") == 2.0
     assert word_accuracy("one two three", "one") == 0.0
 
 
 def test_cer_single_character_substitution():
+    """Normalize a single character substitution by the reference length."""
     assert character_error_rate("bat", "cat") == pytest.approx(1 / 3)
 
 
 def test_score_transcription_batch_means():
+    """Aggregate transcript errors over every pair in a batch."""
     out = score_transcription(
         ["alpha beta", "one two"],
         ["alpha beta", "one two three"],
@@ -59,12 +66,14 @@ def test_score_transcription_batch_means():
 
 
 def test_score_task_transcription_alias():
+    """Route the WER task alias to both word and character error metrics."""
     out = score_task("wer", ["hello world"], ["hello world"])
     assert out["wer"] == 0.0
     assert out["cer"] == 0.0
 
 
 def test_transcriber_suites_return_wer_cer_and_have_no_honest_gap():
+    """Expose computable transcription metrics and penalize a changed word in both suites."""
     for agent in ("pdf_transcriber", "image_extractor"):
         suite = get_suite(agent)
         assert suite.honest_gap is None

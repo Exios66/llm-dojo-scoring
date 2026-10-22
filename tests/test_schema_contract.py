@@ -38,6 +38,7 @@ class _BrokenInsurance(BaseModel):
 
 
 def test_detects_sand042_insurance_nullability_bug():
+    """Identify the five nonnullable insurance scalars that violate empty-field contracts."""
     assert contract_violations("insurance_claim", _BrokenInsurance) == [
         "insurer",
         "insured_party",
@@ -48,7 +49,9 @@ def test_detects_sand042_insurance_nullability_bug():
 
 
 def test_money_probe_catches_currency_phrase():
+    """Accept repaired nullability but flag a currency string in a numeric amount field."""
     class Fixed(_BrokenInsurance):
+        """Repair the insurance scalar nullability while preserving the numeric amount type."""
         insurer: str | None = None
         insured_party: str | None = None
         claim_type: str | None = None
@@ -63,6 +66,7 @@ def test_money_probe_catches_currency_phrase():
 
 @pytest.mark.parametrize("doc_type", sorted(DEFAULT_FIELD_TYPES))
 def test_empty_payload_covers_field_map(doc_type):
+    """Populate every scored field and use empty lists for entity-list fields."""
     payload = contract_empty_payload(doc_type)
     assert set(payload) == set(DEFAULT_FIELD_TYPES[doc_type])
     for field, ftype in DEFAULT_FIELD_TYPES[doc_type].items():
@@ -71,10 +75,12 @@ def test_empty_payload_covers_field_map(doc_type):
 
 
 def test_urgency_never_null():
+    """Use routine urgency as the correspondence empty-value sentinel."""
     assert contract_empty_value("correspondence", "urgency") == "routine"
 
 
 def test_unknown_doc_type_raises():
+    """Reject document classes without a supported schema contract."""
     with pytest.raises(KeyError):
         contract_violations("court_opinion", _BrokenInsurance)
 
@@ -87,13 +93,16 @@ class _RequiredNullable(BaseModel):
 
 
 def test_missing_other_required_field_is_not_blamed_on_probe():
+    """Ignore unrelated missing required fields when probing a nullable field."""
     assert contract_violations("insurance_claim", _RequiredNullable) == []
 
 
 class _RequiredNonNullable(BaseModel):
+    """Model a required nonnullable insurer beside a required nullable insured party."""
     insurer: str
     insured_party: str | None
 
 
 def test_required_non_nullable_still_flagged():
+    """Report a required nonnullable field even when another required field is absent."""
     assert contract_violations("insurance_claim", _RequiredNonNullable) == ["insurer"]

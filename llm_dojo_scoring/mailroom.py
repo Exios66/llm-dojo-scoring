@@ -249,10 +249,12 @@ def resolve_extract_class(doc_type: str | None) -> str | None:
 
 
 def is_live_extract_class(doc_type: str | None) -> bool:
+    """Return whether a document type resolves to a live extraction class."""
     return resolve_extract_class(doc_type) is not None
 
 
 def is_retired_doc_type(doc_type: str | None) -> bool:
+    """Check whether a normalized document type is explicitly retired."""
     return (doc_type or "").strip().lower() in RETIRED_DOC_TYPES
 
 
@@ -313,6 +315,7 @@ def trace_identity(trace: dict[str, Any]) -> dict[str, Any]:
         meta = {}
 
     def _both(*keys: str) -> Any:
+        """Find the first nonempty key value, checking trace fields before metadata per key."""
         for key in keys:
             if trace.get(key) not in (None, ""):
                 return trace[key]

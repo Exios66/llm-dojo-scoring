@@ -92,6 +92,7 @@ def make_sorter_frame(n_runs: int = 8) -> pd.DataFrame:
 
 @pytest.fixture
 def sorter_frame() -> pd.DataFrame:
+    """Provide deterministic sorter results with confidence intervals and subtype metrics."""
     return make_sorter_frame()
 
 

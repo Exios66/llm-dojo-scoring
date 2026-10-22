@@ -186,6 +186,7 @@ class UnknownMetricNameError(KeyError):
     """Raised when a metric name has no canonical ``metric_id`` (#17)."""
 
     def __str__(self) -> str:  # KeyError repr-quotes its message by default
+        """Return the error message without KeyError's added quotation marks."""
         return str(self.args[0]) if self.args else ""
 
 
@@ -195,11 +196,14 @@ class ProvenanceExportError(ValueError):
 
 @dataclass(frozen=True)
 class GtAssessment:
+    """Ground-truth scorability status and an optional reason for refusing a score."""
+
     status: str  # "scored" | "unscorable"
     reason: str | None = None
 
     @property
     def scorable(self) -> bool:
+        """Return whether the assessment explicitly permits scoring."""
         return self.status == "scored"
 
 
@@ -232,6 +236,7 @@ def metric_id_for(
 
 
 def metric_ids_for_class(doc_class: str) -> tuple[str, ...]:
+    """Return class-specific metric IDs, falling back to generic extraction."""
     return _CLASS_METRIC_IDS.get(doc_class, ("pipeline.extraction.overall",))
 
 
@@ -353,6 +358,7 @@ def unscorable_extraction_result(
     doc_class: str = "extraction",
     metric_id: str | None = None,
 ) -> dict[str, Any]:
+    """Build an unscorable extraction payload with null scores and a GT reason."""
     mid = metric_id or metric_id_for("extraction_overall_score", doc_class=doc_class)
     return {
         "status": "unscorable",
@@ -396,12 +402,14 @@ def aggregate_quality_honest(
 
 
 def export_quality_verdict(assessment: GtAssessment | None) -> str:
+    """Label unscorable assessments unproven and all other cases scored."""
     if assessment is None or assessment.scorable:
         return "scored"
     return "unproven"
 
 
 def _try_parse_json(text: str) -> tuple[Any | None, bool]:
+    """Parse JSON-looking text, returning its value and a success flag."""
     stripped = text.strip()
     if not stripped:
         return None, False
@@ -607,6 +615,7 @@ def detect_maud_gt_ambiguity(exp_labels: Mapping[str, Any]) -> set[str]:
 
 
 def _fold(value: Any) -> str:
+    """Lowercase a value and collapse non-ASCII-alphanumeric runs to spaces."""
     return re.sub(r"[^a-z0-9]+", " ", str(value or "").strip().lower()).strip()
 
 
@@ -736,6 +745,7 @@ def stamp_provenance(
 
 
 def _absent(value: Any) -> bool:
+    """Treat only None and blank strings as absent, preserving zero-valued seeds."""
     # 0 is a real draw seed; only None / "" count as missing.
     return value is None or (isinstance(value, str) and not value.strip())
 
@@ -808,6 +818,7 @@ def validate_comparison_provenance(
 
 
 def normalize_serving_kind_token(kind: str | None) -> str | None:
+    """Canonicalize serving-kind aliases while preserving empty inputs."""
     if not kind:
         return kind
     token = str(kind).strip().lower()

@@ -1,3 +1,4 @@
+"""Check extraction error decomposition and date, duration, list, and span diagnostics."""
 import pytest
 
 from llm_dojo_scoring.diagnostics import (
@@ -8,6 +9,7 @@ from llm_dojo_scoring.diagnostics import (
 
 
 def test_parse_duration_days():
+    """Parse written and numeric durations while rejecting absent or unrecognized values."""
     assert parse_duration_days("two (2) years") == 730
     assert parse_duration_days("thirty (30) days") == 30
     assert parse_duration_days("24 months") == 720
@@ -28,6 +30,7 @@ FIELD_TYPES = {
 
 
 def _row(field_scores, predicted=None, expected=None, list_scores=None, filename="doc1.pdf"):
+    """Build an extraction diagnostic row with optional predictions and list scores."""
     return {
         "filename": filename,
         "predicted": predicted or {},
@@ -39,6 +42,7 @@ def _row(field_scores, predicted=None, expected=None, list_scores=None, filename
 
 
 def test_extraction_diagnostics_field_decomposition():
+    """Separate exact, partial, and missed field matches with per-field breakdowns."""
     rows = [
         _row({"document_name": 1.0, "effective_date": 0.5, "contract_value": 0.0}),
         _row({"document_name": 1.0, "effective_date": 1.0, "contract_value": 1.0}),
@@ -52,6 +56,7 @@ def test_extraction_diagnostics_field_decomposition():
 
 
 def test_extraction_diagnostics_date_mae_and_r2():
+    """Compute absolute date errors from paired expected and predicted dates."""
     rows = [
         _row({"effective_date": 1.0},
              predicted={"effective_date": "2024-03-01"},
@@ -67,6 +72,7 @@ def test_extraction_diagnostics_date_mae_and_r2():
 
 
 def test_extraction_diagnostics_duration():
+    """Convert duration differences into aggregate day-based errors."""
     rows = [
         _row({},
              predicted={"term_length": "two (2) years"},
@@ -81,6 +87,7 @@ def test_extraction_diagnostics_duration():
 
 
 def test_extraction_diagnostics_list_and_span():
+    """Summarize entity-list precision and signed and absolute span-count errors."""
     rows = [
         _row({"parties": 1.0},
              list_scores={"parties": {
@@ -98,6 +105,7 @@ def test_extraction_diagnostics_list_and_span():
 
 
 def test_extraction_diagnostics_expected_resolver():
+    """Resolve external expected values before computing date diagnostics."""
     rows = [
         _row({"effective_date": 1.0},
              predicted={"effective_date": "2024-03-01"},

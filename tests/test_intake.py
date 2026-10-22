@@ -23,6 +23,7 @@ from llm_dojo_scoring.tasks import score_task
 
 
 def test_normalize_collapses_nbsp_and_unwraps_hyphens():
+    """Normalize nonbreaking spaces and wrapped words while tracking cleanup statistics."""
     cleaned, stats = deterministic_normalize("A\u00a0B\n\n\n\nagree-\nment")
     assert "A B" in cleaned
     assert "agreement" in cleaned
@@ -34,6 +35,7 @@ def test_normalize_collapses_nbsp_and_unwraps_hyphens():
 
 
 def test_empty_text_is_not_messy():
+    """Leave empty text unchanged and report no cleanup or messiness."""
     cleaned, stats = deterministic_normalize("")
     assert cleaned == ""
     assert stats["changed"] is False
@@ -41,6 +43,7 @@ def test_empty_text_is_not_messy():
 
 
 def test_normalize_is_idempotent():
+    """Avoid further text changes or change flags after normalization."""
     raw = "Hello   world.\r\n\r\n\r\nagree-\nment\n"
     once, _ = deterministic_normalize(raw)
     twice, stats = deterministic_normalize(once)
@@ -49,12 +52,14 @@ def test_normalize_is_idempotent():
 
 
 def test_markdown_table_rows_keep_internal_spaces():
+    """Preserve meaningful internal spacing in Markdown table rows."""
     raw = "| col  a | col  b |\n\n\nNext."
     cleaned, _ = deterministic_normalize(raw)
     assert "| col  a | col  b |" in cleaned
 
 
 def test_apply_intake_payload_has_eval_keys():
+    """Return cleaned text and the evaluation metadata expected from live intake."""
     cleaned, stats = apply_intake("A\n\n\n\nB", filename="x.txt")
     for key in INTAKE_SPAN_KEYS:
         assert key in stats
@@ -63,6 +68,7 @@ def test_apply_intake_payload_has_eval_keys():
 
 
 def test_prep_completeness_fails_when_wraps_remain():
+    """Reduce preparation completeness for residual line wraps and restore it after cleanup."""
     dirty = "agree-\nment\n\n\n\nNext"
     assert intake_prep_completeness(dirty) < 1.0
     cleaned, _ = deterministic_normalize(dirty)
@@ -70,6 +76,7 @@ def test_prep_completeness_fails_when_wraps_remain():
 
 
 def test_score_intake_clerk_against_itself():
+    """Give clerk output perfect scores and preserve normalization statistics."""
     raw = "A\u00a0B\n\n\n\nagree-\nment"
     cleaned, stats = apply_intake(raw)
     out = score_intake(raw, cleaned)
@@ -81,6 +88,7 @@ def test_score_intake_clerk_against_itself():
 
 
 def test_score_intake_detects_skipped_prep():
+    """Penalize skipped text preparation in accuracy and completeness metrics."""
     raw = "Hello   world.\n\n\n\nNext"
     out = score_intake(raw, raw)
     assert out["accuracy"] == 0.0
@@ -88,6 +96,7 @@ def test_score_intake_detects_skipped_prep():
 
 
 def test_llm_intake_scored_against_clerk_gold():
+    """Score matching LLM cleanup against deterministic clerk ground truth."""
     raw = "The par-\nties agree."
     gold, _ = apply_intake(raw)
     llm_cleaned = "The parties agree."  # LLM also unwrapped
@@ -99,6 +108,7 @@ def test_llm_intake_scored_against_clerk_gold():
 
 
 def test_span_payload_without_text_scores_flags():
+    """Compare intake change, messiness, and unwrap flags without requiring text."""
     raw = "A\n\n\n\nB"
     _, gold_stats = apply_intake(raw)
     payload = {k: gold_stats[k] for k in INTAKE_SPAN_KEYS}
@@ -109,6 +119,7 @@ def test_span_payload_without_text_scores_flags():
 
 
 def test_suite_and_profile_are_computable_prep_not_cost():
+    """Expose intake preparation tasks, handoff metadata, and computable metrics."""
     profile = get_profile("intake")
     assert profile.tasks == ("prepare", "normalize")
     assert profile.metrics_bundle == "intake"
@@ -141,6 +152,7 @@ def test_suite_and_profile_are_computable_prep_not_cost():
 
 
 def test_score_task_intake_and_missing_inputs():
+    """Route intake scoring through the task API and validate required inputs."""
     raw = "x  y"
     cleaned, _ = apply_intake(raw)
     out = score_task("intake", [raw], [cleaned])

@@ -22,6 +22,7 @@ from llm_dojo_scoring.profiles import AgentProfile, get_profile, list_profiles
 
 @pytest.fixture(autouse=True)
 def _clean_caches():
+    """Reset registry and profile caches around document-bundle tests."""
     from llm_dojo_scoring.registry import clear_registry_cache
 
     clear_registry_cache()
@@ -32,6 +33,7 @@ def _clean_caches():
 # ----------------------------- DOC_TYPE_BUNDLES ------------------------------
 
 def test_all_eight_doc_types_present():
+    """Pin the eight supported document-type bundles."""
     expected = {
         "contract", "corporate_record", "due_diligence", "correspondence",
         "compliance_filing", "court_opinion", "insurance_claim",
@@ -43,6 +45,7 @@ def test_all_eight_doc_types_present():
 
 
 def test_doc_bundle_names_are_prefixed_and_disjoint_from_task_bundles():
+    """Namespace document bundles separately from task bundles."""
     for dt, b in DOC_TYPE_BUNDLES.items():
         assert b.name == f"doc:{dt}", b.name
     # separate namespace: no doc bundle name collides with a task bundle
@@ -52,17 +55,20 @@ def test_doc_bundle_names_are_prefixed_and_disjoint_from_task_bundles():
 
 
 def test_every_doc_bundle_validates_against_default_registry():
+    """Require every document bundle to contain valid registered metrics."""
     for dt in DOC_TYPE_BUNDLES:
         bundle = get_doc_bundle(dt)  # validate=True default
         assert bundle.metric_names
 
 
 def test_unknown_doc_type_raises_with_known_list():
+    """Reject unknown document types with a list of supported alternatives."""
     with pytest.raises(KeyError, match="known:"):
         get_doc_bundle("podcast_transcript")
 
 
 def test_contract_doc_bundle_has_laziness_overrides():
+    """Include contract-specific laziness and hallucination metrics."""
     b = get_doc_bundle("contract")
     extras = b.metrics_for("contracts_specialist")
     assert "laziness_rate" in extras and "hallucination_rate" in extras
@@ -80,6 +86,7 @@ def test_merger_agreement_bundle_has_maud_extraction_extras():
 
 
 def test_correspondence_bundle_has_enron_content_extras():
+    """Expose Enron content metrics without claiming an honest scoring gap."""
     b = get_doc_bundle("correspondence")
     assert "HONEST GAP" not in b.description
     assert "Enron" in b.description
@@ -89,12 +96,14 @@ def test_correspondence_bundle_has_enron_content_extras():
 
 
 def test_insurance_claim_bundle_declares_honest_gap():
+    """Disclose the insurance scoring gap and its DE-SynPUF corpus context."""
     b = get_doc_bundle("insurance_claim")
     assert "HONEST GAP" in b.description
     assert "DE-SynPUF" in b.description
 
 
 def test_court_opinion_bundle_ships_legalbench():
+    """Expose LegalBench accuracy without an honest-gap warning."""
     b = get_doc_bundle("court_opinion")
     extras = b.metrics_for("court_opinions_specialist")
     assert "legalbench_accuracy" in extras
@@ -104,6 +113,7 @@ def test_court_opinion_bundle_ships_legalbench():
 # ----------------------------- resolver ------------------------------
 
 def test_resolve_doc_bundle_by_doc_type_beats_everything():
+    """Give an explicit document type precedence over other bundle selection inputs."""
     p = get_profile("contracts_specialist")
     bundle, used_fallback = p.resolve_doc_bundle("insurance_claim")
     assert bundle.name == "doc:insurance_claim"
@@ -111,6 +121,7 @@ def test_resolve_doc_bundle_by_doc_type_beats_everything():
 
 
 def test_resolve_doc_bundle_profile_field_when_no_doc_type():
+    """Resolve the profile document bundle when no explicit type is supplied."""
     p = AgentProfile(
         name="test_doc_agent",
         tasks=("extract",),
@@ -126,6 +137,7 @@ def test_resolve_doc_bundle_explicit_fallback_flag():
     # v0.8.0: specialists bind a native doc_bundle, so the no-arg
     # resolver hits that field (used_fallback=False) rather than the
     # task bundle. Agents without a doc_bundle still fall back honestly.
+    """Distinguish document-bundle resolution from task-bundle fallback."""
     p = get_profile("contracts_specialist")
     bundle, used_fallback = p.resolve_doc_bundle()
     assert used_fallback is False
@@ -138,6 +150,7 @@ def test_resolve_doc_bundle_explicit_fallback_flag():
 
 
 def test_resolve_doc_bundle_no_fallback_raises():
+    """Reject unresolved document bundles when task fallback is disabled."""
     p = get_profile("sorter")  # no native doc_bundle
     with pytest.raises(ValueError, match="no doc_bundle"):
         p.resolve_doc_bundle(fallback=False)
@@ -213,6 +226,7 @@ def test_preexisting_22_profiles_unchanged_by_v070():
 
 
 def test_new_specialist_resolves_extraction_task_bundle():
+    """Resolve a new extraction specialist to both task and document bundles."""
     p = get_profile("insurance_claims_specialist")
     assert p.tasks == ("extract",)
     assert p.resolve_bundle().name == "extraction"

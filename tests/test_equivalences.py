@@ -1,3 +1,4 @@
+"""Check subtype vocabularies, scoped equivalence, and configurable scoring settings."""
 import pytest
 
 from llm_dojo_scoring.config import (
@@ -16,12 +17,14 @@ from llm_dojo_scoring.equivalences import (
 
 
 def test_subtype_lists():
+    """Keep per-subtype reporting aligned with the 25 canonical contract subtypes."""
     assert "license" in CONTRACT_SUBTYPE_KEYS
     assert len(PER_SUBTYPE) == 25
     assert set(PER_SUBTYPE) == set(CONTRACT_SUBTYPE_KEYS)
 
 
 def test_normalize_subtype_aliases_and_labels():
+    """Normalize contract subtype aliases and map unknown or absent labels to other."""
     assert normalize_subtype("License_Agreements") == "license"
     assert normalize_subtype("License Agreement") == "license"
     assert normalize_subtype("Non-Compete") == "non_compete_no_solicit"
@@ -30,6 +33,7 @@ def test_normalize_subtype_aliases_and_labels():
 
 
 def test_equivalent_subtypes():
+    """Recognize configured contract-family equivalences without merging unrelated families."""
     assert equivalent_subtypes("reseller", "distributor")
     assert equivalent_subtypes("license", "maintenance")
     assert equivalent_subtypes("license", "development")
@@ -39,6 +43,7 @@ def test_equivalent_subtypes():
 
 
 def test_equivalent_doc_subclasses_scoped():
+    """Restrict document-subclass equivalence to compatible and allowed labels."""
     assert equivalent_doc_subclasses("mixed_cash_stock", "mixed_cash_stock_election")
     assert equivalent_doc_subclasses("mixed_cash_stock", "bylaws") is False
     assert not equivalent_doc_subclasses(
@@ -47,12 +52,14 @@ def test_equivalent_doc_subclasses_scoped():
 
 
 def test_normalize_doc_subclass_scoped():
+    """Normalize document subclasses within the explicitly allowed vocabulary."""
     allowed = {"cash", "stock", "mixed_cash_stock"}
     assert normalize_doc_subclass("Mixed Cash Stock", allowed=allowed) == "mixed_cash_stock"
     assert normalize_doc_subclass("bylaws", allowed=allowed) == "other"
 
 
 def test_settings_yaml_load_and_override(tmp_path):
+    """Load field-scoring settings and replace equivalence groups from YAML."""
     cfg = tmp_path / "settings.yaml"
     cfg.write_text(
         "field_scoring:\n"
@@ -69,11 +76,13 @@ def test_settings_yaml_load_and_override(tmp_path):
 
 
 def test_configure_dotted_override():
+    """Apply nested scoring overrides through dotted configuration keys."""
     settings = configure(field_scoring__ambiguous_band=(0.4, 0.9))
     assert settings.field_scoring.ambiguous_band == (0.4, 0.9)
 
 
 def test_default_settings():
+    """Retain canonical subtype keys and the default unknown-label fallback."""
     s = Settings()
     assert s.subtype_unknown == "other"
     assert s.contract_subtype_keys == CONTRACT_SUBTYPE_KEYS

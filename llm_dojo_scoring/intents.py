@@ -137,6 +137,7 @@ INTENT_ALIASES = {
 
 
 def _compact(value: Any) -> str:
+    """Build a lowercase alphanumeric lookup key from a potentially empty label."""
     return re.sub(r"[^a-z0-9]", "", str(value or "").lower())
 
 

@@ -16,12 +16,14 @@ from llm_dojo_scoring.registry import (
 
 @pytest.fixture(autouse=True)
 def _clean_cache():
+    """Clear the registry cache around each test to isolate loading behavior."""
     clear_registry_cache()
     yield
     clear_registry_cache()
 
 
 def test_default_registry_loads_and_is_cached():
+    """Load the populated default metric registry once and reuse its cached instance."""
     r1 = load_registry()
     r2 = load_registry()
     assert r1 is r2
@@ -29,6 +31,7 @@ def test_default_registry_loads_and_is_cached():
 
 
 def test_every_metric_has_valid_tier_and_units():
+    """Require typed tiers, nonempty units, and supported aggregation modes."""
     reg = load_registry()
     for m in reg.metrics.values():
         assert isinstance(m.tier, MetricTier)
@@ -38,6 +41,7 @@ def test_every_metric_has_valid_tier_and_units():
 
 
 def test_tier_distribution_matches_pruning_plan():
+    """Keep metric tiers and sources aligned with the registry pruning policy."""
     reg = load_registry()
     assert reg.get("f1_macro").tier is MetricTier.HEADLINE
     assert reg.get("accuracy").tier is MetricTier.HEADLINE
@@ -55,6 +59,7 @@ def test_tier_distribution_matches_pruning_plan():
 
 
 def test_filter_by_max_tier_and_agent():
+    """Filter metrics by tier and agent applicability without leaking audit-only entries."""
     reg = load_registry()
     headline_core = reg.filter(max_tier=1)
     assert all(m.tier <= MetricTier.CORE for m in headline_core)
@@ -68,6 +73,7 @@ def test_filter_by_max_tier_and_agent():
 
 
 def test_applies_to():
+    """Distinguish wildcard metrics from agent-specific audit metrics."""
     reg = load_registry()
     assert reg.get("f1_macro").applies_to("anything")
     assert not reg.get("audit_disagreement_rate").applies_to("sorter")
@@ -75,12 +81,14 @@ def test_applies_to():
 
 
 def test_unknown_metric_raises_keyerror():
+    """Raise a lookup error rather than fabricate an unknown metric definition."""
     reg = load_registry()
     with pytest.raises(KeyError):
         reg.get("definitely_not_a_metric")
 
 
 def test_yaml_roundtrip_custom_registry(tmp_path):
+    """Load custom YAML metric definitions with numeric and named tiers."""
     custom = {
         "metrics": {
             "custom_metric": {
@@ -102,6 +110,7 @@ def test_yaml_roundtrip_custom_registry(tmp_path):
 
 
 def test_env_var_override(monkeypatch, tmp_path):
+    """Select an alternate metric registry through the environment override."""
     path = tmp_path / "reg.yaml"
     path.write_text(
         yaml.safe_dump({"metrics": {"only_mine": {"tier": "core"}}})
@@ -112,6 +121,7 @@ def test_env_var_override(monkeypatch, tmp_path):
 
 
 def test_explicit_path_beats_env(monkeypatch, tmp_path):
+    """Prefer an explicitly supplied registry path over the environment setting."""
     env_path = tmp_path / "env.yaml"
     env_path.write_text(yaml.safe_dump({"metrics": {"env_metric": {"tier": 0}}}))
     file_path = tmp_path / "file.yaml"
@@ -140,6 +150,7 @@ def test_mailroom_score_configs_preserved_as_aliases():
 
 
 def test_audit_metrics_are_new_and_core():
+    """Register core audit metrics for the relevant audit agents."""
     reg = load_registry()
     assert "audit_agent" in reg.get("audit_disagreement_rate").applicable_agents
     assert "insurance_claims_auditor" in reg.get("audit_disagreement_rate").applicable_agents
@@ -148,6 +159,7 @@ def test_audit_metrics_are_new_and_core():
 
 
 def test_metricdef_defaults():
+    """Provide wildcard applicability and default metric units, aggregation, and metadata."""
     d = MetricDef(name="x", tier=MetricTier.CORE)
     assert d.applies_to("whoever")
     assert d.units == "float[0,1]"
@@ -184,6 +196,7 @@ _EMITTER_ONLY = {
 
 
 def test_t0_t1_metrics_have_citation_inclusion_ground_truth():
+    """Require headline and core metrics to document sources, inclusion, and ground truth."""
     reg = load_registry()
     t0_t1 = [m for m in reg.metrics.values() if m.tier <= MetricTier.CORE]
     assert t0_t1
@@ -199,18 +212,21 @@ def test_t0_t1_metrics_have_citation_inclusion_ground_truth():
 
 
 def test_field_presence_honesty_gap_is_documented():
+    """Disclose that field-presence telemetry is not currently computed or emitted."""
     m = load_registry().get("field_presence")
     assert "does not emit" in m.citation.lower() or "does not emit" in m.notes.lower()
     assert "not computed" in m.inclusion.lower()
 
 
 def test_structural_metrics_are_labeled_structural():
+    """Label consistency and intake-completeness metrics as structural checks."""
     reg = load_registry()
     assert reg.get("determination_consistency").ground_truth == "structural"
     assert reg.get("intake_prep_completeness").ground_truth == "structural"
 
 
 def test_custom_yaml_loads_without_citation_keys(tmp_path):
+    """Accept legacy custom YAML without requiring newer documentation metadata."""
     path = tmp_path / "reg.yaml"
     path.write_text(yaml.safe_dump({"metrics": {"only_mine": {"tier": "core"}}}))
     reg = Registry.from_yaml(path)

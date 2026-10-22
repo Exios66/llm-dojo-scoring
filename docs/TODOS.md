@@ -18,22 +18,52 @@ because `_v2`… were already taken by GEPA mutations:
 
 ## `Exios66/local-mailroom-sandbox` — mirror the corrected stems
 
-- [ ] Mirror the corrected bytes into
-      `config/prompts/correspondence_specialist_simplified.txt` and
-      `config/prompts/corporate_records_specialist_simplified.txt`.
-- [ ] Refresh `config/prompts/eval_environment_lineage.json` for both rows to
-      the eval-environment mutation keys `correspondence_specialist_v7` /
-      `corporate_records_specialist_v6` (keep the superseded v1 digest and
-      `frozen_at` recoverable).
-- [ ] `scripts/sync_specialist_prompts.py --check` and the sandbox prompt /
-      lineage tests must pass with the stems byte-identical to the lock.
+Landed on sandbox `main` via
+[local-mailroom-sandbox#146](https://github.com/Exios66/local-mailroom-sandbox/pull/146).
+
+- [x] `config/prompts/correspondence_specialist_simplified.txt` is the
+      corrected stem (`2b0b81ff…`).
+- [x] `config/prompts/corporate_records_specialist_simplified.txt` stays the
+      v6 experiment stem (`fe13501f…`). The v7 bytes (`253559fc…`, 5,462
+      chars) are the canonical `corporate_records_specialist_subclass_v2`
+      stem, and #146 moved the corporate default pin from v6 to v7.
+- [x] Lineage lock and specialist sync checks were part of the #146
+      verification (1338 passed; two pre-existing mailroom-ml sibling
+      failures only).
+
+## Upstream blockers (tracked outside this repo)
+
+- [x] eval-environment canonical prompt fix — `corporate_records_specialist_v7`
+      at the pinned lineage commit `22d217ab` is sha `253559fc…` (explicit
+      `certificate_of_formation` line, `omit authorized_capital`, and
+      `subsidiary_list` guidance). The interim `ec3bccc2…` draft is
+      superseded. Merging that branch to eval-environment `main` is still
+      open:
+      [eval-environment#104](https://github.com/LLM-Mailroom-Services/eval-environment/pull/104),
+      tracked on dojo #29.
+- [ ] llm-mailroom re-vendor — bump the vendored llm-dojo-scoring snapshot
+      (still v0.22.0: no `corporate_record_schema.py`, no unlabeled
+      alignment, "39 corporate_record rows" suite docstring). Keep the
+      corporate `production` freeze at v6 (`fe13501f…`) until mailroom
+      promotes evaluation v7 (`253559fc…`). Until the scoring snapshot moves,
+      a prompt bump alone leaves v0.22.0 scoring semantics in place.
+      Tracked on dojo #51.
+
+## Dataset annotation (outside this repo)
+
+- [ ] Human labels for the entity fields the relabel cannot derive
+      (`jurisdiction`, `signatories`, `effective_date`, `filing_number`,
+      subclass entities), the two ambiguous subclass conflicts, and the
+      450 heuristic intents. The relabel JSONL is a proposal, not ground
+      truth. Tracked on dojo #52.
 
 ## Downstream importers of `llm-dojo-scoring`
 
 - [x] Switch consumers that need the frozen eval-environment v1 specialist
       text to `get_prompt(<agent>, family="production_prompts")` instead of
       vendoring their own copy. (Done by llm-mailroom Task 2: specialists load
-      the frozen v1 bytes; the dojo `production` family now equals them.)
+      the frozen v1 bytes; the dojo `production` family follows that freeze.
+      Corporate production remains v6 until mailroom promotes evaluation v7.)
 - [x] Pin `llm-dojo-scoring @ v0.19.1` when adopting the corrected records. (Mailroom pin moves to v0.20.0 after this release.)
 
 ## Dojo reference pins (v0.19.1)
@@ -41,7 +71,7 @@ because `_v2`… were already taken by GEPA mutations:
 | Agent | `family` | `sha256` (prefix) |
 |---|---|---|
 | `contracts_specialist` | `production_prompts` | `d91de396…` |
-| `corporate_records_specialist` | `production_prompts` | `fe13501f…` (= eval-environment `_v6`) |
+| `corporate_records_specialist` | `production_prompts` | `253559fc…` (= eval-environment `_v7`) |
 | `correspondence_specialist` | `production_prompts` | `2b0b81ff…` (= eval-environment `_v7`) |
 | `insurance_claims_specialist` | `production_prompts` | `6c2776bc…` |
 | `merger_agreement_specialist` | `production_prompts` | `00323258…` |

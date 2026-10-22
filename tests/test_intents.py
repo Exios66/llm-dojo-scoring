@@ -1,8 +1,10 @@
+"""Check class-scoped intent vocabularies and exact label scoring semantics."""
 from llm_dojo_scoring import INTENT_LABELS, get_suite, normalize_intent
 from llm_dojo_scoring.field_scoring import score_extraction
 
 
 def test_vocabularies_match_mailroom_bee7f46():
+    """Pin supported class intent labels to the referenced mailroom taxonomy."""
     assert INTENT_LABELS["correspondence"] == (
         "payment_demand", "notice", "analysis", "request", "update",
         "meeting_invite", "press_communication", "other",
@@ -18,6 +20,7 @@ def test_vocabularies_match_mailroom_bee7f46():
 
 
 def test_aliases_resolve_in_class_only():
+    """Resolve known intent aliases only within their owning document class."""
     assert normalize_intent("correspondence", "demand_payment") == "payment_demand"
     assert normalize_intent("insurance_claim", "notice_of_loss") == "claim_filing"
     assert normalize_intent("corporate_record", "request_information") == ""
@@ -29,6 +32,7 @@ LABEL = {"intent": "label", "sender": "name"}
 
 
 def _intent_score(doc, exp, pred, types=LABEL):
+    """Return the intent field score for a minimal sender-and-intent extraction pair."""
     out = score_extraction(
         doc, types, {"sender": "A", "intent": pred}, {"sender": "A", "intent": exp}
     )
@@ -36,16 +40,19 @@ def _intent_score(doc, exp, pred, types=LABEL):
 
 
 def test_label_scoring_is_exact_after_canonicalization():
+    """Award intent credit only for canonical label equality."""
     assert _intent_score("correspondence", "payment_demand", "demand_payment") == 1.0
     assert _intent_score("correspondence", "notice", "other") == 0.0
     assert _intent_score("correspondence", "request", "update") == 0.0
 
 
 def test_foreign_class_token_scores_zero():  # Review Focus 2
+    """Reject an intent token belonging to a different document class."""
     assert _intent_score("correspondence", "notice", "entity_formation") == 0.0
 
 
 def test_null_gt_other_prediction_is_spurious_fill():  # Review Focus 3
+    """Penalize filling other when ground-truth intent is absent."""
     suite = get_suite("correspondence_specialist")
     clean = suite.score_document(
         {"sender": "A", "intent": None}, {"sender": "A", "intent": None},
@@ -59,5 +66,6 @@ def test_null_gt_other_prediction_is_spurious_fill():  # Review Focus 3
 
 
 def test_explicit_name_type_keeps_fuzzy_rescoring():  # Review Focus 4
+    """Retain fuzzy matching when intent is explicitly scored as a name field."""
     types = {"intent": "name", "sender": "name"}
     assert 0.0 < _intent_score("correspondence", "notice", "other", types) < 1.0

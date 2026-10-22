@@ -71,6 +71,7 @@ class PromptVersion:
 
 
 def _from_row(row: dict) -> PromptVersion:
+    """Construct an immutable version record from one serialized lineage row."""
     changes = row.get("changes")
     return PromptVersion(
         key=row["key"],
@@ -91,6 +92,7 @@ def _from_row(row: dict) -> PromptVersion:
 
 
 def _validate(versions: dict[str, PromptVersion]) -> None:
+    """Reject inconsistent version keys, lineage links, and text digests."""
     for v in versions.values():
         m = _KEY_RE.match(v.key)
         if not m or m["role"] != v.role or int(m["version"]) != v.version:
@@ -106,6 +108,7 @@ def _validate(versions: dict[str, PromptVersion]) -> None:
 
 @lru_cache(maxsize=1)
 def _load() -> tuple[Mapping, tuple[PromptVersion, ...]]:
+    """Load, validate, and cache source metadata and sorted lineage versions."""
     raw = resources.files("llm_dojo_scoring.prompts").joinpath(_DATA_FILE).read_text(encoding="utf-8")
     data = json.loads(raw)
     rows = data.get("versions") or []
@@ -133,6 +136,7 @@ def clear_lineage_cache() -> None:
 
 @lru_cache(maxsize=1)
 def _index() -> dict[str, PromptVersion]:
+    """Cache validated lineage versions indexed by their unique keys."""
     return {v.key: v for v in _load()[1]}
 
 
@@ -140,15 +144,19 @@ class _LazySource(Mapping):
     """``LINEAGE_SOURCE``: ``{source_repo, source_commit, lineage_id}`` (loaded on first use)."""
 
     def __getitem__(self, k):
+        """Look up source metadata, loading the lineage on first access."""
         return _load()[0][k]
 
     def __iter__(self):
+        """Iterate the lazily loaded source metadata keys."""
         return iter(_load()[0])
 
     def __len__(self):
+        """Return the number of source metadata keys after lazy loading."""
         return len(_load()[0])
 
     def __repr__(self):
+        """Represent the loaded source metadata as an ordinary dictionary."""
         return repr(dict(_load()[0]))
 
 
@@ -156,6 +164,7 @@ LINEAGE_SOURCE: Mapping = _LazySource()
 
 
 def _unknown(kind: str, name: str, known) -> KeyError:
+    """Build an unknown-prompt error with close matches from known names."""
     close = difflib.get_close_matches(name, sorted(known), n=5, cutoff=0.5)
     hint = f"; did you mean: {', '.join(close)}" if close else ""
     return KeyError(f"unknown prompt {kind} {name!r}{hint}")
