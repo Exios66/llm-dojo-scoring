@@ -9,6 +9,7 @@ site's breakdown card.
 
 from __future__ import annotations
 
+import math
 from typing import Any
 from .pipeline_scoring import raw_classification_stats
 from .equivalences import equivalent_subtypes
@@ -102,18 +103,25 @@ def score_binary(results: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _has_label(value: Any) -> bool:
+    """Exclude missing/blank labels and float NaN without discarding zero or False."""
+    return (value is not None
+            and not (isinstance(value, float) and math.isnan(value))
+            and bool(str(value).strip()))
+
+
 def score_multiclass(results: list[dict[str, Any]], *, subtype_equivalences=None) -> dict[str, Any]:
     """Score labeled family rows with optional immutable consumer equivalences.
 
     Omitted groups preserve the configured Dojo default. Explicit groups bind
     a producer's compatibility policy without mutating process-wide settings.
+    Rows with absent, blank or float-NaN labels count as errors, not support.
     """
     settings = (None if subtype_equivalences is None else
                 Settings(subtype_equivalences=list(subtype_equivalences)))
     ok = [r for r in results if r.get("status") == "ok"
           and r.get("predicted") not in (None, "error")
-          and str(r.get("predicted", "")).strip()
-          and r.get("expected") is not None and str(r["expected"]).strip()]
+          and _has_label(r.get("predicted")) and _has_label(r.get("expected"))]
     per_family: dict[str, list[bool]] = {}
     conf_pairs: list[tuple[float, bool]] = []
     n_other_pred = n_other_label = 0

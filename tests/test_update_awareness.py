@@ -577,7 +577,7 @@ def transport():
     return ReleaseResponse(200, json.dumps({"tag_name":"v0.24.0", "draft":False,
         "prerelease":False,"published_at":"2026-10-22T00:00:00Z"}).encode())
 checker = UpdateChecker(pathlib.Path(sys.argv[3]), transport=transport, clock=lambda: next(moments))
-assert checker.check(force=True).latest_version == "0.24.0"
+assert checker.check(force=True).latest_version == "0.25.0"
 '''
     child = subprocess.Popen([sys.executable, "-I", "-S", "-B", "-c", program,
                                str(root), str(site), str(checker.cache_dir)],
@@ -817,3 +817,158 @@ def test_windows_unlock_error_still_closes_descriptor(harness, windows_crt):
     assert [call[1] for call in windows_crt.calls] == [2, 0]
     with pytest.raises(OSError):
         os.fstat(fd)
+
+
+@pytest.mark.parametrize("at", [0.0, NOW])
+@pytest.mark.parametrize("incoming,current,advance,latest,error,persisted", [
+    ("v0.24.0", "v0.25.0", 0, "0.25.0", None, False),
+    ("v0.100.0", "v0.25.0", 0, "0.100.0", None, True),
+    ("v0.25.0", "v0.25.0", 0, "0.25.0", None, True),
+    ("v0.24.0", "v0.25.0", 1, "0.25.0", None, False),
+    ("v0.24.0", "failure", 1, "0.23.1", "rate_limited", False),
+    ("v0.24.0", "failure", 0, "0.23.1", "rate_limited", False),
+    ("failure", "v0.25.0", 0, "0.25.0", "http_error", True),
+    ("failure", "v0.25.0", 1, "0.25.0", "http_error", False),
+    ("failure", "failure", 0, "0.23.1", "http_error", False),
+])
+def test_concurrent_attempt_merge_and_returned_knowledge(
+        harness, at, incoming, current, advance, latest, error, persisted):
+    """Order real processes by pipes; tied clocks must not regress release knowledge."""
+    import numpy
+
+    checker, http, clock = harness
+    clock[0] = at
+    http.result = response("v0.23.1", published_at="1970-01-01T00:00:00Z")
+    assert checker.check().cache_persisted
+    root = Path(__file__).resolve().parents[1]
+    site = Path(numpy.__file__).resolve().parents[1]
+    program = '''
+"""Pause a real checker at the transport boundary while the parent writes."""
+import sys, pathlib, json
+from dataclasses import asdict
+sys.path[:0] = [sys.argv[1], sys.argv[2]]
+from llm_dojo_scoring import update_awareness as u
+u.__version__ = "0.23.1"
+u.CHECK_TIMEOUT = 30  # Protocol deadlines, not sleeps, control this test.
+at, finished = float(sys.argv[4]), float(sys.argv[5])
+moments = iter([at, finished])
+def transport():
+    """Report entry and wait for the independent check and notice writes."""
+    print("entered", flush=True)
+    assert sys.stdin.readline().strip() == "release"
+    if sys.argv[6] == "failure":
+        return u.ReleaseResponse(500, b"")
+    return u.ReleaseResponse(200, json.dumps({"tag_name":sys.argv[6],
+        "draft":False, "prerelease":False,
+        "published_at":"1970-01-01T00:00:00Z"}).encode())
+checker = u.UpdateChecker(pathlib.Path(sys.argv[3]), transport=transport,
+                          clock=lambda: next(moments))
+print(json.dumps(asdict(checker.check(force=True))), flush=True)
+'''
+    child = subprocess.Popen([sys.executable, "-I", "-S", "-B", "-c", program,
+                              str(root), str(site), str(checker.cache_dir),
+                              str(at), str(at + advance), incoming], stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        assert child.stdout.readline().strip() == "entered"
+        clock[0] += advance
+        http.result = (updates.ReleaseResponse(429, b"", "7200") if current == "failure"
+                       else response(current, published_at="1970-01-01T00:00:00Z"))
+        assert checker.check(force=True).cache_persisted
+        if current != "failure":
+            assert checker.startup("sandbox").notice is not None
+            assert checker.startup("pipeline").notice is not None
+        cache = checker.cache_dir / "updates-v1.json"
+        before = cache.read_bytes()
+        before_data = json.loads(before)
+    finally:
+        stdout, stderr = child.communicate("release\n", timeout=40)
+    assert child.returncode == 0, stdout + stderr
+    result = json.loads(stdout)
+    after = json.loads(cache.read_bytes())
+    assert after["latest"] == latest
+    assert result["latest_version"] == latest
+    assert result["checked_at"] == after["checked_at"]
+    assert result["status"] == ("unavailable" if error else "update_available")
+    assert result["error"] == error
+    assert result["cache_persisted"] is persisted
+    assert result["stale"] is False
+    assert after["notices"] == before_data["notices"]
+    if persisted:
+        assert after["attempted_at"] == at
+        assert after["error"] == error
+        assert after["retry_at"] == (at + 3600 if error else None)
+    else:
+        assert cache.read_bytes() == before
+    assert checker.cached().latest_version == latest
+    if current != "failure":
+        # Retain the already claimed pairs even when a higher release wins.
+        assert set(after["notices"]) == {"sandbox@0.25.0", "pipeline@0.25.0"}
+        if latest == "0.25.0":
+            assert checker.startup("sandbox").notice is None
+    else:
+        assert after["error"] == "rate_limited"
+        assert after["retry_at"] == at + advance + 7200
+        assert checker.check().source == "cache"
+        assert http.calls == 2
+
+
+@pytest.mark.parametrize("at", [0.0, NOW])
+def test_same_time_sequential_failure_recovery_and_newer_rollback(harness, at):
+    """Tie protection retains forced errors/recovery and later publisher rollback."""
+    checker, http, clock = harness
+    clock[0] = at
+    http.result = response("v0.25.0", published_at="1970-01-01T00:00:00Z")
+    assert checker.check().cache_persisted
+    http.result = updates.ReleaseResponse(429, b"", "7200")
+    assert checker.check(force=True).error == "rate_limited"
+    assert checker.cached().error == "rate_limited"
+    http.result = response("v0.25.0", published_at="1970-01-01T00:00:00Z")
+    result = checker.check(force=True)
+    assert (result.status, result.error, result.cache_persisted) == ("update_available", None, True)
+    assert checker.cached().error is None
+    clock[0] += 1
+    http.result = response("v0.24.0", published_at="1970-01-01T00:00:00Z")
+    result = checker.check(force=True)
+    assert (result.latest_version, result.cache_persisted) == ("0.24.0", True)
+    assert checker.cached().latest_version == "0.24.0"
+
+
+def test_busy_attempt_leaves_success_and_backoff_untouched(harness):
+    """Busy is local availability, never a new persisted failed observation."""
+    checker, http, _ = harness
+    checker.check()
+    for result in (response(), updates.ReleaseResponse(429, b"", "7200")):
+        http.result = result
+        checker.check(force=True)
+        cache = checker.cache_dir / "updates-v1.json"
+        before = cache.read_bytes()
+        calls = http.calls
+        assert updates._TRANSPORT_LOCK.acquire(blocking=False)
+        try:
+            busy = checker.check(force=True)
+        finally:
+            updates._TRANSPORT_LOCK.release()
+        assert (busy.status, busy.error, busy.cache_persisted) == ("unavailable", "check_busy", False)
+        assert busy.latest_version == "0.24.0"
+        assert cache.read_bytes() == before
+        assert http.calls == calls
+
+
+def test_documented_startup_example_executes_notice_branch(harness, monkeypatch, capsys):
+    """Execute the actual fenced example with fresh globals and a real cached notice."""
+    checker, _, _ = harness
+    # Seed with the constructor's real clock; the example itself is unmodified.
+    updates.UpdateChecker(checker.cache_dir, transport=FakeHTTP()).check()
+    monkeypatch.setattr(updates, "_default_cache_dir", lambda: checker.cache_dir)
+    doc = Path(__file__).resolve().parents[1] / "docs/UPDATE_AWARENESS.md"
+    example = doc.read_text().split("## Thin application startup hook", 1)[1]
+    example = example.split("```python\n", 1)[1].split("```", 1)[0]
+    namespace = {}
+    exec(compile(example, str(doc), "exec"), namespace)
+    assert namespace["startup"].refresh_scheduled is False
+    assert namespace["startup"].update.latest_version == "0.24.0"
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == ("Dojo update available: installed 0.23.1, latest 0.24.0. "
+                            + updates.RELEASE_URL + "\n")
