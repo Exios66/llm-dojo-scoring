@@ -41,6 +41,10 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Added
 
+- Dojo-owned sandbox MAUD/CUAD compatibility rubrics, distinct metric identities,
+  registry-valid emission maps and count-based benchmark pooling. Consumers
+  re-export these engines after adopting the committed source vendor.
+
 - Complete explicit Python docstrings, including private/nested helpers,
   scripts, examples, and tests, with a repository-wide regression gate.
 - **`score_extraction(audit_predicted=…)`** — with it set,

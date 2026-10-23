@@ -81,6 +81,12 @@ _ACRONYM_BOUNDARY = re.compile(r"([A-Z]+)([A-Z][a-z])")
 
 # Registry metric name → canonical metric_id (issue #17).
 _METRIC_ID_BY_NAME: dict[str, str] = {
+    'sandbox_maud_accuracy': 'maud.sandbox_labeled.micro_accuracy',
+    'sandbox_maud_clean_accuracy': 'maud.sandbox_clean_subset.micro_accuracy',
+    'sandbox_maud_precision_answered': 'maud.sandbox_answered.precision',
+    'sandbox_cuad_presence_f1': 'cuad.sandbox_category_detection.micro_f1',
+    'sandbox_cuad_presence_precision': 'cuad.sandbox_category_detection.micro_precision',
+    'sandbox_cuad_presence_recall': 'cuad.sandbox_category_detection.micro_recall',
     "extraction_overall_score": "pipeline.extraction.overall",
     "overall_score": "pipeline.extraction.overall",
     "extraction_f1": "pipeline.extraction.field_micro_f1",
@@ -110,6 +116,9 @@ _CLASS_METRIC_IDS: dict[str, tuple[str, ...]] = {
         "pipeline.extraction.field_micro_precision",
         "pipeline.extraction.field_micro_recall",
         "maud.question.micro_accuracy",
+        'cuad.sandbox_category_detection.micro_f1',
+        'cuad.sandbox_category_detection.micro_precision',
+        'cuad.sandbox_category_detection.micro_recall',
     ),
     "merger_agreement": (
         "pipeline.extraction.overall",
@@ -119,6 +128,9 @@ _CLASS_METRIC_IDS: dict[str, tuple[str, ...]] = {
         "pipeline.extraction.field_micro_f2",
         "pipeline.extraction.field_micro_precision",
         "pipeline.extraction.field_micro_recall",
+        'maud.sandbox_labeled.micro_accuracy',
+        'maud.sandbox_clean_subset.micro_accuracy',
+        'maud.sandbox_answered.precision',
     ),
     "corporate_record": (
         "pipeline.extraction.overall",
