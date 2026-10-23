@@ -549,8 +549,7 @@ def _documents(expected: Any, predicted: Any) -> list[tuple[Any, Any]]:
     pred_batch = isinstance(pred, list) and pred and isinstance(pred[0], dict)
     if exp_batch or pred_batch:
         if (isinstance(exp, list) and isinstance(pred, list)
-                and all(isinstance(doc, dict) for doc in exp)
-                and all(isinstance(doc, dict) for doc in pred)):
+                and (not exp or exp_batch) and (not pred or pred_batch)):
             require_equal_lengths(exp, pred)
         exp_list = exp if isinstance(exp, list) else [exp]
         pred_list = pred if isinstance(pred, list) else [pred] * len(exp_list)
@@ -563,8 +562,8 @@ def score_maud_extraction(expected: Any, predicted: Any) -> dict:
 
     Accepts label maps, JSON, or clause spans via :func:`parse_maud_labels`.
     A list beginning with a dict is treated as a document batch; a list of
-    strings is one document's spans. Unequal batches containing only document
-    dictionaries raise ValueError; mixed span forms retain their pairing
+    strings is one document's spans. Unequal lists recognized as document
+    batches on both sides raise ValueError; batch-versus-span forms retain their pairing
     behavior. A non-list prediction is reused for each expected document.
     Label parsing errors propagate.
 

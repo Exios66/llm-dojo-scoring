@@ -152,3 +152,30 @@ def test_maud_mixed_list_forms_keep_existing_interpretation():
     assert result["n_documents"] == 1
     assert result["n_questions"] == 1
     assert result["maud_question_accuracy"] == 1.0
+
+
+@pytest.mark.parametrize("entry", ["direct", "dispatch"])
+@pytest.mark.parametrize("sizes", [(2, 1), (1, 2), (0, 1), (1, 0)])
+def test_intake_both_list_forms_reject_missing_documents(entry, sizes):
+    """Direct and dispatched intake must retain every paired document."""
+    from llm_dojo_scoring.intake import score_intake
+    ne, np = sizes
+    call = score_intake if entry == "direct" else lambda e, p: score_task("intake", e, p)
+    with pytest.raises(ValueError, match=rf"expected.*{ne}.*predicted.*{np}"):
+        call(["a"] * ne, ["a"] * np)
+
+
+@pytest.mark.parametrize("as_json", [False, True])
+@pytest.mark.parametrize("reverse", [False, True])
+def test_maud_recognized_mixed_batches_do_not_drop_documents(as_json, reverse):
+    """Recognized mixed batches cannot hide missing native or JSON rows."""
+    import json
+    record = {"Type of Consideration": "All Cash"}
+    expected = [record, "Type of Consideration: All Cash"]
+    predicted = [record]
+    if reverse:
+        expected, predicted = predicted, expected
+    if as_json:
+        expected, predicted = json.dumps(expected), json.dumps(predicted)
+    with pytest.raises(ValueError, match=r"expected.*predicted"):
+        score_maud_extraction(expected, predicted)
