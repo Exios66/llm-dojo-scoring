@@ -153,6 +153,8 @@ def pilot_subclass_match(kind, expected, *, sorter_token=None, fallback_token=No
     if not str(expected or "").strip():
         return None
     if kind == "contract":
+        if not sorter_token or not expected_token:
+            return False
         if contract_equivalences is not None:
             return catalog_subtypes_equivalent(sorter_token, expected_token, contract_equivalences)
         return equivalent_subtypes(sorter_token, expected_token)
