@@ -7,7 +7,7 @@
 Scoring · Error analysis · Visualization · Interpretation
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Release](https://img.shields.io/badge/release-v0.23.1-2EA043)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.23.1)
+[![Release](https://img.shields.io/badge/release-v0.24.0-2EA043)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.24.0)
 [![Contributor](https://img.shields.io/badge/contributor-Exios66-blue)](https://github.com/Exios66)
 [![Tests](https://img.shields.io/badge/pytest-passing-brightgreen)](tests/)
 
@@ -20,7 +20,7 @@ Scoring · Error analysis · Visualization · Interpretation
 <div align="center">
 
 ```bash
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.23.1"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.24.0"
 pip install -e .                # from a local checkout
 ```
 
@@ -42,9 +42,9 @@ pip install -e ".[all]"          # embeddings + tracing + dev
 In **llm-mailroom** `pyproject.toml`:
 
 ```
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.23.1
-# mailroom:     llm-dojo-scoring[tracing] @ git+...@v0.23.1
-# embeddings:   llm-dojo-scoring[embeddings,tracing] @ git+...@v0.23.1  (optional rescue extra)
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.24.0
+# mailroom:     llm-dojo-scoring[tracing] @ git+...@v0.24.0
+# embeddings:   llm-dojo-scoring[embeddings,tracing] @ git+...@v0.24.0  (optional rescue extra)
 ```
 
 ## Quickstart
@@ -87,12 +87,29 @@ dojo-sync --task subtype_classification \
 dojo-sync --check-phoenix
 ```
 
+### Check the loaded Dojo version and available releases
+
+```bash
+dojo-version
+dojo-version --check --force --json
+dojo-version --check --offline --json
+```
+
+The opt-in `llm_dojo_scoring.update_awareness.UpdateChecker` shares a daily
+per-user cache across application startup hooks and limits notices per consumer
+and release. Pure imports and scoring stay offline. Set
+`LLM_DOJO_UPDATE_CHECK=0` to disable all update checks and cache I/O. No packages
+are upgraded automatically. See [update awareness](docs/UPDATE_AWARENESS.md)
+for startup semantics, failure/exit codes, privacy and concurrency limits.
+Available in v0.24.0; dependency pins remain operator controlled.
+
 ## Module Map
 
 <div align="center">
 
 | Module | What it does |
 |:---|:---|
+| `update_awareness` | Opt-in shared release discovery, startup cache and `dojo-version` |
 | `field_scoring` | Field-type-aware deterministic extraction scoring (date/money/id/name/free_text/entity_list) |
 | `classification` | Label normalization, exact match, per-class P/R/F1/F2, macro-PRF, confusion matrices |
 | `extraction_metrics` | Field-micro extraction P/R/F1/F2 over (field, value) events |
@@ -195,6 +212,7 @@ repository-wide coverage gate with
 <div align="center">
 
 ```
+dojo-version [--check [--force|--offline]] [--json]
 dojo-analyze INPUT [-o REPORT.md] [--plots DIR] [--metric COL] [--target 0.94]
                   [--min-n N] [--cost-column COL] [--task T] [--max-items N]
 dojo-export  [--task sorter|extraction|all] [--sweep] [--log LOG] [--outdir DIR]

@@ -5,6 +5,17 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-10-23
+
+### Added
+
+- Shared Dojo release awareness (DMR-095): opt-in shared Dojo release
+  awareness, cached nonblocking application startup checks, cache-only health
+  status, and `dojo-version` with explicit/offline/forced JSON checks. Daily
+  per-user state, error backoff, consumer/release notice limits and an environment
+  opt-out leave imports and scoring offline; upgrades and release pins remain
+  operator controlled.
+
 ## [0.23.1] - 2026-10-23
 
 ### Fixed
