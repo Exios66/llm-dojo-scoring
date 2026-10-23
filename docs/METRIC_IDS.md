@@ -23,6 +23,12 @@ mismatch; `compare_serving` sets `incomparable: true` on the quality block.
 | `sentiment_f1_macro` | `pipeline.enron.sentiment_f1_macro` |
 | `f1_macro` | `pipeline.classification.f1_macro` |
 | `accuracy` | `pipeline.classification.accuracy` |
+| `sandbox_maud_accuracy` | `maud.sandbox_labeled.micro_accuracy` |
+| `sandbox_maud_clean_accuracy` | `maud.sandbox_clean_subset.micro_accuracy` |
+| `sandbox_maud_precision_answered` | `maud.sandbox_answered.precision` |
+| `sandbox_cuad_presence_f1` | `cuad.sandbox_category_detection.micro_f1` |
+| `sandbox_cuad_presence_precision` | `cuad.sandbox_category_detection.micro_precision` |
+| `sandbox_cuad_presence_recall` | `cuad.sandbox_category_detection.micro_recall` |
 
 Resolve helpers: `llm_dojo_scoring.scorecard_honesty.metric_id_for(...)`,
 `metric_ids_for_class(...)`, `metric_id_allowed(...)`.
@@ -33,8 +39,8 @@ All five live extract classes are covered.
 
 | Doc class / suite | Allowed `metric_id` values |
 |---|---|
-| `contract` | `pipeline.extraction.overall`, `cuad.clause_presence.micro_f1`, `pipeline.extraction.field_micro_f1`, `pipeline.extraction.field_micro_f2`, `pipeline.extraction.field_micro_precision`, `pipeline.extraction.field_micro_recall`, `maud.question.micro_accuracy` |
-| `merger_agreement` | `pipeline.extraction.overall`, `maud.question.micro_accuracy`, `maud.clause_presence.rate`, `pipeline.extraction.field_micro_f1`, `pipeline.extraction.field_micro_f2`, `pipeline.extraction.field_micro_precision`, `pipeline.extraction.field_micro_recall` |
+| `contract` | `pipeline.extraction.overall`, `cuad.clause_presence.micro_f1`, `pipeline.extraction.field_micro_f1`, `pipeline.extraction.field_micro_f2`, `pipeline.extraction.field_micro_precision`, `pipeline.extraction.field_micro_recall`, `maud.question.micro_accuracy`, `cuad.sandbox_category_detection.micro_f1`, `cuad.sandbox_category_detection.micro_precision`, `cuad.sandbox_category_detection.micro_recall` |
+| `merger_agreement` | `pipeline.extraction.overall`, `maud.question.micro_accuracy`, `maud.clause_presence.rate`, `pipeline.extraction.field_micro_f1`, `pipeline.extraction.field_micro_f2`, `pipeline.extraction.field_micro_precision`, `pipeline.extraction.field_micro_recall`, `maud.sandbox_labeled.micro_accuracy`, `maud.sandbox_clean_subset.micro_accuracy`, `maud.sandbox_answered.precision` |
 | `corporate_record` | `pipeline.extraction.overall`, `pipeline.extraction.field_micro_f1`, `pipeline.extraction.field_micro_f2`, `pipeline.extraction.field_micro_precision`, `pipeline.extraction.field_micro_recall` |
 | `insurance_claim` | `pipeline.extraction.overall`, `pipeline.extraction.field_micro_f1`, `pipeline.extraction.field_micro_f2`, `pipeline.extraction.field_micro_precision`, `pipeline.extraction.field_micro_recall` |
 | `correspondence` | `pipeline.extraction.overall`, `pipeline.extraction.field_micro_f1`, `pipeline.extraction.field_micro_f2`, `pipeline.extraction.field_micro_precision`, `pipeline.extraction.field_micro_recall`, `pipeline.enron.topic_accuracy`, `pipeline.enron.topic_f1_macro`, `pipeline.enron.sentiment_accuracy`, `pipeline.enron.sentiment_f1_macro` |
@@ -77,3 +83,14 @@ Three paths stamp a `metric_id`, and they agree:
   method, the canonical id for the headline aliases, and otherwise resolves
   `method` through `metric_id_for` (unknown names raise). A contradicting
   claimed `metric_id` is refused.
+
+## Additive sandbox rubrics (DMR-091)
+
+| Registry name | Metric identity | Inclusion |
+| --- | --- | --- |
+| `sandbox_maud_accuracy` | `maud.sandbox_labeled.micro_accuracy` | All labeled sandbox MAUD questions; missing answers and conflicts miss; None with no labels. |
+| `sandbox_maud_clean_accuracy` | `maud.sandbox_clean_subset.micro_accuracy` | Frozen sandbox CLEAN_QUESTIONS subset; None with no supported questions. |
+| `sandbox_maud_precision_answered` | `maud.sandbox_answered.precision` | Sandbox real answers only; placeholders excluded except catalog classes; conflicts count answered and wrong. |
+| `sandbox_cuad_presence_f1` | `cuad.sandbox_category_detection.micro_f1` | Category detection within the row-labeled universe; empty universe is unscorable. |
+| `sandbox_cuad_presence_precision` | `cuad.sandbox_category_detection.micro_precision` | TP/(TP+FP) within row-labeled categories; zero when no detected categories on a labeled row. |
+| `sandbox_cuad_presence_recall` | `cuad.sandbox_category_detection.micro_recall` | TP/(TP+FN) within row-labeled categories; zero when no positive categories on a labeled row. |

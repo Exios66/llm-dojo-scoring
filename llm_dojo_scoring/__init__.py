@@ -413,3 +413,15 @@ __all__ = [
     "GridDocument", "GridExperiment", "build_grid_report", "grid_scorecard",
     "serving_efficiency_rows", "session_cost_rows", "specialist_grid_rows",
 ]
+
+# Additive sandbox benchmark API; existing task/suite entry points keep their rubrics.
+from .sandbox_scoring import score_cuad as score_sandbox_cuad
+from .sandbox_scoring import score_maud as score_sandbox_maud
+
+__all__ += ["score_sandbox_cuad", "score_sandbox_maud"]
+
+from .sandbox_scoring import sandbox_metric_scores
+__all__ += ["sandbox_metric_scores"]
+
+from .sandbox_scoring import aggregate_sandbox_scores
+__all__ += ["aggregate_sandbox_scores"]
