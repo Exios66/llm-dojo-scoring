@@ -214,21 +214,21 @@ This package is the shared scoring engine consumed by llm-mailroom
 and the sandbox (vendored) — version bumps are cross-package
 events.
 
-- **Monorepo home**: this repo is `packages/llm-dojo-scoring` inside the
+- **Source ownership**: this independent repository owns scoring implementation.
+  Review and merge changes here first. The
   [Digital-Mailroom](https://github.com/LLM-Mailroom-Services/Digital-Mailroom)
-  monorepo (dev source of truth). Changes flow to the standalone repo
-  (`Exios66/llm-dojo-scoring`) ONLY via `scripts/sync_packages.py push`
-  (monorepo root) — never hand-edit the mirror.
+  monorepo then imports the exact merged revision into
+  `packages/llm-dojo-scoring` and refreshes its sandbox vendor snapshot.
+  Do not export downstream implementation patches over completed source work.
 - **Release-time pin law**: cutting a release means bumping the version here
   AND updating every consuming pin — llm-mailroom /
   sandbox `pyproject.toml` git pins and the sandbox vendor snapshot.
   The dojo pin is bumped ONLY at release time of this package, via
   `packages/llm-mailroom/src/scripts/bump_dojo_scoring.py` — never delete a
-  pin line. After the bump, run the release-train sweep
-  (`sync_packages.py push --all --patch`) and refresh the sandbox vendor
-  tree (`scripts/sync_vendor.py`). Full law: root `AGENTS.md` §Sub-package
-  sync + `docs/wiki/Releases.md` + `docs/TESTING.md` (a dojo change is tier
-  3 — the changed package + every dependant).
+  pin line. After the release, import the merged source revision and refresh
+  the sandbox vendor tree (`scripts/sync_vendor.py`). Verify the changed
+  package and every dependant; source and vendor imports must identify the
+  same release code, even when unrelated distribution metadata is installed.
 
 ---
 

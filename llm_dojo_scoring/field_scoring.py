@@ -1288,6 +1288,13 @@ class ExtractionScoreResult:
         return bool(self.ambiguous_fields)
 
     @property
+    def audit_support(self) -> dict:
+        """Canonical field-count factuality support (additive; serialization unchanged)."""
+        from .field_support import field_audit_support
+
+        return field_audit_support(self.entity_list_audit)
+
+    @property
     def overall_verified_precision(self) -> Optional[float]:
         """Mean verified_precision across the row's scored list fields
         (None when no list field was audited)."""

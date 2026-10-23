@@ -10,12 +10,9 @@ scoring code (``src/field_scoring.py``, ``src/metrics.py``, ``src/bootstrap.py``
 
 from __future__ import annotations
 
-from importlib import metadata
-
-try:
-    __version__ = metadata.version("llm-dojo-scoring")
-except metadata.PackageNotFoundError:
-    __version__ = "0.22.0"
+# Vendor and source checkouts can coexist with unrelated installed metadata.
+# Report the version of the code actually loaded; release tests pin pyproject parity.
+__version__ = "0.22.0"
 
 from . import (
     archive,

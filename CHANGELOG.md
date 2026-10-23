@@ -41,6 +41,11 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Added
 
+- Canonical pilot classification/subclass policies, required-field and schema
+  support summaries, factuality support, and exact sandbox agent compatibility
+  rubrics. Missing extraction GT remains unscorable rather than a zero score.
+  Source/vendor version reporting ignores unrelated installed distributions.
+
 - Dojo-owned strict pipeline classification, LegalBench report/calibration,
   offline visualizer lifecycle/quality and isolated-agent rubrics. Consumer
   facades preserve existing report populations and keys; new class APIs reject
