@@ -25,6 +25,8 @@ Prep steps applied before the sorter sees ``doc_text``:
 
 from __future__ import annotations
 
+from ._paired import require_equal_lengths
+
 import re
 import unicodedata
 from typing import Any
@@ -367,6 +369,7 @@ def score_intake(
             "string or normalize-intake payload"
         )
     if isinstance(expected, list) and isinstance(predicted, list):
+        require_equal_lengths(expected, predicted)
         rows = [
             _score_one(e, p, raw_text=raw_text) for e, p in zip(expected, predicted)
         ]
