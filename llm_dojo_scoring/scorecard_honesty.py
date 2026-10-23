@@ -389,8 +389,14 @@ def aggregate_quality_honest(
     doc_results: Sequence[Mapping[str, Any]],
     *,
     score_key: str = "overall_score",
+    precision: int | None = 4,
 ) -> dict[str, Any]:
-    """Quality mean excludes unscorable rows — never folds them in as 0.0 (#16)."""
+    """Quality mean excludes unscorable rows, retaining real zero (#16).
+
+    The default keeps four-decimal fmean behavior. ``precision=None`` preserves
+    legacy consumer sum/length arithmetic without rounding; population and
+    empty-support policy remain canonical for either precision mode.
+    """
     scored_vals: list[float] = []
     n_unscorable = 0
     for row in doc_results:
@@ -406,7 +412,10 @@ def aggregate_quality_honest(
     return {
         "n_scored": n_scored,
         "n_unscorable": n_unscorable,
-        "quality_mean": round(fmean(scored_vals), 4) if scored_vals else None,
+        "quality_mean": (
+            (sum(scored_vals) / n_scored if precision is None else round(fmean(scored_vals), precision))
+            if scored_vals else None
+        ),
         "quality_population": "scored_only",
         # Nothing scored (empty batch or every row unscorable) proves nothing.
         "export_verdict": "unproven" if n_scored == 0 else "scored",
