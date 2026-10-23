@@ -539,9 +539,18 @@ def parse_maud_labels(value: Any) -> dict[str, dict[str, Any]]:
 
 
 def _documents(expected: Any, predicted: Any) -> list[tuple[Any, Any]]:
-    """Yield (expected, predicted) per-document pairs.
+    """Return a list of ``(expected, predicted)`` document pairs.
 
-    A list of dicts is a batch. A list of strings is one document's spans.
+    Decode JSON object/array strings; malformed JSON remains unchanged.
+    A list beginning with a dict is a batch, even with later non-dict
+    entries. If neither side is a batch, return a single pair, keeping
+    span lists (including empty lists) as one document.
+
+    When either side is a batch, pair list entries by position. Raise
+    ``ValueError`` for unequal lengths when both sides are lists and each
+    is empty or begins with a dict. Other list pairings stop at the
+    shorter side. A non-list expected value is one document; a non-list
+    prediction is reused for every expected document.
     """
     exp = _maybe_json(expected)
     pred = _maybe_json(predicted)
