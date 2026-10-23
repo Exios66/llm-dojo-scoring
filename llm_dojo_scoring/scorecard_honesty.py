@@ -81,6 +81,12 @@ _ACRONYM_BOUNDARY = re.compile(r"([A-Z]+)([A-Z][a-z])")
 
 # Registry metric name → canonical metric_id (issue #17).
 _METRIC_ID_BY_NAME: dict[str, str] = {
+    'sandbox_maud_accuracy': 'maud.sandbox_labeled.micro_accuracy',
+    'sandbox_maud_clean_accuracy': 'maud.sandbox_clean_subset.micro_accuracy',
+    'sandbox_maud_precision_answered': 'maud.sandbox_answered.precision',
+    'sandbox_cuad_presence_f1': 'cuad.sandbox_category_detection.micro_f1',
+    'sandbox_cuad_presence_precision': 'cuad.sandbox_category_detection.micro_precision',
+    'sandbox_cuad_presence_recall': 'cuad.sandbox_category_detection.micro_recall',
     "extraction_overall_score": "pipeline.extraction.overall",
     "overall_score": "pipeline.extraction.overall",
     "extraction_f1": "pipeline.extraction.field_micro_f1",
@@ -110,6 +116,9 @@ _CLASS_METRIC_IDS: dict[str, tuple[str, ...]] = {
         "pipeline.extraction.field_micro_precision",
         "pipeline.extraction.field_micro_recall",
         "maud.question.micro_accuracy",
+        'cuad.sandbox_category_detection.micro_f1',
+        'cuad.sandbox_category_detection.micro_precision',
+        'cuad.sandbox_category_detection.micro_recall',
     ),
     "merger_agreement": (
         "pipeline.extraction.overall",
@@ -119,6 +128,9 @@ _CLASS_METRIC_IDS: dict[str, tuple[str, ...]] = {
         "pipeline.extraction.field_micro_f2",
         "pipeline.extraction.field_micro_precision",
         "pipeline.extraction.field_micro_recall",
+        'maud.sandbox_labeled.micro_accuracy',
+        'maud.sandbox_clean_subset.micro_accuracy',
+        'maud.sandbox_answered.precision',
     ),
     "corporate_record": (
         "pipeline.extraction.overall",
@@ -377,8 +389,14 @@ def aggregate_quality_honest(
     doc_results: Sequence[Mapping[str, Any]],
     *,
     score_key: str = "overall_score",
+    precision: int | None = 4,
 ) -> dict[str, Any]:
-    """Quality mean excludes unscorable rows — never folds them in as 0.0 (#16)."""
+    """Quality mean excludes unscorable rows, retaining real zero (#16).
+
+    The default keeps four-decimal fmean behavior. ``precision=None`` preserves
+    legacy consumer sum/length arithmetic without rounding; population and
+    empty-support policy remain canonical for either precision mode.
+    """
     scored_vals: list[float] = []
     n_unscorable = 0
     for row in doc_results:
@@ -394,7 +412,10 @@ def aggregate_quality_honest(
     return {
         "n_scored": n_scored,
         "n_unscorable": n_unscorable,
-        "quality_mean": round(fmean(scored_vals), 4) if scored_vals else None,
+        "quality_mean": (
+            (sum(scored_vals) / n_scored if precision is None else round(fmean(scored_vals), precision))
+            if scored_vals else None
+        ),
         "quality_population": "scored_only",
         # Nothing scored (empty batch or every row unscorable) proves nothing.
         "export_verdict": "unproven" if n_scored == 0 else "scored",

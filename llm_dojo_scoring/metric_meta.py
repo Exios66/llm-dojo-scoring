@@ -532,3 +532,14 @@ METRIC_META: dict[str, dict[str, str]] = {
     "bert_elapsed_ms": dict(_EMITTER),
     "fast_path_est_cost_usd": dict(_EMITTER),
 }
+
+
+# Source-owned sandbox compatibility metrics retain explicit benchmark populations.
+METRIC_META.update({
+    'sandbox_maud_accuracy': _m("sandbox_scoring benchmark rubric adopted from sandbox 872b081.", 'All labeled sandbox MAUD questions; missing answers and conflicts miss; None with no labels.', "required"),
+    'sandbox_maud_clean_accuracy': _m("sandbox_scoring benchmark rubric adopted from sandbox 872b081.", 'Frozen sandbox CLEAN_QUESTIONS subset; None with no supported questions.', "required"),
+    'sandbox_maud_precision_answered': _m("sandbox_scoring benchmark rubric adopted from sandbox 872b081.", 'Sandbox real answers only; placeholders excluded except catalog classes; conflicts count answered and wrong.', "required"),
+    'sandbox_cuad_presence_f1': _m("sandbox_scoring benchmark rubric adopted from sandbox 872b081.", 'Category detection within the row-labeled universe; empty universe is unscorable.', "required"),
+    'sandbox_cuad_presence_precision': _m("sandbox_scoring benchmark rubric adopted from sandbox 872b081.", 'TP/(TP+FP) within row-labeled categories; zero when no detected categories on a labeled row.', "required"),
+    'sandbox_cuad_presence_recall': _m("sandbox_scoring benchmark rubric adopted from sandbox 872b081.", 'TP/(TP+FN) within row-labeled categories; zero when no positive categories on a labeled row.', "required"),
+})
