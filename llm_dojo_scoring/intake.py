@@ -25,6 +25,8 @@ Prep steps applied before the sorter sees ``doc_text``:
 
 from __future__ import annotations
 
+from ._paired import require_equal_lengths
+
 import re
 import unicodedata
 from typing import Any
@@ -360,6 +362,16 @@ def score_intake(
     An LLM intake is scored the same way: compare its cleaned text / flags
     to ``deterministic_normalize(expected)``. ``method`` on the payload
     should be ``llm`` or ``deterministic``.
+
+    ``raw_text``, when provided, overrides the source used to derive gold,
+    including for every document in a batch.
+
+    When both inputs are lists, return mean metrics, ``n``, and
+    ``per_document`` results; unequal lengths raise ``ValueError``. Two
+    empty lists return ``n=0``, an empty ``per_document``, zero aggregate
+    metrics, and ``None`` for metadata match scores. Otherwise return
+    single-document metrics and gold text with ``n=1``. Raise ``TypeError``
+    if ``expected``, ``predicted``, and ``raw_text`` are all ``None``.
     """
     if expected is None and predicted is None and raw_text is None:
         raise TypeError(
@@ -367,6 +379,7 @@ def score_intake(
             "string or normalize-intake payload"
         )
     if isinstance(expected, list) and isinstance(predicted, list):
+        require_equal_lengths(expected, predicted)
         rows = [
             _score_one(e, p, raw_text=raw_text) for e, p in zip(expected, predicted)
         ]

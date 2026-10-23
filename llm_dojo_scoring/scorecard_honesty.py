@@ -650,15 +650,17 @@ def summarize_run_completion(
     error_hist: dict[str, int] = {}
     n_errored = 0
     for rec in records:
-        err = rec.get("error") or rec.get("error_class") or rec.get("finish_reason")
+        success_tokens = {
+            "stop", "completed", "success", "none", "",
+            "end_turn", "eos", "stop_sequence", "tool_calls",
+        }
+        # A success-like field cannot mask an independent failure signal.
+        err = next((value for value in (
+            rec.get("error"), rec.get("error_class"), rec.get("finish_reason")
+        ) if value and str(value).strip().lower() not in success_tokens), None)
         status = str(rec.get("status") or "")
         is_error = bool(rec.get("errored") or status.upper().startswith("ERROR"))
-        if not is_error and err:
-            token = str(err)
-            is_error = token.lower() not in {
-                "stop", "completed", "success", "none", "",
-                "end_turn", "eos", "stop_sequence", "tool_calls",
-            }
+        is_error = is_error or err is not None
         if not is_error:
             continue
         n_errored += 1
