@@ -13,6 +13,8 @@ import json
 import re
 from collections import Counter, defaultdict
 
+from ._paired import require_equal_lengths
+
 from llm_dojo_scoring.config import RETIRED_DOC_CLASS_KEYS
 
 ERROR_PREFIX = "ERROR: "  # task output sentinel for failed rows
@@ -70,6 +72,7 @@ def failure(output, expected) -> float:
 
 def accuracy(expected: list, predicted: list) -> float:
     """Overall exact-match accuracy over paired predictions."""
+    require_equal_lengths(expected, predicted)
     if not expected:
         return 0.0
     pairs: list[tuple] = []
@@ -102,6 +105,7 @@ def per_class_stats(expected: list, predicted: list) -> dict[str, dict]:
     Returns ``{class: {n, correct, accuracy, precision, recall, f1, f2}}``.
     Failed rows (``ERROR_PREFIX`` predictions) are skipped entirely.
     """
+    require_equal_lengths(expected, predicted)
     pairs: list[tuple[str, str]] = []
     for e, p in zip(expected, predicted):
         out = str(p)
@@ -146,6 +150,7 @@ def confusion_matrix(expected: list, predicted: list,
     ``labels`` order (default: sorted union of observed classes). Failed
     predictions (ERROR_PREFIX) are dropped.
     """
+    require_equal_lengths(expected, predicted)
     pairs = [
         (normalize_label(e), normalize_label(p))
         for e, p in zip(expected, predicted)
@@ -180,6 +185,7 @@ def binary_metrics(expected: list, predicted: list, positive: str,
             return bool(value)
         return normalize_label(value) == positive
 
+    require_equal_lengths(expected, predicted)
     tp = tn = fp = fn = 0
     for e, p in zip(expected, predicted):
         is_pos = _flag(e)
@@ -212,6 +218,7 @@ def macro_prf(expected: list, predicted: list, *, normalize: bool = True) -> dic
     Standard multiclass macro-average for imbalanced doc-type / subclass
     catalogs (sorter T0 ``f1_macro``). Failed ``ERROR_PREFIX`` rows are skipped.
     """
+    require_equal_lengths(expected, predicted)
     pairs: list[tuple[str, str]] = []
     for e, p in zip(expected, predicted):
         if str(p).startswith(ERROR_PREFIX):
