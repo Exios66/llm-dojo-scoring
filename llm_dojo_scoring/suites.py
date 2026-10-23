@@ -1106,8 +1106,13 @@ class ScoringSuite:
                     peeled_exp.append(exp)
                     peeled_pred.append(pred)
                     unscorable_rows.add(idx)
-                elif isinstance(exp, dict) and isinstance(pred, dict):
-                    e2, p2, payload = peel_non_extraction_fields(exp, pred)
+                elif isinstance(exp, dict):
+                    # Missing/malformed answers remain misses in every scored
+                    # population. Peel GT extras even when there is no dict
+                    # prediction, so they cannot leak into extraction counts.
+                    e2, p2, payload = peel_non_extraction_fields(
+                        exp, pred if isinstance(pred, dict) else {}
+                    )
                     peeled_exp.append(e2)
                     peeled_pred.append(p2)
                     if "content_topic" in payload:
@@ -1154,8 +1159,10 @@ class ScoringSuite:
                 sent_e, sent_p = sents_e, sents_p
             if saw_maud and maud_e is None:
                 maud_e, maud_p = mauds_e, mauds_p
-        elif isinstance(expected, dict) and isinstance(predicted, dict):
-            e2, p2, payload = peel_non_extraction_fields(expected, predicted)
+        elif isinstance(expected, dict):
+            e2, p2, payload = peel_non_extraction_fields(
+                expected, predicted if isinstance(predicted, dict) else {}
+            )
             peeled_exp, peeled_pred = [e2], [p2]
             extraction = _run(e2, p2, doc_text, audit_predictions)
             if "content_topic" in payload and topic_e is None:
@@ -1193,19 +1200,20 @@ class ScoringSuite:
 
             pred_rows: list = []
             if peeled_pred:
-                pred_rows = [p for p in peeled_pred if isinstance(p, dict)]
+                pred_rows = [p if isinstance(p, dict) else {} for p in peeled_pred]
             elif isinstance(predicted, dict):
                 pred_rows = [predicted]
             elif isinstance(predicted, list):
-                pred_rows = [p for p in predicted if isinstance(p, dict)]
+                pred_rows = [p if isinstance(p, dict) else {} for p in predicted]
             if isinstance(presence, list):
                 pairs = [
                     (pred, pe)
-                    for pred, pe in zip(pred_rows, presence)
-                    if isinstance(pe, dict) and pe
+                    for idx, (pred, pe) in enumerate(zip(pred_rows, presence))
+                    if idx not in unscorable_rows and isinstance(pe, dict) and pe
                 ]
             else:
-                pairs = [(pred, presence) for pred in pred_rows]
+                pairs = [(pred, presence) for idx, pred in enumerate(pred_rows)
+                         if idx not in unscorable_rows]
             presence_scores: list[float] = []
             presence_detail = None
             for pred, pe in pairs:
