@@ -634,12 +634,11 @@ def aggregate_serving(
             docs = round(n_docs / window, 6)
 
     costs = [r.estimated_cost_usd for r in normalized]
-    cost = _mean(costs)
+    known_costs = [c for c in costs if c is not None]
+    cost = sum(known_costs) if known_costs else None
     cost_per = None
     if cost is not None and n_docs:
-        cost_per = round(cost / n_docs, 8) if len(normalized) == 1 else round(
-            sum(c for c in costs if c is not None) / n_docs, 8
-        )
+        cost_per = round(cost / n_docs, 8)
 
     identities = [r.identity.as_dict() for r in normalized]
     gaps: list[str] = []

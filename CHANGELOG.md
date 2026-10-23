@@ -25,6 +25,12 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+- DMR-091 independent source audit: retain missing/malformed predictions in
+  content, MAUD and presence populations; preserve raw classifier errors as
+  headline misses; inspect completion failure signals independently; sum pooled
+  serving costs rather than averaging run totals. Hand-counted regressions
+  cover padding, hierarchy, error sentinels, and known/unknown costs.
+
 - Corporate label repair and audit no longer treat malformed falsey GT values
   (`[]`, `0`, `False`) as empty mappings. Text audit summaries retain
   wrong-subclass entity defects instead of reporting those rows as clean.
