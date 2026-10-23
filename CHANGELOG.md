@@ -5,6 +5,8 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-10-23
+
 ### Changed
 
 - Paired batch scorers reject unequal document counts, including direct and
