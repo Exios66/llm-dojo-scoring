@@ -43,6 +43,13 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Added
 
+- Source-owned pipeline verdict thresholds, sandbox schema/floor policies and
+  the fixed chained-evaluation composite. The canonical scored-only reducer
+  supports unrounded consumer arithmetic without changing its existing default.
+  Typed-unavailable schema results retain their truthiness as JSON-safe booleans
+  instead of leaking nonserializable sets; schema key collections are accepted
+  consistently.
+
 - Canonical pilot classification/subclass policies, required-field and schema
   support summaries, factuality support, and exact sandbox agent compatibility
   rubrics. Missing extraction GT remains unscorable rather than a zero score.
