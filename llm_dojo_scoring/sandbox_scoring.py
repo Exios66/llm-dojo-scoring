@@ -123,7 +123,8 @@ def gt_labels(raw: Any) -> dict[str, str]:
             return {}
     if not isinstance(raw, Mapping):
         return {}
-    return {q: str(v.get("answer", "")) for q, v in raw.items() if isinstance(v, Mapping)}
+    return {q: str(v.get("answer", "")) for q, v in raw.items()
+            if isinstance(v, Mapping) and v.get("answer") is not None}
 
 
 CONFLICT = "\x00conflict"

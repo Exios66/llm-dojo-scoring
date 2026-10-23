@@ -39,3 +39,13 @@ def pilot_classification_summary(rows):
     return {**class_scores, "subclass_n": subclass_n, "subclass_correct": subclass_correct,
             "subclass_accuracy": round(subclass_correct / subclass_n, 3) if subclass_n else None,
             "per_class": classes, "per_subclass": strata}
+
+
+def pilot_calibration_error(confidence_pairs):
+    """Return round-last mean absolute confidence error, or None without support.
+
+    Producers select their supported raw confidence/correctness pairs. Unlike
+    averaging rounded per-row scores, raw arithmetic preserves pilot reports.
+    """
+    pairs = list(confidence_pairs)
+    return round(sum(abs(c - m) for c, m in pairs) / len(pairs), 3) if pairs else None
