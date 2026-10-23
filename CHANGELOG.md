@@ -41,6 +41,11 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Added
 
+- Dojo-owned strict pipeline classification, LegalBench report/calibration,
+  offline visualizer lifecycle/quality and isolated-agent rubrics. Consumer
+  facades preserve existing report populations and keys; new class APIs reject
+  unequal paired lengths and do not score missing/blank labels as hits.
+
 - Dojo-owned sandbox MAUD/CUAD compatibility rubrics, distinct metric identities,
   registry-valid emission maps and count-based benchmark pooling. Consumers
   re-export these engines after adopting the committed source vendor.
