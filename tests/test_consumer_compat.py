@@ -229,9 +229,9 @@ def test_jellyfish_is_importable_core_dependency():
     assert jellyfish.jaro_winkler_similarity("Acme Corp", "Acme Corporation") > 0.8
 
 
-def test_release_version_is_0_23_0():
+def test_release_version_is_0_23_1():
     """Pin the package version to the expected compatibility release."""
-    assert dojo.__version__ == "0.23.0"
+    assert dojo.__version__ == "0.23.1"
 
 
 # Every name llm-mailroom imports (src/ + notebooks/), per the sync plan's

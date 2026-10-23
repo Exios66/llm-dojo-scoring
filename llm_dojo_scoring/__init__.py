@@ -12,7 +12,7 @@ from __future__ import annotations
 
 # Vendor and source checkouts can coexist with unrelated installed metadata.
 # Report the version of the code actually loaded; release tests pin pyproject parity.
-__version__ = "0.23.0"
+__version__ = "0.23.1"
 
 from . import (
     archive,

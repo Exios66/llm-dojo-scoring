@@ -62,7 +62,7 @@ def assess_extraction_facts(
         if typed is None:
             # Structural fallback: a dict whose public keys are a subset of the
             # known schema (or unknown doc type → any dict that parsed).
-            schema_valid = bool(payload) and bool(not keys or not extra or set(public) & keys)
+            schema_valid = bool(public) and bool(not keys or not extra or set(public) & keys)
         else:
             schema_valid = bool(typed)
     elif payload is not None and parse_error:

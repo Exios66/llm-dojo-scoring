@@ -5,6 +5,20 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.23.1] - 2026-10-23
+
+### Fixed
+
+- CodeAnt boundary review: non-finite integer intake metadata is a mismatch;
+  blank LegalBench labels and unresolved pilot subclass candidates cannot earn
+  equivalence credit; metadata-only structural fallback payloads are invalid;
+  JSON null MAUD answers do not become the meaningful catalog string "None".
+  Existing valid-label matching, literal catalog answers and typed schema
+  validation remain supported. Regression tests execute the canonical engines.
+- LegalBench accepts explicit producer equivalence groups without mutating
+  global settings. Pilot report calibration has a canonical round-last raw
+  aggregation API, preserving the existing three-decimal report contract.
+
 ## [0.23.0] - 2026-10-23
 
 ### Changed
