@@ -10,12 +10,9 @@ scoring code (``src/field_scoring.py``, ``src/metrics.py``, ``src/bootstrap.py``
 
 from __future__ import annotations
 
-from importlib import metadata
-
-try:
-    __version__ = metadata.version("llm-dojo-scoring")
-except metadata.PackageNotFoundError:
-    __version__ = "0.22.0"
+# Vendor and source checkouts can coexist with unrelated installed metadata.
+# Report the version of the code actually loaded; release tests pin pyproject parity.
+__version__ = "0.23.0"
 
 from . import (
     archive,
@@ -413,3 +410,15 @@ __all__ = [
     "GridDocument", "GridExperiment", "build_grid_report", "grid_scorecard",
     "serving_efficiency_rows", "session_cost_rows", "specialist_grid_rows",
 ]
+
+# Additive sandbox benchmark API; existing task/suite entry points keep their rubrics.
+from .sandbox_scoring import score_cuad as score_sandbox_cuad
+from .sandbox_scoring import score_maud as score_sandbox_maud
+
+__all__ += ["score_sandbox_cuad", "score_sandbox_maud"]
+
+from .sandbox_scoring import sandbox_metric_scores
+__all__ += ["sandbox_metric_scores"]
+
+from .sandbox_scoring import aggregate_sandbox_scores
+__all__ += ["aggregate_sandbox_scores"]

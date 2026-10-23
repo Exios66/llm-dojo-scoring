@@ -5,6 +5,8 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-10-23
+
 ### Changed
 
 - Paired batch scorers reject unequal document counts, including direct and
@@ -40,6 +42,27 @@ Format based on Keep a Changelog; versioning is SemVer.
   shipped with; this correction happened after the v0.22.0 tag.
 
 ### Added
+
+- Source-owned pipeline verdict thresholds, sandbox schema/floor policies and
+  the fixed chained-evaluation composite. The canonical scored-only reducer
+  supports unrounded consumer arithmetic without changing its existing default.
+  Typed-unavailable schema results retain their truthiness as JSON-safe booleans
+  instead of leaking nonserializable sets; schema key collections are accepted
+  consistently.
+
+- Canonical pilot classification/subclass policies, required-field and schema
+  support summaries, factuality support, and exact sandbox agent compatibility
+  rubrics. Missing extraction GT remains unscorable rather than a zero score.
+  Source/vendor version reporting ignores unrelated installed distributions.
+
+- Dojo-owned strict pipeline classification, LegalBench report/calibration,
+  offline visualizer lifecycle/quality and isolated-agent rubrics. Consumer
+  facades preserve existing report populations and keys; new class APIs reject
+  unequal paired lengths and do not score missing/blank labels as hits.
+
+- Dojo-owned sandbox MAUD/CUAD compatibility rubrics, distinct metric identities,
+  registry-valid emission maps and count-based benchmark pooling. Consumers
+  re-export these engines after adopting the committed source vendor.
 
 - Complete explicit Python docstrings, including private/nested helpers,
   scripts, examples, and tests, with a repository-wide regression gate.

@@ -7,7 +7,7 @@
 Scoring · Error analysis · Visualization · Interpretation
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Release](https://img.shields.io/badge/release-v0.22.0-2EA043)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.22.0)
+[![Release](https://img.shields.io/badge/release-v0.23.0-2EA043)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.23.0)
 [![Contributor](https://img.shields.io/badge/contributor-Exios66-blue)](https://github.com/Exios66)
 [![Tests](https://img.shields.io/badge/pytest-passing-brightgreen)](tests/)
 
@@ -20,7 +20,7 @@ Scoring · Error analysis · Visualization · Interpretation
 <div align="center">
 
 ```bash
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.22.0"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.23.0"
 pip install -e .                # from a local checkout
 ```
 
@@ -42,9 +42,9 @@ pip install -e ".[all]"          # embeddings + tracing + dev
 In **llm-mailroom** `pyproject.toml`:
 
 ```
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.22.0
-# mailroom:     llm-dojo-scoring[tracing] @ git+...@v0.22.0
-# embeddings:   llm-dojo-scoring[embeddings,tracing] @ git+...@v0.22.0  (optional rescue extra)
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.23.0
+# mailroom:     llm-dojo-scoring[tracing] @ git+...@v0.23.0
+# embeddings:   llm-dojo-scoring[embeddings,tracing] @ git+...@v0.23.0  (optional rescue extra)
 ```
 
 ## Quickstart
@@ -214,21 +214,21 @@ This package is the shared scoring engine consumed by llm-mailroom
 and the sandbox (vendored) — version bumps are cross-package
 events.
 
-- **Monorepo home**: this repo is `packages/llm-dojo-scoring` inside the
+- **Source ownership**: this independent repository owns scoring implementation.
+  Review and merge changes here first. The
   [Digital-Mailroom](https://github.com/LLM-Mailroom-Services/Digital-Mailroom)
-  monorepo (dev source of truth). Changes flow to the standalone repo
-  (`Exios66/llm-dojo-scoring`) ONLY via `scripts/sync_packages.py push`
-  (monorepo root) — never hand-edit the mirror.
+  monorepo then imports the exact merged revision into
+  `packages/llm-dojo-scoring` and refreshes its sandbox vendor snapshot.
+  Do not export downstream implementation patches over completed source work.
 - **Release-time pin law**: cutting a release means bumping the version here
   AND updating every consuming pin — llm-mailroom /
   sandbox `pyproject.toml` git pins and the sandbox vendor snapshot.
   The dojo pin is bumped ONLY at release time of this package, via
   `packages/llm-mailroom/src/scripts/bump_dojo_scoring.py` — never delete a
-  pin line. After the bump, run the release-train sweep
-  (`sync_packages.py push --all --patch`) and refresh the sandbox vendor
-  tree (`scripts/sync_vendor.py`). Full law: root `AGENTS.md` §Sub-package
-  sync + `docs/wiki/Releases.md` + `docs/TESTING.md` (a dojo change is tier
-  3 — the changed package + every dependant).
+  pin line. After the release, import the merged source revision and refresh
+  the sandbox vendor tree (`scripts/sync_vendor.py`). Verify the changed
+  package and every dependant; source and vendor imports must identify the
+  same release code, even when unrelated distribution metadata is installed.
 
 ---
 

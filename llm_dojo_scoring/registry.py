@@ -1058,6 +1058,50 @@ metrics:
     source: "tasks.legalbench_score"
     notes: "legalbench_* cluster"
 
+  # Additive sandbox benchmark rates: distinct populations from current suites.
+  sandbox_maud_accuracy:
+    tier: 1
+    description: "All labeled sandbox MAUD questions; missing answers and conflicts miss; None with no labels."
+    applicable_agents: [merger_agreement_specialist]
+    source: "sandbox_scoring.sandbox_metric_scores"
+    aggregation: none
+    ground_truth: required
+  sandbox_maud_clean_accuracy:
+    tier: 2
+    description: "Frozen sandbox CLEAN_QUESTIONS subset; None with no supported questions."
+    applicable_agents: [merger_agreement_specialist]
+    source: "sandbox_scoring.sandbox_metric_scores"
+    aggregation: none
+    ground_truth: required
+  sandbox_maud_precision_answered:
+    tier: 2
+    description: "Sandbox real answers only; placeholders excluded except catalog classes; conflicts count answered and wrong."
+    applicable_agents: [merger_agreement_specialist]
+    source: "sandbox_scoring.sandbox_metric_scores"
+    aggregation: none
+    ground_truth: required
+  sandbox_cuad_presence_f1:
+    tier: 1
+    description: "Category detection within the row-labeled universe; empty universe is unscorable."
+    applicable_agents: [contracts_specialist]
+    source: "sandbox_scoring.sandbox_metric_scores"
+    aggregation: none
+    ground_truth: required
+  sandbox_cuad_presence_precision:
+    tier: 2
+    description: "TP/(TP+FP) within row-labeled categories; zero when no detected categories on a labeled row."
+    applicable_agents: [contracts_specialist]
+    source: "sandbox_scoring.sandbox_metric_scores"
+    aggregation: none
+    ground_truth: required
+  sandbox_cuad_presence_recall:
+    tier: 2
+    description: "TP/(TP+FN) within row-labeled categories; zero when no positive categories on a labeled row."
+    applicable_agents: [contracts_specialist]
+    source: "sandbox_scoring.sandbox_metric_scores"
+    aggregation: none
+    ground_truth: required
+
   # ===================== T3 — LOG =====================
   classification_confidence:
     tier: 3
