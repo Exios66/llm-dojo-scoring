@@ -180,10 +180,12 @@ def _label_score(task: str, expected: list, predicted: list, *,
     multiclass, court_opinion, maud_question)."""
     require_equal_lengths(expected, predicted)
     norm = lambda v: normalize_task_answer(task, v, valid=valid)
-    pairs = [(norm(e), norm(p)) for e, p in zip(expected, predicted)]
+    pairs = [(norm(e), str(p) if str(p).startswith(ERROR_PREFIX) else norm(p))
+             for e, p in zip(expected, predicted)]
     exp = [e for e, _ in pairs]
     pred = [p for _, p in pairs]
-    per_row = [1.0 if e == p else 0.0 for e, p in pairs]
+    per_row = [1.0 if not p.startswith(ERROR_PREFIX) and e == p else 0.0
+               for e, p in pairs]
     matrix, labels = confusion_matrix(exp, pred)
     exact = round(sum(per_row) / len(per_row), 4) if per_row else 0.0
     per_class = _per_class(exp, pred)
@@ -349,8 +351,11 @@ def score_task(
     if kind == "docclass":
         norm_dt = lambda v: normalize_label(v)
         doc_exp = [norm_dt(e) for e in expected]
-        doc_pred = [norm_dt(p) for p in predicted]
-        doc_ok = [1.0 if e == p else 0.0 for e, p in zip(doc_exp, doc_pred)]
+        doc_errors = [str(p).startswith(ERROR_PREFIX) for p in predicted]
+        doc_pred = [str(p) if error else norm_dt(p)
+                    for p, error in zip(predicted, doc_errors)]
+        doc_ok = [1.0 if not error and e == p else 0.0
+                  for e, p, error in zip(doc_exp, doc_pred, doc_errors)]
         doc_acc = round(sum(doc_ok) / len(doc_ok), 4) if doc_ok else 0.0
         per_class = _per_class(doc_exp, doc_pred)
         result = {
@@ -370,17 +375,21 @@ def score_task(
             sub_ok_equiv = []
             sub_exp_norm = []
             sub_pred_norm = []
-            for e, p, doc_type in zip(expected_subclass, predicted_subclass, doc_exp):
+            for e, p, doc_type, parent_error in zip(
+                expected_subclass, predicted_subclass, doc_exp, doc_errors
+            ):
                 # Scope the subclass catalog to the *expected* doc type so a
                 # CUAD family is not forced through the MAUD consideration
                 # normalizer (the pre-0.8.1 bug on the merged corpus).
                 en = normalize_corpus_subclass(doc_type, e)
-                pn = normalize_corpus_subclass(doc_type, p)
+                error = parent_error or str(p).startswith(ERROR_PREFIX)
+                pn = (ERROR_PREFIX + "parent classification failed" if parent_error
+                      else str(p) if error else normalize_corpus_subclass(doc_type, p))
                 sub_exp_norm.append(en)
                 sub_pred_norm.append(pn)
-                sub_ok.append(1.0 if en == pn else 0.0)
+                sub_ok.append(1.0 if not error and en == pn else 0.0)
                 sub_ok_equiv.append(
-                    1.0 if (en == pn or subclass_equivalent(doc_type, en, pn)) else 0.0
+                    1.0 if not error and (en == pn or subclass_equivalent(doc_type, en, pn)) else 0.0
                 )
             exact = [1.0 if (de == dp and se == sp)
                      else 0.0 for de, dp, se, sp in

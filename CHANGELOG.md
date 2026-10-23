@@ -7,6 +7,10 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Changed
 
+- Paired batch scorers reject unequal document counts, including direct and
+  dispatched intake and recognized mixed MAUD batches. Span-list and scalar
+  interpretations remain supported; no scoring formula changes.
+
 - **`corporate_records_specialist_v7` amendment coordinated across the four
   repos.** The frozen eval-environment mutation text — the `production_prompts`
   corporate-records bytes; `production` stays on the llm-mailroom v6 freeze
@@ -20,6 +24,12 @@ Format based on Keep a Changelog; versioning is SemVer.
   `_v6` parent, recorded in `prompts/eval_environment_lineage.json`).
 
 ### Fixed
+
+- DMR-091 independent source audit: retain missing/malformed predictions in
+  content, MAUD and presence populations; preserve raw classifier errors as
+  headline misses; inspect completion failure signals independently; sum pooled
+  serving costs rather than averaging run totals. Hand-counted regressions
+  cover padding, hierarchy, error sentinels, and known/unknown costs.
 
 - Corporate label repair and audit no longer treat malformed falsey GT values
   (`[]`, `0`, `False`) as empty mappings. Text audit summaries retain
