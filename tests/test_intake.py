@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from functools import partial
+
 import pytest
 
 from llm_dojo_scoring.intake import (
@@ -20,6 +22,97 @@ from llm_dojo_scoring.mailroom import INTAKE_HANDOFF_NODE, observation_type_for
 from llm_dojo_scoring.profiles import get_profile
 from llm_dojo_scoring.suites import get_suite
 from llm_dojo_scoring.tasks import score_task
+
+
+@pytest.fixture(params=["direct", "dispatch"])
+def intake_scorer(request):
+    """Exercise intake's direct API and public task routing with the same cases."""
+    if request.param == "direct":
+        return score_intake
+    return partial(score_task, "intake")
+
+
+@pytest.mark.parametrize("sizes", [(2, 1), (1, 2), (2, 0), (0, 2)])
+def test_unequal_intake_payload_batches_fail_before_normalizing(
+    intake_scorer, mocker, sizes
+):
+    """Reject incomplete payload batches before normalizing any paired row."""
+    mocker.patch(
+        "llm_dojo_scoring.intake.deterministic_normalize",
+        side_effect=AssertionError("An incomplete batch must not be scored"),
+    )
+    n_expected, n_predicted = sizes
+    with pytest.raises(
+        ValueError, match=rf"expected.*{n_expected}.*predicted.*{n_predicted}"
+    ):
+        intake_scorer(
+            [{"raw_text": "A\u00a0B"}] * n_expected,
+            [{"changed": True}] * n_predicted,
+        )
+
+
+@pytest.mark.parametrize("sizes", [(2, 1), (1, 2)])
+def test_intake_raw_text_override_does_not_bypass_batch_cardinality(sizes):
+    """A shared raw-text override still requires one prediction per document."""
+    n_expected, n_predicted = sizes
+    with pytest.raises(
+        ValueError, match=rf"expected.*{n_expected}.*predicted.*{n_predicted}"
+    ):
+        score_intake(
+            [None] * n_expected,
+            [{"text": "A B"}] * n_predicted,
+            raw_text="A\u00a0B",
+        )
+
+
+def test_equal_intake_batches_preserve_order_and_mean_scores(intake_scorer):
+    """Score every aligned row, including an incorrect final prediction."""
+    result = intake_scorer(
+        ["A\u00a0B", "C\u00a0D"],
+        ["A B", {"text": "wrong", "method": "llm", "changed": True}],
+    )
+
+    assert result["n"] == 2
+    assert [row["gold_text"] for row in result["per_document"]] == ["A B", "C D"]
+    assert [row["accuracy"] for row in result["per_document"]] == [1.0, 0.0]
+    assert result["per_document"][1]["intake_method"] == "llm"
+    assert result["accuracy"] == 0.5
+    assert result["f1_macro"] == 0.5
+    assert result["intake_changed_rate"] == 1.0
+    assert result["intake_prep_completeness"] == 1.0
+
+
+def test_equal_intake_payload_batches_keep_optional_match_denominators(intake_scorer):
+    """Missing payload flags stay excluded while present mismatches lower scores."""
+    result = intake_scorer(
+        ["agree-\nment", "A\n\n\n\nB"],
+        [
+            {"changed": True, "hyphen_unwraps": 1},
+            {"changed": False, "collapsed_blank_runs": 1},
+        ],
+    )
+
+    assert result["n"] == 2
+    assert [row["accuracy"] for row in result["per_document"]] == [1.0, 0.5]
+    assert result["accuracy"] == 0.75
+    assert result["f1_macro"] == 0.75
+    assert result["intake_changed_match"] == 0.5
+    assert result["intake_hyphen_unwraps_match"] == 1.0
+    assert result["intake_collapsed_blanks_match"] == 1.0
+    assert result["intake_messy_match"] is None
+
+
+def test_empty_intake_batches_return_empty_aggregates(intake_scorer):
+    """Equal empty lists remain valid without inventing scored documents."""
+    result = intake_scorer([], [])
+
+    assert result["n"] == 0
+    assert result["per_document"] == []
+    assert result["accuracy"] == 0.0
+    assert result["f1_macro"] == 0.0
+    assert result["intake_changed_rate"] == 0.0
+    assert result["intake_hyphen_unwraps"] == 0.0
+    assert result["intake_changed_match"] is None
 
 
 def test_normalize_collapses_nbsp_and_unwraps_hyphens():
