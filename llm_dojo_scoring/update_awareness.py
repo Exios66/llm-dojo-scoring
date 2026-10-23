@@ -417,18 +417,31 @@ class UpdateChecker:
                   "retry_at": now + delay if error else None}
         if latest is not None:
             fields.update(latest=latest, checked_at=now)
-        data.update(fields)
+        observed = data
+        data = {**data, **fields}
         persisted = False
         with self._lock() as locked:
             if locked:
                 current = self._read(self._clock())
                 # Merge under lock so delayed requests cannot erase notice claims
                 # or newer observations from another process.
-                if (current.get("attempted_at") or -1) <= now:
+                attempted = current.get("attempted_at")
+                tied = attempted == now
+                lower_release = (latest is not None and current.get("latest") is not None
+                                 and _version(latest) < _version(current["latest"]))
+                # A concurrent failure must retain its backoff. An explicit
+                # retry that already saw that observation can still recover.
+                concurrent_failure = current.get("error") and any(
+                    current.get(key) != observed.get(key)
+                    for key in ("attempted_at", "checked_at", "latest", "error", "retry_at")
+                )
+                if (attempted is None or attempted < now
+                        or (tied and not lower_release and not concurrent_failure)):
                     current.update(fields)
                     current.setdefault("schema", 1)
                     current.setdefault("notices", {})
                     persisted = self._write(current)
+                data = current
         return self._status(data, now, source="network", error=error, persisted=persisted)
 
     def _notice(self, consumer: str, update: UpdateStatus, now: float) -> str | None:

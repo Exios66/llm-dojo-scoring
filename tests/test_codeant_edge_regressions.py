@@ -78,3 +78,35 @@ def test_pilot_calibration_aggregates_unrounded_errors_then_rounds_once():
     assert pilot_calibration_error([(.00049, False), (.00049, False), (.00149, False)]) == .001
     assert pilot_calibration_error([]) is None
     assert pilot_calibration_error([(.9, True), (.2, False)]) == .15
+
+
+@pytest.mark.parametrize("side", ["expected", "predicted", "both"])
+@pytest.mark.parametrize("correct", [False, True])
+def test_nan_legalbench_labels_are_unscorable(side, correct):
+    """A missing numeric label cannot enter any report denominator or calibration."""
+    bad = {"status": "ok", "expected": "license", "predicted": "license",
+           "correct": correct, "family": "missing", "confidence": 1.0}
+    for key in ("expected", "predicted"):
+        if side in (key, "both"):
+            bad[key] = float("nan")
+    good = {"status": "ok", "expected": "license", "predicted": "license",
+            "correct": True, "family": "license", "confidence": 0.5}
+    assert legalbench_scoring.score_multiclass([bad, good]) == {
+        "accuracy": 1.0, "accuracy_equiv": 1.0, "macro_f1": 1.0,
+        "n_documents": 1, "n_error": 1, "n_other_predicted": 0,
+        "n_other_labeled": 0, "confidence_mean": 0.5,
+        "calibration_error": 0.5, "per_family": {"license": 1.0},
+    }
+    empty = legalbench_scoring.score_multiclass([bad])
+    assert empty["n_documents"] == 0 and empty["n_error"] == 1
+    assert empty["accuracy_equiv"] == empty["confidence_mean"] == 0.0
+    assert empty["per_family"] == {}
+
+
+@pytest.mark.parametrize("label", [0, False, 0.0, 1, "nan", "None", "other"])
+def test_legalbench_nonmissing_falsy_and_literal_labels_keep_support(label):
+    """Public row values are Any; missing detection must not become a truthiness filter."""
+    row = {"status": "ok", "expected": label, "predicted": label, "correct": True}
+    result = legalbench_scoring.score_multiclass([row])
+    assert result["n_documents"] == 1 and result["n_error"] == 0
+    assert result["accuracy"] == result["accuracy_equiv"] == 1.0

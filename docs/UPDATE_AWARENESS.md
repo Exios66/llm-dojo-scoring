@@ -42,6 +42,8 @@ text, server bodies, private paths, and credential-bearing URLs.
 ## Thin application startup hook
 
 ```python
+import sys
+
 from llm_dojo_scoring.update_awareness import UpdateChecker
 
 checker = UpdateChecker()  # construction is offline
@@ -148,8 +150,15 @@ The adapter follows the official
 [Microsoft CRT documentation](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/locking?view=msvc-170)
 and [Python msvcrt documentation](https://docs.python.org/3/library/msvcrt.html#msvcrt.locking). Readers see complete old or new JSON. Refresh
 merges reload the cache under lock, retain notification markers recorded during
-HTTP and avoid replacing a newer observation with an older request. Lock
-contention skips that write/notice; it never waits for another writer. No lock
+HTTP and avoid replacing a newer observation with an older request. Timestamp
+zero is a real observation. On tied timestamps, a lower
+release cannot replace a higher one, and a failure recorded during the request
+is retained. A subsequent check that already observed that failure may recover
+at the same timestamp. Equal releases may merge; a strictly later attempt can
+follow a publisher moving latest back. Explicit results use the merged cache
+knowledge when the lock is acquired, while an actual request failure still
+reports unavailable. `cache_persisted` is false when a merge is declined.
+Lock contention skips that write/notice; it never waits for another writer. No lock
 is held across HTTP. Cross-process HTTP deduplication/exactly-once requests are
 **not** promised: simultaneous cold starts may duplicate GETs. There is no
 background lease. A process crash cannot strand a kernel file lock, but can
