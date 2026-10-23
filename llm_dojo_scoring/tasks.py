@@ -19,6 +19,7 @@ from __future__ import annotations
 import re
 from typing import Any, Iterable
 
+from ._paired import require_equal_lengths
 from .bootstrap import bootstrap_ci
 from .classification import (
     ERROR_PREFIX,
@@ -177,6 +178,7 @@ def _label_score(task: str, expected: list, predicted: list, *,
                  valid=None, seed: int, n_boot: int) -> dict:
     """Shared score dict for label-classification kinds (subtype, doc_class,
     multiclass, court_opinion, maud_question)."""
+    require_equal_lengths(expected, predicted)
     norm = lambda v: normalize_task_answer(task, v, valid=valid)
     pairs = [(norm(e), norm(p)) for e, p in zip(expected, predicted)]
     exp = [e for e, _ in pairs]
@@ -263,6 +265,13 @@ def score_task(
         from .intake import score_intake
 
         return score_intake(expected, predicted)
+
+    if kind != "chained":
+        require_equal_lengths(expected, predicted)
+    if kind in ("pipeline", "docclass"):
+        if expected_subclass is not None and predicted_subclass is not None:
+            require_equal_lengths(expected_subclass, predicted_subclass)
+            require_equal_lengths(expected, expected_subclass)
 
     if kind == "contracteval":
         return contracteval_metrics(
@@ -549,6 +558,7 @@ def contracteval_metrics(
     POSITIVE pairs; no-related rate over all pairs; false-no-related rate over
     the positives.
     """
+    require_equal_lengths(expected_spans, outputs)
     tp = tn = fn = fp = 0
     jaccards: list[float] = []
     no_related_cnt = 0
