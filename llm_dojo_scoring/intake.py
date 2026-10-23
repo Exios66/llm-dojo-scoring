@@ -275,7 +275,7 @@ def _int_match(pred: Any, gold: Any) -> float | None:
         return None
     try:
         return 1.0 if int(pred) == int(gold) else 0.0
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return 0.0
 
 
