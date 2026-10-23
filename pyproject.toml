@@ -4,12 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-dojo-scoring"
-version = "0.23.1"
+version = "0.24.0"
 description = "Dedicated scoring, error-analysis, visualization, and interpretation suite for LLM document pipelines (llm-mailroom / local-mailroom-sandbox)"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 dependencies = [
+    "packaging>=23.2",  # PEP 440 release comparisons; no hand-rolled semver.
     "pandas>=2.0.0",
     "numpy>=1.26.0",
     "PyYAML>=6.0",
@@ -54,6 +55,7 @@ all = [
 ]
 
 [project.scripts]
+dojo-version = "llm_dojo_scoring.update_awareness:main"
 dojo-analyze = "llm_dojo_scoring.cli:analyze_main"
 dojo-export = "llm_dojo_scoring.cli:export_main"
 dojo-sync = "llm_dojo_scoring.cli:sync_main"
