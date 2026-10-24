@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 362" width="900" height="362" role="img" aria-labelledby="t d" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace">
+  <title id="t">~/llm-dojo-scoring — zsh</title>
+  <desc id="d">Animated terminal: clone, install, check the Dojo version offline, analyze a workbook and run the tests.</desc>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0d1117"/><stop offset="1" stop-color="#161b2e"/></linearGradient></defs>
+  <rect id="cyc" width="1" height="1" fill="none"><animate id="loop" attributeName="x" from="0" to="0" dur="20s" begin="0s;loop.end"/></rect>
+  <rect x="1" y="1" width="898" height="360" rx="16" fill="url(#bg)" stroke="#30363d" stroke-width="2"/>
+  <rect x="1" y="1" width="898" height="44" rx="16" fill="#1c2230"/>
+  <rect x="1" y="30" width="898" height="15" fill="#1c2230"/>
+  <circle cx="30" cy="23" r="7" fill="#ff5f57"/><circle cx="54" cy="23" r="7" fill="#febc2e"/><circle cx="78" cy="23" r="7" fill="#28c840"/>
+  <text x="450" y="28" text-anchor="middle" font-size="13" fill="#8b949e">~/llm-dojo-scoring — zsh</text>
+  <clipPath id="c0"><rect x="30" y="72" height="28" width="0"><set attributeName="width" to="0" begin="loop.begin"/><animate attributeName="width" from="0" to="566.8" dur="2.36s" begin="loop.begin+0.6s" fill="freeze"/></rect></clipPath>
+  <text x="32" y="92" font-size="15" clip-path="url(#c0)"><tspan fill="#7ee787">$ </tspan><tspan fill="#e6edf3">git clone https://github.com/Exios66/llm-dojo-scoring.git</tspan></text>
+  <clipPath id="c1"><rect x="30" y="102" height="28" width="0"><set attributeName="width" to="0" begin="loop.begin"/><animate attributeName="width" from="0" to="465.6" dur="1.92s" begin="loop.begin+3.9s" fill="freeze"/></rect></clipPath>
+  <text x="32" y="122" font-size="15" clip-path="url(#c1)"><tspan fill="#7ee787">$ </tspan><tspan fill="#e6edf3">cd llm-dojo-scoring &amp;&amp; pip install -e &quot;.[dev]&quot;</tspan></text>
+  <clipPath id="c2"><rect x="30" y="132" height="28" width="0"><set attributeName="width" to="0" begin="loop.begin"/><animate attributeName="width" from="0" to="622" dur="0.35s" begin="loop.begin+6.7s" fill="freeze"/></rect></clipPath>
+  <text x="32" y="152" font-size="15" clip-path="url(#c2)" fill="#8b949e" font-style="italic">  # core scoring is offline: no model, API key or tracing service</text>
+  <clipPath id="c3"><rect x="30" y="162" height="28" width="0"><set attributeName="width" to="0" begin="loop.begin"/><animate attributeName="width" from="0" to="382.8" dur="1.56s" begin="loop.begin+7.5s" fill="freeze"/></rect></clipPath>
+  <text x="32" y="182" font-size="15" clip-path="url(#c3)"><tspan fill="#7ee787">$ </tspan><tspan fill="#e6edf3">dojo-version --check --offline --json</tspan></text>
+  <clipPath id="c4"><rect x="30" y="192" height="28" width="0"><set attributeName="width" to="0" begin="loop.begin"/><animate attributeName="width" from="0" to="447.2" dur="0.35s" begin="loop.begin+10s" fill="freeze"/></rect></clipPath>
+  <text x="32" y="212" font-size="15" clip-path="url(#c4)" fill="#8b949e" font-style="italic">  # which Dojo is loaded, and what is released</text>
+  <clipPath id="c5"><rect x="30" y="222" height="28" width="0"><set attributeName="width" to="0" begin="loop.begin"/><animate attributeName="width" from="0" to="677.2" dur="2.84s" begin="loop.begin+10.8s" fill="freeze"/></rect></clipPath>
+  <text x="32" y="242" font-size="15" clip-path="url(#c5)"><tspan fill="#7ee787">$ </tspan><tspan fill="#e6edf3">dojo-analyze Sorter_Experiment_Results.xlsx --target 0.94 --min-n 100</tspan></text>
+  <clipPath id="c6"><rect x="30" y="252" height="28" width="0"><set attributeName="width" to="0" begin="loop.begin"/><animate attributeName="width" from="0" to="557.6" dur="0.35s" begin="loop.begin+14.6s" fill="freeze"/></rect></clipPath>
+  <text x="32" y="272" font-size="15" clip-path="url(#c6)" fill="#8b949e" font-style="italic">  # → a markdown report and PNG plots next to the workbook</text>
+  <clipPath id="c7"><rect x="30" y="282" height="28" width="0"><set attributeName="width" to="0" begin="loop.begin"/><animate attributeName="width" from="0" to="189.6" dur="0.72s" begin="loop.begin+15.4s" fill="freeze"/></rect></clipPath>
+  <text x="32" y="302" font-size="15" clip-path="url(#c7)"><tspan fill="#7ee787">$ </tspan><tspan fill="#e6edf3">python -m pytest</tspan></text>
+  <rect class="motion" x="32" y="316" width="9" height="19" fill="#e6edf3"><animate attributeName="opacity" values="1;0;1" dur="1s" repeatCount="indefinite"/></rect>
+</svg>

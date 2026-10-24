@@ -2,35 +2,55 @@
 
 <picture>
   <source media="(max-width: 640px)" srcset="docs/assets/readme/hero-mobile.svg"/>
-  <img src="docs/assets/readme/hero.svg" alt="Ground truth and predictions converge on a field-type matcher, which produces metrics, intervals, diagnostics and reports." width="100%"/>
+  <img src="docs/assets/readme/hero.svg" alt="LLM Dojo Scoring: expected and predicted document classes are compared pair by pair, two match and one does not, and the score of two thirds is shown with its Wilson interval" width="100%"/>
 </picture>
 
-# LLM Dojo Scoring
+<br/>
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=for-the-badge)](pyproject.toml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](pyproject.toml)
 [![Release v0.24.0](https://img.shields.io/badge/release-v0.24.0-6C63FF?style=for-the-badge)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.24.0)
 [![Offline core](https://img.shields.io/badge/scoring-offline_core-22C55E?style=for-the-badge)](docs/SCORING.md)
 [![MIT](https://img.shields.io/badge/license-MIT-0EA5E9?style=for-the-badge)](pyproject.toml)
 
-**[Quickstart](#quickstart)** · **[How it works](#how-it-works)** · **[Workflows](#workflows)** · **[API](#library-usage)** · **[Docs](#documentation)**
+[![Hub](https://img.shields.io/badge/🏛️_hub-Digital--Mailroom-000?style=flat-square)](https://github.com/LLM-Mailroom-Services/Digital-Mailroom)
+[![Scoring tables](https://img.shields.io/badge/📐_scoring_tables-SCORING.md-555?style=flat-square)](docs/SCORING.md)
+[![Migration](https://img.shields.io/badge/🔀_migration-MIGRATION.md-555?style=flat-square)](docs/MIGRATION.md)
+
+**[Quickstart](#quickstart)** · **[How it works](#how-it-works)** · **[Workflows](#workflows)** · **[API](#library-usage)** · **[Where it fits](#where-it-fits)** · **[Docs](#documentation)**
 
 </div>
 
 ---
 
-## What this does
+<a id="what-this-does"></a>
 
-**The shared, field-type-aware scoring engine for the Mailroom constellation.**
-Use one importable library to compare document classifications and structured
-extractions, quantify uncertainty, inspect failure modes and produce reports.
-The pipeline and sandbox consume this source; they do not maintain separate
-implementations of its metrics.
+## 🥋 What is this?
+
+Language models are happy to tell you they did great. The Dojo checks. It is
+**the shared, field-type-aware scoring engine for the Mailroom constellation**:
+one importable library that compares document classifications and structured
+extractions, quantifies the uncertainty, shows how each failure happened and
+writes the report. A date is scored as a date, a dollar amount as an amount
+and a party name as a name, instead of string-matching everything the same way.
+
+The pipeline and the sandbox consume this source. Neither keeps a separate
+implementation of its metrics, and the deterministic core needs no model, API
+key or tracing service.
 
 <div align="center">
-<img src="docs/assets/readme/stats.svg" alt="Field-aware extraction scoring, task suites, uncertainty intervals, and diagnostics." width="100%"/>
+<picture>
+  <source media="(max-width: 640px)" srcset="docs/assets/readme/stats-mobile.svg"/>
+  <img src="docs/assets/readme/stats.svg" alt="By the numbers: 27 agent profiles, 11 task bundles, metric tiers T0 to T3, four command-line tools, bootstrap and Wilson confidence intervals, and an offline core that needs no API key" width="100%"/>
+</picture>
 </div>
 
-## Install
+<a id="install"></a>
+
+## 📦 Install
+
+<div align="center">
+<img src="docs/assets/readme/terminal.svg" alt="Animated terminal: clone, install, check the Dojo version offline, analyze a workbook and run the tests" width="90%"/>
+</div>
 
 <div align="center">
 
@@ -68,7 +88,9 @@ release and a consuming application's pin are separate decisions; update
 consumers through their release workflow rather than treating this example
 as their current configuration.
 
-## Quickstart
+<a id="quickstart"></a>
+
+## 🚀 Quickstart
 
 After installing, score three document-class predictions entirely offline:
 
@@ -88,7 +110,17 @@ and confidence intervals; the one correspondence error remains visible in
 the class-level results. No model, API key or tracing service is required.
 For extraction, use the field-type-aware API in [Library Usage](#library-usage).
 
-## How it works
+
+<a id="how-it-works"></a>
+
+## 🧭 How it works
+
+<div align="center">
+<picture>
+  <source media="(max-width: 640px)" srcset="docs/assets/readme/flow-mobile.svg"/>
+  <img src="docs/assets/readme/flow.svg" alt="Predictions flow through a task suite, normalization, comparison, metrics, uncertainty and explanation; the pipeline, sandbox, Langfuse, Phoenix and workbooks plug into it" width="100%"/>
+</picture>
+</div>
 
 Ground truth and predictions enter a task suite. The engine normalizes and
 aligns their fields or labels, computes metrics and uncertainty, then exposes
@@ -102,7 +134,35 @@ are separate integrations; the deterministic core does not require them.
 | Uncertainty | Confidence intervals and comparisons | `bootstrap_ci(...)` |
 | Explanation | Failure modes, field diagnostics, reports | `dojo-analyze`, `dojo-export` |
 
-## Workflows
+<a id="at-a-glance"></a>
+
+## 📟 At a glance
+
+<div align="center">
+<img src="docs/assets/readme/tui.svg" alt="Terminal dashboard: the registry (27 agent profiles, 11 task bundles, tiers T0 to T3, four command-line tools) and a sample dojo-analyze run with its Wilson interval" width="90%"/>
+</div>
+
+<a id="where-it-fits"></a>
+
+## 🌌 Where it fits
+
+<div align="center">
+<picture>
+  <source media="(max-width: 640px)" srcset="docs/assets/readme/constellation-mobile.svg"/>
+  <img src="docs/assets/readme/constellation.svg" alt="Data-flow map of the Mailroom constellation with llm-dojo-scoring highlighted: both the sandbox and the pipeline score with it" width="100%"/>
+</picture>
+</div>
+
+| | Neighbour | Relationship |
+| :---: | :--- | :--- |
+| 🏛️ | [`Digital-Mailroom`](https://github.com/LLM-Mailroom-Services/Digital-Mailroom) | The integration hub. It imports this repository into `packages/llm-dojo-scoring`, and all scoring logic and metrics are authored here first |
+| 🧠 | [`llm-mailroom`](https://github.com/Exios66/llm-mailroom) | The pipeline. It pins a Dojo release and scores its runs with the suites |
+| 🧪 | [`local-mailroom-sandbox`](https://github.com/Exios66/local-mailroom-sandbox) | Scores sandbox runs with a vendored snapshot, refreshed from the hub |
+| 🧠 | [`mailroom-ml`](https://github.com/LLM-Mailroom-Services/mailroom-ml) | Standalone contractor that consumes the Dojo taxonomy and never redefines it |
+
+<a id="workflows"></a>
+
+## 🔧 Workflows
 
 ### Analyze a workbook
 
@@ -148,7 +208,12 @@ are upgraded automatically. See [update awareness](docs/UPDATE_AWARENESS.md)
 for startup semantics, failure/exit codes, privacy and concurrency limits.
 Available in v0.24.0; dependency pins remain operator controlled.
 
-## Module Map
+<a id="module-map"></a>
+
+## 🗺️ Module map
+
+<details>
+<summary><b>The module map: what each module does</b></summary>
 
 <div align="center">
 
@@ -168,14 +233,21 @@ Available in v0.24.0; dependency pins remain operator controlled.
 | `suites` | Dedicated scoring suite per pipeline agent — the API consumers should call |
 | `registry` | Metric definitions registry: every score name → tier (T0 HEADLINE → T3 LOG) |
 | `bundles` | Eleven pre-built task bundles (classification, extraction, cost, factuality, etc.) |
-| `profiles` | 26 agent profiles — each agent's scoring identity |
+| `profiles` | 27 agent profiles — each agent's scoring identity |
 | `emitter` | Unified score emitter: JSONL manifest sink + inert Langfuse sink |
 | `langfuse_sync` | Pull live experiment traces into run records + reference workbook |
 | `phoenix_sync` | Local Phoenix/OTLP sink probe + span reader |
 
 </div>
 
-## Task Coverage
+</details>
+
+<a id="task-coverage"></a>
+
+## 🎯 Task coverage
+
+<details>
+<summary><b>`score_task` keys and their headline metrics</b></summary>
 
 `score_task(task, expected, predicted, ...)` is the single entry point for every classification task:
 
@@ -194,7 +266,11 @@ Available in v0.24.0; dependency pins remain operator controlled.
 
 </div>
 
-## Library Usage
+</details>
+
+<a id="library-usage"></a>
+
+## 🧰 Library usage
 
 ```python
 import llm_dojo_scoring as dojo
@@ -227,7 +303,9 @@ emitter.emit_score(
 )
 ```
 
-## Configuration
+<a id="configuration"></a>
+
+## ⚙️ Configuration
 
 All thresholds, equivalence sets, subtype lists, cost tables, and failure-mode definitions live in one `Settings` object:
 
@@ -240,7 +318,9 @@ settings = load_settings("config/taxonomy.yaml")
 
 Set `LLM_DOJO_SCORING_CONFIG` to a YAML path for the process-wide override.
 
-## Testing
+<a id="testing"></a>
+
+## ✅ Testing
 
 <a id="tests"></a>
 
@@ -254,7 +334,9 @@ private helpers, nested definitions, scripts, examples, and tests. Run the
 repository-wide coverage gate with
 `python -m pytest tests/test_docstring_coverage.py`.
 
-## CLI Reference
+<a id="cli-reference"></a>
+
+## ⌨️ CLI reference
 
 <div align="center">
 
@@ -269,13 +351,16 @@ dojo-sync    [--task TRACE_NAME] [--session NAME] [--max-items N]
 
 </div>
 
-## Documentation
-
+<a id="documentation"></a>
 <a id="migration"></a>
+
+## 📖 Documentation
 
 See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md). Prompt catalog and eval-environment prompt lineage (`list_prompt_versions`, `prompt_chain`, `diff_prompt_versions`): [`docs/PROMPTS.md`](docs/PROMPTS.md).
 
-## Releases & monorepo sync
+<a id="releases--monorepo-sync"></a>
+
+## 🚢 Releases & monorepo sync
 
 This package is the shared scoring engine consumed by llm-mailroom
 and the sandbox (vendored) — version bumps are cross-package
@@ -309,10 +394,10 @@ events.
 **[Mailroom-Corpus-EDA](https://github.com/Exios66/Mailroom-Corpus-EDA)** ·
 **[mailroom-ml](https://github.com/LLM-Mailroom-Services/mailroom-ml)**
 
-<sub>The Mailroom constellation · independent source repositories, shared interfaces.</sub>
+<sub>LLM Dojo Scoring · one of the Mailroom constellation's independent source repositories, with shared interfaces.</sub>
 <br/>
 <sub>Core packages integrate in Digital-Mailroom; mailroom-ml is a standalone contractor.</sub>
 <br/>
-<sub>Local artwork: <a href="docs/assets/readme/README.md">design and regeneration</a>.</sub>
+<sub>🥋 <i>Score the extraction, not the vibes.</i> · Artwork: <a href="docs/assets/readme/README.md">design and regeneration</a></sub>
 
 </div>
