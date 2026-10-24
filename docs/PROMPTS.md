@@ -28,7 +28,7 @@ system = get_prompt("contracts_specialist", family="docclass").text
 ```
 
 `list_prompts()` returns every catalog entry. Filter with `agent=`, `family=`,
-or `kind=`. Every name in `DEFAULT_PROFILES` (26 agents) has at least one
+or `kind=`. Every name in `DEFAULT_PROFILES` (27 agents) has at least one
 entry. Judge variants (`judge-completeness`, `judge-classification`,
 `judge-correctness`) are extra keys for the completeness / classification /
 correctness arms.
