@@ -1,19 +1,34 @@
 <div align="center">
 
-# ⚖️ llm-dojo-scoring
+<picture>
+  <source media="(max-width: 640px)" srcset="docs/assets/readme/hero-mobile.svg"/>
+  <img src="docs/assets/readme/hero.svg" alt="Ground truth and predictions converge on a field-type matcher, which produces metrics, intervals, diagnostics and reports." width="100%"/>
+</picture>
 
-**The deterministic, field-type-aware scoring engine for the LLM-Mailroom constellation — one importable library replacing project-local scoring across llm-mailroom and the sandbox.**
+# LLM Dojo Scoring
 
-Scoring · Error analysis · Visualization · Interpretation
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=for-the-badge)](pyproject.toml)
+[![Release v0.24.0](https://img.shields.io/badge/release-v0.24.0-6C63FF?style=for-the-badge)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.24.0)
+[![Offline core](https://img.shields.io/badge/scoring-offline_core-22C55E?style=for-the-badge)](docs/SCORING.md)
+[![MIT](https://img.shields.io/badge/license-MIT-0EA5E9?style=for-the-badge)](pyproject.toml)
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Release](https://img.shields.io/badge/release-v0.24.0-2EA043)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.24.0)
-[![Contributor](https://img.shields.io/badge/contributor-Exios66-blue)](https://github.com/Exios66)
-[![Tests](https://img.shields.io/badge/pytest-passing-brightgreen)](tests/)
+**[Quickstart](#quickstart)** · **[How it works](#how-it-works)** · **[Workflows](#workflows)** · **[API](#library-usage)** · **[Docs](#documentation)**
 
 </div>
 
 ---
+
+## What this does
+
+**The shared, field-type-aware scoring engine for the Mailroom constellation.**
+Use one importable library to compare document classifications and structured
+extractions, quantify uncertainty, inspect failure modes and produce reports.
+The pipeline and sandbox consume this source; they do not maintain separate
+implementations of its metrics.
+
+<div align="center">
+<img src="docs/assets/readme/stats.svg" alt="Field-aware extraction scoring, task suites, uncertainty intervals, and diagnostics." width="100%"/>
+</div>
 
 ## Install
 
@@ -39,25 +54,55 @@ pip install -e ".[all]"          # embeddings + tracing + dev
 
 </details>
 
-In **llm-mailroom** `pyproject.toml`:
+A standalone consumer can pin this release explicitly:
 
+```toml
+[project]
+dependencies = [
+    "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.24.0",
+]
 ```
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.24.0
-# mailroom:     llm-dojo-scoring[tracing] @ git+...@v0.24.0
-# embeddings:   llm-dojo-scoring[embeddings,tracing] @ git+...@v0.24.0  (optional rescue extra)
-```
+
+The pipeline currently pins **v0.23.1** in its own source. A new Dojo
+release and a consuming application's pin are separate decisions; update
+consumers through their release workflow rather than treating this example
+as their current configuration.
 
 ## Quickstart
 
-<div align="center">
+After installing, score three document-class predictions entirely offline:
 
 ```python
-from llm_dojo_scoring import score_extraction, bootstrap_ci, tokens_summary
-from llm_dojo_scoring import get_suite, apply_intake, score_task, compare_serving
-from llm_dojo_scoring.prompts import get_prompt
+from llm_dojo_scoring import score_task
+
+scores = score_task(
+    "doc_class",
+    expected=["contract", "correspondence", "insurance_claim"],
+    predicted=["contract", "contract", "insurance_claim"],
+)
+print(scores)
 ```
 
-</div>
+Two of the three labels match. The returned dictionary includes task metrics
+and confidence intervals; the one correspondence error remains visible in
+the class-level results. No model, API key or tracing service is required.
+For extraction, use the field-type-aware API in [Library Usage](#library-usage).
+
+## How it works
+
+Ground truth and predictions enter a task suite. The engine normalizes and
+aligns their fields or labels, computes metrics and uncertainty, then exposes
+errors for analysis and export. Optional embedding rescue and tracing sinks
+are separate integrations; the deterministic core does not require them.
+
+| Layer | Responsibility | Entry point |
+| :--- | :--- | :--- |
+| Task suite | Agent-specific scoring contract | `get_suite(...)` |
+| Comparison | Typed fields or task labels | `score_extraction(...)`, `score_task(...)` |
+| Uncertainty | Confidence intervals and comparisons | `bootstrap_ci(...)` |
+| Explanation | Failure modes, field diagnostics, reports | `dojo-analyze`, `dojo-export` |
+
+## Workflows
 
 ### Analyze a workbook
 
@@ -195,7 +240,9 @@ settings = load_settings("config/taxonomy.yaml")
 
 Set `LLM_DOJO_SCORING_CONFIG` to a YAML path for the process-wide override.
 
-## Tests
+## Testing
+
+<a id="tests"></a>
 
 ```bash
 pip install -e ".[dev]"
@@ -222,7 +269,9 @@ dojo-sync    [--task TRACE_NAME] [--session NAME] [--max-items N]
 
 </div>
 
-## Migration
+## Documentation
+
+<a id="migration"></a>
 
 See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md). Prompt catalog and eval-environment prompt lineage (`list_prompt_versions`, `prompt_chain`, `diff_prompt_versions`): [`docs/PROMPTS.md`](docs/PROMPTS.md).
 
@@ -242,7 +291,7 @@ events.
   AND updating every consuming pin — llm-mailroom /
   sandbox `pyproject.toml` git pins and the sandbox vendor snapshot.
   The dojo pin is bumped ONLY at release time of this package, via
-  `packages/llm-mailroom/src/scripts/bump_dojo_scoring.py` — never delete a
+  `src/scripts/bump_dojo_scoring.py` in the llm-mailroom source — never delete a
   pin line. After the release, import the merged source revision and refresh
   the sandbox vendor tree (`scripts/sync_vendor.py`). Verify the changed
   package and every dependant; source and vendor imports must identify the
@@ -252,10 +301,18 @@ events.
 
 <div align="center">
 
-**[llm-mailroom](https://github.com/LLM-Mailroom-Services/Digital-Mailroom)** ·
-**[local-mailroom-sandbox](https://github.com/LLM-Mailroom-Services/Digital-Mailroom)** ·
-**[The-Mailroom](https://github.com/Exios66/The-Mailroom)**
+**[Digital-Mailroom](https://github.com/LLM-Mailroom-Services/Digital-Mailroom)** ·
+**[llm-mailroom](https://github.com/Exios66/llm-mailroom)** ·
+**[llm-dojo-scoring](https://github.com/Exios66/llm-dojo-scoring)** ·
+**[The-Mailroom](https://github.com/Exios66/The-Mailroom)** ·
+**[local-mailroom-sandbox](https://github.com/Exios66/local-mailroom-sandbox)** ·
+**[Mailroom-Corpus-EDA](https://github.com/Exios66/Mailroom-Corpus-EDA)** ·
+**[mailroom-ml](https://github.com/LLM-Mailroom-Services/mailroom-ml)**
 
-<sub>Built by the governed evaluation family under <a href="https://github.com/Exios66">@Exios66</a> · 2026</sub>
+<sub>The Mailroom constellation · independent source repositories, shared interfaces.</sub>
+<br/>
+<sub>Core packages integrate in Digital-Mailroom; mailroom-ml is a standalone contractor.</sub>
+<br/>
+<sub>Local artwork: <a href="docs/assets/readme/README.md">design and regeneration</a>.</sub>
 
 </div>
