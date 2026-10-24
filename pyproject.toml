@@ -63,6 +63,8 @@ dojo-sync = "llm_dojo_scoring.cli:sync_main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["llm_dojo_scoring*"]
+# packages/* are separate distributions (e.g. llm-dojo-pipeline, #83).
+exclude = ["packages*"]
 
 [tool.setuptools.package-data]
 llm_dojo_scoring = ["prompts/*.yaml", "prompts/*.json", "prompts/templates/*.md"]

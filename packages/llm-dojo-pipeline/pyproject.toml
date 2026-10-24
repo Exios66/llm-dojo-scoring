@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-dojo-pipeline"
+version = "0.1.0.dev0"
+description = "Dedicated full-pipeline scoring for the Mailroom constellation: primary task families + transcription/OCR, trace-sink agnostic"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+# Built on the dojo primary tier; no scorer is re-implemented here yet.
+dependencies = ["llm-dojo-scoring>=0.24.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["dojo_pipeline*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

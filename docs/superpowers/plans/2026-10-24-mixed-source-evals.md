@@ -86,6 +86,8 @@ These are **kept primary** because a live suite or dependent repo calls them:
 
 ## Sub-issues (attached to #66, in order)
 
+Issue numbers: 01 = #84, then 02–18 = #67–#83.
+
 1. Consumer-surface audit script + pinned manifest + contract test
 2. Golden-number freeze for every task key (pre-move baseline)
 3. Primary tier definition: `docs/PACKAGE_TIERS.md` + `PRIMARY_TASK_KINDS` / `MIXED_SOURCE_TASK_KINDS` in config
@@ -103,3 +105,68 @@ These are **kept primary** because a live suite or dependent repo calls them:
 15. Slim the root `__init__` + tiered `__all__` + import-time test
 16. Docs, CHANGELOG, MIGRATION and the v0.25.0 release
 17. Downstream adoption: re-vendor llm-mailroom, local-mailroom-sandbox and eval-environment, plus a The-Mailroom parity check
+
+## Dedicated pipeline package: `llm-dojo-pipeline` (#83)
+
+This work lives on the long-lived branch `feat/66-pipeline-scoring-package`, which is
+stacked on `refactor/66-mixed-source-evals`. It does **not** merge to `main`
+until #66 is complete. The skeleton is at `packages/llm-dojo-pipeline/`
+(import `dojo_pipeline`) and has its own pyproject. It will be released with
+`pipeline-vX.Y.Z` tags.
+
+- **Families:** classification, hierarchical, maud, correspondence and
+  **transcription** (PDF transcriber, image transcriber / OCR, `transcription`/`wer`/`cer`).
+  `score_family` delegates to `llm_dojo_scoring.score_task`, so the numbers are
+  identical to the core, and checks each result against `contracts.CONTRACTS`.
+- **Sink-agnostic emission:**
+  - `ScoreEvent` gives typed fields for the trace, observation and session
+    targets, the data type and the comment.
+  - `TraceSink` is the protocol. The adapters are `LocalManifestTraceSink`,
+    `LangfuseTraceSink` (dojo alias table, refuses unattached scores) and
+    `FanoutSink`.
+  - `PhoenixTraceSink` and `OTelTraceSink` are planned stubs.
+- `PipelineScorer` maps graph nodes to families. Nodes without a primary family
+  raise `NotImplementedError` explicitly.
+
+### Recon findings (2026-10-24, four parallel Sonnet scouts)
+
+**Trace sinks**
+- `emitter.ScoreSink` is already a neutral protocol. However, `LangfuseSink`
+  reads `trace_id`, `data_type` and `comment` from untyped metadata, and it
+  drops provenance.
+- Failure counters are module-global.
+- The Langfuse alias table has three copies: the dojo, mailroom
+  `observability/scores.py`, and the sandbox fallback in `eval/tracing.py`.
+  The dojo copy must be the single source.
+- Judge score names are hyphenated (`mailroom-pipeline-judge` / `-quality`).
+  Keep them as they are, because the visualizer reads them.
+- The sandbox already has a second sink (Braintrust), but it is hard-coded as
+  an `if` branch in the consumer.
+- Phoenix is read-only today.
+
+**Family scorers**
+- Contract gaps, now tracked in `CONTRACTS.planned`:
+  - Enron has no CI or per-class P/R/F1, and it counts an `"error:"`
+    pseudo-label in its stats.
+  - `maud_extraction` has its own shape, with no `accuracy`/`n`/CI.
+  - `docclass` without a subclass has no `exact_match` or `confusion`, and it
+    ignores `valid=` for doc_type.
+  - `subtype` does not canonicalize aliases.
+- There is a circular import between `content_scoring` and `tasks`.
+- `content_scoring` pulls in `field_scoring` and `scorecard_honesty` only to
+  build `NON_EXTRACTION_KEYS`.
+
+**Live callers**
+- Only intake and extraction are scored by the dojo inside `llm-mailroom`.
+- The sandbox calls `score_task` only for `docclass` (fallback) and `legalbench`.
+- No consumer calls `enron_*`, `maud_*` or `asr.score_transcription` yet. The
+  pipeline package is meant to become their caller.
+
+**Packaging**
+- llm-mailroom pins `llm-dojo-scoring @ git+…@v0.22.0`. A
+  `bump-dojo-scoring.yml` workflow polls `releases/latest`, so pipeline tags
+  must be prefixed.
+- The sandbox vendors the dojo (`vendor/`, `scripts/sync_vendor.py`,
+  `fetch-deps`) and needs a third vendor entry.
+- eval-environment resolves the dojo transitively.
+- The dojo repo has no `.github/` workflows.
