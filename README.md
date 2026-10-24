@@ -22,6 +22,32 @@
 
 ---
 
+<!-- readme-v2.1 -->
+<details>
+<summary><b>📑 Contents</b></summary>
+
+- [🥋 What is this?](#what-this-does)
+- [🤔 When to reach for it](#when-to-reach-for-it)
+- [📦 Install](#install)
+- [🚀 Quickstart](#quickstart)
+- [🧭 How it works](#how-it-works)
+- [📟 At a glance](#at-a-glance)
+- [🌌 Where it fits](#where-it-fits)
+- [🔧 Workflows](#workflows)
+- [🗺️ Module map](#module-map)
+- [🎯 Task coverage](#task-coverage)
+- [🧰 Library usage](#library-usage)
+- [⚙️ Configuration](#configuration)
+- [✅ Testing](#testing)
+- [⌨️ CLI reference](#cli-reference)
+- [📖 Documentation](#documentation)
+- [🚢 Releases & monorepo sync](#releases--monorepo-sync)
+- [❓ FAQ](#faq)
+- [🙏 Built on](#built-on)
+- [🤝 Contributing, security and license](#contributing-security-and-license)
+
+</details>
+
 <a id="what-this-does"></a>
 
 ## 🥋 What is this?
@@ -43,6 +69,16 @@ key or tracing service.
   <img src="docs/assets/readme/stats.svg" alt="By the numbers: 27 agent profiles, 11 task bundles, metric tiers T0 to T3, four command-line tools, bootstrap and Wilson confidence intervals, and an offline core that needs no API key" width="100%"/>
 </picture>
 </div>
+
+<a id="when-to-reach-for-it"></a>
+
+## 🤔 When to reach for it
+
+| ✅ Reach for it when… | ↪️ Look elsewhere when… |
+| :--- | :--- |
+| You score document classes or structured extractions against ground truth and want the same answer on every run | You want an LLM-as-a-judge rubric. The core never calls a model; the Judge agent and the Langfuse LLM-as-a-judge evaluators live in llm-mailroom |
+| Your fields have types (dates, money, IDs, names, free text, entity lists) and plain string equality would mislead you | You need a general-purpose eval framework. The suites, profiles and bundles are built around the Mailroom document classes |
+| You want confidence intervals and a failure-mode breakdown rather than one bare accuracy number | You want a live dashboard. The Dojo writes Markdown reports, plots and JSONL score manifests; it serves no UI |
 
 <a id="install"></a>
 
@@ -381,6 +417,69 @@ events.
   the sandbox vendor tree (`scripts/sync_vendor.py`). Verify the changed
   package and every dependant; source and vendor imports must identify the
   same release code, even when unrelated distribution metadata is installed.
+
+<a id="faq"></a>
+
+## ❓ FAQ
+
+<details>
+<summary><b>Does scoring need an API key or a network connection?</b></summary>
+
+No. The deterministic core needs no model, API key or tracing service. Embedding rescue (`[embeddings]`) and the Langfuse/Phoenix sinks (`[tracing]`) are opt-in extras, and release checks only run through the opt-in `UpdateChecker`; `LLM_DOJO_UPDATE_CHECK=0` turns them off entirely.
+
+</details>
+
+<details>
+<summary><b>Why not just compare the strings?</b></summary>
+
+Because `"March 3, 2026"` and `"2026-03-03"` are the same fact. `field_scoring` uses one algorithm per field type: IDs are normalized then matched exactly, dates are parsed to ISO with partial-credit fallbacks, money is parsed and compared with a one-cent tolerance, names use Jaro-Winkler plus a token-set ratio, free text uses SQuAD-style token F1, and entity lists use Hungarian bipartite matching.
+
+</details>
+
+<details>
+<summary><b>Which function should my project call?</b></summary>
+
+Consumers should call the dedicated suite for each pipeline agent, `get_suite("<agent>")`. `score_task(...)` is the single entry point for classification tasks and `score_extraction(...)` scores one extraction. See [Library usage](#library-usage) and [Task coverage](#task-coverage).
+
+</details>
+
+<details>
+<summary><b>What do the tiers T0 to T3 mean?</b></summary>
+
+They are the dashboard discipline in `registry`: **T0 HEADLINE** is one board-level number per agent, **T1 CORE** answers "what broke yesterday?", **T2 DEEP** is root-cause investigation (confusion matrices, failure modes) and **T3 LOG** is audit trail and regression comparison only.
+
+</details>
+
+<details>
+<summary><b>How does a new Dojo release reach the pipeline?</b></summary>
+
+Only at release time. The pin is bumped in the llm-mailroom source with `src/scripts/bump_dojo_scoring.py`, and the hub then imports both sources and refreshes the sandbox vendor snapshot. Pin lines are never deleted; see [Releases & monorepo sync](#releases--monorepo-sync).
+
+</details>
+
+<a id="built-on"></a>
+
+## 🙏 Built on
+
+The deterministic core stands on a small, boring stack:
+
+| Project | What it does here |
+| :--- | :--- |
+| [pandas](https://pandas.pydata.org/) · [SciPy](https://scipy.org/) | Score tables, and the Hungarian matcher (`linear_sum_assignment`) for entity lists. Bootstrap CIs use only the standard library |
+| [jellyfish](https://github.com/jamesturk/jellyfish) | Jaro-Winkler similarity for name fields |
+| [python-dateutil](https://github.com/dateutil/dateutil) | Date parsing before comparison |
+| [Matplotlib](https://matplotlib.org/) · [openpyxl](https://openpyxl.readthedocs.io/) | `dojo-analyze` plots and the Excel workbooks |
+| [Langfuse](https://langfuse.com/) · [Arize Phoenix](https://phoenix.arize.com/) (optional) | `dojo-sync` and the tracing sinks, behind the `[tracing]` extra |
+
+<a id="contributing-security-and-license"></a>
+
+## 🤝 Contributing, security and license
+
+| | |
+| :--- | :--- |
+| **Contributing** | Scoring logic and metrics are authored here first, with tests and docstrings (the [docstring coverage gate](#testing) is part of the suite). The hub [contributing guide](https://github.com/LLM-Mailroom-Services/Digital-Mailroom/blob/main/CONTRIBUTING.md) covers the card workflow and the import into Digital-Mailroom. |
+| **Security** | Report vulnerabilities privately as described in the hub [security policy](https://github.com/LLM-Mailroom-Services/Digital-Mailroom/blob/main/SECURITY.md), which covers this package; never post exploit details in a public issue. |
+| **License** | MIT, declared in [`pyproject.toml`](pyproject.toml). There is no standalone `LICENSE` file yet. |
 
 ---
 
