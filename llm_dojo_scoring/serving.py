@@ -537,13 +537,24 @@ def normalize_serving_record(record: Mapping[str, Any] | ServingRun) -> ServingR
         prompt = sum(o.prompt_tokens or 0 for o in observations) or None
         completion = sum(o.completion_tokens or 0 for o in observations) or None
         # Keep one-component pricing, but never price wholly unobserved requests.
-        if (prompt or completion) and all(
-            o.prompt_tokens is not None or o.completion_tokens is not None
+        # An explicit total_tokens: 0 is observed zero usage, not a missing
+        # component: it can contribute zero to an otherwise complete run and
+        # proves a fully zero-token run costs zero when the model is priced.
+        complete_usage = all(
+            o.prompt_tokens is not None
+            or o.completion_tokens is not None
+            or o.total_tokens == 0
             for o in observations
-        ):
+        )
+        if complete_usage and (prompt or completion):
             cost = estimate_cost(prompt, completion, identity.model)
             if cost is not None:
                 cost_basis = COST_BASIS_TOKEN_PRICE
+        elif complete_usage and observations and all(
+            o.total_tokens == 0 for o in observations
+        ) and price_for(identity.model) is not None:
+            cost = 0.0
+            cost_basis = COST_BASIS_TOKEN_PRICE
     gaps: list[str] = []
     if not any(o.ttft_seconds is not None for o in observations):
         gaps.append("ttft_seconds missing — not inferred from e2e/n_tokens")
