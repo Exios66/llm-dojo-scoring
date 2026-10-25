@@ -519,7 +519,11 @@ def _request_rows(record: Mapping[str, Any]) -> list[Mapping[str, Any]]:
 
 
 def normalize_serving_record(record: Mapping[str, Any] | ServingRun) -> ServingRun:
-    """Normalize a sandbox / experiment-log / raw serving dict into a run."""
+    """Normalize a sandbox / experiment-log / raw serving dict into a run.
+
+    Missing costs may be estimated when every observation records at least one
+    token-count component; recorded whole-run costs remain authoritative.
+    """
     if isinstance(record, ServingRun):
         return record
     identity = _identity_from(record)
@@ -532,7 +536,11 @@ def normalize_serving_record(record: Mapping[str, Any] | ServingRun) -> ServingR
     if cost is None:
         prompt = sum(o.prompt_tokens or 0 for o in observations) or None
         completion = sum(o.completion_tokens or 0 for o in observations) or None
-        if prompt or completion:
+        # Keep one-component pricing, but never price wholly unobserved requests.
+        if (prompt or completion) and all(
+            o.prompt_tokens is not None or o.completion_tokens is not None
+            for o in observations
+        ):
             cost = estimate_cost(prompt, completion, identity.model)
             if cost is not None:
                 cost_basis = COST_BASIS_TOKEN_PRICE

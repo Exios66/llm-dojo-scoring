@@ -468,7 +468,10 @@ Estimated USD cost of the call/run
 - **ground_truth:** `none`
 - **units:** `USD` · **aggregation:** `sum`
 - **citation:** USD cost from token counts × model table (cost.estimate_cost).
-- **inclusion:** 0 when usage is missing. Not a quality score.
+- **inclusion:** Unknown when usage or model pricing is unavailable. Serving
+  run estimates require recorded usage for every observation; mixed known/unknown
+  runs keep pooled costs unknown. Explicit recorded zero remains zero. Not a
+  quality score.
 
 ### `exact_accuracy` (T1)
 

@@ -8,7 +8,7 @@
 <br/>
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](pyproject.toml)
-[![Release v0.24.1](https://img.shields.io/badge/release-v0.24.1-6C63FF?style=for-the-badge)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.24.1)
+[![Release v0.24.2](https://img.shields.io/badge/release-v0.24.2-6C63FF?style=for-the-badge)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.24.2)
 [![Offline core](https://img.shields.io/badge/scoring-offline_core-22C55E?style=for-the-badge)](docs/SCORING.md)
 [![MIT](https://img.shields.io/badge/license-MIT-0EA5E9?style=for-the-badge)](pyproject.toml)
 
@@ -91,7 +91,7 @@ key or tracing service.
 <div align="center">
 
 ```bash
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.24.1"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.24.2"
 pip install -e .                # from a local checkout
 ```
 
@@ -115,7 +115,7 @@ A standalone consumer can pin this release explicitly:
 ```toml
 [project]
 dependencies = [
-    "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.24.1",
+    "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.24.2",
 ]
 ```
 
