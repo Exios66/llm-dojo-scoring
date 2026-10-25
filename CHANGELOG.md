@@ -5,6 +5,17 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.24.2] - 2026-10-25
+
+### Fixed
+
+- A multi-request run with a completely missing usage observation no longer
+  prices only its recorded subset as the whole run. Recorded run costs and
+  explicit zero costs remain authoritative; complete per-run token estimates,
+  one-component usage and document counts distinct from request counts remain
+  supported. Published v0.24.1 and its tag remain immutable.
+
+
 ## [0.24.1] - 2026-10-25
 
 ### Fixed

@@ -231,7 +231,7 @@ def test_jellyfish_is_importable_core_dependency():
 
 def test_release_version_is_0_23_1():
     """Pin the package version to the expected compatibility release."""
-    assert dojo.__version__ == "0.24.1"
+    assert dojo.__version__ == "0.24.2"
 
 
 # Every name llm-mailroom imports (src/ + notebooks/), per the sync plan's
