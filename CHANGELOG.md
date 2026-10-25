@@ -5,6 +5,13 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Fixed
+
+- DMR-113: treat an explicit `total_tokens: 0` request as observed zero usage,
+  so it neither blocks an otherwise complete run estimate nor makes a fully
+  zero-token priced run unknown. Rename the release-version compatibility test
+  to match the current version.
+
 ## [0.24.2] - 2026-10-25
 
 ### Fixed

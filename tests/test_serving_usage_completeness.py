@@ -77,6 +77,26 @@ def test_explicit_zero_usage_is_observed_usage(zero_usage):
     assert normalized.cost_basis == "token_price_estimate"
 
 
+def test_zero_total_only_request_does_not_block_complete_run_estimate():
+    """An explicit zero-token request is observed, not missing usage."""
+    record = {"provider": "openrouter", "model": _MODEL, "n": 2,
+              "requests": [_USAGE, {"total_tokens": 0}], "estimated_cost_usd": None}
+    normalized = normalize_serving_record(record)
+    assert normalized.estimated_cost_usd == estimate_cost(1000, 100, _MODEL)
+    assert normalized.cost_basis == "token_price_estimate"
+
+
+def test_all_zero_total_usage_is_known_zero_cost():
+    """A fully zero-token run has a known zero cost, not an unknown one."""
+    record = {"provider": "openrouter", "model": _MODEL, "n": 1,
+              "requests": [{"total_tokens": 0}], "estimated_cost_usd": None}
+    comparison = compare_serving([], [record])
+    for block in (comparison["api"], comparison["cost"]["api"]):
+        assert block["estimated_cost_usd"] == 0.0
+        assert block["cost_per_document"] == 0.0
+        assert block["cost_basis"] == "token_price_estimate"
+
+
 @pytest.mark.parametrize("explicit_unknown", [False, True])
 def test_complete_raw_usage_remains_estimable_with_multiple_documents(explicit_unknown):
     """Missing scalar cost permits complete run pricing even when documents exceed requests."""
