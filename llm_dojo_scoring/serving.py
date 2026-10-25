@@ -599,7 +599,7 @@ def score_serving_run(run: Mapping[str, Any] | ServingRun) -> dict[str, Any]:
 def aggregate_serving(
     runs: Iterable[Mapping[str, Any] | ServingRun],
 ) -> dict[str, Any]:
-    """Mean + p50/p95 over every observation in ``runs``."""
+    """Mean + p50/p95 over every observation; costs require every run to be known."""
     runs = list(runs)
     normalized = [normalize_serving_record(r) for r in runs]
     obs: list[ServingObservation] = []
@@ -635,7 +635,7 @@ def aggregate_serving(
 
     costs = [r.estimated_cost_usd for r in normalized]
     known_costs = [c for c in costs if c is not None]
-    cost = sum(known_costs) if known_costs else None
+    cost = sum(known_costs) if costs and len(known_costs) == len(costs) else None
     cost_per = None
     if cost is not None and n_docs:
         cost_per = round(cost / n_docs, 8)
@@ -701,9 +701,9 @@ def aggregate_serving(
             out["metric_id_conflict"] = distinct
     costed = [r for r in normalized if r.estimated_cost_usd is not None]
     bases = {r.cost_basis for r in costed}
-    if costed and len(bases) == 1 and None not in bases:
-        # One labelled basis across every costed run; mixed or unlabelled
-        # costs carry no basis and are refused at emission (#22).
+    if cost is not None and len(bases) == 1 and None not in bases:
+        # One labelled basis across every run; unknown, mixed or unlabelled
+        # pooled costs carry no basis and are refused at emission (#22).
         out["cost_basis"] = bases.pop()
     mixed = sorted(
         key
@@ -900,7 +900,10 @@ def serving_table_markdown(
 
 
 def serving_cost_card(agg: Mapping[str, Any] | None) -> dict[str, Any]:
-    """Token × price-table cost breakdown. ``None`` when the slug has no price."""
+    """Build a cost breakdown, preserving explicitly unknown aggregate totals.
+
+    Only inputs without ``estimated_cost_usd`` use legacy token-price fallback.
+    """
     agg = agg or {}
     ident = _identity_dict(agg)
     model = ident.get("model")
@@ -908,8 +911,9 @@ def serving_cost_card(agg: Mapping[str, Any] | None) -> dict[str, Any]:
     prompt = agg.get("prompt_tokens")
     completion = agg.get("completion_tokens")
     recorded = _as_float(agg.get("estimated_cost_usd"))
-    computed = estimate_cost(prompt, completion, model)
-    cost = recorded if recorded is not None else computed
+    explicit_cost = "estimated_cost_usd" in agg
+    computed = None if explicit_cost else estimate_cost(prompt, completion, model)
+    cost = recorded if explicit_cost else computed
     cost_basis = agg.get("cost_basis")
     if cost_basis is None and recorded is None and computed is not None:
         # Computed here from tokens × the price table, so the basis is known.
@@ -925,7 +929,7 @@ def serving_cost_card(agg: Mapping[str, Any] | None) -> dict[str, Any]:
     elif prompt is None and completion is None:
         gap = "token counts not recorded"
     n_docs = agg.get("n_docs")
-    cost_per = agg.get("cost_per_document")
+    cost_per = agg.get("cost_per_document") if cost is not None else None
     if cost_per is None and cost is not None and n_docs:
         cost_per = round(cost / n_docs, 8)
     return {
