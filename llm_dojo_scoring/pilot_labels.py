@@ -119,12 +119,15 @@ def normalize_pilot_consideration(value) -> str:
 def normalize_sorter_token(kind, value, catalog, *, contract_token=None):
     """Keep scoped corpus normalization, including its unknown-to-other policy.
 
-    ``contract_token`` is the producer's already normalized CUAD token. All
-    other raw tokens use the existing canonical corpus normalizer.
+    ``contract_token`` is the producer's already normalized CUAD token. Exact
+    accepted producer tokens retain their identity; other values use the
+    existing canonical corpus normalizer.
     """
     if value is None or not str(value).strip() or not catalog:
         return None
     text = str(value).strip()
+    if kind != "contract" and text in catalog:
+        return text
     token = contract_token if kind == "contract" else normalize_corpus_subclass(kind, text)
     if token in catalog:
         return token
