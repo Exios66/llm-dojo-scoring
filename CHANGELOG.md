@@ -5,6 +5,20 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.24.1] - 2026-10-25
+
+### Fixed
+
+- Serving aggregates retain unknown total and per-document costs when any run
+  is unpriced, including comparison cost cards and cost-basis reporting;
+  complete known totals, genuine zero costs and absent-key legacy token pricing
+  remain supported.
+- Producer-accepted noncontract sorter labels retain their exact identity
+  before narrower corpus normalization. This preserves FNOL liability, health,
+  life and workers compensation labels without changing CUAD precedence or
+  the scoped unknown-label fallback.
+
+
 ## [0.24.0] - 2026-10-23
 
 ### Added

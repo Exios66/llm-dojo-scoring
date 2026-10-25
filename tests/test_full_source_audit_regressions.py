@@ -73,12 +73,13 @@ def test_success_tokens_do_not_mask_independent_failures(success, failure):
     assert result["error_class_histogram"] == {expected: 1}
 
 
-@pytest.mark.parametrize("costs,total", [([1.0, 3.0], 4.0), ([1.0, 3.0, 2.0], 6.0),
-                                      ([None, None], None), ([1.0, None], 1.0), ([0.0, 0.0], 0.0)])
-def test_pooled_cost_conserves_known_run_totals(costs, total):
-    """Unknown costs stay unknown; known partial totals use the full doc count."""
+@pytest.mark.parametrize("costs,total,per_doc", [
+    ([1.0, 3.0], 4.0, 2.0), ([1.0, 3.0, 2.0], 6.0, 2.0),
+    ([None, None], None, None), ([1.0, None], None, None), ([0.0, 0.0], 0.0, 0.0),
+])
+def test_pooled_cost_requires_complete_run_totals(costs, total, per_doc):
+    """Any unknown run cost keeps the pooled total and per-document rate unknown."""
     result = aggregate_serving([{"estimated_cost_usd": c, "cost_basis": "busy_window", "n": 1}
                                 for c in costs])
     assert result["estimated_cost_usd"] == total
-    expected = None if total is None else total / len(costs)
-    assert result["cost_per_document"] == expected
+    assert result["cost_per_document"] == per_doc
