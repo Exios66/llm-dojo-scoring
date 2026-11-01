@@ -214,6 +214,9 @@ AUDIT_NODE_ALIASES: dict[str, str] = {
     "insurance_claims_specialist": "document_type_specialist",
     "specialist": "document_type_specialist",
     "arbitrate-verdict": "arbiter",
+    # Classification arbiter between a parked decision review and a person
+    # (llm-mailroom graph node ``classification_arbiter``).
+    "arbitrate-classification": "classification_review",
     "judge-verify": "judge",
     "human_review_tray_extraction": "human_review_extraction",
     "compile-report": "deterministic_reporter",

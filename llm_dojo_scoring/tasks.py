@@ -327,12 +327,17 @@ def score_task(
         }
         if expected_subclass is not None and predicted_subclass is not None:
             from .corpus import normalize_corpus_subclass
+            from .sorter_guide import subclass_scorable
 
             sub_ok = []
             sub_exp_norm = []
             sub_pred_norm = []
+            unannotated = 0
             for e, p, doc in zip(expected_subclass, predicted_subclass, expected):
                 parent = align_doc_type(doc)
+                if str(e or "").strip() and not subclass_scorable(parent, e):
+                    unannotated += 1
+                    continue
                 en = normalize_corpus_subclass(parent, e)
                 pn = normalize_corpus_subclass(parent, p)
                 sub_exp_norm.append(en)
@@ -342,6 +347,7 @@ def score_task(
                 round(sum(sub_ok) / len(sub_ok), 4) if sub_ok else 0.0
             )
             result["n_subclass_scored"] = len(sub_ok)
+            result["n_subclass_unannotated"] = unannotated
             result["per_subclass"] = _per_class(sub_exp_norm, sub_pred_norm)
             result.update(
                 _macros_from_per_class(result["per_subclass"], prefix="subclass_")
@@ -370,14 +376,24 @@ def score_task(
         }
         if expected_subclass is not None and predicted_subclass is not None:
             from .corpus import normalize_corpus_subclass, subclass_equivalent
+            from .sorter_guide import subclass_scorable
 
             sub_ok = []
             sub_ok_equiv = []
             sub_exp_norm = []
             sub_pred_norm = []
-            for e, p, doc_type, parent_error in zip(
-                expected_subclass, predicted_subclass, doc_exp, doc_errors
+            exact = []
+            unannotated = 0
+            for e, p, doc_type, parent_error, doc_pred_value in zip(
+                expected_subclass, predicted_subclass, doc_exp, doc_errors, doc_pred
             ):
+                # An unannotated expected subclass (merger ``other``: no MAUD
+                # consideration annotation) is no label: the class is scored,
+                # the subclass is not.
+                if str(e or "").strip() and not subclass_scorable(doc_type, e):
+                    unannotated += 1
+                    exact.append(1.0 if not parent_error and doc_type == doc_pred_value else 0.0)
+                    continue
                 # Scope the subclass catalog to the *expected* doc type so a
                 # CUAD family is not forced through the MAUD consideration
                 # normalizer (the pre-0.8.1 bug on the merged corpus).
@@ -391,9 +407,7 @@ def score_task(
                 sub_ok_equiv.append(
                     1.0 if not error and (en == pn or subclass_equivalent(doc_type, en, pn)) else 0.0
                 )
-            exact = [1.0 if (de == dp and se == sp)
-                     else 0.0 for de, dp, se, sp in
-                     zip(doc_exp, doc_pred, sub_exp_norm, sub_pred_norm)]
+                exact.append(1.0 if doc_type == doc_pred_value and en == pn else 0.0)
             per_subclass = _per_class(sub_exp_norm, sub_pred_norm)
             result.update({
                 "subclass_accuracy": round(sum(sub_ok) / len(sub_ok), 4) if sub_ok else 0.0,
@@ -403,6 +417,7 @@ def score_task(
                 "exact_match_ci": _ci(exact, seed=seed, n_boot=n_boot),
                 "per_subclass": per_subclass,
                 "n_subclass_scored": len(sub_ok),
+                "n_subclass_unannotated": unannotated,
                 **_macros_from_per_class(per_subclass, prefix="subclass_"),
             })
         return result
