@@ -2,7 +2,7 @@
 import math
 import pytest
 from llm_dojo_scoring import sandbox_schema_adherence as schema
-from llm_dojo_scoring.pipeline_verdict import deterministic_verdict_label as verdict
+from llm_dojo_scoring.pipeline.pipeline_verdict import deterministic_verdict_label as verdict
 
 
 @pytest.mark.parametrize('score,review,mismatch,band,want', [

@@ -8,13 +8,13 @@ from __future__ import annotations
 
 import pytest
 
-from llm_dojo_scoring.profiles import DEFAULT_PROFILES, list_profiles
-from llm_dojo_scoring.registry import (
+from llm_dojo_scoring.metrics.profiles import DEFAULT_PROFILES, list_profiles
+from llm_dojo_scoring.metrics.registry import (
     SPECIALIST_AGENTS,
     expand_agent_families,
     load_registry,
 )
-from llm_dojo_scoring.suites import (
+from llm_dojo_scoring.scoring.suites import (
     DEFAULT_FIELD_TYPES,
     DEFAULT_SUITES,
     DOC_TYPE_ALIASES,

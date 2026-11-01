@@ -7,12 +7,12 @@ import pytest
 pydantic = pytest.importorskip("pydantic")
 from pydantic import BaseModel, Field  # noqa: E402
 
-from llm_dojo_scoring.schema_contract import (  # noqa: E402
+from llm_dojo_scoring.schemas.schema_contract import (  # noqa: E402
     contract_empty_payload,
     contract_empty_value,
     contract_violations,
 )
-from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES  # noqa: E402
+from llm_dojo_scoring.scoring.suites import DEFAULT_FIELD_TYPES  # noqa: E402
 
 
 class _BrokenInsurance(BaseModel):

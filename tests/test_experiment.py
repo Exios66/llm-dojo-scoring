@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from llm_dojo_scoring.experiment import (
+from llm_dojo_scoring.analysis.experiment import (
     append_experiment,
     dotted_get,
     git_snapshot,

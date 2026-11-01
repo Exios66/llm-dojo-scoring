@@ -5,19 +5,19 @@ from __future__ import annotations
 import pytest
 import yaml
 
-from llm_dojo_scoring.bundles import (
+from llm_dojo_scoring.metrics.bundles import (
     BUILTIN_BUNDLES,
     bundle_metric_names,
     get_bundle,
     list_bundles,
     validate_bundle,
 )
-from llm_dojo_scoring.pruning import (
+from llm_dojo_scoring.metrics.pruning import (
     dashboard_metrics,
     headline_metrics,
     prune_metrics,
 )
-from llm_dojo_scoring.profiles import (
+from llm_dojo_scoring.metrics.profiles import (
     clear_profile_cache,
     get_profile,
     list_profiles,
@@ -28,7 +28,7 @@ from llm_dojo_scoring.profiles import (
 @pytest.fixture(autouse=True)
 def _clean_caches():
     """Clear registry and profile caches before and after each test."""
-    from llm_dojo_scoring.registry import clear_registry_cache
+    from llm_dojo_scoring.metrics.registry import clear_registry_cache
 
     clear_registry_cache()
     clear_profile_cache()

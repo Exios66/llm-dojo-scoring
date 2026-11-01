@@ -8,8 +8,8 @@ from copy import deepcopy
 import pytest
 
 from llm_dojo_scoring import get_suite
-from llm_dojo_scoring.corporate_record_relabel import company_from_template, relabel_row, relabel_rows
-from llm_dojo_scoring.corporate_record_schema import audit_gt_row
+from llm_dojo_scoring.schemas.corporate_record_relabel import company_from_template, relabel_row, relabel_rows
+from llm_dojo_scoring.schemas.corporate_record_schema import audit_gt_row
 
 _TEMPLATE_ROW = {
     "expected": "corporate_record",
@@ -156,7 +156,7 @@ def test_relabel_never_overwrites_stated_labels():
 def test_relabel_rows_survives_malformed_gt():
     """Malformed JSON is retained and reported as unparseable during batch repair."""
     bad = {"expected": "corporate_record", "expected_subclass": "bylaws", "gt_fields": "{not json"}
-    from llm_dojo_scoring.corporate_record_relabel import relabel_rows
+    from llm_dojo_scoring.schemas.corporate_record_relabel import relabel_rows
 
     ((row, changes),) = list(relabel_rows([bad]))
     assert row == bad and changes == ["gt_unparseable"]
@@ -165,7 +165,7 @@ def test_relabel_rows_survives_malformed_gt():
 def test_relabel_rows_survives_non_mapping_gt_fields():
     """A list / int ``gt_fields`` raises ``TypeError`` inside :func:`relabel_row`;
     the batch must report ``gt_unparseable`` and keep going, not abort."""
-    from llm_dojo_scoring.corporate_record_relabel import relabel_rows
+    from llm_dojo_scoring.schemas.corporate_record_relabel import relabel_rows
 
     bad_list = {"expected": "corporate_record", "expected_subclass": "bylaws", "gt_fields": ["not", "a", "mapping"]}
     bad_int = {"expected": "corporate_record", "expected_subclass": "bylaws", "gt_fields": 42}

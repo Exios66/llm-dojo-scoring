@@ -10,9 +10,9 @@ from llm_dojo_scoring import (
     score_serving_run,
     split_local_api,
 )
-from llm_dojo_scoring.pruning import dashboard_metrics, headline_metrics
-from llm_dojo_scoring.registry import MetricTier, expand_agent_families, load_registry
-from llm_dojo_scoring.serving import (
+from llm_dojo_scoring.metrics.pruning import dashboard_metrics, headline_metrics
+from llm_dojo_scoring.metrics.registry import MetricTier, expand_agent_families, load_registry
+from llm_dojo_scoring.analysis.serving import (
     CANONICAL_SERVING_KEYS,
     classify_serving_kind,
     pair_comparable_runs,
@@ -286,7 +286,7 @@ def test_kind_field_is_not_used_for_serving_kind():
 
 def test_scoring_table_includes_missing_elements_as_none():
     """Retain every serving metric with explicit missing or one-sided comparison status."""
-    from llm_dojo_scoring.serving import SERVING_METRIC_NAMES, serving_table_rows
+    from llm_dojo_scoring.analysis.serving import SERVING_METRIC_NAMES, serving_table_rows
 
     out = compare_serving(
         {
@@ -321,8 +321,8 @@ def test_scoring_table_includes_missing_elements_as_none():
 
 def test_scorecard_and_cost_calculations():
     """Build serving headlines, dashboard, identity, and derived cost measurements."""
-    from llm_dojo_scoring.cost import estimate_cost
-    from llm_dojo_scoring.serving import serving_card_markdown
+    from llm_dojo_scoring.analysis.cost import estimate_cost
+    from llm_dojo_scoring.analysis.serving import serving_card_markdown
 
     local = {
         "provider": "ollama",
@@ -368,8 +368,8 @@ def test_scorecard_and_cost_calculations():
 
 def test_emit_serving_scorecard_separates_local_and_api_runs():
     """Emit distinct local and API scorecards with their own metric values."""
-    from llm_dojo_scoring.emitter import Emitter
-    from llm_dojo_scoring.serving import emit_serving_scorecard
+    from llm_dojo_scoring.metrics.emitter import Emitter
+    from llm_dojo_scoring.analysis.serving import emit_serving_scorecard
 
     em = Emitter(sinks=[])
     cmp = compare_serving(
@@ -417,9 +417,9 @@ def test_emit_serving_scorecard_validates_all_provenance_before_emitting(
     tmp_path, mocker, invalid_side, invalid_field
 ):
     """Reject incomplete provenance before writing any serving records to sinks."""
-    from llm_dojo_scoring.emitter import Emitter, LocalManifestSink
-    from llm_dojo_scoring.scorecard_honesty import ProvenanceExportError
-    from llm_dojo_scoring.serving import emit_serving_scorecard
+    from llm_dojo_scoring.metrics.emitter import Emitter, LocalManifestSink
+    from llm_dojo_scoring.metrics.scorecard_honesty import ProvenanceExportError
+    from llm_dojo_scoring.analysis.serving import emit_serving_scorecard
 
     sink = LocalManifestSink(tmp_path / "scores.jsonl")
     em = Emitter(sinks=[sink])

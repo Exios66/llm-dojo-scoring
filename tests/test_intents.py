@@ -1,6 +1,6 @@
 """Check class-scoped intent vocabularies and exact label scoring semantics."""
 from llm_dojo_scoring import INTENT_LABELS, get_suite, normalize_intent
-from llm_dojo_scoring.field_scoring import score_extraction
+from llm_dojo_scoring.scoring.field_scoring import score_extraction
 
 
 def test_vocabularies_match_mailroom_bee7f46():

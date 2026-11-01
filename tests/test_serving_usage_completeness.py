@@ -2,8 +2,8 @@
 
 import pytest
 
-from llm_dojo_scoring.cost import estimate_cost
-from llm_dojo_scoring.serving import compare_serving, normalize_serving_record
+from llm_dojo_scoring.analysis.cost import estimate_cost
+from llm_dojo_scoring.analysis.serving import compare_serving, normalize_serving_record
 
 
 _MODEL = "qwen/qwen3.7-flash"

@@ -23,14 +23,14 @@ from pathlib import Path
 import pytest
 
 from llm_dojo_scoring import get_suite
-from llm_dojo_scoring.content_scoring import (
+from llm_dojo_scoring.scoring.content_scoring import (
     is_valid_maud_answer,
     normalize_maud_answer,
     parse_maud_labels,
     score_maud_extraction,
 )
-from llm_dojo_scoring.corpus import MAUD_QUESTION_KEYS
-from llm_dojo_scoring.maud import (
+from llm_dojo_scoring.schemas.corpus import MAUD_QUESTION_KEYS
+from llm_dojo_scoring.schemas.maud import (
     MAUD_ANSWER_CLASSES,
     MAUD_CATALOG_ROWS,
     MAUD_QUESTION_KEYS_BY_DOC_TYPE,

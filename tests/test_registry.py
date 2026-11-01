@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 import yaml
 
-from llm_dojo_scoring.registry import (
+from llm_dojo_scoring.metrics.registry import (
     clear_registry_cache,
     load_registry,
     MetricDef,

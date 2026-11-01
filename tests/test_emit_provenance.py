@@ -6,18 +6,18 @@ import json
 
 import pytest
 
-from llm_dojo_scoring.archive import (
+from llm_dojo_scoring.pipeline.archive import (
     ARCHIVE_SCORING_KEYS,
     empty_archive_scoring_block,
     score_archive_block,
 )
-from llm_dojo_scoring.emitter import (
+from llm_dojo_scoring.metrics.emitter import (
     EMIT_REQUIRED_PROVENANCE,
     Emitter,
     LocalManifestSink,
 )
-from llm_dojo_scoring.registry import MetricDef, MetricTier, Registry
-from llm_dojo_scoring.scorecard_honesty import (
+from llm_dojo_scoring.metrics.registry import MetricDef, MetricTier, Registry
+from llm_dojo_scoring.metrics.scorecard_honesty import (
     SCORER_VERSION,
     ProvenanceExportError,
     stamp_provenance,

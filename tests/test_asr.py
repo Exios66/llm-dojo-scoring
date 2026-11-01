@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import pytest
 
-from llm_dojo_scoring.asr import (
+from llm_dojo_scoring.scoring.asr import (
     character_error_rate,
     score_transcription,
     word_accuracy,
     word_error_rate,
 )
-from llm_dojo_scoring.suites import get_suite
-from llm_dojo_scoring.tasks import score_task
+from llm_dojo_scoring.scoring.suites import get_suite
+from llm_dojo_scoring.scoring.tasks import score_task
 
 
 def test_identical_strings_are_zero_error():

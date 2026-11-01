@@ -2,7 +2,7 @@
 import pytest
 
 from llm_dojo_scoring import interpret as interp
-from llm_dojo_scoring.io import normalize_results_frame
+from llm_dojo_scoring.analysis.io import normalize_results_frame
 
 
 @pytest.fixture
