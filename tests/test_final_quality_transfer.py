@@ -2,12 +2,12 @@
 import math
 import pytest
 from llm_dojo_scoring import get_suite
-from llm_dojo_scoring.field_support import pilot_ground_truth_scores, schema_gt_support, field_audit_support
-from llm_dojo_scoring.pilot_summary import pilot_classification_summary
-from llm_dojo_scoring.pilot_labels import pilot_subclass_match, normalize_sorter_token, normalize_inventory_label
-from llm_dojo_scoring.sandbox_agent_scoring import label_match, contains_match, reporter_keys
-from llm_dojo_scoring.scorecard_honesty import aggregate_quality_honest
-from llm_dojo_scoring.pipeline_scoring import score_exact_classification
+from llm_dojo_scoring.scoring.field_support import pilot_ground_truth_scores, schema_gt_support, field_audit_support
+from llm_dojo_scoring.pipeline.pilot_summary import pilot_classification_summary
+from llm_dojo_scoring.pipeline.pilot_labels import pilot_subclass_match, normalize_sorter_token, normalize_inventory_label
+from llm_dojo_scoring.pipeline.sandbox_agent_scoring import label_match, contains_match, reporter_keys
+from llm_dojo_scoring.metrics.scorecard_honesty import aggregate_quality_honest
+from llm_dojo_scoring.pipeline.pipeline_scoring import score_exact_classification
 
 
 def test_required_fields_are_not_schema_coverage():
@@ -105,8 +105,8 @@ def test_honest_aggregate_known_zero_mixed_and_no_gt():
 def test_explicit_equivalence_policy_is_separate_from_published_task_defaults(monkeypatch):
     """Frozen pipeline groups remain literal while Dojo global settings still work."""
     from llm_dojo_scoring.config import get_settings
-    from llm_dojo_scoring.equivalences import equivalent_subtypes
-    from llm_dojo_scoring.pilot_labels import catalog_subtypes_equivalent
+    from llm_dojo_scoring.schemas.equivalences import equivalent_subtypes
+    from llm_dojo_scoring.pipeline.pilot_labels import catalog_subtypes_equivalent
     monkeypatch.setattr(get_settings(),'subtype_equivalences',[])
     assert equivalent_subtypes('license','maintenance') is False
     assert catalog_subtypes_equivalent('license','maintenance',[frozenset({'license','maintenance'})]) is True

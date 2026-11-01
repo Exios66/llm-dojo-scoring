@@ -3,8 +3,8 @@
 import pytest
 
 from llm_dojo_scoring import get_suite, score_task
-from llm_dojo_scoring.scorecard_honesty import summarize_run_completion
-from llm_dojo_scoring.serving import aggregate_serving
+from llm_dojo_scoring.metrics.scorecard_honesty import summarize_run_completion
+from llm_dojo_scoring.analysis.serving import aggregate_serving
 
 
 @pytest.mark.parametrize("missing", [None, "not json"])

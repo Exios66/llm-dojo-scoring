@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 from llm_dojo_scoring import error_analysis as ea
-from llm_dojo_scoring.io import normalize_results_frame
+from llm_dojo_scoring.analysis.io import normalize_results_frame
 
 
 @pytest.fixture
@@ -104,7 +104,7 @@ def test_require_metric_raises(df):
 
 def test_real_workbook_analysis(real_artifacts):
     """Analyze reference workbook rankings, failure counts, and subtype coverage."""
-    from llm_dojo_scoring.io import read_workbook
+    from llm_dojo_scoring.analysis.io import read_workbook
 
     result = read_workbook(real_artifacts["results"])
     df = normalize_results_frame(result.frame)

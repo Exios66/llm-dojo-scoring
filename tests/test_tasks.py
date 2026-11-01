@@ -4,7 +4,7 @@ opinions, ContractEval."""
 
 import pytest
 
-from llm_dojo_scoring.tasks import (
+from llm_dojo_scoring.scoring.tasks import (
     chained_composite,
     chained_summary,
     contracteval_classified,

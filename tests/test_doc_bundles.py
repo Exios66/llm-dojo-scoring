@@ -9,21 +9,21 @@ from __future__ import annotations
 
 import pytest
 
-from llm_dojo_scoring.doc_bundles import (
+from llm_dojo_scoring.metrics.doc_bundles import (
     DOC_TYPES,
     DOC_TYPE_BUNDLES,
     get_doc_bundle,
     list_doc_types,
     validate_doc_bundle,
 )
-from llm_dojo_scoring.bundles import BUILTIN_BUNDLES, get_bundle
-from llm_dojo_scoring.profiles import AgentProfile, get_profile, list_profiles
+from llm_dojo_scoring.metrics.bundles import BUILTIN_BUNDLES, get_bundle
+from llm_dojo_scoring.metrics.profiles import AgentProfile, get_profile, list_profiles
 
 
 @pytest.fixture(autouse=True)
 def _clean_caches():
     """Reset registry and profile caches around document-bundle tests."""
-    from llm_dojo_scoring.registry import clear_registry_cache
+    from llm_dojo_scoring.metrics.registry import clear_registry_cache
 
     clear_registry_cache()
     yield

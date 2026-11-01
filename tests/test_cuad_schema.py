@@ -1,4 +1,4 @@
-"""CUAD contract schema catalog (``llm_dojo_scoring.cuad_schema``) — network-free.
+"""CUAD contract schema catalog (``llm_dojo_scoring.schemas.cuad_schema``) — network-free.
 
 Pins the 41-category / 25+1-family catalog to the corpus constants, the frozen
 ``contracts_specialist`` prompt and the taxonomy fixture, and checks that the
@@ -14,13 +14,13 @@ from pathlib import Path
 import pytest
 
 from llm_dojo_scoring.config import CONTRACT_SUBTYPE_KEYS
-from llm_dojo_scoring.corpus import (
+from llm_dojo_scoring.schemas.corpus import (
     CORPUS_EXTRACTION_FIELDS,
     CORPUS_SUBCLASS_SURFACES,
     CUAD_CLAUSE_CATEGORIES,
     DOC_TYPE_SUBCLASSES,
 )
-from llm_dojo_scoring.cuad_schema import (
+from llm_dojo_scoring.schemas.cuad_schema import (
     CONTRACT_EXTRACTION_FIELDS,
     CONTRACT_FIELD_TYPES,
     CUAD_ANSWER_FORMATS,
@@ -38,9 +38,9 @@ from llm_dojo_scoring.cuad_schema import (
     render_cuad_question_block,
     salient_categories,
 )
-from llm_dojo_scoring.equivalences import normalize_subtype
+from llm_dojo_scoring.schemas.equivalences import normalize_subtype
 from llm_dojo_scoring.prompts import get_prompt
-from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES
+from llm_dojo_scoring.scoring.suites import DEFAULT_FIELD_TYPES
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "taxonomy_field_types.json"
 
@@ -469,7 +469,7 @@ def test_json_schema_agrees_with_jsonschema_when_installed():
 
 def test_reference_doc_covers_every_category_and_family():
     """Keep reference documentation complete for every CUAD category and family."""
-    doc = (Path(__file__).parent.parent / "docs" / "CUAD_SCHEMA.md").read_text(encoding="utf-8")
+    doc = (Path(__file__).parent.parent / "docs" / "schemas" / "CUAD_SCHEMA.md").read_text(encoding="utf-8")
     for cat in CUAD_CATEGORIES:
         assert f"`{cat.name}`" in doc and cat.description.replace("|", "\\|") in doc
     for fam in CUAD_FAMILIES:
@@ -480,7 +480,7 @@ def test_cuad_family_unknown_normalized_subtype_falls_back_to_other(monkeypatch)
     # configure_from_taxonomy() can register a custom subtype that
     # normalize_subtype returns verbatim; it has no CUAD family.
     """Fall back to other when subtype normalization yields an uncataloged family."""
-    import llm_dojo_scoring.cuad_schema as cs
+    import llm_dojo_scoring.schemas.cuad_schema as cs
 
     monkeypatch.setattr(cs, "normalize_subtype", lambda _name: "custom")
     assert cs.cuad_family("custom contract").key == "other"

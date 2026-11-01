@@ -12,8 +12,8 @@ those inspected checkouts, not the current integration state.
 The superseded `issue_inventory.md` has been removed rather than maintained as
 a second live issue tracker; its original evidence remains in Git history.
 Use GitHub issues and pull requests for current review and merge status, and
-[`docs/TODOS.md`](../../docs/TODOS.md) for remaining connected-repository work.
+[`docs/TODOS.md`](../../docs/history/TODOS.md) for remaining connected-repository work.
 Current dojo contracts are documented in
-[`docs/CORPORATE_RECORD_SCHEMA.md`](../../docs/CORPORATE_RECORD_SCHEMA.md) and
-[`docs/PROMPTS.md`](../../docs/PROMPTS.md), with prompt bytes and provenance
+[`docs/CORPORATE_RECORD_SCHEMA.md`](../../docs/schemas/CORPORATE_RECORD_SCHEMA.md) and
+[`docs/PROMPTS.md`](../../docs/guides/PROMPTS.md), with prompt bytes and provenance
 validated by the package tests.

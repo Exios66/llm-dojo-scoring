@@ -1,7 +1,7 @@
 """Check confidence interval bounds, reproducibility, and insufficient-sample handling."""
 import pytest
 
-from llm_dojo_scoring.bootstrap import bootstrap_ci, delta_significance, wilson_ci
+from llm_dojo_scoring.analysis.bootstrap import bootstrap_ci, delta_significance, wilson_ci
 
 
 def test_bootstrap_ci_single_value_returns_none():

@@ -74,7 +74,7 @@ def test_legalbench_can_bind_producer_equivalences_without_global_mutation():
 
 def test_pilot_calibration_aggregates_unrounded_errors_then_rounds_once():
     """Per-row rounding would incorrectly change this report from .001 to .000."""
-    from llm_dojo_scoring.pilot_summary import pilot_calibration_error
+    from llm_dojo_scoring.pipeline.pilot_summary import pilot_calibration_error
     assert pilot_calibration_error([(.00049, False), (.00049, False), (.00149, False)]) == .001
     assert pilot_calibration_error([]) is None
     assert pilot_calibration_error([(.9, True), (.2, False)]) == .15

@@ -7,7 +7,7 @@ from functools import partial
 
 import pytest
 
-from llm_dojo_scoring.content_scoring import (
+from llm_dojo_scoring.scoring.content_scoring import (
     normalize_content_topic,
     normalize_maud_answer,
     normalize_maud_question_key,
@@ -19,14 +19,14 @@ from llm_dojo_scoring.content_scoring import (
     score_maud_extraction,
     score_sentiment,
 )
-from llm_dojo_scoring.corpus import (
+from llm_dojo_scoring.schemas.corpus import (
     CORRESPONDENCE_SENTIMENT_LABELS,
     CORRESPONDENCE_TOPICS,
     MAUD_QUESTION_KEYS,
 )
-from llm_dojo_scoring.suites import get_suite
-from llm_dojo_scoring.tasks import maud_extraction_score, score_task
-from llm_dojo_scoring.gt_metadata import ANNOTATION_KEYS
+from llm_dojo_scoring.scoring.suites import get_suite
+from llm_dojo_scoring.scoring.tasks import maud_extraction_score, score_task
+from llm_dojo_scoring.schemas.gt_metadata import ANNOTATION_KEYS
 
 
 @pytest.fixture(params=["direct", "dispatch"])

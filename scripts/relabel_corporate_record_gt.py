@@ -6,7 +6,7 @@ Usage::
     python scripts/relabel_corporate_record_gt.py OUT.jsonl PATH [PATH ...]
 
 PATH: mailroom-dataset ``ground_truth`` parquet(s). Only ``corporate_record``
-rows are emitted, repaired by ``llm_dojo_scoring.corporate_record_relabel``;
+rows are emitted, repaired by ``llm_dojo_scoring.schemas.corporate_record_relabel``;
 prints the change counts and the post-repair audit. Review the JSONL before
 anything is pushed to the Hub. Needs ``pyarrow``.
 """
@@ -20,8 +20,8 @@ from pathlib import Path
 
 import pyarrow.parquet as pq
 
-from llm_dojo_scoring.corporate_record_relabel import relabel_rows
-from llm_dojo_scoring.corporate_record_schema import audit_gt_rows
+from llm_dojo_scoring.schemas.corporate_record_relabel import relabel_rows
+from llm_dojo_scoring.schemas.corporate_record_schema import audit_gt_rows
 
 
 def main(argv: list[str]) -> int:

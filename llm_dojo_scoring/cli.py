@@ -41,14 +41,14 @@ def _cli_sync(argv: list[str]) -> int:
                         help="Probe the local Phoenix/OTLP sink and report status")
     args = parser.parse_args(argv)
 
-    from .langfuse_sync import LangfuseClient, load_langfuse_config, sync_sorter_results
+    from .integrations.langfuse_sync import LangfuseClient, load_langfuse_config, sync_sorter_results
 
     # --check-phoenix alone is a standalone probe (no Langfuse credentials needed)
     sync_requested = any([args.session, args.max_items, args.env_file, args.workbook,
                           args.task != "subtype_classification",
                           args.outdir != ".", args.no_workbook])
     if args.check_phoenix:
-        from .phoenix_sync import PhoenixClient, check_phoenix
+        from .integrations.phoenix_sync import PhoenixClient, check_phoenix
 
         status = check_phoenix()
         print(f"[dojo-sync] {status.describe()}")
@@ -114,14 +114,14 @@ def _cli_analyze(argv: list[str]) -> int:
                              "langfuse:<name> live sync")
     args = parser.parse_args(argv)
 
-    from . import error_analysis as ea
-    from .io import load_log, normalize_results_frame, read_workbook
-    from .report import build_report
+    from .analysis import error_analysis as ea
+    from .analysis.io import load_log, normalize_results_frame, read_workbook
+    from .analysis.report import build_report
 
     path = args.input
     if path.startswith("langfuse:"):
         # Live sync: langfuse:<trace-name>  (e.g. langfuse:subtype_classification)
-        from .langfuse_sync import (
+        from .integrations.langfuse_sync import (
             LangfuseClient,
             fetch_run_records,
             load_langfuse_config,
@@ -161,7 +161,7 @@ def _cli_analyze(argv: list[str]) -> int:
             import matplotlib
 
             matplotlib.use("Agg")
-            from .visualize import build_all_plots, save_plots
+            from .analysis.visualize import build_all_plots, save_plots
 
             figures = build_all_plots(frame, metric=metric, cost_column=cost_column)
             saved = save_plots(figures, plots_dir, prefix="dojo")
@@ -199,7 +199,7 @@ def _cli_export(argv: list[str]) -> int:
                         help="Also write the model-sweep workbook (champion prompt)")
     args = parser.parse_args(argv)
 
-    from .export import (
+    from .analysis.export import (
         extraction_columns, extraction_records, load_records, sorter_columns,
         sorter_records, build_sweep_workbook, write_codebook, write_workbook,
     )

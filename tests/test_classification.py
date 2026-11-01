@@ -1,7 +1,7 @@
 """Exercise label normalization, failure filtering, and classification score aggregation."""
 import pytest
 
-from llm_dojo_scoring.classification import (
+from llm_dojo_scoring.scoring.classification import (
     accuracy,
     binary_metrics,
     class_distribution,
@@ -100,7 +100,7 @@ def test_binary_metrics():
 
 def test_macro_prf_unweighted_mean():
     """Expose macro precision and F-scores with compatible aggregate aliases."""
-    from llm_dojo_scoring.classification import macro_prf
+    from llm_dojo_scoring.scoring.classification import macro_prf
 
     exp = ["contract", "contract", "insurance_claim"]
     pred = ["contract", "correspondence", "insurance_claim"]
@@ -128,7 +128,7 @@ def test_confusion_matrix_extends_explicit_labels_with_observed():
 
 def test_macro_prf_normalize_false_not_all_zero():
     """Compute nonzero macro scores when label normalization is disabled."""
-    from llm_dojo_scoring.classification import macro_prf
+    from llm_dojo_scoring.scoring.classification import macro_prf
 
     exp = ["yes", "no", "yes"]
     pred = ["yes", "yes", "no"]
