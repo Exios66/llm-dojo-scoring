@@ -84,6 +84,7 @@ def run(
     cwd: Path | None = None,
     env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
+    """Auto-generated docstring."""
     proc = subprocess.run(
         cmd,
         cwd=str(cwd or REPO_ROOT),
@@ -97,10 +98,12 @@ def run(
 
 
 def git(*args: str) -> str:
+    """Auto-generated docstring."""
     return run(["git", *args]).stdout
 
 
 def gh_json(*args: str) -> object:
+    """Auto-generated docstring."""
     proc = run(["gh", *args], check=False)
     if proc.returncode != 0:
         raise ReleaseError(f"gh {' '.join(args)} failed: {proc.stderr.strip()}")
@@ -108,6 +111,7 @@ def gh_json(*args: str) -> object:
 
 
 def emit(payload: dict, *, as_json: bool, human_lines: list[str] | None = None) -> int:
+    """Auto-generated docstring."""
     if as_json:
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:
@@ -126,6 +130,7 @@ def emit(payload: dict, *, as_json: bool, human_lines: list[str] | None = None) 
 
 
 def parse_semver(version: str) -> tuple[int, int, int] | None:
+    """Auto-generated docstring."""
     match = VERSION_RE.match(version.removeprefix(TAG_PREFIX))
     if not match:
         return None
@@ -133,6 +138,7 @@ def parse_semver(version: str) -> tuple[int, int, int] | None:
 
 
 def normalize_version(version: str) -> str:
+    """Auto-generated docstring."""
     version = version.removeprefix(TAG_PREFIX)
     if parse_semver(version) is None:
         raise ReleaseError(f"{version!r} is not semver X.Y.Z")
@@ -140,10 +146,12 @@ def normalize_version(version: str) -> str:
 
 
 def tag_for(version: str) -> str:
+    """Auto-generated docstring."""
     return f"{TAG_PREFIX}{normalize_version(version)}"
 
 
 def pyproject_version() -> str:
+    """Auto-generated docstring."""
     match = PYPROJECT_VERSION_RE.search(PYPROJECT.read_text(encoding="utf-8"))
     if not match:
         raise ReleaseError("no version = line in pyproject.toml")
@@ -151,6 +159,7 @@ def pyproject_version() -> str:
 
 
 def init_version() -> str:
+    """Auto-generated docstring."""
     match = INIT_VERSION_RE.search(INIT_PY.read_text(encoding="utf-8"))
     if not match:
         raise ReleaseError("no __version__ in llm_dojo_scoring/__init__.py")
@@ -158,6 +167,7 @@ def init_version() -> str:
 
 
 def list_version_tags() -> list[dict]:
+    """Auto-generated docstring."""
     out = git(
         "tag",
         "--list",
@@ -190,6 +200,7 @@ def list_version_tags() -> list[dict]:
 
 
 def parse_changelog() -> list[dict]:
+    """Auto-generated docstring."""
     sections: list[dict] = []
     lines = CHANGELOG.read_text(encoding="utf-8").splitlines()
     for line_no, line in enumerate(lines, start=1):
@@ -219,6 +230,7 @@ def parse_changelog() -> list[dict]:
 
 
 def section_for(version: str) -> dict:
+    """Auto-generated docstring."""
     version = normalize_version(version)
     for section in parse_changelog():
         if section["name"] == version and not section["is_unreleased"]:
@@ -227,6 +239,7 @@ def section_for(version: str) -> dict:
 
 
 def chain_state() -> dict:
+    """Auto-generated docstring."""
     tags = list_version_tags()
     sections = parse_changelog()
     version_sections = [s["name"] for s in sections if not s["is_unreleased"]]
@@ -249,6 +262,7 @@ def chain_state() -> dict:
 
 
 def check_chain(state: dict) -> tuple[list[str], list[str]]:
+    """Auto-generated docstring."""
     errors: list[str] = []
     warnings: list[str] = []
 
@@ -330,6 +344,7 @@ def check_chain(state: dict) -> tuple[list[str], list[str]]:
 
 
 def _stamp_changelog(version: str, today: str) -> None:
+    """Auto-generated docstring."""
     lines = CHANGELOG.read_text(encoding="utf-8").splitlines()
     unreleased_idx = next(
         (
@@ -369,6 +384,7 @@ def _replace_once(
     repl: str | Callable[[re.Match[str]], str],
     label: str,
 ) -> None:
+    """Auto-generated docstring."""
     text = path.read_text(encoding="utf-8")
     new_text, count = pattern.subn(repl, text, count=1)
     if count != 1:
@@ -377,6 +393,7 @@ def _replace_once(
 
 
 def _bump_readme_pins(old: str, new: str) -> int:
+    """Auto-generated docstring."""
     text = README.read_text(encoding="utf-8")
     replacements = (
         (f"release-v{old}", f"release-v{new}"),
@@ -396,6 +413,7 @@ def _bump_readme_pins(old: str, new: str) -> int:
 
 
 def cut_plan(version: str, *, today: str, allow_dirty: bool, allow_empty: bool) -> dict:
+    """Auto-generated docstring."""
     version = normalize_version(version)
     state = chain_state()
     if state["dirty"] and not allow_dirty:
@@ -448,6 +466,7 @@ def cut_plan(version: str, *, today: str, allow_dirty: bool, allow_empty: bool) 
 
 
 def cut_apply(plan: dict) -> None:
+    """Auto-generated docstring."""
     version = plan["version"]
     old = plan["from_version"]
     _stamp_changelog(version, plan["date"])
@@ -468,6 +487,7 @@ def cut_apply(plan: dict) -> None:
 
 
 def previous_tag(version: str, tags: list[dict]) -> str | None:
+    """Auto-generated docstring."""
     target = parse_semver(version)
     for tag in tags:
         sv = parse_semver(tag["version"])
@@ -479,10 +499,12 @@ def previous_tag(version: str, tags: list[dict]) -> str | None:
 
 
 def _resolve_commit(ref: str | None) -> str:
+    """Auto-generated docstring."""
     return git("rev-parse", ref or "HEAD").strip()
 
 
 def commits_in_range(prev_tag: str | None, end_ref: str) -> list[dict]:
+    """Auto-generated docstring."""
     if prev_tag:
         out = git("log", "--oneline", "--no-merges", f"{prev_tag}..{end_ref}")
     else:
@@ -497,6 +519,7 @@ def commits_in_range(prev_tag: str | None, end_ref: str) -> list[dict]:
 
 
 def prs_in_range(prev_tag: str | None, end_ref: str, *, net: bool) -> list[dict]:
+    """Auto-generated docstring."""
     if prev_tag:
         merge_log = git("log", "--oneline", "--merges", f"{prev_tag}..{end_ref}")
     else:
@@ -577,6 +600,7 @@ def bullet_summaries(body: str, limit: int = 8) -> list[str]:
 
 
 def key_commits(commits: list[dict], limit: int = 12) -> list[dict]:
+    """Auto-generated docstring."""
     preferred = [c for c in commits if DMR_RE.search(c["subject"]) or "Release" in c["subject"]]
     others = [c for c in commits if c not in preferred]
     return (preferred + others)[:limit]
@@ -593,6 +617,7 @@ def render_notes(
     commits: list[dict],
     artifacts_text: str,
 ) -> dict:
+    """Auto-generated docstring."""
     version = normalize_version(version)
     highlights = bullet_summaries(body)
     if title:
@@ -668,6 +693,7 @@ def build_notes(
     net: bool,
     artifacts_text: str = "",
 ) -> dict:
+    """Auto-generated docstring."""
     version = normalize_version(version)
     tags = list_version_tags()
     prev = previous or previous_tag(version, tags)
@@ -694,6 +720,7 @@ def build_notes(
 
 
 def sha256_file(path: Path) -> str:
+    """Auto-generated docstring."""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -702,6 +729,7 @@ def sha256_file(path: Path) -> str:
 
 
 def build_assets(version: str, *, out_dir: Path, commit: str) -> dict:
+    """Auto-generated docstring."""
     version = normalize_version(version)
     if pyproject_version() != version or init_version() != version:
         # Allow publishing an older already-cut tag from a newer worktree by
@@ -851,6 +879,7 @@ def _build_assets_at_commit(version: str, *, out_dir: Path, commit: str) -> dict
 
 
 def remote_release(version: str) -> dict | None:
+    """Auto-generated docstring."""
     tag = tag_for(version)
     proc = run(
         ["gh", "release", "view", tag, "--repo", REPO, "--json", "name,tagName,isDraft,url,targetCommitish"],
@@ -862,6 +891,7 @@ def remote_release(version: str) -> dict | None:
 
 
 def remote_tag_commit(version: str) -> str | None:
+    """Auto-generated docstring."""
     proc = run(["git", "ls-remote", "--tags", "origin", tag_for(version)], check=False)
     if proc.returncode != 0 or not proc.stdout.strip():
         return None
@@ -888,6 +918,7 @@ def publish_plan(
     title: str | None,
     notes_file: Path | None,
 ) -> dict:
+    """Auto-generated docstring."""
     version = normalize_version(version)
     state = chain_state()
     errors, warnings = check_chain(state)
@@ -1010,6 +1041,7 @@ def publish_plan(
 
 
 def publish_apply(plan: dict, *, push: bool) -> dict:
+    """Auto-generated docstring."""
     if plan["errors"]:
         raise ReleaseError("; ".join(plan["errors"]))
 
@@ -1133,6 +1165,7 @@ def edit_release(
     latest: bool | None,
     apply: bool,
 ) -> dict:
+    """Auto-generated docstring."""
     version = normalize_version(version)
     existing = remote_release(version)
     if not existing:
@@ -1183,6 +1216,7 @@ def edit_release(
 
 
 def cmd_status(args: argparse.Namespace) -> int:
+    """Auto-generated docstring."""
     state = chain_state()
     payload = {"action": "status", **state, "exit_code": 0, "next": []}
     lines = [
@@ -1206,6 +1240,7 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 
 def cmd_check(args: argparse.Namespace) -> int:
+    """Auto-generated docstring."""
     state = chain_state()
     errors, warnings = check_chain(state)
     payload = {
@@ -1232,6 +1267,7 @@ def cmd_check(args: argparse.Namespace) -> int:
 
 
 def cmd_cut(args: argparse.Namespace) -> int:
+    """Auto-generated docstring."""
     today = args.date or _dt.date.today().isoformat()
     plan = cut_plan(
         args.version,
@@ -1265,6 +1301,7 @@ def cmd_cut(args: argparse.Namespace) -> int:
 
 
 def cmd_notes(args: argparse.Namespace) -> int:
+    """Auto-generated docstring."""
     notes = build_notes(
         args.version,
         previous=args.previous,
@@ -1300,6 +1337,7 @@ def cmd_notes(args: argparse.Namespace) -> int:
 
 
 def cmd_assets(args: argparse.Namespace) -> int:
+    """Auto-generated docstring."""
     version = normalize_version(args.version)
     commit = _resolve_commit(args.commit)
     out_dir = Path(args.out_dir) if args.out_dir else DEFAULT_ASSET_DIR
@@ -1339,6 +1377,7 @@ def cmd_assets(args: argparse.Namespace) -> int:
 
 
 def cmd_publish(args: argparse.Namespace) -> int:
+    """Auto-generated docstring."""
     plan = publish_plan(
         args.version,
         commit_ref=args.commit,
@@ -1379,6 +1418,7 @@ def cmd_publish(args: argparse.Namespace) -> int:
 
 
 def cmd_edit(args: argparse.Namespace) -> int:
+    """Auto-generated docstring."""
     latest = True if args.latest else False if args.not_latest else None
     plan = edit_release(
         args.version,
@@ -1399,6 +1439,7 @@ def cmd_edit(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Auto-generated docstring."""
     parser = argparse.ArgumentParser(
         prog="scripts/release.py",
         description="Cut, note, asset-build, publish, and edit Dojo GitHub releases.",
@@ -1468,6 +1509,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Auto-generated docstring."""
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
