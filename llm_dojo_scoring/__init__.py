@@ -12,7 +12,7 @@ from __future__ import annotations
 
 # Vendor and source checkouts can coexist with unrelated installed metadata.
 # Report the version of the code actually loaded; release tests pin pyproject parity.
-__version__ = "0.24.2"
+__version__ = "0.25.0"
 
 from . import (
     archive,
@@ -230,6 +230,14 @@ from .corpus import (
     normalize_corpus_subclass,
     suite_schema,
 )
+from .sorter_guide import (
+    CORRESPONDENCE_SUBCLASS_PRECEDENCE,
+    SORTER_SUBCLASS_GUIDE,
+    UNANNOTATED_SUBCLASSES,
+    format_sorter_subclass_guide,
+    sorter_subclass_keys,
+    subclass_scorable,
+)
 from .cuad_schema import (
     CUAD_CATEGORIES,
     CUAD_FAMILIES,
@@ -369,6 +377,8 @@ __all__ = [
     "DOC_TYPE_ALIASES", "SPECIALIST_DOC_TYPES",
     "get_suite", "list_suites", "score_suite", "suite_for_doc_type",
     "CORPUS_DOC_TYPES", "DOC_TYPE_SUBCLASSES",
+    "CORRESPONDENCE_SUBCLASS_PRECEDENCE", "SORTER_SUBCLASS_GUIDE", "UNANNOTATED_SUBCLASSES",
+    "format_sorter_subclass_guide", "sorter_subclass_keys", "subclass_scorable",
     "normalize_corpus_subclass", "suite_schema",
     "LIVE_DOC_TYPES", "LIVE_SPECIALISTS", "PIPELINE_TRACE",
     "EXTRACT_CLASS_ALIASES", "NODE_OBSERVATION_TYPES",

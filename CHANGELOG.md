@@ -5,7 +5,31 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-11-01
+
+### Added
+
+- `llm_dojo_scoring.sorter_guide`: the sorter-facing subclass catalog. It gives the
+  keys a sorter may emit (`sorter_subclass_keys`), the corpus meaning of each key
+  (`SORTER_SUBCLASS_GUIDE`), the correspondence marker precedence
+  (`CORRESPONDENCE_SUBCLASS_PRECEDENCE`) and the rendered block
+  (`format_sorter_subclass_guide`). The bare key list caused systematic subclass
+  errors on the 2,979-document train split: 116 CMS carrier tables were labelled
+  outpatient, 48 Certificates of Designation rights_instrument, 35 charter amendments
+  certificate_of_formation or articles_of_incorporation, and 364 correspondence forms
+  ignored the precedence. `certificate_of_formation` stays a scoring key, but a sorter
+  no longer emits it.
+
+- `arbitrate-classification`, llm-mailroom's classification arbiter node between a
+  parked decision review and a person, is now in `NODE_OBSERVATION_TYPES` (agent) and in
+  the archive node-to-agent map (classification_review).
+
 ### Fixed
+
+- Merger subclass `other` is unannotated (it has no MAUD Type of Consideration), so it
+  is no longer scored as a label. The `docclass` and hierarchical subclass scores skip
+  those rows and report them as `n_subclass_unannotated`; the class is still scored.
+  `subclass_scorable` and `UNANNOTATED_SUBCLASSES` expose the rule.
 
 - DMR-113: treat an explicit `total_tokens: 0` request as observed zero usage,
   so it neither blocks an otherwise complete run estimate nor makes a fully
