@@ -2,7 +2,7 @@
 
 Synced from eval-environment ``22d217ab`` by ``scripts/sync_eval_environment_lineage.py``.
 The texts are historical eval-environment bytes, so the anti-priming rule from
-``docs/PROMPTS.md`` is deliberately not asserted here. Network-free.
+``docs/guides/PROMPTS.md`` is deliberately not asserted here. Network-free.
 """
 
 from __future__ import annotations

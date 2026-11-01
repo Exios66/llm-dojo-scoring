@@ -1,7 +1,7 @@
 """Empty-field contract guard for specialist extraction schemas.
 
 The dojo scores against one empty-field contract
-(``docs/EXTRACTION_SCHEMAS.md``): an unstated scalar is ``null``, an unstated
+(``docs/schemas/EXTRACTION_SCHEMAS.md``): an unstated scalar is ``null``, an unstated
 list is ``[]``, and correct emptiness earns full credit. The specialist
 prompts teach the same contract. The pydantic extraction schemas live in
 llm-mailroom, though, and nothing checked them against it.

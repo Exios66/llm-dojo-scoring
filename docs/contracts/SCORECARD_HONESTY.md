@@ -71,7 +71,7 @@ Every extraction suite emits its class scores on the per-document surface:
   parsed and scoped to the document type's own schema before any of the
   above: `"[]"` / `"{}"` are empty, `not_applicable` /
   `schema_documented_absence` are never required events, and annotation
-  stats never reach extraction. See [`GT_METADATA.md`](GT_METADATA.md).
+  stats never reach extraction. See [`GT_METADATA.md`](../schemas/GT_METADATA.md).
 
 ## Completion, ITT, cost, serving (#21)
 

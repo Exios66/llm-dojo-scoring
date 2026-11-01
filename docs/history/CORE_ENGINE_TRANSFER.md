@@ -1,5 +1,8 @@
 # Core evaluation engines (DMR-091 proposal)
 
+> **Historical record.** This doc describes status at the time it was written and is not kept current;
+> see the [CHANGELOG](../../CHANGELOG.md) for what shipped.
+
 **Release prerequisite:** these additive module APIs are not provided by the
 published v0.22.0 dependency. Review and release Dojo first, then adopt its
 immutable release pin in each source consumer. Workspace resolution alone is

@@ -429,7 +429,7 @@ def test_scoring_doc_field_tables_match_default_field_types():
 
     from llm_dojo_scoring.scoring.suites import DEFAULT_FIELD_TYPES
 
-    text = (Path(__file__).resolve().parents[1] / "docs" / "SCORING.md").read_text(
+    text = (Path(__file__).resolve().parents[1] / "docs" / "guides" / "SCORING.md").read_text(
         encoding="utf-8"
     )
     documented = {}

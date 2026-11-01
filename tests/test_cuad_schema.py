@@ -469,7 +469,7 @@ def test_json_schema_agrees_with_jsonschema_when_installed():
 
 def test_reference_doc_covers_every_category_and_family():
     """Keep reference documentation complete for every CUAD category and family."""
-    doc = (Path(__file__).parent.parent / "docs" / "CUAD_SCHEMA.md").read_text(encoding="utf-8")
+    doc = (Path(__file__).parent.parent / "docs" / "schemas" / "CUAD_SCHEMA.md").read_text(encoding="utf-8")
     for cat in CUAD_CATEGORIES:
         assert f"`{cat.name}`" in doc and cat.description.replace("|", "\\|") in doc
     for fam in CUAD_FAMILIES:

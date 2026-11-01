@@ -12,11 +12,26 @@ The scoring code that lives in the pipeline projects is now consolidated in
 kept (same signatures, same return shapes) so the eval runners, Braintrust
 scorers, and reporting scripts keep working with minimal edits.
 
+## 0. v0.26.0: subpackage layout
+
+The flat modules moved into subpackages (`schemas/`, `scoring/`, `pipeline/`, `metrics/`, `analysis/`,
+`integrations/`); see [`llm_dojo_scoring/README.md`](../../llm_dojo_scoring/README.md).
+
+- **Imports keep working.** `llm_dojo_scoring.field_scoring` and every other old path resolves to the same
+  module object as the new path (`llm_dojo_scoring.scoring.field_scoring`). So do `from … import`, `mock.patch`
+  strings and `monkeypatch.setattr`. The package root keeps its module attributes.
+- **Module `__name__` changed.** It is now the subpackage path. Code that matches Dojo frames or loggers by module
+  name must accept it. llm-mailroom's delegation tests (`calls_to("llm_dojo_scoring.cost")` and the
+  `frame.f_globals["__name__"]` sets) are the known case. Compare against
+  `llm_dojo_scoring._layout.LEGACY_MODULES[...]`, or match by function name under the `llm_dojo_scoring` prefix.
+- **Docs moved** into `docs/guides`, `docs/schemas`, `docs/contracts` and `docs/history`.
+- New code should import from the subpackage path.
+
 ## 1. Install the package
 
 ```bash
 # in llm-mailroom — pin the published tag
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.16.0"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.25.0"
 # or from a local checkout
 pip install -e /path/to/llm-dojo-scoring
 ```
@@ -340,7 +355,7 @@ m = __import__("llm_dojo_scoring").load_registry().get("extraction_f1")
 assert m.citation and m.ground_truth == "required"
 ```
 
-Canonical scoring tables (per-agent T0/T1, field maps, honest gaps, metric catalog): [`docs/SCORING.md`](SCORING.md). Prompt catalog rules: [`docs/PROMPTS.md`](PROMPTS.md).
+Canonical scoring tables (per-agent T0/T1, field maps, honest gaps, metric catalog): [`docs/guides/SCORING.md`](SCORING.md). Prompt catalog rules: [`docs/guides/PROMPTS.md`](PROMPTS.md).
 
 Do not push pin PRs to llm-mailroom / The-Mailroom from this package PR — consumers bump when they choose.
 

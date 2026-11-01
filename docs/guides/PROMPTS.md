@@ -79,7 +79,7 @@ byte-identical to the frozen v1 source. Catalog digests identify the current tex
 re-freeze and a matching catalog/test update.
 
 Field maps those stems emit (and the scorer grades) are documented in
-[`EXTRACTION_SCHEMAS.md`](EXTRACTION_SCHEMAS.md).
+[`EXTRACTION_SCHEMAS.md`](../schemas/EXTRACTION_SCHEMAS.md).
 
 ## eval-environment prompt lineage
 

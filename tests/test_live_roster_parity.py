@@ -163,8 +163,8 @@ def _schema_table_fields(section_body: str) -> set[str]:
 
 
 def test_extraction_schemas_doc_covers_live_field_maps():
-    """docs/EXTRACTION_SCHEMAS.md must name every live schema class and field."""
-    report = (Path(__file__).resolve().parents[1] / "docs" / "EXTRACTION_SCHEMAS.md").read_text(
+    """docs/schemas/EXTRACTION_SCHEMAS.md must name every live schema class and field."""
+    report = (Path(__file__).resolve().parents[1] / "docs" / "schemas" / "EXTRACTION_SCHEMAS.md").read_text(
         encoding="utf-8"
     )
     sections = {m.group("doc_type"): m for m in _SCHEMA_SECTION.finditer(report)}

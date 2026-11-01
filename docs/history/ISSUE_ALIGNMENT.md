@@ -1,5 +1,8 @@
 # Issue alignment — v0.19.0 (updated for Unreleased, planned v0.22.0)
 
+> **Historical record.** This doc describes status at the time it was written and is not kept current;
+> see the [CHANGELOG](../../CHANGELOG.md) for what shipped.
+
 Status of the open scoring issues after the v0.19.0 release-completion
 patch (adversarial audit of PR #23 + this patch). **Stale** = already
 satisfied, no further code needed. **Relevant** = still open, with the

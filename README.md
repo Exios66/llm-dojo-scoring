@@ -9,12 +9,12 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](pyproject.toml)
 [![Release v0.25.0](https://img.shields.io/badge/release-v0.25.0-6C63FF?style=for-the-badge)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.25.0)
-[![Offline core](https://img.shields.io/badge/scoring-offline_core-22C55E?style=for-the-badge)](docs/SCORING.md)
+[![Offline core](https://img.shields.io/badge/scoring-offline_core-22C55E?style=for-the-badge)](docs/guides/SCORING.md)
 [![MIT](https://img.shields.io/badge/license-MIT-0EA5E9?style=for-the-badge)](pyproject.toml)
 
 [![Hub](https://img.shields.io/badge/🏛️_hub-Digital--Mailroom-000?style=flat-square)](https://github.com/LLM-Mailroom-Services/Digital-Mailroom)
-[![Scoring tables](https://img.shields.io/badge/📐_scoring_tables-SCORING.md-555?style=flat-square)](docs/SCORING.md)
-[![Migration](https://img.shields.io/badge/🔀_migration-MIGRATION.md-555?style=flat-square)](docs/MIGRATION.md)
+[![Scoring tables](https://img.shields.io/badge/📐_scoring_tables-SCORING.md-555?style=flat-square)](docs/guides/SCORING.md)
+[![Migration](https://img.shields.io/badge/🔀_migration-MIGRATION.md-555?style=flat-square)](docs/guides/MIGRATION.md)
 
 **[Quickstart](#quickstart)** · **[How it works](#how-it-works)** · **[Workflows](#workflows)** · **[API](#library-usage)** · **[Where it fits](#where-it-fits)** · **[Docs](#documentation)**
 
@@ -119,8 +119,8 @@ dependencies = [
 ]
 ```
 
-The pipeline currently pins **v0.23.1** in its own source. A new Dojo
-release and a consuming application's pin are separate decisions; update
+The pipeline currently pins the **v0.25.0** release commit (`e35504d`) in its own
+source. A new Dojo release and a consuming application's pin are separate decisions; update
 consumers through their release workflow rather than treating this example
 as their current configuration.
 
@@ -240,7 +240,7 @@ The opt-in `llm_dojo_scoring.integrations.update_awareness.UpdateChecker` shares
 per-user cache across application startup hooks and limits notices per consumer
 and release. Pure imports and scoring stay offline. Set
 `LLM_DOJO_UPDATE_CHECK=0` to disable all update checks and cache I/O. No packages
-are upgraded automatically. See [update awareness](docs/UPDATE_AWARENESS.md)
+are upgraded automatically. See [update awareness](docs/guides/UPDATE_AWARENESS.md)
 for startup semantics, failure/exit codes, privacy and concurrency limits.
 Available in v0.24.0; dependency pins remain operator controlled.
 
@@ -248,35 +248,24 @@ Available in v0.24.0; dependency pins remain operator controlled.
 
 ## 🗺️ Module map
 
-<details>
-<summary><b>The module map: what each module does</b></summary>
+Modules are grouped into subpackages by what they are about. The full module table is in
+[`llm_dojo_scoring/README.md`](llm_dojo_scoring/README.md).
 
 <div align="center">
 
-| Module | What it does |
+| Subpackage | What lives there |
 |:---|:---|
-| `update_awareness` | Opt-in shared release discovery, startup cache and `dojo-version` |
-| `field_scoring` | Field-type-aware deterministic extraction scoring (date/money/id/name/free_text/entity_list) |
-| `classification` | Label normalization, exact match, per-class P/R/F1/F2, macro-PRF, confusion matrices |
-| `extraction_metrics` | Field-micro extraction P/R/F1/F2 over (field, value) events |
-| `claims_consistency` | Insurance `determination_consistency` and `amount_exactness` |
-| `failure_modes` | Failure-mode taxonomy + `classify_failure`, per-subtype accuracy |
-| `bootstrap` | Bootstrap CIs, two-sample delta significance, Wilson intervals |
-| `cost` | Price lookup, cost estimation, usage aggregation |
-| `diagnostics` | Run-level diagnostics: date/duration/money MAE+R², span drift, field error decomposition |
-| `experiment` | JSONL record append/load, dotted-path access, git snapshot |
-| `tasks` | Task-aware scoring across the full document hierarchy (MAUD, LegalBench, chained, etc.) |
-| `suites` | Dedicated scoring suite per pipeline agent — the API consumers should call |
-| `registry` | Metric definitions registry: every score name → tier (T0 HEADLINE → T3 LOG) |
-| `bundles` | Eleven pre-built task bundles (classification, extraction, cost, factuality, etc.) |
-| `profiles` | 27 agent profiles — each agent's scoring identity |
-| `emitter` | Unified score emitter: JSONL manifest sink + inert Langfuse sink |
-| `langfuse_sync` | Pull live experiment traces into run records + reference workbook |
-| `phoenix_sync` | Local Phoenix/OTLP sink probe + span reader |
+| `schemas/` | Corpus alignment, GT metadata, intents, CUAD/MAUD/corporate-record contracts, sorter guide |
+| `scoring/` | `field_scoring`, classification, extraction metrics, content, claims, LegalBench, `tasks`, `suites` |
+| `pipeline/` | Mailroom pipeline contract, intake, pilot labels, verdicts, archive, sandbox rubrics |
+| `metrics/` | Registry, metric metadata, bundles, profiles, emitter, scorecard honesty |
+| `analysis/` | Bootstrap, diagnostics, failure modes, interpretation, reports, plots, export, grid, serving, cost |
+| `integrations/` | Langfuse and Phoenix sync, update awareness |
+| root | `config`, `cli`, `prompts/`, and the public API in `__init__` |
 
 </div>
 
-</details>
+The pre-v0.26.0 flat paths (`llm_dojo_scoring.field_scoring`, …) remain importable as the same module objects.
 
 <a id="task-coverage"></a>
 
@@ -392,7 +381,12 @@ dojo-sync    [--task TRACE_NAME] [--session NAME] [--max-items N]
 
 ## 📖 Documentation
 
-See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md). Prompt catalog and eval-environment prompt lineage (`list_prompt_versions`, `prompt_chain`, `diff_prompt_versions`): [`docs/PROMPTS.md`](docs/PROMPTS.md).
+Start at [`docs/README.md`](docs/README.md). The docs are grouped into guides, schemas, contracts and history.
+
+- **Migrating a pipeline project**, including the v0.26.0 subpackage layout: [`docs/guides/MIGRATION.md`](docs/guides/MIGRATION.md)
+- **Scoring tables**: [`docs/guides/SCORING.md`](docs/guides/SCORING.md)
+- **Prompt catalog and eval-environment lineage** (`list_prompt_versions`, `prompt_chain`, `diff_prompt_versions`): [`docs/guides/PROMPTS.md`](docs/guides/PROMPTS.md)
+- **Releases**: [`docs/guides/RELEASES.md`](docs/guides/RELEASES.md)
 
 <a id="releases--monorepo-sync"></a>
 

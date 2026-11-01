@@ -32,7 +32,7 @@ block = score_archive_block(
 `overall_score` is `score_extraction`: unweighted mean of typed scores on
 expected fields that are non-null and non-empty. No field weights.
 `confidence` and `reasoning` are never scored. They are **captured** on
-`trace` as experimental knobs (`docs/SCORECARD_HONESTY.md`) — sweep
+`trace` as experimental knobs (`docs/contracts/SCORECARD_HONESTY.md`) — sweep
 `confidence_min`, `confidence_band`, and `reasoning_routes_presence` via
 `configure(trace_knobs__…)` or a `trace_knobs:` YAML block. Keys not on
 the live model (`key_obligations`, `cuad_family` on a merger, …) are

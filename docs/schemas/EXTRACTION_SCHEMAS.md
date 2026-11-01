@@ -232,7 +232,7 @@ benchmark.
 
 **Prompt:** `corporate_records_specialist` `sha256 253559fc…`
 (locally corrected + per-subclass entity schemas; upstream eval-environment re-freeze tracked in
-[`TODOS.md`](TODOS.md)).
+[`TODOS.md`](../history/TODOS.md)).
 
 ---
 
@@ -390,6 +390,6 @@ for doc_type in LIVE_DOC_TYPES:
 out = get_suite("insurance_claims_specialist").score_document(expected, predicted)
 ```
 
-Related: [`SCORING.md`](SCORING.md) · [`GT_METADATA.md`](GT_METADATA.md) ·
-[`METRIC_IDS.md`](METRIC_IDS.md) · [`MAUD_LABELS.md`](MAUD_LABELS.md) ·
-[`PROMPTS.md`](PROMPTS.md) · [`SCORECARD_HONESTY.md`](SCORECARD_HONESTY.md).
+Related: [`SCORING.md`](../guides/SCORING.md) · [`GT_METADATA.md`](GT_METADATA.md) ·
+[`METRIC_IDS.md`](../contracts/METRIC_IDS.md) · [`MAUD_LABELS.md`](MAUD_LABELS.md) ·
+[`PROMPTS.md`](../guides/PROMPTS.md) · [`SCORECARD_HONESTY.md`](../contracts/SCORECARD_HONESTY.md).

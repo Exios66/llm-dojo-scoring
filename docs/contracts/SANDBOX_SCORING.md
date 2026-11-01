@@ -1,4 +1,4 @@
-# Additive sandbox scoring API (DMR-091 draft)
+# Sandbox scoring API
 
 `score_sandbox_maud(predicted, maud_clause_labels)` and
 `score_sandbox_cuad(predicted, cuad_clause_labels)` transfer the sandbox's
@@ -25,12 +25,8 @@ run stores, item identities, prompt selection/lineage, and file rendering.
 Its old scoring modules re-export Dojo APIs. Current pipeline corporate v6
 and sandbox evaluation v7 prompt families are untouched.
 
-This draft is source-owned and additive. It requires a reviewed Dojo release
-and explicit consuming source-pin adoption wherever a package pins a released
-Dojo. Sandbox standalone installs require its generated vendor snapshot to
-include this committed Dojo source before these facades can land. Do not ship
-consumer-only imports against the old vendor tree.
-
+Shipped in v0.23.0 (DMR-091) and additive to the existing suites. The sandbox imports it from the installed
+release first, falling back to its vendored snapshot; both must identify the same release.
 
 `aggregate_sandbox_scores(benchmark, rows)` owns cross-document event pooling.
 It accepts already selected score rows, sums MAUD question / answer events or

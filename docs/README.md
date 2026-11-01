@@ -1,40 +1,51 @@
-<div align="center">
+# llm-dojo-scoring documentation
 
-# 📚 LLM Dojo Scoring Documentation
+The docs are grouped by purpose. The package layout itself is described in
+[`llm_dojo_scoring/README.md`](../llm_dojo_scoring/README.md).
 
-**Documentation for the scoring engine package.**
+## Guides: using the Dojo
 
-</div>
+| Doc | Read it for |
+|:---|:---|
+| [`guides/SCORING.md`](guides/SCORING.md) | How every score is computed: field types, entity lists, classification, factuality audit, task keys |
+| [`guides/MIGRATION.md`](guides/MIGRATION.md) | Moving a pipeline project onto the Dojo; the v0.26.0 subpackage layout |
+| [`guides/PROMPTS.md`](guides/PROMPTS.md) | The importable prompt catalog and frozen eval-environment lineage |
+| [`guides/GRID_REPORTS.md`](guides/GRID_REPORTS.md) | Specialist grid reports for local → Modal GPU studies |
+| [`guides/UPDATE_AWARENESS.md`](guides/UPDATE_AWARENESS.md) | Opt-in release discovery and `dojo-version` |
+| [`guides/RELEASES.md`](guides/RELEASES.md) | Cutting and publishing a release with `scripts/release.py` |
 
----
+## Schemas: what the dataset rows mean
 
-## Purpose
+| Doc | Covers |
+|:---|:---|
+| [`schemas/EXTRACTION_SCHEMAS.md`](schemas/EXTRACTION_SCHEMAS.md) | Live extraction schemas for the five mailroom-dataset classes, including the CMS source-table mapping |
+| [`schemas/GT_METADATA.md`](schemas/GT_METADATA.md) | Hub `gt_fields` parsing, `gt_presence` and per-class label scoping |
+| [`schemas/CUAD_SCHEMA.md`](schemas/CUAD_SCHEMA.md) | CUAD: 41 categories, families, questions, JSON Schema |
+| [`schemas/MAUD_SCHEMA.md`](schemas/MAUD_SCHEMA.md) | MAUD: the 22 questions, allowed answers and grammar |
+| [`schemas/MAUD_LABELS.md`](schemas/MAUD_LABELS.md) | MAUD answer-class catalogs (no guessing on GT labels) |
+| [`schemas/CORPORATE_RECORD_SCHEMA.md`](schemas/CORPORATE_RECORD_SCHEMA.md) | Per-subclass corporate-record contracts and the label audit |
 
-Documentation for the llm-dojo-scoring package, covering:
+## Contracts: what a score means and how it is emitted
 
-- Scoring methodology
-- Field-type-aware scoring
-- Entity list scoring
-- Live extraction schemas for the five mailroom-dataset document types (`EXTRACTION_SCHEMAS.md`)
-- CUAD contract schema catalog: 41 categories, 25+1 families, tailored questions, guided-decoding JSON Schema (`CUAD_SCHEMA.md`)
-- Archive scoring block (`ARCHIVE_SCORING.md`)
-- Scorecard honesty: MAUD GT, format vs extraction, completion/cost, confidence/reasoning knobs (`SCORECARD_HONESTY.md`)
-- Hub ground-truth metadata: `gt_fields` parsing, `gt_presence`, per-class label scoping (`GT_METADATA.md`)
-- MAUD answer-class catalogs: no-guess validity/scoring on merger agreements (`MAUD_LABELS.md`)
-- Corporate-record per-subclass entity schemas, unlabeled-GT scoring rule, label audit (`CORPORATE_RECORD_SCHEMA.md`)
-- MAUD entity schema: the 22 questions with allowed answers, JSON Schema grammar, prompt block, consideration subclasses (`MAUD_SCHEMA.md`)
-- Importable prompt catalog + frozen eval-environment v1 lineage (`PROMPTS.md`)
-- Connected-repo TODOs for prompt mirrors, re-freeze scripts, and downstream imports (`TODOS.md`)
-- Metric identity by doc class (`METRIC_IDS.md`)
-- Specialist grid reports for local → Modal GPU studies (`GRID_REPORTS.md`)
-- Issue-by-issue alignment status (`ISSUE_ALIGNMENT.md`)
+| Doc | Covers |
+|:---|:---|
+| [`contracts/METRIC_IDS.md`](contracts/METRIC_IDS.md) | Metric identity by doc class: which scores may be compared |
+| [`contracts/SCORECARD_HONESTY.md`](contracts/SCORECARD_HONESTY.md) | Fail-closed GT, format vs extraction, completion and cost, captured knobs |
+| [`contracts/SANDBOX_SCORING.md`](contracts/SANDBOX_SCORING.md) | Sandbox MAUD/CUAD rubrics and the v0.26.0 contract truth corrections |
+| [`contracts/ARCHIVE_SCORING.md`](contracts/ARCHIVE_SCORING.md) | The archivist scoring block and audit row |
 
+## History: proposals and status records
 
-- Regression diagnostics
-- Factuality audit
+These docs record decisions and their status when they were written. They are not kept current. The CHANGELOG
+is the record of what shipped.
 
-## Related Files
+| Doc | Records |
+|:---|:---|
+| [`history/CORE_ENGINE_TRANSFER.md`](history/CORE_ENGINE_TRANSFER.md) | DMR-091 core evaluation engine transfer proposal |
+| [`history/FINAL_QUALITY_TRANSFER.md`](history/FINAL_QUALITY_TRANSFER.md) | DMR-091 final primary quality proposal |
+| [`history/PRIMARY_ENGINE_OWNERSHIP.md`](history/PRIMARY_ENGINE_OWNERSHIP.md) | Primary scoring ownership as of 0.23.0 |
+| [`history/ISSUE_ALIGNMENT.md`](history/ISSUE_ALIGNMENT.md) | Issue-by-issue alignment as of v0.19–v0.22 |
+| [`history/TODOS.md`](history/TODOS.md) | Connected-repo TODOs at the time of the prompt-catalog transfer |
+| [`history/plans/`](history/plans/) | Implementation plans |
 
-- `README.md` — Package overview
-- `llm_dojo_scoring/` — Source code
-- `examples/` — Usage examples
+`assets/readme/` holds the generated README artwork (`generate.py`).
