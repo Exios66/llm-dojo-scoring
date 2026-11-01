@@ -90,6 +90,12 @@ def test_cli_publish_dry_run_json():
     assert any("already published" in e for e in payload["errors"])
 
 
+def test_missing_executable_is_a_release_error(release):
+    """A command that is not installed (e.g. no ``gh``) raises ReleaseError, not FileNotFoundError."""
+    with pytest.raises(release.ReleaseError, match="failed"):
+        release.run(["definitely-not-an-installed-command-xyz", "--version"])
+
+
 def test_compat_pin_regex_rounds_trip(release):
     """The compat-test version pin regex bumps cleanly."""
     sample = 'assert dojo.__version__ == "0.25.0"\n'

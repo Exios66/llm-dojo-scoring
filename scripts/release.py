@@ -85,13 +85,16 @@ def run(
     env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Run a command in the repository and return the completed process (raise on failure when ``check``)."""
-    proc = subprocess.run(
-        cmd,
-        cwd=str(cwd or REPO_ROOT),
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=str(cwd or REPO_ROOT),
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+    except FileNotFoundError as exc:  # e.g. no ``gh`` installed: a ReleaseError like any failed command
+        raise ReleaseError(f"{' '.join(cmd)} failed: {exc}") from exc
     if check and proc.returncode != 0:
         raise ReleaseError(f"{' '.join(cmd)} failed: {proc.stderr.strip() or proc.stdout.strip()}")
     return proc
