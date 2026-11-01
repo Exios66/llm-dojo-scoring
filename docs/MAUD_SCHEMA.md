@@ -1,6 +1,6 @@
 # MAUD schema — the machine-checkable question→answer contract
 
-`llm_dojo_scoring/maud_schema.py` turns the 22 Hub MAUD questions into data so
+`llm_dojo_scoring/schemas/maud_schema.py` turns the 22 Hub MAUD questions into data so
 the **prompt**, the **output grammar** and the **scorer** read one source. Answer
 classes are never typed here: they are pulled from
 [`maud.py`](MAUD_LABELS.md) (`MAUD_ANSWER_CLASSES`); this module only adds
@@ -8,7 +8,7 @@ meaning, location, grouping, and rendering. It imports from `maud.py`, never
 changes it.
 
 ```python
-from llm_dojo_scoring.maud_schema import (
+from llm_dojo_scoring.schemas.maud_schema import (
     MAUD_QUESTIONS, maud_question, maud_questions, maud_json_schema,
     render_maud_question_block, parse_maud_clause, maud_answers_to_clauses,
     MergerAgreementExtraction, MAUD_CONSIDERATION_SUBCLASSES,

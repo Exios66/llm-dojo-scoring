@@ -30,7 +30,7 @@ mismatch; `compare_serving` sets `incomparable: true` on the quality block.
 | `sandbox_cuad_presence_precision` | `cuad.sandbox_category_detection.micro_precision` |
 | `sandbox_cuad_presence_recall` | `cuad.sandbox_category_detection.micro_recall` |
 
-Resolve helpers: `llm_dojo_scoring.scorecard_honesty.metric_id_for(...)`,
+Resolve helpers: `llm_dojo_scoring.metrics.scorecard_honesty.metric_id_for(...)`,
 `metric_ids_for_class(...)`, `metric_id_allowed(...)`.
 
 ## Doc class → allowed metric_ids
@@ -55,7 +55,7 @@ fingerprint, prompt, task, model or serving kind (`identity_mixed`, listed in
 the leg's `identity_conflict`). `assert_comparable_metric_ids` uses the same
 metric rule; two legs with no id at all are legacy data and come back
 `metric_id_unverified` from both. A grid row that mixes
-metric ids raises (`llm_dojo_scoring.grid.specialist_grid_rows`) rather than
+metric ids raises (`llm_dojo_scoring.analysis.grid.specialist_grid_rows`) rather than
 averaging two different scales.
 
 ## Strict resolution

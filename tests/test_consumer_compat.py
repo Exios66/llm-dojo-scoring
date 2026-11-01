@@ -13,7 +13,7 @@ from pathlib import Path
 
 import llm_dojo_scoring as dojo
 from llm_dojo_scoring import load_registry
-from llm_dojo_scoring.registry import MetricTier
+from llm_dojo_scoring.metrics.registry import MetricTier
 
 
 # Top-level names imported by local-mailroom-sandbox + llm-mailroom tests.
@@ -317,7 +317,7 @@ def test_readme_release_pins_match_version():
 def test_mailroom_relations_matcher_methods_exist():
     # relations.py still calls these until it moves to embed_texts.
     """Preserve private embedding methods still called by mailroom relations."""
-    from llm_dojo_scoring.field_scoring import _EmbeddingMatcher
+    from llm_dojo_scoring.scoring.field_scoring import _EmbeddingMatcher
 
     assert callable(getattr(_EmbeddingMatcher, "_embed", None))
     assert callable(getattr(_EmbeddingMatcher, "_load_local", None))
@@ -363,7 +363,7 @@ def test_sandbox_local_vs_api_emit_call_shape(tmp_path):
     fixture records. With dataset_revision on the records (or passed as
     provenance) it must emit; price-table USD needs no hand-written basis."""
     from llm_dojo_scoring import Emitter, LocalManifestSink, emit_serving_scorecard
-    from llm_dojo_scoring.serving import compare_serving
+    from llm_dojo_scoring.analysis.serving import compare_serving
 
     def rec(**kw):
         """Build a serving record with dataset provenance and caller-supplied overrides."""

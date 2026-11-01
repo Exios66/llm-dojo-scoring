@@ -6,18 +6,18 @@ from __future__ import annotations
 import pytest
 
 from llm_dojo_scoring import get_suite
-from llm_dojo_scoring.archive import (
+from llm_dojo_scoring.pipeline.archive import (
     ARCHIVE_SCORING_POST_V021_KEYS,
     empty_archive_scoring_block,
     format_audit_entry,
     score_archive_block,
     validate_audit_entry,
 )
-from llm_dojo_scoring.emitter import Emitter
-from llm_dojo_scoring.field_scoring import embed_texts, score_extraction
-from llm_dojo_scoring.grid import build_grid_report, specialist_grid_rows
-from llm_dojo_scoring.registry import get_registry
-from llm_dojo_scoring.scorecard_honesty import (
+from llm_dojo_scoring.metrics.emitter import Emitter
+from llm_dojo_scoring.scoring.field_scoring import embed_texts, score_extraction
+from llm_dojo_scoring.analysis.grid import build_grid_report, specialist_grid_rows
+from llm_dojo_scoring.metrics.registry import get_registry
+from llm_dojo_scoring.metrics.scorecard_honesty import (
     _CLASS_METRIC_IDS,
     _METRIC_ID_BY_NAME,
     COST_BASIS_VALUES,
@@ -28,8 +28,8 @@ from llm_dojo_scoring.scorecard_honesty import (
     assert_comparable_metric_ids,
     validate_comparison_provenance,
 )
-from llm_dojo_scoring.serving import compare_serving, pair_comparable_runs
-from llm_dojo_scoring.suites import list_suites
+from llm_dojo_scoring.analysis.serving import compare_serving, pair_comparable_runs
+from llm_dojo_scoring.scoring.suites import list_suites
 
 LIVE = ("contract", "merger_agreement", "corporate_record", "correspondence", "insurance_claim")
 INSURANCE = "insurance_claims_specialist"
@@ -427,7 +427,7 @@ def test_scoring_doc_field_tables_match_default_field_types():
     import re
     from pathlib import Path
 
-    from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES
+    from llm_dojo_scoring.scoring.suites import DEFAULT_FIELD_TYPES
 
     text = (Path(__file__).resolve().parents[1] / "docs" / "SCORING.md").read_text(
         encoding="utf-8"
@@ -449,7 +449,7 @@ def test_scoring_doc_field_tables_match_default_field_types():
 
 def _insurance_full():
     """Fill the insurance schema's empty payload with supplied ground-truth values."""
-    from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES
+    from llm_dojo_scoring.scoring.suites import DEFAULT_FIELD_TYPES
 
     full = {k: None for k in DEFAULT_FIELD_TYPES["insurance_claim"]}
     full.update(GT)
@@ -488,7 +488,7 @@ def test_whole_batch_json_string_is_parsed():
 
 def test_gt_less_batch_rows_feed_no_content_extras():
     """Exclude unscorable rows from topic and sentiment metric denominators."""
-    from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES
+    from llm_dojo_scoring.scoring.suites import DEFAULT_FIELD_TYPES
 
     keys = list(DEFAULT_FIELD_TYPES["correspondence"])[:2]
     gold = {**{k: "AB123" for k in keys}, "content_topic": "billing",
@@ -504,7 +504,7 @@ def test_gt_less_batch_rows_feed_no_content_extras():
 
 def test_stamp_provenance_keeps_draw_seed_zero():
     """Retain a zero draw seed in direct and document-level provenance stamping."""
-    from llm_dojo_scoring.scorecard_honesty import stamp_provenance
+    from llm_dojo_scoring.metrics.scorecard_honesty import stamp_provenance
 
     assert stamp_provenance(draw_seed=0)["provenance"]["draw_seed"] == 0
     out = get_suite(INSURANCE).score_document(GT, _insurance_full(), draw_seed=0)
@@ -528,14 +528,14 @@ def test_vary_accepts_a_bare_key_name():
 
 def test_empty_batch_quality_is_unproven():
     """Assign an unproven export verdict when quality aggregation receives no rows."""
-    from llm_dojo_scoring.scorecard_honesty import aggregate_quality_honest
+    from llm_dojo_scoring.metrics.scorecard_honesty import aggregate_quality_honest
 
     assert aggregate_quality_honest([])["export_verdict"] == "unproven"
 
 
 def test_serving_run_inputs_keep_their_metric_id():
     """Preserve metric IDs on typed serving inputs so mismatches remain detectable."""
-    from llm_dojo_scoring.serving import normalize_serving_record
+    from llm_dojo_scoring.analysis.serving import normalize_serving_record
 
     left = normalize_serving_record(_leg("vllm", metric_id="pipeline.extraction.overall"))
     right = normalize_serving_record(
@@ -560,7 +560,7 @@ def test_no_metric_ids_on_either_leg_is_flagged_unverified():
 
 def test_leg_pooling_different_datasets_is_identity_mixed():
     """Reject pooled dataset identities during comparison, export, and strict validation."""
-    from llm_dojo_scoring.serving import emit_serving_scorecard
+    from llm_dojo_scoring.analysis.serving import emit_serving_scorecard
 
     mid = "pipeline.extraction.overall"
     local = [
@@ -580,7 +580,7 @@ def test_leg_pooling_different_datasets_is_identity_mixed():
 
 def test_emit_drops_a_quality_metric_id_stamp_and_none_values():
     """Ignore unrelated quality-ID stamps and null overrides when emitting serving metrics."""
-    from llm_dojo_scoring.serving import emit_serving_scorecard
+    from llm_dojo_scoring.analysis.serving import emit_serving_scorecard
 
     cmp = compare_serving(
         _leg("vllm", model="qwen3:8b", prompt_version="p1", dataset_revision="r1"),

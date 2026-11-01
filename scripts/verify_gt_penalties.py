@@ -43,12 +43,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from llm_dojo_scoring import get_suite  # noqa: E402
-from llm_dojo_scoring.content_scoring import (  # noqa: E402
+from llm_dojo_scoring.scoring.content_scoring import (  # noqa: E402
     NON_EXTRACTION_KEYS,
     is_valid_maud_answer,
 )
-from llm_dojo_scoring.extraction_metrics import extraction_binary_metrics  # noqa: E402
-from llm_dojo_scoring.gt_metadata import (  # noqa: E402
+from llm_dojo_scoring.scoring.extraction_metrics import extraction_binary_metrics  # noqa: E402
+from llm_dojo_scoring.schemas.gt_metadata import (  # noqa: E402
     CUAD_PRESENCE_KEY,
     is_empty_value,
     parse_gt_fields,

@@ -7,7 +7,7 @@ not adoption evidence. Existing Dojo APIs/defaults are unchanged.
 
 ## Pipeline and visualizer policies
 
-`llm_dojo_scoring.pipeline_scoring` provides:
+`llm_dojo_scoring.pipeline.pipeline_scoring` provides:
 
 - `normalize_class`, `classes_match`, `score_exact_classification`: nonempty
   trimmed/lowercase class tokens; no regex recovery, class collapse or error
@@ -57,7 +57,7 @@ claims.
 
 ## LegalBench reports
 
-`llm_dojo_scoring.legalbench_scoring.score_binary` and `.score_multiclass`
+`llm_dojo_scoring.scoring.legalbench_scoring.score_binary` and `.score_multiclass`
 retain the pipeline's exact report keys and producer `correct` flags. Only
 `status == 'ok'` and predicted not None/`error` enter quality support; excluded
 rows become `n_error`. An `ok` row with absent GT is still included under the
@@ -86,7 +86,7 @@ intermediate rates, recover labels and/or choose a different population.
 
 ## Isolation rubrics and pack diagnostics
 
-`llm_dojo_scoring.agent_rubrics` provides dependency-free functions:
+`llm_dojo_scoring.scoring.agent_rubrics` provides dependency-free functions:
 `token_set_f1` (lowercase whitespace sets; blank/blank=1; punctuation retained),
 `key_presence` (case-sensitive substring in serialized producer output, even
 inside values; no expected keys -> None), and `decision_valid` (literal enum

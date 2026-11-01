@@ -2,7 +2,7 @@
 import pandas as pd
 import pytest
 
-from llm_dojo_scoring.io import (
+from llm_dojo_scoring.analysis.io import (
     display_model,
     load_log,
     normalize_results_frame,

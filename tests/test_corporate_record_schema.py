@@ -8,7 +8,7 @@ from copy import deepcopy
 import pytest
 
 from llm_dojo_scoring import get_suite
-from llm_dojo_scoring.corporate_record_schema import (
+from llm_dojo_scoring.schemas.corporate_record_schema import (
     CORE_FIELDS,
     RECORD_TYPES,
     SUBCLASS_SCHEMAS,
@@ -22,9 +22,9 @@ from llm_dojo_scoring.corporate_record_schema import (
     subclass_schema,
     unlabeled_fields,
 )
-from llm_dojo_scoring.corpus import DOC_TYPE_SUBCLASSES
+from llm_dojo_scoring.schemas.corpus import DOC_TYPE_SUBCLASSES
 from llm_dojo_scoring.prompts import get_prompt
-from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES
+from llm_dojo_scoring.scoring.suites import DEFAULT_FIELD_TYPES
 
 _GT = {
     "intent": "entity_formation",
@@ -394,7 +394,7 @@ def test_pending_annotation_is_unlabeled_not_expected_empty():
 
 def test_json_schema_accepts_prompt_compliant_output_for_inapplicable_keys():
     """Required inapplicable core keys accept only null or empty list values."""
-    from llm_dojo_scoring.corporate_record_schema import corporate_record_json_schema as js
+    from llm_dojo_scoring.schemas.corporate_record_schema import corporate_record_json_schema as js
 
     sch = js("bylaws")
     assert set(sch["required"]) >= set(CORE_FIELDS)

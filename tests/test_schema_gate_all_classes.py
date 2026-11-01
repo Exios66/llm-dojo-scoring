@@ -7,14 +7,14 @@ from pathlib import Path
 
 import pytest
 
-from llm_dojo_scoring.mailroom import LIVE_DOC_TYPES
-from llm_dojo_scoring.scorecard_honesty import (
+from llm_dojo_scoring.pipeline.mailroom import LIVE_DOC_TYPES
+from llm_dojo_scoring.metrics.scorecard_honesty import (
     DEFAULT_INSURANCE_SCHEMA_GATE,
     DEFAULT_SCHEMA_GATE,
     SCHEMA_PROMOTION_GATES,
     check_schema_promotion_gate,
 )
-from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES, get_suite
+from llm_dojo_scoring.scoring.suites import DEFAULT_FIELD_TYPES, get_suite
 
 _TAXONOMY = json.loads(
     (Path(__file__).parent / "fixtures" / "taxonomy_field_types.json").read_text()
@@ -89,7 +89,7 @@ def test_gate_threshold_resolution():
 
 def test_batch_format_layer_counts_missing_keys_per_item():
     """A list was treated as one parsed object, so a batch always read 1.0."""
-    from llm_dojo_scoring.scorecard_honesty import score_format_layer
+    from llm_dojo_scoring.metrics.scorecard_honesty import score_format_layer
 
     out = score_format_layer(
         predicted=[{"a": 1, "b": 2}, {"a": 1}], required_keys=["a", "b"]
@@ -99,7 +99,7 @@ def test_batch_format_layer_counts_missing_keys_per_item():
 
 def test_batch_format_layer_counts_unparseable_strings():
     """Include malformed JSON predictions in batch parse and schema-validity rates."""
-    from llm_dojo_scoring.scorecard_honesty import score_format_layer
+    from llm_dojo_scoring.metrics.scorecard_honesty import score_format_layer
 
     out = score_format_layer(
         predicted=['{"a": 1}', "not json at all"], required_keys=["a"]
@@ -110,7 +110,7 @@ def test_batch_format_layer_counts_unparseable_strings():
 
 def test_empty_batch_fails_closed():
     """Assign zero schema validity to a batch with no predictions."""
-    from llm_dojo_scoring.scorecard_honesty import score_format_layer
+    from llm_dojo_scoring.metrics.scorecard_honesty import score_format_layer
 
     assert score_format_layer(predicted=[], required_keys=["a"])["schema_valid"] == 0.0
 
@@ -118,7 +118,7 @@ def test_empty_batch_fails_closed():
 @pytest.mark.parametrize("raw", ["[]", '[{"a": 1}]'])
 def test_parsed_non_object_fails_required_keys(raw):
     """Require object keys only when specified, even for successfully parsed JSON."""
-    from llm_dojo_scoring.scorecard_honesty import score_format_layer
+    from llm_dojo_scoring.metrics.scorecard_honesty import score_format_layer
 
     out = score_format_layer(predicted_raw=raw, required_keys=["a"])
     assert out == {"parse_ok": 1.0, "schema_valid": 0.0, "schema_adherence": 0.0}
@@ -185,7 +185,7 @@ def test_unscorable_document_with_malformed_answer_fails_gate(doc_class):
 def test_dashboards_never_hide_schema(metric):
     """Registry-driven T0+T1 views must show structural validity for every
     live specialist; demoting it below T1 or scoping it away fails here."""
-    from llm_dojo_scoring.registry import LIVE_SPECIALIST_AGENTS, get_registry
+    from llm_dojo_scoring.metrics.registry import LIVE_SPECIALIST_AGENTS, get_registry
 
     reg = get_registry()
     for agent in LIVE_SPECIALIST_AGENTS:

@@ -1,6 +1,6 @@
 # Specialist grid reports (local → Modal GPU)
 
-`llm_dojo_scoring.grid` builds a scorecard for multi-experiment studies in
+`llm_dojo_scoring.analysis.grid` builds a scorecard for multi-experiment studies in
 the **L4 Specialist Grid** shape: one row per specialist with the class
 metric, `ok / n`, p50 latency, and GPU cost **per ok document**; a pooled
 serving-efficiency table; and a cost table separating **busy-window** GPU

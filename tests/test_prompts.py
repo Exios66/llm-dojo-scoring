@@ -6,14 +6,14 @@ import re
 
 import pytest
 
-from llm_dojo_scoring.profiles import DEFAULT_PROFILES
+from llm_dojo_scoring.metrics.profiles import DEFAULT_PROFILES
 from llm_dojo_scoring.prompts import (
     FAMILIES,
     PromptRecord,
     get_prompt,
     list_prompts,
 )
-from llm_dojo_scoring.registry import MetricTier, load_registry
+from llm_dojo_scoring.metrics.registry import MetricTier, load_registry
 
 _SCORED_PHRASES = (
     "you will be scored",

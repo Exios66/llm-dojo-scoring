@@ -490,7 +490,7 @@ def test_cli_executes_product_with_fake_http_and_json(harness, monkeypatch, caps
     """Exercise parsing, the real checker, JSON output, and the explicit error exit contract."""
     checker, http, _ = harness
     config = tomllib.loads((Path(__file__).resolve().parents[1] / "pyproject.toml").read_text())
-    assert config["project"]["scripts"]["dojo-version"] == "llm_dojo_scoring.update_awareness:main"
+    assert config["project"]["scripts"]["dojo-version"] == "llm_dojo_scoring.integrations.update_awareness:main"
     monkeypatch.setattr(updates, "_default_cache_dir", lambda: checker.cache_dir)
     monkeypatch.setattr(updates, "_http_transport", http)
     monkeypatch.setattr(updates.time, "time", lambda: NOW)
@@ -568,7 +568,7 @@ def test_slow_process_cannot_erase_newer_release(harness):
 """Block an older fake request while another process saves a newer release."""
 import sys, pathlib, json
 sys.path[:0] = [sys.argv[1], sys.argv[2]]
-from llm_dojo_scoring.update_awareness import UpdateChecker, ReleaseResponse
+from llm_dojo_scoring.integrations.update_awareness import UpdateChecker, ReleaseResponse
 moments = iter([1792713600.0, 1792713602.0])
 def transport():
     """Coordinate without sockets and return the earlier stable release."""
@@ -689,7 +689,7 @@ def test_process_exit_never_joins_background_http(harness, tmp_path):
 """Exit with a live daemon HTTP worker and no real network use."""
 import sys, pathlib, threading
 sys.path[:0] = [sys.argv[1], sys.argv[2]]
-from llm_dojo_scoring.update_awareness import UpdateChecker, ReleaseResponse
+from llm_dojo_scoring.integrations.update_awareness import UpdateChecker, ReleaseResponse
 entered = threading.Event()
 def transport():
     """Remain blocked beyond the subprocess test timeout unless process exit drops us."""

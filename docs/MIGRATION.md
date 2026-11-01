@@ -44,7 +44,7 @@ from llm_dojo_scoring import (
     score_extraction, score_field, score_entity_list,
     EntityListScore, ExtractionScoreResult,
 )
-from llm_dojo_scoring.field_scoring import (
+from llm_dojo_scoring.scoring.field_scoring import (
     get_ambiguous_band, get_bipartite_match_threshold,
     get_partial_gt_fields, get_containment_fields,
     verification_enabled, get_verification_coverage,
@@ -69,11 +69,11 @@ from src.scorers import normalize_label, exact_match, failure, cost
 from src.scorers import per_class_stats, macro_accuracy, ERROR_PREFIX
 
 # NEW
-from llm_dojo_scoring.classification import (
+from llm_dojo_scoring.scoring.classification import (
     normalize_label, exact_match, failure, per_class_stats, macro_accuracy,
     ERROR_PREFIX, confusion_matrix, binary_metrics,
 )
-from llm_dojo_scoring.cost import tokens_summary  # cost() is input["cost"] -> inline it
+from llm_dojo_scoring.analysis.cost import tokens_summary  # cost() is input["cost"] -> inline it
 ```
 
 ### CIs — `src/bootstrap.py`
@@ -83,7 +83,7 @@ from llm_dojo_scoring.cost import tokens_summary  # cost() is input["cost"] -> i
 from src.bootstrap import bootstrap_ci, delta_significance
 
 # NEW
-from llm_dojo_scoring.bootstrap import bootstrap_ci, delta_significance, wilson_ci
+from llm_dojo_scoring.analysis.bootstrap import bootstrap_ci, delta_significance, wilson_ci
 ```
 
 ### Cost — `src/cost_models.py` / `experiment_log.tokens_summary`
@@ -94,7 +94,7 @@ from src.cost_models import estimate_cost, estimate_for_record
 from src.experiment_log import tokens_summary
 
 # NEW
-from llm_dojo_scoring.cost import estimate_cost, estimate_for_record, tokens_summary
+from llm_dojo_scoring.analysis.cost import estimate_cost, estimate_for_record, tokens_summary
 ```
 
 ### Diagnostics — `src/metrics.py`
@@ -104,7 +104,7 @@ from llm_dojo_scoring.cost import estimate_cost, estimate_for_record, tokens_sum
 from src.metrics import extraction_diagnostics, parse_duration_days
 
 # NEW
-from llm_dojo_scoring.diagnostics import extraction_diagnostics, parse_duration_days
+from llm_dojo_scoring.analysis.diagnostics import extraction_diagnostics, parse_duration_days
 ```
 
 `extraction_diagnostics` no longer imports `cuad_ground_truth` /
@@ -118,8 +118,8 @@ callable to reproduce master-label preference.
 from src.experiment_log import append_experiment, git_snapshot, mean
 
 # NEW
-from llm_dojo_scoring.experiment import append_experiment, git_snapshot, mean
-from llm_dojo_scoring.experiment import load_records, dotted_get, record_date
+from llm_dojo_scoring.analysis.experiment import append_experiment, git_snapshot, mean
+from llm_dojo_scoring.analysis.experiment import load_records, dotted_get, record_date
 ```
 
 The `experiment_log_markdown` / `render_full_log` renderers stay in the
@@ -132,8 +132,8 @@ pipeline repo (they are report-layer, not scoring-layer).
 from scripts.eval.run_subtype_eval import classify_failure
 
 # NEW
-from llm_dojo_scoring.failure_modes import classify_failure
-from llm_dojo_scoring.failure_modes import summarize_failures, per_subtype_accuracy
+from llm_dojo_scoring.analysis.failure_modes import classify_failure
+from llm_dojo_scoring.analysis.failure_modes import summarize_failures, per_subtype_accuracy
 ```
 
 ### Equivalences — `agents/sorter_agent.py`
@@ -146,7 +146,7 @@ from agents.sorter_agent import (
 )
 
 # NEW
-from llm_dojo_scoring.equivalences import (
+from llm_dojo_scoring.schemas.equivalences import (
     equivalent_subtypes, normalize_subtype, equivalent_doc_subclasses,
 )
 from llm_dojo_scoring.config import (
@@ -166,7 +166,7 @@ from scripts.reporting.export_experiment_results import (
 )
 
 # NEW
-from llm_dojo_scoring.export import (
+from llm_dojo_scoring.analysis.export import (
     sorter_columns, extraction_columns, write_workbook, write_codebook,
     load_records, sorter_records, extraction_records, build_sweep_workbook,
 )
@@ -358,7 +358,7 @@ v0.12.0 is additive on the v0.10.0 / v0.11.0 scoring surface (formulas and T0 na
 
 ```python
 from llm_dojo_scoring import get_suite, compare_serving, split_local_api
-from llm_dojo_scoring.serving import score_serving_run
+from llm_dojo_scoring.analysis.serving import score_serving_run
 
 # expected = local run(s), predicted = API-key run(s)
 cmp = get_suite("local_vs_api").score(
@@ -397,7 +397,7 @@ with identity + token × price-table cost calculations:
 
 ```python
 from llm_dojo_scoring import get_suite
-from llm_dojo_scoring.serving import emit_serving_scorecard
+from llm_dojo_scoring.analysis.serving import emit_serving_scorecard
 
 cmp = get_suite("local_vs_api").score(local_records, api_records)
 assert {r["metric"] for r in cmp["table"]}  # includes queue_time_seconds even when None

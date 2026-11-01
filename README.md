@@ -236,7 +236,7 @@ dojo-version --check --force --json
 dojo-version --check --offline --json
 ```
 
-The opt-in `llm_dojo_scoring.update_awareness.UpdateChecker` shares a daily
+The opt-in `llm_dojo_scoring.integrations.update_awareness.UpdateChecker` shares a daily
 per-user cache across application startup hooks and limits notices per consumer
 and release. Pure imports and scoring stay offline. Set
 `LLM_DOJO_UPDATE_CHECK=0` to disable all update checks and cache I/O. No packages

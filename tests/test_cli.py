@@ -2,8 +2,8 @@
 import pytest
 
 from llm_dojo_scoring.cli import _cli_analyze, _cli_export
-from llm_dojo_scoring.report import build_report
-from llm_dojo_scoring.io import normalize_results_frame
+from llm_dojo_scoring.analysis.report import build_report
+from llm_dojo_scoring.analysis.io import normalize_results_frame
 
 
 @pytest.fixture
@@ -44,7 +44,7 @@ def test_cli_analyze_xlsx(tmp_path):
     """Analyze an exported workbook into a winning-run report and plots."""
     import os
 
-    from llm_dojo_scoring.export import sorter_columns, write_workbook
+    from llm_dojo_scoring.analysis.export import sorter_columns, write_workbook
 
     xlsx = tmp_path / "results.xlsx"
     record = {
@@ -108,7 +108,7 @@ def test_cli_analyze_langfuse_sync(tmp_path):
 
 def test_cli_export(tmp_path):
     """Export logged sorter experiments as a results workbook and codebook."""
-    from llm_dojo_scoring.experiment import append_experiment
+    from llm_dojo_scoring.analysis.experiment import append_experiment
 
     log = tmp_path / "log.jsonl"
     append_experiment({

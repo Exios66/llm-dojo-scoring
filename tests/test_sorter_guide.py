@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 import llm_dojo_scoring as dojo
-from llm_dojo_scoring.corpus import CORPUS_SUBCLASS_SURFACES, DOC_TYPE_SUBCLASSES
-from llm_dojo_scoring.sorter_guide import (
+from llm_dojo_scoring.schemas.corpus import CORPUS_SUBCLASS_SURFACES, DOC_TYPE_SUBCLASSES
+from llm_dojo_scoring.schemas.sorter_guide import (
     CORRESPONDENCE_SUBCLASS_PRECEDENCE,
     SORTER_SUBCLASS_GUIDE,
     format_sorter_subclass_guide,
     sorter_subclass_keys,
     subclass_scorable,
 )
-from llm_dojo_scoring.tasks import score_task
+from llm_dojo_scoring.scoring.tasks import score_task
 
 LIVE = ("contract", "merger_agreement", "corporate_record", "correspondence", "insurance_claim")
 

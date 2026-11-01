@@ -1,8 +1,8 @@
 """Additive sandbox benchmark regression tests with hand-counted outcomes."""
 
 from llm_dojo_scoring import score_sandbox_cuad, score_sandbox_maud
-from llm_dojo_scoring.content_scoring import score_maud_extraction
-from llm_dojo_scoring.sandbox_scoring import score_cuad, score_maud
+from llm_dojo_scoring.scoring.content_scoring import score_maud_extraction
+from llm_dojo_scoring.pipeline.sandbox_scoring import score_cuad, score_maud
 
 
 def test_public_sandbox_apis_use_one_dojo_implementation():
@@ -58,7 +58,7 @@ def test_sandbox_emission_names_are_registered_and_populations_stay_distinct():
     import pytest
 
     from llm_dojo_scoring import get_registry, sandbox_metric_scores
-    from llm_dojo_scoring.scorecard_honesty import metric_id_for
+    from llm_dojo_scoring.metrics.scorecard_honesty import metric_id_for
 
     out = score_sandbox_cuad({}, {"Parties": [{"text": "Acme"}]})
     scores = sandbox_metric_scores("cuad", out)

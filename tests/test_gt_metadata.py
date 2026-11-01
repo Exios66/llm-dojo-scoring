@@ -20,9 +20,9 @@ from copy import deepcopy
 import pytest
 
 from llm_dojo_scoring import get_suite
-from llm_dojo_scoring.extraction_metrics import extraction_binary_metrics
-from llm_dojo_scoring.field_scoring import ExtractionScoreResult
-from llm_dojo_scoring.gt_metadata import (
+from llm_dojo_scoring.scoring.extraction_metrics import extraction_binary_metrics
+from llm_dojo_scoring.scoring.field_scoring import ExtractionScoreResult
+from llm_dojo_scoring.schemas.gt_metadata import (
     ABSENT_PRESENCE_STATUSES,
     ANNOTATION_KEYS,
     CUAD_PRESENCE_KEY,

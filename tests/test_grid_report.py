@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from llm_dojo_scoring.grid import (
+from llm_dojo_scoring.analysis.grid import (
     GridDocument,
     GridExperiment,
     _is_error,

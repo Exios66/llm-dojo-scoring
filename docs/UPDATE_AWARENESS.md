@@ -6,7 +6,7 @@ feature is available in Dojo v0.24.0; consumer pins remain operator controlled.
 It does not replace the nightly all-feeder drift audit, which checks more
 repositories and integration state.
 
-`llm_dojo_scoring.update_awareness.UpdateChecker` centralizes discovery, version
+`llm_dojo_scoring.integrations.update_awareness.UpdateChecker` centralizes discovery, version
 comparison, cache policy, notice limits, and failure semantics. Pure package
 imports, construction of a checker, scoring functions, and `dojo-version`
 without `--check` never perform update HTTP or start update threads. Do not call
@@ -20,7 +20,7 @@ dojo-version --json
 dojo-version --check                      # daily cache, then bounded HTTP if due
 dojo-version --check --force --json       # ignore success/error intervals
 dojo-version --check --offline --json     # cache only, no writes or HTTP
-python -m llm_dojo_scoring.update_awareness --check --offline --json
+python -m llm_dojo_scoring.integrations.update_awareness --check --offline --json
 ```
 
 `--force` and `--offline` are mutually exclusive and require `--check`. Exit 0
@@ -44,7 +44,7 @@ text, server bodies, private paths, and credential-bearing URLs.
 ```python
 import sys
 
-from llm_dojo_scoring.update_awareness import UpdateChecker
+from llm_dojo_scoring.integrations.update_awareness import UpdateChecker
 
 checker = UpdateChecker()  # construction is offline
 startup = checker.startup("mailroom-pipeline")
