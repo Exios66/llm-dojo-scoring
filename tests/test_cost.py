@@ -1,7 +1,7 @@
 """Check token-price lookup, estimated costs, and cost provenance conventions."""
 import pytest
 
-from llm_dojo_scoring.cost import (
+from llm_dojo_scoring.analysis.cost import (
     estimate_cost,
     estimate_for_record,
     price_for,

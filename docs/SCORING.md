@@ -4,7 +4,7 @@
 - Archive / unified scoring block: [`ARCHIVE_SCORING.md`](ARCHIVE_SCORING.md)
 - MAUD GT, format vs extraction, completion and cost: [`SCORECARD_HONESTY.md`](SCORECARD_HONESTY.md)
 - Metric identity: [`METRIC_IDS.md`](METRIC_IDS.md)
-- Controlled `intent` labels (`label` field type): `llm_dojo_scoring/intents.py`
+- Controlled `intent` labels (`label` field type): `llm_dojo_scoring/schemas/intents.py`
 
 ## Field types by class
 
@@ -188,7 +188,7 @@ Formulas (vLLM / NVIDIA NIM / OpenAI streaming conventions):
 - **req/s** = `n_requests / sum(e2e)`
 - GPU util values `> 1` are treated as percent and stored in `[0, 1]`
 
-Canonical record keys: `llm_dojo_scoring.serving.CANONICAL_SERVING_KEYS`.
+Canonical record keys: `llm_dojo_scoring.analysis.serving.CANONICAL_SERVING_KEYS`.
 
 ### Scoring table and scorecard
 
@@ -198,7 +198,7 @@ Canonical record keys: `llm_dojo_scoring.serving.CANONICAL_SERVING_KEYS`.
 
 ```python
 from llm_dojo_scoring import get_suite
-from llm_dojo_scoring.serving import serving_card_markdown, emit_serving_scorecard
+from llm_dojo_scoring.analysis.serving import serving_card_markdown, emit_serving_scorecard
 
 cmp = get_suite("local_vs_api").score(local_records, api_records)
 cmp["table"]       # list of {metric, tier, local, api, delta, ratio, status, note}

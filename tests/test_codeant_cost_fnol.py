@@ -2,8 +2,8 @@
 
 import pytest
 
-from llm_dojo_scoring.pilot_labels import normalize_sorter_token
-from llm_dojo_scoring.serving import aggregate_serving
+from llm_dojo_scoring.pipeline.pilot_labels import normalize_sorter_token
+from llm_dojo_scoring.analysis.serving import aggregate_serving
 
 
 @pytest.mark.parametrize("costs,expected_total,expected_per_doc", [
@@ -48,7 +48,7 @@ def test_sorter_preserves_contract_precedence_and_scoped_fallbacks():
 @pytest.mark.parametrize("unknown_first", [False, True])
 def test_comparison_cost_card_keeps_incomplete_priced_pool_unknown(known_cost, unknown_first):
     """Partial tokens cannot restore an unknown pooled cost or its cost basis."""
-    from llm_dojo_scoring.serving import compare_serving
+    from llm_dojo_scoring.analysis.serving import compare_serving
 
     runs = [
         {"provider": "openrouter", "model": "qwen/qwen3.7-flash", "n": 2,
@@ -76,8 +76,8 @@ def test_comparison_cost_card_keeps_incomplete_priced_pool_unknown(known_cost, u
 ])
 def test_cost_card_respects_explicit_cost_and_retains_legacy_token_fallback(record, expected, basis):
     """Only a missing cost key permits legacy token pricing; known zero is a cost."""
-    from llm_dojo_scoring.cost import estimate_cost
-    from llm_dojo_scoring.serving import serving_cost_card
+    from llm_dojo_scoring.analysis.cost import estimate_cost
+    from llm_dojo_scoring.analysis.serving import serving_cost_card
 
     aggregate = {"identity": {"model": "qwen/qwen3.7-flash", "provider": "openrouter"},
                  "prompt_tokens": 1000, "completion_tokens": 100, "n_docs": 10,
@@ -93,8 +93,8 @@ def test_cost_card_respects_explicit_cost_and_retains_legacy_token_fallback(reco
 
 def test_comparison_prices_each_complete_token_run_before_pooling():
     """Complete priced token runs still produce the full total and document rate."""
-    from llm_dojo_scoring.cost import estimate_cost
-    from llm_dojo_scoring.serving import compare_serving
+    from llm_dojo_scoring.analysis.cost import estimate_cost
+    from llm_dojo_scoring.analysis.serving import compare_serving
 
     runs = [{"provider": "openrouter", "model": "qwen/qwen3.7-flash", "n": n,
              "prompt_tokens": prompt, "completion_tokens": completion}

@@ -14,7 +14,7 @@ to any one document, and many values are stringified JSON containers.
 }
 ```
 
-`llm_dojo_scoring.gt_metadata` is the parser/normalizer every suite runs
+`llm_dojo_scoring.schemas.gt_metadata` is the parser/normalizer every suite runs
 before scoring (`ScoringSuite._score_extraction`). It guarantees:
 
 1. **Stringified JSON is parsed.** `"[]"` / `"{}"` are empty; a stringified

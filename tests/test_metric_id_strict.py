@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from llm_dojo_scoring.registry import get_registry
-from llm_dojo_scoring.scorecard_honesty import (
+from llm_dojo_scoring.metrics.registry import get_registry
+from llm_dojo_scoring.metrics.scorecard_honesty import (
     _CLASS_METRIC_IDS,
     _METRIC_ID_BY_NAME,
     UnknownMetricNameError,

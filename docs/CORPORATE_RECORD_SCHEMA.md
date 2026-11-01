@@ -1,6 +1,6 @@
 # Corporate-record entity schema — one contract per subclass
 
-`corporate_record` is not one document shape. The flat nine-field `CorporateRecordExtraction` is a shared **core**; each sorter `doc_subclass` adds its own **key entities** and drops core fields that do not apply to it. The data lives in `llm_dojo_scoring.corporate_record_schema`; the specialist prompt section is generated from it (a test asserts they match).
+`corporate_record` is not one document shape. The flat nine-field `CorporateRecordExtraction` is a shared **core**; each sorter `doc_subclass` adds its own **key entities** and drops core fields that do not apply to it. The data lives in `llm_dojo_scoring.schemas.corporate_record_schema`; the specialist prompt section is generated from it (a test asserts they match).
 
 ```python
 from llm_dojo_scoring import (

@@ -21,9 +21,9 @@ from llm_dojo_scoring.config import (
     LIVE_DOC_CLASS_KEYS,
     RETIRED_DOC_CLASS_KEYS,
 )
-from llm_dojo_scoring.corpus import CORPUS_EXTRACTION_FIELDS
-from llm_dojo_scoring.field_scoring import ExtractionScoreResult
-from llm_dojo_scoring.mailroom import (
+from llm_dojo_scoring.schemas.corpus import CORPUS_EXTRACTION_FIELDS
+from llm_dojo_scoring.scoring.field_scoring import ExtractionScoreResult
+from llm_dojo_scoring.pipeline.mailroom import (
     EXTRACT_CLASS_ALIASES,
     LIVE_DOC_TYPES,
     LIVE_SPECIALISTS,
@@ -31,12 +31,12 @@ from llm_dojo_scoring.mailroom import (
     is_live_extract_class,
     resolve_extract_class,
 )
-from llm_dojo_scoring.scorecard_honesty import (
+from llm_dojo_scoring.metrics.scorecard_honesty import (
     metric_id_allowed,
     metric_id_for,
     metric_ids_for_class,
 )
-from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES, get_suite
+from llm_dojo_scoring.scoring.suites import DEFAULT_FIELD_TYPES, get_suite
 
 _FIXTURE_PATH = Path(__file__).parent / "fixtures" / "taxonomy_field_types.json"
 _FIXTURE = json.loads(_FIXTURE_PATH.read_text())

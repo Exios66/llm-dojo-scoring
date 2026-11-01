@@ -3,8 +3,8 @@
 Network-free: pure registry inspection, no LLM or HTTP.
 """
 
-from llm_dojo_scoring.profiles import DEFAULT_PROFILES, get_profile
-from llm_dojo_scoring.bundles import get_bundle
+from llm_dojo_scoring.metrics.profiles import DEFAULT_PROFILES, get_profile
+from llm_dojo_scoring.metrics.bundles import get_bundle
 
 NEW_PROFILES = [
     "sorter_reviewer",

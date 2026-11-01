@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import json
 
-from llm_dojo_scoring.corpus import CMS_SOURCE_TABLES, cms_source_table
-from llm_dojo_scoring.field_scoring import score_extraction
-from llm_dojo_scoring.sandbox_scoring import (
+from llm_dojo_scoring.schemas.corpus import CMS_SOURCE_TABLES, cms_source_table
+from llm_dojo_scoring.scoring.field_scoring import score_extraction
+from llm_dojo_scoring.pipeline.sandbox_scoring import (
     effective_from_agreement,
     field_value_ok,
     party_core,

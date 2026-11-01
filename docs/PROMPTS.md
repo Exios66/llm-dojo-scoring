@@ -203,7 +203,7 @@ byte-deterministic: `synced_at` is the source commit date, never wall-clock.
 | Role | `kind` | What the catalog stores |
 | --- | --- | --- |
 | `reporter` | `deterministic` | Procedural matter-record assembler: the pipeline formats classification and extraction fields; no LLM call. The template file keeps the live procedural text for provenance; `text` stays `""`. |
-| `intake` | `deterministic` | Clerk invariants (NFC, newline unify, NBSP, zero-width, C0, hyphen unwrap, blank-run / horizontal collapse, trim). Gold is `llm_dojo_scoring.intake`. |
+| `intake` | `deterministic` | Clerk invariants (NFC, newline unify, NBSP, zero-width, C0, hyphen unwrap, blank-run / horizontal collapse, trim). Gold is `llm_dojo_scoring.pipeline.intake`. |
 | `archivist` | `procedural` | Content-addressed archive + audit hash. No system prompt. |
 | `local_vs_api` | `procedural` | Serving comparison (TTFT, throughput, utilization, identity). No system prompt. Gold is recorded timings, not a quality label. |
 | `corporate_records_auditor`, `due_diligence_auditor`, `correspondence_auditor`, `compliance_auditor`, `court_opinions_auditor`, `insurance_claims_auditor` | `proposed` | Stub pointing at the specialist field map + suite `score()`. **No LLM body.** |

@@ -12,7 +12,7 @@ from unittest.mock import Mock, call
 import pytest
 
 from conftest import load_script
-from llm_dojo_scoring.corporate_record_schema import ENTITY_CORE_FIELDS
+from llm_dojo_scoring.schemas.corporate_record_schema import ENTITY_CORE_FIELDS
 
 
 @pytest.fixture

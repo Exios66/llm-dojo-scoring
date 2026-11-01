@@ -1,6 +1,6 @@
 """Hand-computed controls for the sandbox's canonical chained rubric."""
 import pytest
-from llm_dojo_scoring.sandbox_composite import chained_composite
+from llm_dojo_scoring.pipeline.sandbox_composite import chained_composite
 
 
 @pytest.mark.parametrize("sorter, extract, expected", [(1., 1., 1.), (1., 0., .25), (0., 1., .75), (0., 0., 0.), (1., .5, .625)])

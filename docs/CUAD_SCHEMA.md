@@ -1,6 +1,6 @@
 # CUAD contract schema — categories, families, questions
 
-Reference for `llm_dojo_scoring.cuad_schema`, the single importable catalog
+Reference for `llm_dojo_scoring.schemas.cuad_schema`, the single importable catalog
 behind the `contract` document class (`ContractExtraction` /
 `contracts_specialist`). It unifies the **41 Atticus clause categories**, the
 **25 contract families + `other`**, the **11 scored fields**, tailored CUAD
@@ -18,7 +18,7 @@ prompt (sha256 `d91de396…`) is untouched. Import-time checks raise
 or `DEFAULT_FIELD_TYPES["contract"]`.
 
 ```python
-from llm_dojo_scoring.cuad_schema import (
+from llm_dojo_scoring.schemas.cuad_schema import (
     CUAD_CATEGORIES, CUAD_FAMILIES, CONTRACT_EXTRACTION_FIELDS,
     cuad_category, cuad_family, cuad_questions,
     cuad_json_schema, render_cuad_question_block,

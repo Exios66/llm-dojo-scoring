@@ -9,7 +9,7 @@ Network-free: catalogs are in-repo constants derived from that publish.
 from __future__ import annotations
 
 from llm_dojo_scoring.config import DOC_CLASS_KEYS
-from llm_dojo_scoring.corpus import (
+from llm_dojo_scoring.schemas.corpus import (
     CORPUS_ABSENT_DOC_TYPES,
     CORPUS_DIFFERENTIATORS,
     CORPUS_DOC_TYPES,
@@ -24,7 +24,7 @@ from llm_dojo_scoring.corpus import (
     subclass_equivalent,
     suite_schema,
 )
-from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES, get_suite, suite_for_doc_type
+from llm_dojo_scoring.scoring.suites import DEFAULT_FIELD_TYPES, get_suite, suite_for_doc_type
 
 
 def test_native_doc_types_match_config_and_corpus_union():
@@ -197,7 +197,7 @@ def test_sorter_in_corpus_and_normalizes_across_types():
 
 def test_correspondence_topics_and_cuad_maud_catalogs_are_complete():
     """Pin correspondence topic and MAUD category and question catalog sizes."""
-    from llm_dojo_scoring.corpus import CORRESPONDENCE_TOPICS, MAUD_CLAUSE_CATEGORIES
+    from llm_dojo_scoring.schemas.corpus import CORRESPONDENCE_TOPICS, MAUD_CLAUSE_CATEGORIES
 
     assert len(CORRESPONDENCE_TOPICS) == 11
     assert set(CORRESPONDENCE_TOPICS) == {

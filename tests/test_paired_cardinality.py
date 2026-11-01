@@ -3,12 +3,12 @@
 import pytest
 
 from llm_dojo_scoring import classification as c
-from llm_dojo_scoring.asr import score_transcription
-from llm_dojo_scoring.content_scoring import (
+from llm_dojo_scoring.scoring.asr import score_transcription
+from llm_dojo_scoring.scoring.content_scoring import (
     score_content_topic, score_sentiment, score_maud_extraction,
 )
-from llm_dojo_scoring.mailroom import score_aligned_classification
-from llm_dojo_scoring.tasks import score_task, multiclass_score, contracteval_metrics
+from llm_dojo_scoring.pipeline.mailroom import score_aligned_classification
+from llm_dojo_scoring.scoring.tasks import score_task, multiclass_score, contracteval_metrics
 
 
 @pytest.mark.parametrize("metric", [
@@ -158,7 +158,7 @@ def test_maud_mixed_list_forms_keep_existing_interpretation():
 @pytest.mark.parametrize("sizes", [(2, 1), (1, 2), (0, 1), (1, 0)])
 def test_intake_both_list_forms_reject_missing_documents(entry, sizes):
     """Direct and dispatched intake must retain every paired document."""
-    from llm_dojo_scoring.intake import score_intake
+    from llm_dojo_scoring.pipeline.intake import score_intake
     ne, np = sizes
     call = score_intake if entry == "direct" else lambda e, p: score_task("intake", e, p)
     with pytest.raises(ValueError, match=rf"expected.*{ne}.*predicted.*{np}"):

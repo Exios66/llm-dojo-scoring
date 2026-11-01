@@ -1,6 +1,6 @@
 """MAUD entity schema: question→answer contract is data, and the scorer agrees.
 
-Pins ``llm_dojo_scoring.maud_schema`` against the live catalog
+Pins ``llm_dojo_scoring.schemas.maud_schema`` against the live catalog
 (``maud.py``), the offline Hub mirror (``fixtures/maud_valid_classes.json``),
 the field map (``DEFAULT_FIELD_TYPES``) and — via the real merger suite — the
 scorer's own parsing, so the prompt, the grammar and the scorer cannot drift.
@@ -17,23 +17,23 @@ import pytest
 
 from llm_dojo_scoring import get_suite
 from llm_dojo_scoring.config import MAUD_CONSIDERATION_TYPES
-from llm_dojo_scoring.content_scoring import (
+from llm_dojo_scoring.scoring.content_scoring import (
     parse_maud_labels,
     score_maud_extraction,
 )
-from llm_dojo_scoring.corpus import (
+from llm_dojo_scoring.schemas.corpus import (
     CORPUS_EXTRACTION_FIELDS,
     DOC_TYPE_SUBCLASSES,
     MAUD_CLAUSE_CATEGORIES,
     MAUD_QUESTION_KEYS,
     subclass_equivalent,
 )
-from llm_dojo_scoring.maud import (
+from llm_dojo_scoring.schemas.maud import (
     MAUD_ANSWER_CLASSES,
     MAUD_VARIABLE_CLASS_QUESTIONS,
     maud_question_catalog,
 )
-from llm_dojo_scoring.maud_schema import (
+from llm_dojo_scoring.schemas.maud_schema import (
     MAUD_CONSIDERATION_SUBCLASSES,
     MAUD_QUESTIONS,
     MAUD_TYPE_OF_CONSIDERATION_TO_TOKEN,
@@ -53,8 +53,8 @@ from llm_dojo_scoring.maud_schema import (
     scorer_ambiguous_classes,
     scorer_fold_collisions,
 )
-from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES
-from llm_dojo_scoring.tasks import normalize_maud_consideration
+from llm_dojo_scoring.scoring.suites import DEFAULT_FIELD_TYPES
+from llm_dojo_scoring.scoring.tasks import normalize_maud_consideration
 
 FIXTURE = Path(__file__).parent / "fixtures" / "maud_valid_classes.json"
 FIDUCIARY = "Fiduciary exception:  Board determination (no-shop)"
