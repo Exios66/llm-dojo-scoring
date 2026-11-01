@@ -18,6 +18,10 @@ Format based on Keep a Changelog; versioning is SemVer.
   ignored the precedence. `certificate_of_formation` stays a scoring key, but a sorter
   no longer emits it.
 
+- `arbitrate-classification`, llm-mailroom's classification arbiter node between a
+  parked decision review and a person, is now in `NODE_OBSERVATION_TYPES` (agent) and in
+  the archive node-to-agent map (classification_review).
+
 ### Fixed
 
 - Merger subclass `other` is unannotated (it has no MAUD Type of Consideration), so it
