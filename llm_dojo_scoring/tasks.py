@@ -327,12 +327,11 @@ def score_task(
         }
         if expected_subclass is not None and predicted_subclass is not None:
             from .corpus import normalize_corpus_subclass
+            from .sorter_guide import subclass_scorable
 
             sub_ok = []
             sub_exp_norm = []
             sub_pred_norm = []
-            from .sorter_guide import subclass_scorable
-
             unannotated = 0
             for e, p, doc in zip(expected_subclass, predicted_subclass, expected):
                 parent = align_doc_type(doc)
@@ -377,7 +376,6 @@ def score_task(
         }
         if expected_subclass is not None and predicted_subclass is not None:
             from .corpus import normalize_corpus_subclass, subclass_equivalent
-
             from .sorter_guide import subclass_scorable
 
             sub_ok = []
