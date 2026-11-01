@@ -100,3 +100,14 @@ def test_parenthetical_that_is_part_of_the_name_still_matches():
     spans = _labels(Parties=["ACME (US) LLC", "Beta Inc."])
     assert field_value_ok("parties", ["ACME (US) LLC", 'Beta Inc. ("Buyer")'], spans) is True
     assert field_value_ok("parties", ["ACME (UK) LLC"], spans) is False
+
+
+def test_qualifiers_are_kept_and_names_never_span_two_entries():
+    """``(UK)`` is not a defined term, and a name must lie within one span."""
+    assert party_core("ACME (US) LLC") == "acme us llc"
+    spans = _labels(Parties=["ACME LLC", "ACME (US) LLC"])
+    assert field_value_ok("parties", ["ACME (UK) LLC"], spans) is False
+    assert field_value_ok("parties", ['ACME (US) LLC ("Buyer")'], spans) is True
+    split = _labels(Parties=["ACME (US)", "Holdings LLC"])
+    assert field_value_ok("parties", ["ACME (US) Holdings LLC"], split) is False
+
