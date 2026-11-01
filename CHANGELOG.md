@@ -5,6 +5,8 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-11-01
+
 ### Added
 
 - `llm_dojo_scoring.sorter_guide`: the sorter-facing subclass catalog. It gives the
