@@ -84,23 +84,29 @@ def run(
     cwd: Path | None = None,
     env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    proc = subprocess.run(
-        cmd,
-        cwd=str(cwd or REPO_ROOT),
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+    """Run a command in the repository and return the completed process (raise on failure when ``check``)."""
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=str(cwd or REPO_ROOT),
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+    except FileNotFoundError as exc:  # e.g. no ``gh`` installed: a ReleaseError like any failed command
+        raise ReleaseError(f"{' '.join(cmd)} failed: {exc}") from exc
     if check and proc.returncode != 0:
         raise ReleaseError(f"{' '.join(cmd)} failed: {proc.stderr.strip() or proc.stdout.strip()}")
     return proc
 
 
 def git(*args: str) -> str:
+    """Return the stdout of a git command."""
     return run(["git", *args]).stdout
 
 
 def gh_json(*args: str) -> object:
+    """Run a gh command and decode its JSON stdout (``None`` when empty)."""
     proc = run(["gh", *args], check=False)
     if proc.returncode != 0:
         raise ReleaseError(f"gh {' '.join(args)} failed: {proc.stderr.strip()}")
@@ -108,6 +114,7 @@ def gh_json(*args: str) -> object:
 
 
 def emit(payload: dict, *, as_json: bool, human_lines: list[str] | None = None) -> int:
+    """Print the payload as JSON or as human lines (plus next steps); return its exit code."""
     if as_json:
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:
@@ -126,6 +133,7 @@ def emit(payload: dict, *, as_json: bool, human_lines: list[str] | None = None) 
 
 
 def parse_semver(version: str) -> tuple[int, int, int] | None:
+    """Return ``(major, minor, patch)`` for an ``X.Y.Z`` or ``vX.Y.Z`` string, else ``None``."""
     match = VERSION_RE.match(version.removeprefix(TAG_PREFIX))
     if not match:
         return None
@@ -133,6 +141,7 @@ def parse_semver(version: str) -> tuple[int, int, int] | None:
 
 
 def normalize_version(version: str) -> str:
+    """Strip the tag prefix and require ``X.Y.Z``."""
     version = version.removeprefix(TAG_PREFIX)
     if parse_semver(version) is None:
         raise ReleaseError(f"{version!r} is not semver X.Y.Z")
@@ -140,10 +149,12 @@ def normalize_version(version: str) -> str:
 
 
 def tag_for(version: str) -> str:
+    """Return the git tag name of a version."""
     return f"{TAG_PREFIX}{normalize_version(version)}"
 
 
 def pyproject_version() -> str:
+    """Return the version declared in ``pyproject.toml``."""
     match = PYPROJECT_VERSION_RE.search(PYPROJECT.read_text(encoding="utf-8"))
     if not match:
         raise ReleaseError("no version = line in pyproject.toml")
@@ -151,6 +162,7 @@ def pyproject_version() -> str:
 
 
 def init_version() -> str:
+    """Return ``llm_dojo_scoring.__version__`` as written in ``__init__.py``."""
     match = INIT_VERSION_RE.search(INIT_PY.read_text(encoding="utf-8"))
     if not match:
         raise ReleaseError("no __version__ in llm_dojo_scoring/__init__.py")
@@ -158,6 +170,7 @@ def init_version() -> str:
 
 
 def list_version_tags() -> list[dict]:
+    """List local version tags, newest first, with type, object and subject."""
     out = git(
         "tag",
         "--list",
@@ -190,6 +203,7 @@ def list_version_tags() -> list[dict]:
 
 
 def parse_changelog() -> list[dict]:
+    """Parse the CHANGELOG ``## [X.Y.Z]`` sections into dicts (name, line, date, unreleased flag)."""
     sections: list[dict] = []
     lines = CHANGELOG.read_text(encoding="utf-8").splitlines()
     for line_no, line in enumerate(lines, start=1):
@@ -219,6 +233,7 @@ def parse_changelog() -> list[dict]:
 
 
 def section_for(version: str) -> dict:
+    """Return the released CHANGELOG section of a version."""
     version = normalize_version(version)
     for section in parse_changelog():
         if section["name"] == version and not section["is_unreleased"]:
@@ -227,6 +242,7 @@ def section_for(version: str) -> dict:
 
 
 def chain_state() -> dict:
+    """Snapshot the release chain: versions, tags, CHANGELOG sections and the working tree."""
     tags = list_version_tags()
     sections = parse_changelog()
     version_sections = [s["name"] for s in sections if not s["is_unreleased"]]
@@ -249,6 +265,7 @@ def chain_state() -> dict:
 
 
 def check_chain(state: dict) -> tuple[list[str], list[str]]:
+    """Return ``(errors, warnings)`` for inconsistencies in the release chain."""
     errors: list[str] = []
     warnings: list[str] = []
 
@@ -330,6 +347,7 @@ def check_chain(state: dict) -> tuple[list[str], list[str]]:
 
 
 def _stamp_changelog(version: str, today: str) -> None:
+    """Turn ``[Unreleased]`` into the dated version section and open a fresh ``[Unreleased]``."""
     lines = CHANGELOG.read_text(encoding="utf-8").splitlines()
     unreleased_idx = next(
         (
@@ -369,6 +387,7 @@ def _replace_once(
     repl: str | Callable[[re.Match[str]], str],
     label: str,
 ) -> None:
+    """Replace exactly one regex match in a file, or raise naming ``label``."""
     text = path.read_text(encoding="utf-8")
     new_text, count = pattern.subn(repl, text, count=1)
     if count != 1:
@@ -377,6 +396,7 @@ def _replace_once(
 
 
 def _bump_readme_pins(old: str, new: str) -> int:
+    """Move the README release badges and install pins from ``old`` to ``new``; return the count."""
     text = README.read_text(encoding="utf-8")
     replacements = (
         (f"release-v{old}", f"release-v{new}"),
@@ -396,6 +416,7 @@ def _bump_readme_pins(old: str, new: str) -> int:
 
 
 def cut_plan(version: str, *, today: str, allow_dirty: bool, allow_empty: bool) -> dict:
+    """Plan a release cut (CHANGELOG stamp and version bumps) without writing anything."""
     version = normalize_version(version)
     state = chain_state()
     if state["dirty"] and not allow_dirty:
@@ -448,6 +469,7 @@ def cut_plan(version: str, *, today: str, allow_dirty: bool, allow_empty: bool) 
 
 
 def cut_apply(plan: dict) -> None:
+    """Apply a cut plan to CHANGELOG, pyproject, ``__init__`` and README pins."""
     version = plan["version"]
     old = plan["from_version"]
     _stamp_changelog(version, plan["date"])
@@ -468,6 +490,7 @@ def cut_apply(plan: dict) -> None:
 
 
 def previous_tag(version: str, tags: list[dict]) -> str | None:
+    """Return the highest version tag below ``version``, if any."""
     target = parse_semver(version)
     for tag in tags:
         sv = parse_semver(tag["version"])
@@ -479,10 +502,12 @@ def previous_tag(version: str, tags: list[dict]) -> str | None:
 
 
 def _resolve_commit(ref: str | None) -> str:
+    """Resolve a ref (default ``HEAD``) to a full commit SHA."""
     return git("rev-parse", ref or "HEAD").strip()
 
 
 def commits_in_range(prev_tag: str | None, end_ref: str) -> list[dict]:
+    """List the non-merge commits between the previous tag and ``end_ref``."""
     if prev_tag:
         out = git("log", "--oneline", "--no-merges", f"{prev_tag}..{end_ref}")
     else:
@@ -497,6 +522,7 @@ def commits_in_range(prev_tag: str | None, end_ref: str) -> list[dict]:
 
 
 def prs_in_range(prev_tag: str | None, end_ref: str, *, net: bool) -> list[dict]:
+    """List the pull requests merged between the previous tag and ``end_ref`` (GitHub lookup when ``net``)."""
     if prev_tag:
         merge_log = git("log", "--oneline", "--merges", f"{prev_tag}..{end_ref}")
     else:
@@ -577,6 +603,7 @@ def bullet_summaries(body: str, limit: int = 8) -> list[str]:
 
 
 def key_commits(commits: list[dict], limit: int = 12) -> list[dict]:
+    """Pick the commits worth naming in release notes: release and DMR commits first."""
     preferred = [c for c in commits if DMR_RE.search(c["subject"]) or "Release" in c["subject"]]
     others = [c for c in commits if c not in preferred]
     return (preferred + others)[:limit]
@@ -593,6 +620,7 @@ def render_notes(
     commits: list[dict],
     artifacts_text: str,
 ) -> dict:
+    """Render the release-notes Markdown body."""
     version = normalize_version(version)
     highlights = bullet_summaries(body)
     if title:
@@ -668,6 +696,7 @@ def build_notes(
     net: bool,
     artifacts_text: str = "",
 ) -> dict:
+    """Collect the CHANGELOG section, commits and PRs for a version and render its notes."""
     version = normalize_version(version)
     tags = list_version_tags()
     prev = previous or previous_tag(version, tags)
@@ -694,6 +723,7 @@ def build_notes(
 
 
 def sha256_file(path: Path) -> str:
+    """Return the SHA-256 hex digest of a file."""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -702,6 +732,7 @@ def sha256_file(path: Path) -> str:
 
 
 def build_assets(version: str, *, out_dir: Path, commit: str) -> dict:
+    """Build the sdist/wheel and checksum assets of a version."""
     version = normalize_version(version)
     if pyproject_version() != version or init_version() != version:
         # Allow publishing an older already-cut tag from a newer worktree by
@@ -851,6 +882,7 @@ def _build_assets_at_commit(version: str, *, out_dir: Path, commit: str) -> dict
 
 
 def remote_release(version: str) -> dict | None:
+    """Return the published GitHub release of a version, or ``None``."""
     tag = tag_for(version)
     proc = run(
         ["gh", "release", "view", tag, "--repo", REPO, "--json", "name,tagName,isDraft,url,targetCommitish"],
@@ -862,6 +894,7 @@ def remote_release(version: str) -> dict | None:
 
 
 def remote_tag_commit(version: str) -> str | None:
+    """Return the commit a remote version tag points at (peeled), or ``None``."""
     proc = run(["git", "ls-remote", "--tags", "origin", tag_for(version)], check=False)
     if proc.returncode != 0 or not proc.stdout.strip():
         return None
@@ -888,6 +921,7 @@ def publish_plan(
     title: str | None,
     notes_file: Path | None,
 ) -> dict:
+    """Plan a publish (tag, push, release, assets) and collect the refusals that block it."""
     version = normalize_version(version)
     state = chain_state()
     errors, warnings = check_chain(state)
@@ -1010,6 +1044,7 @@ def publish_plan(
 
 
 def publish_apply(plan: dict, *, push: bool) -> dict:
+    """Execute a publish plan: tag, optionally push, create the release and upload assets."""
     if plan["errors"]:
         raise ReleaseError("; ".join(plan["errors"]))
 
@@ -1133,6 +1168,7 @@ def edit_release(
     latest: bool | None,
     apply: bool,
 ) -> dict:
+    """Plan or apply an edit to a published release's title, notes or latest flag."""
     version = normalize_version(version)
     existing = remote_release(version)
     if not existing:
@@ -1183,6 +1219,7 @@ def edit_release(
 
 
 def cmd_status(args: argparse.Namespace) -> int:
+    """``status``: print the release-chain identity."""
     state = chain_state()
     payload = {"action": "status", **state, "exit_code": 0, "next": []}
     lines = [
@@ -1206,6 +1243,7 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 
 def cmd_check(args: argparse.Namespace) -> int:
+    """``check``: validate the release chain; non-zero on errors."""
     state = chain_state()
     errors, warnings = check_chain(state)
     payload = {
@@ -1232,6 +1270,7 @@ def cmd_check(args: argparse.Namespace) -> int:
 
 
 def cmd_cut(args: argparse.Namespace) -> int:
+    """``cut``: stamp CHANGELOG and bump versions (dry run unless ``--apply``)."""
     today = args.date or _dt.date.today().isoformat()
     plan = cut_plan(
         args.version,
@@ -1265,6 +1304,7 @@ def cmd_cut(args: argparse.Namespace) -> int:
 
 
 def cmd_notes(args: argparse.Namespace) -> int:
+    """``notes``: render release notes for a version."""
     notes = build_notes(
         args.version,
         previous=args.previous,
@@ -1300,6 +1340,7 @@ def cmd_notes(args: argparse.Namespace) -> int:
 
 
 def cmd_assets(args: argparse.Namespace) -> int:
+    """``assets``: build release assets for a version."""
     version = normalize_version(args.version)
     commit = _resolve_commit(args.commit)
     out_dir = Path(args.out_dir) if args.out_dir else DEFAULT_ASSET_DIR
@@ -1339,6 +1380,7 @@ def cmd_assets(args: argparse.Namespace) -> int:
 
 
 def cmd_publish(args: argparse.Namespace) -> int:
+    """``publish``: tag and create the GitHub release (dry run unless ``--apply``)."""
     plan = publish_plan(
         args.version,
         commit_ref=args.commit,
@@ -1379,6 +1421,7 @@ def cmd_publish(args: argparse.Namespace) -> int:
 
 
 def cmd_edit(args: argparse.Namespace) -> int:
+    """``edit``: change a published release."""
     latest = True if args.latest else False if args.not_latest else None
     plan = edit_release(
         args.version,
@@ -1399,6 +1442,7 @@ def cmd_edit(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build the command-line parser."""
     parser = argparse.ArgumentParser(
         prog="scripts/release.py",
         description="Cut, note, asset-build, publish, and edit Dojo GitHub releases.",
@@ -1468,6 +1512,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the command line; a ``ReleaseError`` becomes an ``error`` payload and exit code 1."""
     parser = build_parser()
     args = parser.parse_args(argv)
     try:

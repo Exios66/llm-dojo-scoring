@@ -260,14 +260,79 @@ def predicted_categories(pred: Mapping[str, Any], universe: list[str]) -> tuple[
     return found, outside
 
 
+#: Defined-term annotations a party name carries: ``ACME CORP. ("Seller")``. Only a
+#: parenthetical holding a quoted term is an annotation; ``(US)`` is part of the name.
+_ANNOTATION = re.compile(r"\([^()]*[\"\u201c\u201d][^()]*\)|\"[^\"]*\"|\u201c[^\u201d]*\u201d")
+
+
+def party_core(text: Any) -> str:
+    """A party name without its defined-term annotations, normalized for comparison."""
+    return _norm(_ANNOTATION.sub(" ", str(text or "")))
+
+
 def _value_ok(field: str, value: Any, spans: list[str]) -> bool:
-    """Check the sandbox metadata containment rubric against GT spans."""
+    """Check the sandbox metadata containment rubric against GT spans.
+
+    Parties: every extracted name, with its defined-term annotation stripped,
+    must be contained in the CUAD ``Parties`` spans. CUAD mixes legal names,
+    defined terms and pronouns in that category, so an annotated legal name
+    (``NMS CORP. ("Seller")``) is right when its core is a span (v0.26.0). Only a
+    quoted defined term is stripped, so a qualifier (``ACME (US) LLC``) must match.
+    Each name must lie within one span, never across two.
+    """
     blob = " ".join(_norm(s) for s in spans)
     if field == "parties":
-        names = [_norm(v) for v in (value or [])] if isinstance(value, list) else [_norm(value)]
-        return bool(names) and all(n and n in blob for n in names)
+        names = list(value or []) if isinstance(value, list) else [value]
+        normed = [n for n in (_norm(s) for s in spans) if n]
+
+        def found(name: Any) -> bool:
+            """The core or the whole name lies within a single span."""
+            return any(c and any(c in s for s in normed) for c in (party_core(name), _norm(name)))
+
+        return bool(names) and all(found(n) for n in names)
     v = _norm(value)
     return bool(v) and (v in blob or any(_norm(s) in v for s in spans if _norm(s)))
+
+
+def _same_date(a: Any, b: Any) -> bool:
+    """Whether two date strings parse to the same calendar date."""
+    from .field_scoring import _parse_date
+
+    da, db = _parse_date(str(a)), _parse_date(str(b))
+    return da is not None and da == db
+
+
+def effective_from_agreement(value: Any, gt: Mapping[str, list[str]]) -> bool:
+    """Whether ``value`` is the CUAD Agreement Date standing in for an unlabelled Effective Date.
+
+    CUAD leaves ``Effective Date`` empty when a contract states only its
+    agreement date; the contract is then effective on that date, so an
+    extraction that reports it is right, not a false positive (v0.26.0).
+    """
+    if _empty(value) or (gt.get("Effective Date") or []):
+        return False
+    return any(_same_date(value, a) for a in gt.get("Agreement Date") or [])
+
+
+def field_value_ok(field: str, value: Any, cuad_clause_labels: Any) -> bool | None:
+    """Per-field truth of one contract metadata value against the row's CUAD labels.
+
+    ``None`` when the row's CUAD universe does not carry the field's category.
+    Value fields use the containment rubric; ``effective_date`` accepts the
+    Agreement Date fallback; the other fields are right when presence matches.
+    """
+    gt = gt_categories(cuad_clause_labels)
+    cat = FIELD_CATEGORY.get(field)
+    if cat is None or cat not in gt:
+        return None
+    spans = gt[cat]
+    if field == "effective_date" and effective_from_agreement(value, gt):
+        return True
+    if not spans:
+        return _empty(value)
+    if _empty(value):
+        return False
+    return _value_ok(field, value, spans) if field in VALUE_FIELDS else True
 
 
 def score_cuad(pred: Mapping[str, Any], cuad_clause_labels: Any) -> dict[str, Any]:
@@ -276,6 +341,10 @@ def score_cuad(pred: Mapping[str, Any], cuad_clause_labels: Any) -> dict[str, An
     universe = list(gt)
     present = {c for c, spans in gt.items() if spans}
     found, outside = predicted_categories(pred or {}, universe)
+    # An effective date read off the Agreement Date is not a false positive.
+    from_agreement = "Effective Date" in found and effective_from_agreement((pred or {}).get("effective_date"), gt)
+    if from_agreement:
+        found.discard("Effective Date")
     tp, fp, fn = len(found & present), len(found - present), len(present - found)
     p = tp / (tp + fp) if tp + fp else 0.0
     r = tp / (tp + fn) if tp + fn else 0.0
@@ -293,6 +362,7 @@ def score_cuad(pred: Mapping[str, Any], cuad_clause_labels: Any) -> dict[str, An
         "cuad_presence_f1": f1 if universe else None,
         "cuad_out_of_universe": outside,
         "cuad_value_checked": checked, "cuad_value_correct": correct,
+        "cuad_effective_from_agreement": int(from_agreement),
     }
 
 
@@ -301,6 +371,7 @@ __all__ = [
     "same_answer", "is_non_answer", "norm", "CLEAN_QUESTIONS",
     "MULTI_CLASS_QUESTIONS", "TYPE_OF_CONSIDERATION", "CONFLICT",
     "gt_categories", "predicted_categories", "FIELD_CATEGORY", "VALUE_FIELDS",
+    "party_core", "effective_from_agreement", "field_value_ok",
     "SANDBOX_MAUD_METRIC_ID", "SANDBOX_MAUD_CLEAN_METRIC_ID",
     "SANDBOX_CUAD_METRIC_ID",
 ]
