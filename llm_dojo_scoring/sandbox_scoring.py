@@ -275,12 +275,18 @@ def _value_ok(field: str, value: Any, spans: list[str]) -> bool:
     Parties: every extracted name, with its defined-term annotation stripped,
     must be contained in the CUAD ``Parties`` spans. CUAD mixes legal names,
     defined terms and pronouns in that category, so an annotated legal name
-    (``NMS CORP. ("Seller")``) is right when its core is a span (v0.26.0).
+    (``NMS CORP. ("Seller")``) is right when its core is a span (v0.26.0). A name
+    whose parenthetical belongs to it (``ACME (US) LLC``) also matches as written.
     """
     blob = " ".join(_norm(s) for s in spans)
     if field == "parties":
-        names = [party_core(v) for v in (value or [])] if isinstance(value, list) else [party_core(value)]
-        return bool(names) and all(n and n in blob for n in names)
+        names = list(value or []) if isinstance(value, list) else [value]
+
+        def found(name: Any) -> bool:
+            """The core is a span, or the whole name is (``ACME (US) LLC``)."""
+            return any(c and c in blob for c in (party_core(name), _norm(name)))
+
+        return bool(names) and all(found(n) for n in names)
     v = _norm(value)
     return bool(v) and (v in blob or any(_norm(s) in v for s in spans if _norm(s)))
 

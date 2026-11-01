@@ -83,3 +83,20 @@ def test_cms_source_table_is_scored_orthogonally():
     # Without a cms_source_table expectation nothing changes.
     plain = score_extraction("insurance_claim", {}, {"claim_type": "carrier"}, {"claim_type": "health"})
     assert plain.field_scores == {"claim_type": 1.0}
+
+
+def test_blank_or_null_source_table_falls_back_to_claim_type():
+    """An empty or null-token table field does not hide the table reported on claim_type."""
+    exp = {"claim_type": "health", "cms_source_table": "carrier"}
+    for blank in ("", "null", "  ", None):
+        out = score_extraction("insurance_claim", {}, {"claim_type": "carrier", "cms_source_table": blank}, exp)
+        assert out.field_scores["cms_source_table"] == 1.0, blank
+    stated = score_extraction("insurance_claim", {}, {"claim_type": "carrier", "cms_source_table": "inpatient"}, exp)
+    assert stated.field_scores["cms_source_table"] == 0.0  # a stated table is scored as stated
+
+
+def test_parenthetical_that_is_part_of_the_name_still_matches():
+    """``ACME (US) LLC`` matches its span as written; the stripped core is tried first."""
+    spans = _labels(Parties=["ACME (US) LLC", "Beta Inc."])
+    assert field_value_ok("parties", ["ACME (US) LLC", 'Beta Inc. ("Buyer")'], spans) is True
+    assert field_value_ok("parties", ["ACME (UK) LLC"], spans) is False
