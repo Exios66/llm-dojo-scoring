@@ -40,3 +40,22 @@ corrects the sandbox grid card's old truthiness branch which displayed a total
 miss as null. The pooling API preserves report keys and returns additive
 `clean_accuracy` support on MAUD rows. Return values use Dojo's existing fbeta
 rounding, so pooled CUAD F1 is four decimals; consumers may format it further.
+
+## Contract truth corrections (v0.26.0)
+
+The sandbox's extraction-gate vetting found two places where the CUAD labels
+marked a correct contract extraction wrong. Both are fixed here, from the Hub's own CUAD
+evidence only:
+
+| Field | CUAD behaviour | Rule |
+| --- | --- | --- |
+| `parties` | The `Parties` spans mix legal names, defined terms and pronouns. An annotated legal name (`NMS CORP. ("Seller")`) failed containment. Only 34% of party lists that named every party correctly scored right. | Strip defined-term annotations (`party_core`) before the containment check. |
+| `effective_date` | `Effective Date` is empty when a contract states only its agreement date. The extracted date then counted as a presence false positive. | When CUAD labels no Effective Date and the value equals an `Agreement Date` span, it is right (`effective_from_agreement`). It is dropped from the presence confusion and counted in `cuad_effective_from_agreement`. |
+
+`field_value_ok(field, value, cuad_clause_labels)` gives the per-field truth that
+consumers previously rebuilt from `_value_ok`. It returns `None` when the row's CUAD
+universe lacks the field's category.
+
+**Comparability (#97).** `cuad_value_correct` and the CUAD presence counts can rise
+on rows that carry annotated party names or an agreement date without an effective
+date. Re-score older runs before you compare them with v0.26.0+ cards.
