@@ -314,6 +314,20 @@ fields the text states.
 `health` is **not** a subclass (`normalize_corpus_subclass(..., "health")`
 → `other`).
 
+**CMS mapping (v0.26.0, #93).** `corpus.CMS_SOURCE_TABLES` is the single source
+of truth: each source table (`carrier` · `inpatient` · `outpatient` · `pde`) maps
+to `claim_type=health`, subclass = the table, and intent `claim_data_record`.
+`claim_type` (the product line) and the source table are **orthogonal**:
+
+- `claim_type` still folds a CMS token onto GT `health` (SAND-042).
+- The source table is scored as its own label field, `cms_source_table`, whenever
+  the expected row carries it. Derive it with `cms_source_table(doc_type, subclass)`.
+  The specialist's `claim_type` token is the prediction when the extraction has no
+  `cms_source_table` key.
+
+The published merge does not carry `cms_source_table` yet. Until it does, consumers
+add it from `expected_subclass`. The sandbox's interim label overlay does this.
+
 **`claim_checklist` categories:** Coverage Determination; Policy Limits;
 Exclusions Cited; Deductible; Reservation Of Rights; Timely Notice; Proof
 Of Loss; Subrogation; Independent Medical Exam; Amount Consistency.

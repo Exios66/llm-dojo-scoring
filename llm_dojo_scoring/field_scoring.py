@@ -1368,7 +1368,8 @@ def score_extraction(
         exp_value = parse_json_container(exp_value)
         if is_empty_value(exp_value):
             continue
-        field_type = field_types.get(key) or _heuristic_field_type(key, exp_value)
+        field_type = (field_types.get(key)
+                      or ("label" if key == "cms_source_table" else _heuristic_field_type(key, exp_value)))
         # Judge escalation uses the configured type's band, not the
         # containment override applied for scoring below.
         original_field_type = field_type
@@ -1382,6 +1383,12 @@ def score_extraction(
         if (doc_class == "insurance_claim" and key == "claim_type"
                 and pred_value is not None):
             pred_value = canonical_claim_type(pred_value, exp_value)
+        if doc_class == "insurance_claim" and key == "cms_source_table" and is_empty_value(pred_value):
+            # The specialist reports the table on ``claim_type`` (the frozen
+            # insurance prompt); score it here, orthogonal to the product line.
+            # A blank or null-token table field falls back too.
+            token = str(predicted.get("claim_type") or "").strip().lower()
+            pred_value = token if token in CMS_CLAIM_TYPES else None
         if pred_value is None:
             # A null answer satisfies a null-expectation date (blank-template
             # or label-only GT holds no real date).

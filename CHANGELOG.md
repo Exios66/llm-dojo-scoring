@@ -17,6 +17,33 @@ Format based on Keep a Changelog; versioning is SemVer.
   fallback) plus registered project scripts (Setup/Tests/Release status) so
   agent worktrees boot importable and smoke-tested.
 
+### Fixed
+
+- CUAD `parties` truth: defined-term annotations (`NMS CORP. ("Seller")`) are
+  stripped before containment against the `Parties` spans (`party_core`). Found by
+  the sandbox's extraction-gate vetting: 34% of correct party lists scored right.
+- CUAD `effective_date` truth: when CUAD labels no `Effective Date`, a value equal to
+  the `Agreement Date` is right and is no longer a presence false positive
+  (`effective_from_agreement`, new `cuad_effective_from_agreement` count).
+- `tests/test_docstring_coverage.py` passes again: docstrings for the release
+  governor and its tests. `test_cli_publish_dry_run_json` reads the error payload
+  from stderr and skips when the GitHub CLI cannot reach the API.
+
+### Added
+
+- `sandbox_scoring.field_value_ok(field, value, cuad_clause_labels)`: per-field
+  contract truth for consumers, so they no longer rebuild it from `_value_ok`.
+- `corpus.CMS_SOURCE_TABLES` and `cms_source_table()`: one explicit CMS mapping from
+  source table to `claim_type`, subclass and intent (#93, first part).
+  `score_extraction` scores `cms_source_table` as its own label field, orthogonal to
+  `claim_type`, when the expected row carries it.
+
+### Comparability
+
+- Contract `cuad_value_correct` and CUAD presence counts can rise on affected rows.
+  Re-score older runs before comparing (#97). Insurance scores change only for rows
+  whose expectation includes `cms_source_table`. The published merge has none yet.
+
 ## [0.25.0] - 2026-11-01
 
 ### Added

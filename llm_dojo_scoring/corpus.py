@@ -46,6 +46,8 @@ __all__ = [
     "CORRESPONDENCE_TOPICS",
     "CORRESPONDENCE_SENTIMENT_LABELS",
     "INSURANCE_CLAIM_TYPES",
+    "CMS_SOURCE_TABLES",
+    "cms_source_table",
     "normalize_corpus_subclass",
     "subclass_equivalent",
     "suite_schema",
@@ -480,6 +482,26 @@ INSURANCE_CLAIM_TYPES: tuple[str, ...] = (
     "workers_comp",
     "other",
 )
+
+
+#: Explicit CMS DE-SynPUF mapping (dojo #93): source-table token -> the Hub's
+#: ``claim_type`` (product line), the subclass and the intent of the row.
+#: ``claim_type`` and the source table are **orthogonal**: the product line of
+#: every CMS row is ``health``; the table is scored as its own field,
+#: ``cms_source_table``, whenever the expected row carries it (see
+#: :func:`cms_source_table` and ``field_scoring.score_extraction``).
+CMS_SOURCE_TABLES: dict[str, dict[str, str]] = {
+    table: {"claim_type": "health", "subclass": table, "intent": "claim_data_record"}
+    for table in ("carrier", "inpatient", "outpatient", "pde")
+}
+
+
+def cms_source_table(doc_type: str | None, subclass: Any) -> str | None:
+    """The CMS source table of an insurance row, derived from its subclass (else ``None``)."""
+    if doc_type != "insurance_claim":
+        return None
+    token = str(subclass or "").strip().lower()
+    return token if token in CMS_SOURCE_TABLES else None
 
 
 def normalize_corpus_subclass(doc_type: str | None, value: Any) -> str:
