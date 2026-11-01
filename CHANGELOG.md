@@ -5,6 +5,14 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/release.py`: agent-facing release governor (`status`, `check`, `cut`,
+  `notes`, `assets`, `publish`, `edit`) with dry-run-by-default, `--json` plans,
+  annotated tag + GitHub Release publish, and wheel / `SHA256SUMS` /
+  `release-manifest.json` assets (#92 Option B). Guide: `docs/RELEASES.md`.
+  Template: `.github/RELEASE_TEMPLATE.md`.
+
 ## [0.25.0] - 2026-11-01
 
 ### Added
