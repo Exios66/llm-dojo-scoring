@@ -39,7 +39,6 @@ def test_check_accepts_current_stamped_tree(release):
     errors, warnings = release.check_chain(state)
     assert state["pyproject_version"] == state["init_version"] == "0.25.0"
     assert not errors
-    assert any("0.25.0" in w and "not local yet" in w for w in warnings)
 
 
 def test_cut_dry_run_refuses_existing_section(release):
@@ -63,6 +62,8 @@ def test_notes_render_contains_changelog_and_commit(release):
 
 
 def test_cli_publish_dry_run_json():
+    # v0.25.0 is now published; a dry-run publish must refuse (idempotent)
+    # rather than silently re-tag/re-release.
     proc = subprocess.run(
         [sys.executable, str(SCRIPT), "publish", "0.25.0", "--commit", "HEAD", "--json"],
         cwd=ROOT,
@@ -70,14 +71,13 @@ def test_cli_publish_dry_run_json():
         text=True,
         timeout=60,
     )
-    assert proc.returncode == 0, proc.stderr
     payload = json.loads(proc.stdout)
     assert payload["action"] == "publish"
     assert payload["version"] == "0.25.0"
     assert payload["dry_run"] is True
     assert payload["tag"] == "v0.25.0"
-    assert any(step["op"] == "git_tag" for step in payload["steps"])
-    assert not payload["errors"]
+    assert payload["errors"]
+    assert any("already published" in e for e in payload["errors"])
 
 
 def test_compat_pin_regex_rounds_trip(release):
