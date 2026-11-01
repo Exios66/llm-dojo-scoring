@@ -1,5 +1,8 @@
 # DMR-091 final primary quality proposal
 
+> **Historical record.** This doc describes status at the time it was written and is not kept current;
+> see the [CHANGELOG](../../CHANGELOG.md) for what shipped.
+
 Additive source APIs, requiring a reviewed new Dojo release before consumers
 ship. Published v0.22.0 is not claimed to provide these modules.
 

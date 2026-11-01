@@ -1,5 +1,8 @@
 # Connected-repo TODOs
 
+> **Historical record.** This doc describes status at the time it was written and is not kept current;
+> see the [CHANGELOG](../../CHANGELOG.md) for what shipped.
+
 Follow-ups for repos that mirror the frozen specialist prompts or import the
 dojo prompt catalog. The dojo side of the v0.19.1 `production_prompts` lineage
 is complete; the items below are **not** done in this repo.

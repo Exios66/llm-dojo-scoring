@@ -1,5 +1,8 @@
 # Primary scoring ownership in 0.23.0
 
+> **Historical record.** This doc describes status at the time it was written and is not kept current;
+> see the [CHANGELOG](../../CHANGELOG.md) for what shipped.
+
 Implementation changes originate and merge in this independent repository.
 Consumers adopt the reviewed release and Digital-Mailroom imports the merged
 source revisions before generating its sandbox vendor copies.

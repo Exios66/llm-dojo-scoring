@@ -961,7 +961,7 @@ def test_documented_startup_example_executes_notice_branch(harness, monkeypatch,
     # Seed with the constructor's real clock; the example itself is unmodified.
     updates.UpdateChecker(checker.cache_dir, transport=FakeHTTP()).check()
     monkeypatch.setattr(updates, "_default_cache_dir", lambda: checker.cache_dir)
-    doc = Path(__file__).resolve().parents[1] / "docs/UPDATE_AWARENESS.md"
+    doc = Path(__file__).resolve().parents[1] / "docs/guides/UPDATE_AWARENESS.md"
     example = doc.read_text().split("## Thin application startup hook", 1)[1]
     example = example.split("```python\n", 1)[1].split("```", 1)[0]
     namespace = {}

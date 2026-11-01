@@ -104,7 +104,7 @@ _METRIC_ID_BY_NAME: dict[str, str] = {
     "sentiment_f1_macro": "pipeline.enron.sentiment_f1_macro",
 }
 
-# Doc class / suite → allowed metric_ids for comparisons (documented in docs/METRIC_IDS.md).
+# Doc class / suite → allowed metric_ids for comparisons (documented in docs/contracts/METRIC_IDS.md).
 # Covers all five live extract classes (#17): contract, merger_agreement,
 # corporate_record, correspondence, insurance_claim.
 _CLASS_METRIC_IDS: dict[str, tuple[str, ...]] = {
@@ -232,7 +232,7 @@ def metric_id_for(
     ``pipeline.<class>.<name>`` — a made-up id never matches another leg's,
     so it would hide an incomparable pair instead of refusing it.
     ``doc_class`` is accepted for call-site symmetry; the id does not depend
-    on it. See ``docs/METRIC_IDS.md``.
+    on it. See ``docs/contracts/METRIC_IDS.md``.
     """
     try:
         canonical = _METRIC_ID_BY_NAME[metric_name]
@@ -240,7 +240,7 @@ def metric_id_for(
         raise UnknownMetricNameError(
             f"no canonical metric_id for {metric_name!r}"
             + (f" (doc_class={doc_class!r})" if doc_class else "")
-            + "; add it to _METRIC_ID_BY_NAME and docs/METRIC_IDS.md"
+            + "; add it to _METRIC_ID_BY_NAME and docs/contracts/METRIC_IDS.md"
         ) from None
     if presence_mode:
         return "cuad.clause_presence.micro_f1"

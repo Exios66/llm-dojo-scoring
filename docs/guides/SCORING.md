@@ -1,9 +1,9 @@
 # Scoring
 
-- Live extraction schemas (five mailroom-dataset classes): [`EXTRACTION_SCHEMAS.md`](EXTRACTION_SCHEMAS.md)
-- Archive / unified scoring block: [`ARCHIVE_SCORING.md`](ARCHIVE_SCORING.md)
-- MAUD GT, format vs extraction, completion and cost: [`SCORECARD_HONESTY.md`](SCORECARD_HONESTY.md)
-- Metric identity: [`METRIC_IDS.md`](METRIC_IDS.md)
+- Live extraction schemas (five mailroom-dataset classes): [`EXTRACTION_SCHEMAS.md`](../schemas/EXTRACTION_SCHEMAS.md)
+- Archive / unified scoring block: [`ARCHIVE_SCORING.md`](../contracts/ARCHIVE_SCORING.md)
+- MAUD GT, format vs extraction, completion and cost: [`SCORECARD_HONESTY.md`](../contracts/SCORECARD_HONESTY.md)
+- Metric identity: [`METRIC_IDS.md`](../contracts/METRIC_IDS.md)
 - Controlled `intent` labels (`label` field type): `llm_dojo_scoring/schemas/intents.py`
 
 ## Field types by class
@@ -153,7 +153,7 @@ HONEST GAP: court_opinion was RETIRED from the live llm-mailroom pipeline (v0.5.
 
 ### `corporate_records_specialist`
 
-HONEST GAP: no *external* extraction benchmark (CUAD/MAUD-grade coverage is not claimed). The published merge covers 450 corporate_record rows in 10 record-shape subclasses (see [`CORPORATE_RECORD_SCHEMA.md`](CORPORATE_RECORD_SCHEMA.md)). Suite scores typed-extraction field-micro P/R/F1/F2 per subclass schema. Key-entity fields the dataset leaves blank without documenting absence are *unlabeled* and excluded from both sides (reported as `unlabeled_fields`).
+HONEST GAP: no *external* extraction benchmark (CUAD/MAUD-grade coverage is not claimed). The published merge covers 450 corporate_record rows in 10 record-shape subclasses (see [`CORPORATE_RECORD_SCHEMA.md`](../schemas/CORPORATE_RECORD_SCHEMA.md)). Suite scores typed-extraction field-micro P/R/F1/F2 per subclass schema. Key-entity fields the dataset leaves blank without documenting absence are *unlabeled* and excluded from both sides (reported as `unlabeled_fields`).
 
 ### `compliance_specialist`
 
