@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -66,6 +67,15 @@ def test_notes_render_contains_changelog_and_commit(release):
     assert "Pull requests merged" in notes["body"]
 
 
+#: gh errors that mean the CLI or the API cannot be reached here (not a release-tool bug):
+#: not installed, not logged in, no network, refused or rate-limited by the API.
+_GH_UNAVAILABLE = re.compile(
+    r"No such file or directory|gh auth login|not logged in|authentication|HTTP 40[13]|"
+    r"rate limit|could not resolve|error connecting|connection (refused|reset)|timed? ?out|proxy",
+    re.IGNORECASE,
+)
+
+
 def test_cli_publish_dry_run_json():
     # v0.25.0 is now published; a dry-run publish must refuse (idempotent)
     # rather than silently re-tag/re-release.
@@ -80,8 +90,9 @@ def test_cli_publish_dry_run_json():
     # main() writes a ReleaseError payload to stderr; a gh/network failure is
     # an environment limit, not a release-tool regression.
     payload = json.loads(proc.stdout or proc.stderr)
-    if "action" not in payload and "gh " in str(payload.get("error", "")):
-        pytest.skip(f"GitHub CLI unavailable here: {payload['error'][:120]}")
+    error = str(payload.get("error", ""))
+    if "action" not in payload and error.startswith("gh ") and _GH_UNAVAILABLE.search(error):
+        pytest.skip(f"GitHub CLI unavailable here: {error[:120]}")
     assert payload["action"] == "publish"
     assert payload["version"] == "0.25.0"
     assert payload["dry_run"] is True
@@ -105,3 +116,11 @@ def test_compat_pin_regex_rounds_trip(release):
         lambda m: f'{m.group(1)}0.26.0{m.group(3)}', sample, count=1
     )
     assert bumped == 'assert dojo.__version__ == "0.26.0"\n'
+
+
+def test_gh_unavailable_pattern_is_narrow():
+    """Only unreachable-CLI errors skip the publish test; other gh failures fail it."""
+    assert _GH_UNAVAILABLE.search("gh pr list failed: [Errno 2] No such file or directory: 'gh'")
+    assert _GH_UNAVAILABLE.search("gh api failed: To get started with GitHub CLI, please run:  gh auth login")
+    assert not _GH_UNAVAILABLE.search("gh pr list failed: unknown flag: --bogus")
+    assert not _GH_UNAVAILABLE.search("gh release view failed: release not found")
