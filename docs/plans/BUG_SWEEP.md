@@ -22,37 +22,46 @@ scores needs a CHANGELOG comparability note and a `score_changelog` entry.
 - [ ] **Insurance `claim_checklist`:** it is in the live field map, but no Hub row
   populates it, so the insurance headline is always `partial`. Either add GT or drop
   the field from the map in step with llm-mailroom.
-- [ ] **`"nan"` string values:** they appear in 350 non-CMS insurance rows (topic and
+- [x] **`"nan"` string values:** they appear in 350 non-CMS insurance rows (topic and
   sentiment keys). Verify `scoring_gt_fields` / `is_empty_value` treat `"nan"` as
   empty for every class that maps those keys.
+  Fixed: `is_empty_value` treats `nan` / float NaN as empty.
 - [ ] **Intents never seen in GT:** `loss_report` and `other` (insurance) never occur in
   the Hub data. Decide whether hints should still teach them.
 - [x] **PR #106 adversarial review:** confirmed findings 1–3, 5 and 6 are fixed in
   #106 (`fcca394`).
-- [ ] **CMS detection still sniffs the key.** A plain-dict GT that carries
+- [x] **CMS detection still sniffs the key.** A plain-dict GT that carries
   `cms_source_table` puts a non-CMS row into CMS mode (#106 review, finding 4).
   Replace key-sniffing with an explicit flag set where GT is scoped.
-- [ ] **Scalar `expected_subclass` with a list `expected`.** In batch scoring this
+  Fixed: a row whose GT names a product line other than `health` is never CMS.
+- [x] **Scalar `expected_subclass` with a list `expected`.** In batch scoring this
   marks every row as CMS. Numpy or pandas subclass arrays silently miss detection,
   and `rescore` reads only the `expected_subclass` key (#106 review).
-- [ ] **Archive method label is wrong for CMS blocks.** The `method` label
+  Fixed: a scalar is not broadcast for CMS derivation in a batch; arrays are read per row; rescore also reads `doc_subclass`.
+- [x] **Archive method label is wrong for CMS blocks.** The `method` label
   `unweighted_mean_of_nonempty_expected_fields` no longer describes them, because
   documented-absent fields join the mean (`n_fields_scored` 14 → 17).
-- [ ] **CMS branch skipped when `adjuster` is missing.** If the expected dict has no
+  Fixed: `ARCHIVE_SCORING_METHOD_CMS`, same `metric_id`.
+- [x] **CMS branch skipped when `adjuster` is missing.** If the expected dict has no
   `adjuster` key, the CMS branch is skipped, while field-micro metrics still count a
   stated adjuster as a false positive.
-- [ ] **NDC padding.** `zfill(11)` mis-normalizes the 5-3-2 / 5-4-1 forms of a
+  Fixed: a stated value on an omitted documented-absent key scores 0; silence on it is not scored.
+- [x] **NDC padding.** `zfill(11)` mis-normalizes the 5-3-2 / 5-4-1 forms of a
   10-digit NDC, causing false negatives in `_cms_doc_signature`.
+  Fixed: hyphenated segments pad to 5-4-2.
 
 ## Reporting / honesty
 
-- [ ] **Unescaped Markdown in grid output:** specialist names are interpolated without
+- [x] **Unescaped Markdown in grid output:** specialist names are interpolated without
   escaping into the grid table and the headline-scope footnotes (`analysis/grid.py`).
   A name containing `|`, `**` or a newline breaks the report.
-- [ ] **Exports:** `headline_scope` / `intent_split` are not exported from the package root.
+  Fixed: `_cell` escapes free text.
+- [x] **Exports:** `headline_scope` / `intent_split` are not exported from the package root.
   Decide whether they are part of the public surface.
-- [ ] **Scored-enum fragments have no `"type"`.** Strict structured-output decoders may
+  Decided: public in `metrics.scorecard_honesty` (its `__all__`), like `aggregate_quality_honest`; not root exports.
+- [x] **Scored-enum fragments have no `"type"`.** Strict structured-output decoders may
   require one. See `schemas/scored_enums.py`.
+  Fixed: `type` is `["string", "null"]` or `"string"`.
 
 ## Portability / CI (no GitHub Actions dependency)
 

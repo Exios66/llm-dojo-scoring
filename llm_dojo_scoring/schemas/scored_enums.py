@@ -97,13 +97,19 @@ def scored_enum_schema(doc_type: str, field: str, *, nullable: bool = True) -> d
     """A JSON Schema fragment restricting ``field`` to its scored vocabulary.
 
     ``nullable`` (default) admits ``null``, the empty-field contract value for
-    an unstated enum (see :mod:`.schema_contract`).
+    an unstated enum (see :mod:`.schema_contract`). The fragment carries an
+    explicit ``"type"`` (``["string", "null"]`` or ``"string"``) because strict
+    structured-output decoders reject an ``enum`` without one.
     """
     vocabulary, description = _entry(doc_type, field)
     values: list[Any] = list(vocabulary)
     if nullable:
         values.append(None)
-    return {"enum": values, "description": description}
+    return {
+        "type": ["string", "null"] if nullable else "string",
+        "enum": values,
+        "description": description,
+    }
 
 
 def scored_enum_schemas(doc_type: str, *, nullable: bool = True) -> dict[str, dict[str, Any]]:

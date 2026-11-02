@@ -26,6 +26,7 @@ from ..scoring.extraction_metrics import extraction_binary_metrics
 from ..scoring.field_scoring import (
     NEVER_SCORED_FIELDS,
     RETIRED_PROMPT_KEYS,
+    expected_cms_source_table,
     score_extraction,
 )
 from ..schemas.corpus import cms_source_table
@@ -45,6 +46,7 @@ __all__ = [
     "ARCHIVE_SCORING_KEYS",
     "ARCHIVE_SCORING_POST_V021_KEYS",
     "ARCHIVE_SCORING_METHOD",
+    "ARCHIVE_SCORING_METHOD_CMS",
     "ARCHIVED_REQUIRED_TAIL",
     "AUDIT_DETAIL_KEYS",
     "AUDIT_ENTRY_KEYS",
@@ -78,6 +80,10 @@ __all__ = [
 ARCHIVE_HASH_VERSION = 2
 
 ARCHIVE_SCORING_METHOD = "unweighted_mean_of_nonempty_expected_fields"
+#: The same rubric on a CMS row (#93): documented-absent fields
+#: (``adjuster`` / ``denial_reasons``) join the mean, scored 1.0 when the model
+#: states nothing, so the default label would misdescribe the block.
+ARCHIVE_SCORING_METHOD_CMS = "unweighted_mean_of_nonempty_expected_and_cms_documented_absent_fields"
 
 #: Keys the archivist ``detail.scoring`` object always carries.
 ARCHIVE_SCORING_KEYS: tuple[str, ...] = (
@@ -247,7 +253,7 @@ def _archive_metric_id(resolved_method: str) -> str:
     raises :class:`~llm_dojo_scoring.metrics.scorecard_honesty.UnknownMetricNameError`
     rather than stamping an id no other leg can match.
     """
-    if resolved_method == ARCHIVE_SCORING_METHOD:
+    if resolved_method in (ARCHIVE_SCORING_METHOD, ARCHIVE_SCORING_METHOD_CMS):
         return "pipeline.extraction.overall"
     if resolved_method in _HEADLINE_METHOD_ALIASES.values():
         return resolved_method
@@ -407,6 +413,9 @@ def score_archive_block(
         exp[CMS_SOURCE_TABLE_KEY] = cms_table
         if (predicted or {}).get(CMS_SOURCE_TABLE_KEY) is not None:
             pred[CMS_SOURCE_TABLE_KEY] = predicted[CMS_SOURCE_TABLE_KEY]
+    # The scorer's own test (it also checks the GT product line) decides
+    # whether the block is CMS, so the method label matches what was scored.
+    cms_table = expected_cms_source_table(doc_class, exp)
 
     result = score_extraction(
         doc_class, ftypes, pred, exp, doc_text=doc_text
@@ -435,7 +444,7 @@ def score_archive_block(
         doc_class=doc_class,
     )
     countable = assessment.scorable and int(prf.get("expected_events") or 0) > 0
-    resolved_method = ARCHIVE_SCORING_METHOD
+    resolved_method = ARCHIVE_SCORING_METHOD_CMS if cms_table is not None else ARCHIVE_SCORING_METHOD
     if method:
         resolved_method = _HEADLINE_METHOD_ALIASES.get(method, method)
 

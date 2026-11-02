@@ -123,7 +123,14 @@ def expected_cms_source_table(doc_class: str | None, expected: Any) -> str | Non
     if doc_class != "insurance_claim" or not isinstance(expected, dict):
         return None
     token = str(parse_json_container(expected.get("cms_source_table")) or "").strip().lower()
-    return token if token in CMS_SOURCE_TABLES else None
+    if token not in CMS_SOURCE_TABLES:
+        return None
+    # Every published CMS row is ``claim_type=health``. A row whose GT names
+    # another product line is not CMS, whatever stray key it carries.
+    claim_type = parse_json_container(expected.get("claim_type"))
+    if not is_empty_value(claim_type) and str(claim_type).strip().lower() != "health":
+        return None
+    return token
 
 
 def get_ambiguous_band() -> tuple[float, float]:
@@ -1232,13 +1239,15 @@ _CMS_FACILITY_RE = re.compile(
 )
 _CMS_NPI_RE = re.compile(r"(?<![a-z0-9])(\d{10})(?![a-z0-9])")
 _CMS_NDC_RE = re.compile(r"(?<![a-z0-9])(\d{9,11})(?![a-z0-9])")
+_CMS_NDC_SEGMENTS_RE = re.compile(r"(?<![a-z0-9-])(\d{4,5})-(\d{3,4})-(\d{1,2})(?![a-z0-9-])")
 
 
 def _cms_doc_signature(text) -> tuple[str, str]:
     """Classify one CMS supporting-document item as ``(kind, value)``.
 
     Identifier items compare as exact tokens: ``npi`` (10 digits), ``ndc``
-    (digits, hyphens dropped, left-padded to 11 when labelled NDC) and
+    (11-digit 5-4-2 form: a hyphenated labelled NDC pads each segment, an
+    unhyphenated one is left-padded) and
     ``facility_provider`` (alphanumeric id). Anything else is a descriptor
     (``HCPCS detail (1 codes)``) reduced to its normalized type label: letters
     only, count and ``code(s)`` words dropped.
@@ -1247,6 +1256,13 @@ def _cms_doc_signature(text) -> tuple[str, str]:
     facility = _CMS_FACILITY_RE.search(raw)
     if facility:
         return "facility_provider", facility.group(1)
+    if re.search(r"\bndc\b", raw):
+        # A hyphenated 10-digit NDC (4-4-2, 5-3-2, 5-4-1) pads the short
+        # segment, not the whole number, to reach the 11-digit 5-4-2 form.
+        segmented = _CMS_NDC_SEGMENTS_RE.search(raw)
+        if segmented:
+            labeler, product, package = segmented.groups()
+            return "ndc", labeler.zfill(5) + product.zfill(4) + package.zfill(2)
     squeezed = re.sub(r"(?<=\d)-(?=\d)", "", raw)
     if re.search(r"\bndc\b", squeezed):
         match = _CMS_NDC_RE.search(squeezed)
@@ -1455,7 +1471,20 @@ def score_extraction(
     # supporting_documents. Non-CMS rows keep the generic behaviour.
     cms_table = expected_cms_source_table(doc_class, expected) if cms_aware else None
 
-    for key, exp_value in expected.items():
+    expected_items = list(expected.items())
+    if cms_table is not None:
+        # A CMS row whose GT omits a documented-absent key still penalises a
+        # stated value, as the field-micro counts already do (a false
+        # positive). Silence on an omitted key earns no credit: it is not
+        # scored, so partial GT does not inflate the mean.
+        expected_items += [
+            (key, "") for key in CMS_DOCUMENTED_ABSENT_FIELDS
+            if key not in expected
+            and (not field_types or key in field_types)
+            and not is_empty_value(parse_json_container(predicted.get(key)))
+        ]
+
+    for key, exp_value in expected_items:
         if key in NEVER_SCORED_FIELDS:
             continue
         if key in RETIRED_PROMPT_KEYS and key not in field_types:
