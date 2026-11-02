@@ -78,7 +78,7 @@ def test_real_subject_matter_is_not_flagged(value):
         "Sent Items",
         "_sent_mail",
         "skilling-j/inbox",
-        "/enron/maildir/x",
+        "/enron/maildir/inbox/x",
         "2001-05-14",
         "05/14/2001 09:32",
         "9:32 am",
@@ -185,3 +185,107 @@ def test_honest_aggregate_carries_intent_split_and_partial_scope():
     assert out["intent_split"]["n_intent_missed"] == 1
     assert out["headline_scope"] == "partial"
     assert "intent_split" not in aggregate_quality_honest([_three_field(1.0)])
+
+
+def test_honest_aggregate_intent_split_uses_only_rows_in_the_headline():
+    """Rows with a missing, boolean or string score never enter the intent split."""
+    rows = [
+        {"overall_score": 0.9, "field_scores": {"intent": 1, "keywords": 0.8}},
+        {"overall_score": None, "field_scores": {"intent": 0}},
+        {"overall_score": True, "field_scores": {"intent": 0}},
+        {"overall_score": "0.4", "field_scores": {"intent": 0}},
+    ]
+    out = aggregate_quality_honest(rows, doc_class="correspondence")
+    assert out["n_scored"] == 1
+    assert out["intent_split"]["n_intent"] == 1
+    assert out["intent_split"]["intent_mean"] == 1.0
+    # Standalone, only unscorable rows are skipped.
+    assert intent_split(rows)["n_intent"] == 4
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "Correspondence concerning general_business: Construction Duration, Florida Peaker Project",
+        "Correspondence concerning scheduling: End User Measurement",
+        "Correspondence concerning general_business.",
+        "Email regarding General Business. Follow-up attached",
+    ],
+)
+def test_template_frame_with_title_suffix_is_flagged(value):
+    """A frame plus topic key is templated even with a ``: title`` or trailing text."""
+    assert is_templated_subject_matter(value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "Correspondence concerning the pipeline outage.",
+        "Rescheduling the Q3 review.",
+        "Revised RTO conference call schedule discussing PJM",
+    ],
+)
+def test_prose_subject_matter_stays_unflagged(value):
+    """Real summaries and non-topic frames are not templated."""
+    assert not is_templated_subject_matter(value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "delainey-d",
+        "sanders-r",
+        "skilling-j",
+        "email",
+        "memo",
+        "letter",
+        "demand",
+        "maildir/allen-p/inbox/12.",
+        "allen-p/_sent_mail/3.",
+        "C:\\mail\\inbox\\4.",
+    ],
+)
+def test_metadata_keywords_mailbox_type_and_folder_paths(value):
+    """Mailbox ids, communication-type tokens and any-segment folder paths are metadata."""
+    assert is_metadata_keyword(value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["SPP/Entergy", "EFP/EFS PROCEDURES", "/s", "RTO Filing", "PJM", "July 25th", "2001 budget",
+     "Notice # 02-46", "2.0.1", "10.12.15", "12345678", "20011314"],
+)
+def test_content_keywords_are_not_metadata(value):
+    """Slashes, version numbers and arbitrary digit runs are not metadata."""
+    assert not is_metadata_keyword(value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "2000-06-26T09:40:00+00:00",
+        "2001-11-20T06:59:28+00:00",
+        "2001-05-14",
+        "05/14/2001 09:32",
+        "9:32 am",
+        "20010514",
+        "20010514093200",
+    ],
+)
+def test_date_and_time_stamps_are_metadata(value):
+    """ISO timestamps with an offset, US dates, clock times and compact stamps are flagged."""
+    assert is_metadata_keyword(value)
+
+
+def test_real_hub_keyword_lists_are_all_metadata():
+    """The two real Hub keyword shapes fire ``keywords_all_metadata``; clean ones do not."""
+    for keywords in (
+        ["general_business", "email", "delainey-d", "_sent_mail", "2000-06-26T09:40:00+00:00"],
+        ["scheduling", "letter", "baughman-d", "inbox", "2001-11-20T06:59:28+00:00"],
+    ):
+        defects = audit_correspondence_gt_row(
+            {"intent": "information_request", "keywords": keywords}
+        )
+        assert "keywords_all_metadata" in defects
+    clean = ["RTO Filing", "PJM", "July 25th", "Notice # 02-46", "EFP/EFS PROCEDURES", "SPP/Entergy"]
+    assert not audit_correspondence_gt_row({"intent": "information_request", "keywords": clean})

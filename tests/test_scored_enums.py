@@ -137,3 +137,23 @@ def test_helpers_are_exported_from_the_package_root():
     ):
         assert hasattr(dojo, name), name
         assert name in dojo.__all__, name
+
+
+def test_bare_string_vendored_value_is_one_value():
+    """A bare string is a one-element list, not iterated into characters."""
+    problems = enum_hint_violations("correspondence", {"intent": "payment_demand"})
+    assert not any("unscored values" in p for p in problems)
+    assert any("never teaches scored values" in p for p in problems)
+    bad = enum_hint_violations("correspondence", {"intent": "demand_payment"})
+    assert any("teaches unscored values ['demand_payment']" in p for p in bad)
+
+
+def test_module_docstring_states_the_cms_claim_type_exception():
+    """The docstring names the CMS tokens that claim_type teaches beyond canonical ones."""
+    from llm_dojo_scoring.schemas import scored_enums
+
+    doc = scored_enums.__doc__ or ""
+    assert "Only canonical tokens are taught" not in doc
+    for token in ("pde", "inpatient", "outpatient", "carrier"):
+        assert token in doc
+        assert token in scored_vocabulary("insurance_claim", "claim_type")

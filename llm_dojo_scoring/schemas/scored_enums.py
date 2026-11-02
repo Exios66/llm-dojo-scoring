@@ -16,10 +16,14 @@ now owns the hints as well, the way :mod:`.maud_schema` already does for MAUD:
 - :func:`enum_hint_violations` — a consumer asserts its vendored hint lists
   match the dojo's instead of re-implementing the check.
 
-Only canonical tokens are taught. The scorer still folds aliases
-(``normalize_intent``) and CMS table tokens (``canonical_claim_type``), but a
-hint that relies on that leniency is reported, because the alias table is a
-safety net for stored answers, not a vocabulary.
+Only the scored vocabulary is taught, and it is canonical tokens with one
+deliberate exception: ``insurance_claim.claim_type`` also lists the CMS
+source-table tokens (``pde``, ``inpatient``, ``outpatient``, ``carrier``),
+because the specialist prompt teaches them for CMS / DE-SynPUF rows and the
+scorer credits them against GT ``health`` (``canonical_claim_type``). The
+scorer still folds intent aliases (``normalize_intent``), but a hint that
+relies on that leniency is reported, because the alias table is a safety net
+for stored answers, not a vocabulary.
 """
 
 from __future__ import annotations
@@ -130,7 +134,10 @@ def enum_hint_violations(
             problems.append(f"{doc_type}.{field}: not a scored enum field")
             continue
         scored = known[field][0]
-        taught = [str(value).strip() for value in vendored[field] if value is not None]
+        values = vendored[field]
+        if isinstance(values, (str, bytes)):
+            values = [values]  # a bare string is one value, not its characters
+        taught = [str(value).strip() for value in values if value is not None]
         unscored = sorted({value for value in taught if value not in scored})
         missing = [token for token in scored if token not in set(taught)]
         if unscored:

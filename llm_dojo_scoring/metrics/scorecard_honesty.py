@@ -407,10 +407,19 @@ MAUD_HEADLINE_FIELDS: frozenset[str] = frozenset({"maud_clauses"})
 
 
 def _row_field_scores(row: Mapping[str, Any]) -> Mapping[str, Any] | None:
-    """The per-field scores a document row carries, wherever it nests them."""
+    """The per-field scores a document row carries, wherever it nests them.
+
+    The single lookup shared by the honest aggregate, :func:`intent_split` and
+    the grid. Holders are checked in order: the row, ``row["extraction"]``,
+    ``row["scores"]``. An empty ``field_scores`` mapping is skipped, so an
+    empty top-level dict does not hide nested data.
+    """
     for holder in (row, row.get("extraction"), row.get("scores")):
-        if isinstance(holder, Mapping) and isinstance(holder.get("field_scores"), Mapping):
-            return holder["field_scores"]
+        if not isinstance(holder, Mapping):
+            continue
+        fields = holder.get("field_scores")
+        if isinstance(fields, Mapping) and fields:
+            return fields
     return None
 
 
@@ -429,7 +438,12 @@ def headline_scope(
     - ``"partial"`` — some live fields never carried ground truth, so the
       headline is not comparable with a class scored on its whole field map;
     - ``"full"`` — every live field was scored at least once;
-    - ``None`` — nothing was scored or the class has no live field map.
+    - ``None`` — no scored field is in the live map (nothing scored, an
+      unknown class, or only off-map fields).
+
+    Scored fields outside the live map are listed in ``off_map_fields`` and
+    kept in ``scored_fields``, but never count toward the scope,
+    ``field_coverage`` or ``unscored_fields``.
     """
     from ..scoring.suites import DEFAULT_FIELD_TYPES
 
@@ -440,19 +454,20 @@ def headline_scope(
     )
     scored = sorted(field for field, n in counts.items() if n > 0)
     live = list(DEFAULT_FIELD_TYPES.get(str(doc_class or ""), {}))
-    unscored = [field for field in live if field not in set(scored)]
+    live_set = set(live)
+    scored_live = [field for field in scored if field in live_set]
+    unscored = [field for field in live if field not in set(scored_live)]
     out: dict[str, Any] = {
         "headline_scope": None,
         "headline_label": None,
         "scored_fields": {field: counts[field] for field in scored},
         "unscored_fields": unscored,
-        "field_coverage": (
-            round(sum(1 for f in live if f in set(scored)) / len(live), 6) if live else None
-        ),
+        "off_map_fields": [field for field in scored if field not in live_set],
+        "field_coverage": (round(len(scored_live) / len(live), 6) if live else None),
     }
-    if not scored or not live:
+    if not scored_live:
         return out
-    if doc_class == "merger_agreement" and set(scored) <= MAUD_HEADLINE_FIELDS:
+    if doc_class == "merger_agreement" and set(scored_live) <= MAUD_HEADLINE_FIELDS:
         out["headline_scope"] = "maud_only"
         out["headline_label"] = "MAUD answers only (maud_clauses); not a field-level score"
     elif unscored:
@@ -486,6 +501,10 @@ def intent_split(
       mean over its other scored fields.
 
     Returns ``None`` when no row scored ``field``.
+
+    Standalone, this skips only rows marked ``status == "unscorable"``. It does
+    not check that a row has a numeric headline score; :func:`aggregate_quality_honest`
+    therefore passes it only the rows that actually entered the headline mean.
     """
     intents: list[float] = []
     others: list[float] = []
@@ -539,6 +558,7 @@ def aggregate_quality_honest(
     headline is visible (#94).
     """
     scored_vals: list[float] = []
+    scored_rows: list[Mapping[str, Any]] = []
     n_unscorable = 0
     field_counts: dict[str, int] = {}
     saw_fields = False
@@ -551,6 +571,7 @@ def aggregate_quality_honest(
             val = row["extraction"].get("overall_score")
         if isinstance(val, (int, float)) and not isinstance(val, bool):
             scored_vals.append(float(val))
+            scored_rows.append(row)
             fields = _row_field_scores(row)
             if fields is not None:
                 saw_fields = True
@@ -560,7 +581,7 @@ def aggregate_quality_honest(
     population: dict[str, Any] = {}
     if doc_class is not None and saw_fields:
         population = headline_scope(doc_class, field_counts)
-        split = intent_split(doc_results)
+        split = intent_split(scored_rows)
         if split is not None:
             population["intent_split"] = split
     return {
