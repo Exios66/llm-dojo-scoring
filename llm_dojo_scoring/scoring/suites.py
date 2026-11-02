@@ -651,10 +651,20 @@ class ScoringSuite:
                 f"Emitter using metric_names={self.metric_names()!r}"
             )
         if self.kind == _KIND_EXTRACTION:
-            return self._score_extraction(
+            result = self._score_extraction(
                 expected, predicted, doc_text=doc_text, field_types=field_types,
                 detailed=detailed, **kwargs,
             )
+            if detailed and field_types is None and isinstance(result, dict) \
+                    and not isinstance(expected, list):
+                # Additive: the doc-type / subtype schema this document is
+                # scored under, and which of its fields the GT row labels.
+                # Skipped for a caller field map (the registry describes the
+                # live map).
+                schema = self._schema_coverage(expected, kwargs)
+                if schema is not None:
+                    result["schema"] = schema
+            return result
         if self.kind == _KIND_AUDIT:
             return self._score_audit(
                 expected, predicted, doc_text=doc_text, field_types=field_types
@@ -719,6 +729,26 @@ class ScoringSuite:
                 "score_document is the per-document extraction surface"
             )
         return self.score(expected, predicted, detailed=True, **kwargs)
+
+    def _schema_coverage(self, expected: Any, kwargs: Mapping[str, Any]) -> dict[str, Any] | None:
+        """Schema coverage for one mailroom-class document, else ``None``."""
+        from ..schemas.extraction_schemas import MAILROOM_DOC_TYPES, schema_coverage
+
+        doc_class = self.doc_type or self.name
+        if doc_class not in MAILROOM_DOC_TYPES:
+            return None
+        subtype = _subclass_kwarg(kwargs)
+        if isinstance(subtype, list):
+            subtype = subtype[0] if len(subtype) == 1 else None
+        gt = expected if isinstance(expected, (Mapping, str)) else None
+        try:
+            return schema_coverage(doc_class, subtype, gt)
+        except (KeyError, TypeError, ValueError):
+            # Unknown subtype or unparseable GT: report the doc-type schema only.
+            try:
+                return schema_coverage(doc_class, None, None)
+            except (KeyError, TypeError, ValueError):
+                return None
 
     def validate_metrics(self, metrics: dict[str, Any]) -> dict[str, Any]:
         """Keep only registry-known names; unknown keys are dropped.

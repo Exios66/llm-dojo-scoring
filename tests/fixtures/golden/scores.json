@@ -201,6 +201,25 @@
           "serving_kind": null,
           "split": null
         },
+        "schema": {
+          "doc_type": "contract",
+          "pending_fields": [
+            "contract_value"
+          ],
+          "schema_id": "contract@v9.2",
+          "scorable_fields": [
+            "document_name",
+            "parties",
+            "effective_date",
+            "term_length",
+            "governing_law",
+            "renewal_terms",
+            "cuad_family",
+            "cuad_clauses"
+          ],
+          "subtype": null,
+          "unlabelled_fields": []
+        },
         "schema_adherence": 0.2727,
         "schema_promotion_gate": {
           "doc_class": "contract",
@@ -295,6 +314,26 @@
           "scorer_version": "<SCORER_VERSION>",
           "serving_kind": null,
           "split": null
+        },
+        "schema": {
+          "doc_type": "corporate_record",
+          "pending_fields": [
+            "entity_name",
+            "effective_date",
+            "signatories",
+            "jurisdiction",
+            "filing_number"
+          ],
+          "schema_id": "corporate_record@v9.2",
+          "scorable_fields": [
+            "record_type"
+          ],
+          "subtype": null,
+          "unlabelled_fields": [
+            "intent",
+            "subject_matter",
+            "keywords"
+          ]
         },
         "schema_adherence": 0.1111,
         "schema_promotion_gate": {
@@ -397,6 +436,28 @@
           "scorer_version": "<SCORER_VERSION>",
           "serving_kind": null,
           "split": null
+        },
+        "schema": {
+          "doc_type": "correspondence",
+          "pending_fields": [
+            "sender",
+            "recipient",
+            "additional_recipients",
+            "communication_date",
+            "demand_amount",
+            "action_items",
+            "urgency"
+          ],
+          "schema_id": "correspondence@v9.2",
+          "scorable_fields": [
+            "communication_type"
+          ],
+          "subtype": null,
+          "unlabelled_fields": [
+            "intent",
+            "subject_matter",
+            "keywords"
+          ]
         },
         "schema_adherence": 0.0909,
         "schema_promotion_gate": {
@@ -547,6 +608,35 @@
           "scorer_version": "<SCORER_VERSION>",
           "serving_kind": null,
           "split": null
+        },
+        "schema": {
+          "doc_type": "insurance_claim",
+          "pending_fields": [
+            "claim_checklist"
+          ],
+          "schema_id": "insurance_claim@v9.2",
+          "scorable_fields": [
+            "claim_number",
+            "claim_type",
+            "claimed_amount",
+            "coverage_determination",
+            "denial_reasons",
+            "supporting_documents",
+            "cms_source_table"
+          ],
+          "subtype": null,
+          "unlabelled_fields": [
+            "policy_number",
+            "insurer",
+            "insured_party",
+            "date_of_loss",
+            "date_filed",
+            "adjuster",
+            "damages_description",
+            "intent",
+            "subject_matter",
+            "keywords"
+          ]
         },
         "schema_adherence": 0.4118,
         "schema_promotion_gate": {
@@ -1639,6 +1729,23 @@
           "scorer_version": "<SCORER_VERSION>",
           "serving_kind": null,
           "split": null
+        },
+        "schema": {
+          "doc_type": "merger_agreement",
+          "pending_fields": [
+            "document_name",
+            "parties",
+            "effective_date",
+            "effective_time",
+            "governing_law"
+          ],
+          "schema_id": "merger_agreement@v9.2",
+          "scorable_fields": [
+            "merger_consideration",
+            "maud_clauses"
+          ],
+          "subtype": null,
+          "unlabelled_fields": []
         },
         "schema_adherence": 0.2,
         "schema_promotion_gate": {
