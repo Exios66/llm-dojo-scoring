@@ -156,7 +156,13 @@ def test_claim_type_teaches_product_lines_only():
     assert "health" in claim_types
     assert not set(claim_types) & set(tables)
     problems = enum_hint_violations("insurance_claim", {"claim_type": [*claim_types, "pde"]})
-    assert problems == ["insurance_claim.claim_type: teaches unscored values ['pde']"]
+    assert "insurance_claim.claim_type: teaches unscored values ['pde']" in problems
+    # Fields this partial hint set omits are reported separately (#104 review).
+    assert all(
+        p.endswith("scored enum field missing from vendored hints")
+        for p in problems
+        if not p.startswith("insurance_claim.claim_type:")
+    )
 
 
 def test_scored_enum_fields_outer_mapping_is_read_only():
