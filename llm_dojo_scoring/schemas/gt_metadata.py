@@ -196,12 +196,18 @@ def normalize_field_values(record: Any) -> Any:
     return {str(key): parse_json_container(value) for key, value in record.items()}
 
 
+#: Derived (never published) GT key naming a CMS row's source table (#93).
+CMS_SOURCE_TABLE_KEY = "cms_source_table"
+
+
 def scoring_gt_fields(
     fields: Mapping[str, Any],
     *,
     field_types: Mapping[str, str] | None = None,
     extra_keys: Sequence[str] = (),
     drop_unmapped: bool = True,
+    doc_type: str | None = None,
+    subclass: Any = None,
 ) -> dict[str, Any]:
     """Scope Hub metadata to one suite's scorable surface.
 
@@ -211,7 +217,13 @@ def scoring_gt_fields(
       leaves unmapped keys intact;
     * replaces fields whose ``gt_presence`` status is
       ``not_applicable`` / ``schema_documented_absence`` /
-      ``pending_annotation`` with ``""`` so they are never expected events.
+      ``pending_annotation`` with ``""`` so they are never expected events;
+    * for an ``insurance_claim`` row whose ``subclass`` (``expected_subclass``)
+      is a CMS source table, adds the derived ``cms_source_table`` (#93): the
+      published ``gt_fields`` never carry it. Non-CMS rows never get it, and a
+      ``cms_source_table`` already present is kept. The scorer treats a row
+      carrying a valid table as a CMS row (documented-absent ``adjuster`` /
+      ``denial_reasons``, identifier-aware ``supporting_documents``).
 
     ``drop_unmapped=False`` keeps the historical behavior for plain field
     dicts (no Hub ``gt_presence``): unmapped keys still reach the heuristic
@@ -231,6 +243,12 @@ def scoring_gt_fields(
             out[key] = ""
             continue
         out[key] = value
+    if doc_type is not None and is_empty_value(out.get(CMS_SOURCE_TABLE_KEY)):
+        from .corpus import cms_source_table
+
+        table = cms_source_table(doc_type, subclass)
+        if table is not None:
+            out[CMS_SOURCE_TABLE_KEY] = table
     return out
 
 

@@ -112,6 +112,26 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Changed
 
+- **Insurance CMS mapping (#93) — insurance_claim scores move on CMS rows;
+  re-score pre-change cards.** `claim_type` and the CMS source table are scored
+  separately: the SAND-042 fold (a table token on `claim_type` credited as
+  `health`) is retired, and on CMS rows `claim_type` is an exact label.
+  `cms_source_table` is derived from `expected_subclass` for the 600 CMS rows
+  (the published GT never carries it). CMS rows also score `adjuster` /
+  `denial_reasons` as documented-absent (a stated value scores 0) and
+  `supporting_documents` by identifier (NPI / NDC / facility provider id). Non-CMS
+  rows are unchanged. `corpus.INSURANCE_PRODUCT_LINES` is the new `claim_type`
+  vocabulary (the scored-enum hint drops the table tokens);
+  `INSURANCE_CLAIM_TYPES` keeps its old contents as the insurance subclass keys,
+  and `canonical_claim_type` stays importable but is no longer used by the scorer.
+  Validated on all 1,100 Hub insurance rows. A table token on `claim_type`
+  scores 0 on every path, even when the row is not detected as CMS. CMS-row
+  rules apply only when GT is scored, not when the auditor compares model
+  outputs. A null prediction earns no documented-absent credit. **Consumers
+  must pass `expected_subclass` when scoring insurance rows** so that CMS rows
+  get `cms_source_table` (coordinated bump: Exios66/llm-mailroom#142 and the
+  sandbox `vendor/` snapshot).
+
 - **Package layout**: the 63 flat modules are nested into `schemas/`, `scoring/`, `pipeline/`, `metrics/`,
   `analysis/` and `integrations/`. Only `config`, `cli` and `prompts/` remain at the root (see
   `llm_dojo_scoring/README.md`).
