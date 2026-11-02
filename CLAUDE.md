@@ -12,7 +12,7 @@ Read `README.md` for the public contract and `docs/guides/` for scoring detail.
 ```bash
 uv run --extra dev pytest tests -q          # full suite (network-free)
 uv run --extra dev pytest tests/test_cli.py -q   # one file
-ruff check llm_dojo_scoring tests scripts examples   # correctness gate; same as CI
+uvx ruff check llm_dojo_scoring tests scripts examples   # correctness gate; same as CI
 python scripts/release.py status            # read-only: version / changelog / pin chain
 python scripts/release.py check             # read-only: verify the chain is consistent
 ```
@@ -21,6 +21,9 @@ In a shallow clone with no tags (typical for cloud sessions),
 `tests/test_release_tools.py::test_notes_render_contains_changelog_and_commit`
 fails — that is environmental, not your change. `git fetch --unshallow --tags`
 fixes it. Everything else should pass (about 2050 tests, under a minute).
+
+Ruff is not in the `dev` extra (keeping `uv.lock` untouched): use `uvx ruff ...` or
+`pip install ruff`. The editing hook uses `ruff` from PATH and is a no-op without it.
 
 Plain `pytest` also works once `pip install -e ".[dev]"` has been run. Optional
 extras (`embeddings`, `tracing`, `catalog`) are only needed for the code paths
