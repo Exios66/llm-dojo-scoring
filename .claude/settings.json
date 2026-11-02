@@ -7,15 +7,18 @@
       "Bash(uv run --extra dev pytest:*)",
       "Bash(uv run pytest:*)",
       "Bash(ruff check:*)",
+      "Bash(uvx ruff check:*)",
       "Bash(ruff format --check:*)",
       "Bash(python scripts/release.py status:*)",
       "Bash(python scripts/release.py check:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
-      "Bash(git branch:*)"
+      "Bash(git branch --show-current:*)",
+      "Bash(git branch --list:*)"
     ],
     "ask": [
+      "Bash(git push:*)",
       "Bash(python scripts/release.py cut:*)",
       "Bash(python scripts/release.py publish:*)",
       "Bash(python scripts/release.py edit:*)",
@@ -27,7 +30,10 @@
       "Read(./.env)",
       "Bash(git push --force:*)",
       "Bash(git push -f:*)",
-      "Bash(git tag -d:*)"
+      "Bash(git tag -d:*)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f*)",
+      "Bash(git tag --delete:*)"
     ]
   },
   "hooks": {
