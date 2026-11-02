@@ -172,7 +172,7 @@ def _rescore_classification(record: Mapping[str, Any], given: Mapping[str, Any] 
 
 
 def _rescore_reviewer(record: Mapping[str, Any], given: Mapping[str, Any] | None) -> dict[str, Any]:
-    """Re-score one reviewer record once the review-lane surface is available."""
+    """Re-score one reviewer record through the review-lane scorecard."""
     try:
         from .reviewer import score_review_lane
     except ImportError as exc:  # pragma: no cover - package always ships it
@@ -183,13 +183,18 @@ def _rescore_reviewer(record: Mapping[str, Any], given: Mapping[str, Any] | None
         raise RescoreError("reviewer record needs a non-empty review_records list")
     payload = score_review_lane(records)
     if given:
-        payload.setdefault("provenance", {}).update(dict(given))
+        payload["provenance"].update(dict(given))
     payload["provenance"]["scorer_version"] = SCORER_VERSION
+    quality = payload.get("quality") or {}
+    headline = _headline(quality)
+    if headline is None:
+        # The review lane's headline number is class_accuracy, not "accuracy".
+        headline = quality.get("class_accuracy")
     return {
         "doc_id": record.get("doc_id", record.get("id", record.get("item_id"))),
         "task": "reviewer",
         "doc_class": None,
-        "score": _headline(payload.get("quality") or {}),
+        "score": headline,
         "payload": payload,
         "provenance": payload["provenance"],
         "rescored_from": {
