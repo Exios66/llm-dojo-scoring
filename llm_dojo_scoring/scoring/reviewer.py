@@ -313,11 +313,12 @@ def _first_present(*values: Any) -> Any:
 
 
 def _cost(*candidates: Any) -> float | None:
-    """First finite numeric cost; NaN / inf are unpriced, never totals."""
+    """First finite numeric cost; NaN / inf candidates are skipped, never totalled."""
     for value in candidates:
         if isinstance(value, (int, float)) and not isinstance(value, bool):
             number = float(value)
-            return number if math.isfinite(number) else None
+            if math.isfinite(number):
+                return number
     return None
 
 
@@ -780,7 +781,7 @@ def _operating_points(
             upper = clopper_pearson_upper(wrong, len(accepted), confidence=confidence)
             curve.append(
                 {
-                    "cutoff": round(cutoff, 6),
+                    "cutoff": cutoff,
                     "accepted": len(accepted),
                     "accuracy": round(sum(accepted) / len(accepted), 6),
                     "wrong_rate": round(wrong / len(accepted), 6),
@@ -808,7 +809,9 @@ def _operating_points(
             "n": len(rows),
             "target_accuracy": target_accuracy,
             "cutoff_at_target": cutoff_at_target(rows, target_accuracy),
-            "risk_cutoff": round(risk_cutoff, 6) if risk_cutoff is not None else None,
+            # Exact, not rounded: an inclusive consumer must not admit a row
+            # the bound check excluded.
+            "risk_cutoff": risk_cutoff,
             **cross_fit_cutoffs(rows, target=target_accuracy, confidence=confidence),
             "curve": curve,
         }
