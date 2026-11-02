@@ -1,0 +1,93 @@
+version: 2.1
+
+# Free-tier CircleCI gate for the Dojo (shared scoring engine for llm-mailroom
+# and local-mailroom-sandbox, so a red main here breaks both). Same service and
+# shape as local-mailroom-sandbox/.circleci/config.yml. Runs on every push and
+# PR automatically once the repo is followed in CircleCI; to BLOCK merges, mark
+# these checks as required in the GitHub branch protection rule for main:
+#   ci/circleci: lint
+#   ci/circleci: test-3.11
+#   ci/circleci: test-3.12
+# (matrix jobs are named test-<version>; there is no plain "test" check).
+
+executors:
+  py:
+    parameters:
+      version:
+        type: string
+        default: "3.11"
+    docker:
+      - image: cimg/python:<< parameters.version >>
+    resource_class: small
+
+jobs:
+  lint:
+    executor: py
+    steps:
+      - checkout
+      - run:
+          name: Install ruff
+          command: pip install --quiet ruff
+      - run:
+          name: ruff (correctness gate, config in pyproject.toml)
+          command: ruff check llm_dojo_scoring tests scripts examples
+
+  test:
+    parameters:
+      version:
+        type: string
+    executor:
+      name: py
+      version: << parameters.version >>
+    steps:
+      - checkout
+      - run:
+          # tests/test_release_tools.py runs `git log vX.Y.Z..HEAD`, so it
+          # needs tags and full history.
+          name: Fetch tags and full history
+          command: git fetch --tags --force && (git fetch --unshallow 2>/dev/null || true)
+      - restore_cache:
+          keys:
+            - pip-v1-<< parameters.version >>-{{ checksum "pyproject.toml" }}
+      - run:
+          name: Install (dev extra)
+          command: pip install -e ".[dev]"
+      - save_cache:
+          key: pip-v1-<< parameters.version >>-{{ checksum "pyproject.toml" }}
+          paths:
+            - ~/.cache/pip
+      - run:
+          # One test (test_cli_publish_dry_run_json) calls git ls-remote / gh and
+          # skips itself when gh is unavailable; everything else is offline.
+          name: Pytest
+          command: python -m pytest tests -q --junitxml=test-results/junit.xml
+      - store_test_results:
+          path: test-results
+
+  release-chain:
+    # main only. check_chain() errors when pyproject is behind the newest tag, so
+    # running it on PRs would turn every branch cut before a release red.
+    executor:
+      name: py
+      version: "3.11"
+    steps:
+      - checkout
+      - run:
+          name: Fetch tags and full history
+          command: git fetch --tags --force && (git fetch --unshallow 2>/dev/null || true)
+      - run:
+          name: Release chain is consistent (version / changelog / pins)
+          command: python scripts/release.py check
+
+workflows:
+  ci:
+    jobs:
+      - lint
+      - test:
+          matrix:
+            parameters:
+              version: ["3.11", "3.12"]
+      - release-chain:
+          filters:
+            branches:
+              only: main

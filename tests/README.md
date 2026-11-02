@@ -11,9 +11,14 @@
 ## Running Tests
 
 ```bash
-cd packages/llm-dojo-scoring
-uv run pytest tests/
+uv run --extra dev pytest tests/        # from the repository root
+# or, after `pip install -e ".[dev]"`:
+python -m pytest tests -q
 ```
+
+> `tests/test_release_tools.py` runs `git log vX.Y.Z..HEAD`, so it needs tags and
+> full history. In a shallow clone run `git fetch --unshallow --tags` first, or
+> expect that one test to fail.
 
 ## Test Structure
 
