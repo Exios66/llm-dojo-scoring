@@ -31,6 +31,7 @@ __all__ = [
     "unscorable_extraction_result",
     "aggregate_quality_honest",
     "headline_scope",
+    "intent_split",
     "MAUD_HEADLINE_FIELDS",
     "export_quality_verdict",
     "score_format_layer",
@@ -466,6 +467,57 @@ def headline_scope(
     return out
 
 
+def intent_split(
+    doc_results: Sequence[Mapping[str, Any]],
+    *,
+    field: str = "intent",
+    hit_threshold: float = 0.5,
+) -> dict[str, Any] | None:
+    """Report ``intent`` apart from the other fields (#94).
+
+    With three scored correspondence fields, ``intent`` is a third of every
+    document score, so the class headline is bimodal: a missed intent caps a
+    document near ⅔ and a hit floors it near ⅓. Over scorable rows that carry
+    ``field_scores``, this returns:
+
+    - ``intent_mean`` and ``n_intent`` — the mean of the intent field score;
+    - ``n_intent_hit`` / ``n_intent_missed`` — split at ``hit_threshold``;
+    - ``other_fields_mean`` and ``n_other`` — the mean of each document's
+      mean over its other scored fields.
+
+    Returns ``None`` when no row scored ``field``.
+    """
+    intents: list[float] = []
+    others: list[float] = []
+    for row in doc_results:
+        if row.get("status") == "unscorable":
+            continue
+        fields = _row_field_scores(row)
+        if not fields:
+            continue
+        value = fields.get(field)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            intents.append(float(value))
+        rest = [
+            float(v)
+            for k, v in fields.items()
+            if k != field and isinstance(v, (int, float)) and not isinstance(v, bool)
+        ]
+        if rest:
+            others.append(fmean(rest))
+    if not intents:
+        return None
+    return {
+        "field": field,
+        "n_intent": len(intents),
+        "intent_mean": round(fmean(intents), 4),
+        "n_intent_hit": sum(1 for v in intents if v >= hit_threshold),
+        "n_intent_missed": sum(1 for v in intents if v < hit_threshold),
+        "n_other": len(others),
+        "other_fields_mean": round(fmean(others), 4) if others else None,
+    }
+
+
 def aggregate_quality_honest(
     doc_results: Sequence[Mapping[str, Any]],
     *,
@@ -482,7 +534,9 @@ def aggregate_quality_honest(
     When ``doc_class`` is given and rows carry ``field_scores``, the result
     also reports the scored population (:func:`headline_scope`): which live
     fields carried GT, in how many documents, and whether the headline covers
-    the whole field map (#95).
+    the whole field map (#95), and, when rows score ``intent``, an
+    ``intent_split`` (:func:`intent_split`) so a bimodal intent-driven
+    headline is visible (#94).
     """
     scored_vals: list[float] = []
     n_unscorable = 0
@@ -506,6 +560,9 @@ def aggregate_quality_honest(
     population: dict[str, Any] = {}
     if doc_class is not None and saw_fields:
         population = headline_scope(doc_class, field_counts)
+        split = intent_split(doc_results)
+        if split is not None:
+            population["intent_split"] = split
     return {
         **population,
         "n_scored": n_scored,
