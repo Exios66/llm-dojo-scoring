@@ -11,7 +11,9 @@ Format based on Keep a Changelog; versioning is SemVer.
   for all five mailroom classes (61 schemas). Field statuses (`scored`,
   `partial`, `derived`, `documented_absent`, `label_task`,
   `pending_annotation`, `not_applicable`) are frozen from mailroom-dataset
-  `ground_truth` v9.2 (`schemas/data/extraction_status.json`, rebuilt by
+  `ground_truth` v9.2.1 (branch `corporate-labels-v9.2.1` @ `0a2f8292`: v9.2
+  plus the corporate relabel, so corporate `entity_name` is labelled;
+  `schemas/data/extraction_status.json`, rebuilt by
   `scripts/build_extraction_status.py`). Subtype schemas carry their own fields
   and guidance:
   - CMS `cms_source_table` and identifier-aware `supporting_documents`;

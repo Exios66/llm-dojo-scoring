@@ -156,3 +156,11 @@ def test_registry_is_exported_from_the_root():
     for name in ("extraction_schema", "iter_extraction_schemas", "schema_coverage",
                  "ExtractionSchema", "FieldSchema", "extraction_subtypes"):
         assert name in dojo.__all__ and hasattr(dojo, name)
+
+
+def test_corporate_entity_name_is_labelled_from_the_relabel():
+    """v9.2.1 labels the registrant; subclass entities stay pending everywhere."""
+    assert extraction_schema("corporate_record").fields["entity_name"].status in {"scored", "partial"}
+    indenture = extraction_schema("corporate_record", "indenture")
+    assert "entity_name" in indenture.scored_fields
+    assert all(indenture.fields[name].status == "pending_annotation" for name in indenture.extensions)
