@@ -202,3 +202,32 @@ def test_valid_matching_scorer_versions_stay_verified():
     out = compare_serving(_leg("vllm", "0.26.0"), _leg("openrouter", "0.26.0"))
     assert not out.get("incomparable")
     assert "scorer_version_unverified" not in out
+
+
+def test_emit_serving_scorecard_keeps_historical_leg_release():
+    """Uniformly stamped historical legs keep their release on every emitted record."""
+    from llm_dojo_scoring import Emitter, emit_serving_scorecard
+
+    cmp = compare_serving(_leg("vllm", "0.20.0"), _leg("openrouter", "0.20.0"))
+    em = Emitter(sinks=[])
+    emit_serving_scorecard(cmp, run_id="hist", emitter=em)
+    assert em._records
+    assert {r.metadata["provenance"]["scorer_version"] for r in em._records} == {"0.20.0"}
+    assert SCORER_VERSION != "0.20.0"
+
+
+def test_emit_serving_scorecard_explicit_scorer_version_wins():
+    """A caller-supplied provenance scorer_version overrides the leg's recorded one."""
+    from llm_dojo_scoring import Emitter, emit_serving_scorecard
+
+    cmp = compare_serving(_leg("vllm", "0.20.0"), _leg("openrouter", "0.20.0"))
+    em = Emitter(sinks=[])
+    emit_serving_scorecard(
+        cmp, run_id="hist", emitter=em,
+        provenance={"local": {"scorer_version": "0.21.0"}},
+    )
+    got = {
+        (r.metadata["side"], r.metadata["provenance"]["scorer_version"])
+        for r in em._records
+    }
+    assert got == {("local", "0.21.0"), ("api", "0.20.0")}
