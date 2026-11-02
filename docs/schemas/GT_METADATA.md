@@ -56,6 +56,42 @@ Verified against the published corpus (2026-10-04): every `populated` key in
 both splits (3,302 rows) is inside its class's field map or a handled content
 / presence key — there are no orphan GT labels.
 
+## Correspondence GT audit (#94)
+
+The SAND-042 RCA found correspondence scored on three of eleven live fields
+(`intent`, `subject_matter`, `keywords`). It also *inferred*, without checking
+the Hub rows, that `subject_matter` / `keywords` are templated
+(`"Correspondence concerning general_business."`, folder and timestamp
+tokens). `llm_dojo_scoring.schemas.correspondence_gt_audit` measures both:
+
+```bash
+python scripts/audit_correspondence_gt.py ground_truth.parquet   # or a JSONL export; --json for the raw report
+```
+
+| Code | Meaning |
+| --- | --- |
+| `subject_matter_templated` | a `Correspondence concerning <topic>.` frame, or an embedded snake_case topic key |
+| `keywords_metadata` / `keywords_all_metadata` | some / every keyword is a topic key, date or time stamp, mailbox folder or path, or email address |
+| `intent_missing` | no usable `intent` GT (population fact; does not fail the script) |
+| `gt_unparseable` | `gt_fields` could not be parsed |
+
+The report also gives `field_population` (rows with GT per live field),
+`populated_field_counts` and `unscored_fields`. The script exits 1 when a
+templated or metadata defect is found.
+
+Status: the detectors are in place, but the Hub rows have not been audited
+yet. The relabel proposal and human-review export (#94 steps 2–3) wait on
+those numbers. Until the GT is relabelled:
+
+- the correspondence headline is reported with `headline_scope: "partial"`
+  (see [`SCORECARD_HONESTY.md`](../contracts/SCORECARD_HONESTY.md));
+- `aggregate_quality_honest(..., doc_class=...)` adds `intent_split`
+  (intent mean, hit / miss counts, mean of the other fields), so the
+  intent-driven bimodality is visible.
+
+A relabel changes correspondence scores, which is a comparability break that
+must be recorded in the CHANGELOG and `metrics.score_changelog`.
+
 ## Public API
 
 ```python

@@ -50,6 +50,13 @@ Format based on Keep a Changelog; versioning is SemVer.
   (`‡`) with a footnote, so neither reads as a comparable full-field headline.
   Additive: existing keys and the default aggregate shape are unchanged.
 
+- Correspondence GT audit (#94): `schemas.correspondence_gt_audit` and
+  `scripts/audit_correspondence_gt.py` flag templated `subject_matter` and
+  metadata-derived `keywords` GT, and report the scored population per live
+  field. `metrics.scorecard_honesty.intent_split` (also `intent_split` on
+  `aggregate_quality_honest(..., doc_class=)`) reports `intent` apart from the
+  other fields. No scores change; the Hub audit and relabel are still to run.
+
 - `metrics.score_changelog`: machine ledger of releases that moved a score,
   used by `compare_serving` to explain a release mismatch.
 
