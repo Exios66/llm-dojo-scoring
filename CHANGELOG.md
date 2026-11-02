@@ -5,6 +5,32 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Fixed (bug sweep and second #104 review round)
+
+- CMS rows (#93 follow-ups): a GT row naming a product line other than
+  `health` is never CMS; a stated `adjuster` / `denial_reasons` on a CMS row
+  whose GT omits the key scores 0 (silence there is not scored); hyphenated
+  10-digit NDCs pad per segment to 5-4-2; a scalar subclass is no longer
+  broadcast across a batch for CMS derivation, and NumPy / pandas subclass
+  arrays are read per row; CMS archive blocks carry
+  `method = ARCHIVE_SCORING_METHOD_CMS` (same `metric_id`).
+- `is_empty_value` treats `"nan"` and float NaN as empty (pandas exports).
+- Grid report escapes `|`, `*`, backticks and newlines in free text.
+- Scored-enum JSON-schema fragments carry an explicit `type`.
+- Rescore: raw-input tasks resolve through `TASK_KINDS` (`wer`, `cer`,
+  `maud_clause`), stored JSON-array batches are decoded, `word_accuracy` /
+  `maud_question_accuracy` are headlines, and `doc_subclass` is read for CMS rows.
+- Reviewer lane: a non-finite `cost_usd` falls back to a finite `cost`;
+  `risk_cutoff` and curve cutoffs are exact (unrounded).
+- `audit_consumer_surface`: star imports bind dispatch functions.
+  `freeze_goldens --write` stages each write in a unique temp file.
+
+### Comparability
+
+- Golden scores are unchanged. CMS rows can move only where GT omits a
+  documented-absent key and the model states a value (now 0 on that field), or
+  where a labelled hyphenated NDC is in 5-3-2 / 5-4-1 form (now matches).
+
 ### Added
 
 - `scripts/release.py`: agent-facing release governor (`status`, `check`, `cut`,

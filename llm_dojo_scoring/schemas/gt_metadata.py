@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import ast
 import json
+import math
 import re
 from typing import Any, Mapping, Sequence
 
@@ -90,7 +91,9 @@ ANNOTATION_KEYS: frozenset[str] = frozenset(
     }
 )
 
-_NULL_TOKENS: frozenset[str] = frozenset({"null", "none", "n/a", "n.a."})
+#: ``nan`` is the pandas export of a missing cell (350 non-CMS insurance rows
+#: carry it on topic / sentiment keys); it is never a real field value.
+_NULL_TOKENS: frozenset[str] = frozenset({"null", "none", "n/a", "n.a.", "nan"})
 
 #: A scorable clause text must contain at least one alphanumeric character.
 _HAS_ALNUM = re.compile(r"[A-Za-z0-9]")
@@ -117,7 +120,7 @@ def parse_json_container(value: Any) -> Any:
 
 def is_empty_value(value: Any) -> bool:
     """True for ``None``, blank strings, JSON / placeholder absence tokens
-    (``null``, ``none``, ``n/a``), and empty collections — including their
+    (``null``, ``none``, ``n/a``, ``nan``), float NaN, and empty collections — including their
     stringified forms (``"[]"``, ``"{}"``). Numbers and booleans (including
     ``0`` / ``False``) are values.
     """
@@ -128,6 +131,8 @@ def is_empty_value(value: Any) -> bool:
         stripped = value.strip()
         return not stripped or stripped.lower() in _NULL_TOKENS
     if value is None:
+        return True
+    if isinstance(value, float) and math.isnan(value):
         return True
     if isinstance(value, (list, dict, tuple, set)) and len(value) == 0:
         return True

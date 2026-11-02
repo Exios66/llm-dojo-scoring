@@ -30,6 +30,7 @@ the matching suite.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from collections.abc import Mapping
 from typing import Any, Iterable
 
 from ..metrics.bundles import Bundle, bundle_metric_names
@@ -489,6 +490,21 @@ def _task_key_for(profile: AgentProfile, kind: str) -> str | None:
     return None
 
 
+
+def _subclass_kwarg(kwargs: Mapping[str, Any]) -> Any:
+    """``doc_subclass`` (else ``expected_subclass``) as a scalar or a per-row list.
+
+    NumPy / pandas arrays and other non-string iterables become lists, so
+    they are treated per row instead of being stringified (or raising on an
+    ambiguous truth value).
+    """
+    value = kwargs.get("doc_subclass")
+    if value is None:
+        value = kwargs.get("expected_subclass")
+    if value is not None and not isinstance(value, (str, bytes, Mapping)) and hasattr(value, "__iter__"):
+        return list(value)
+    return value
+
 @dataclass(frozen=True)
 class ScoringSuite:
     """One agent's dedicated, importable scoring suite."""
@@ -846,13 +862,19 @@ class ScoringSuite:
                 return _gtm.parse_gt_fields(value)
             return value
 
-        row_subclass_kw = kwargs.get("doc_subclass") or kwargs.get("expected_subclass")
+        row_subclass_kw = _subclass_kwarg(kwargs)
 
         def _subclass_for(index: int | None) -> Any:
-            """The row's ``expected_subclass`` (scalar, or the ``index``-th of a list)."""
-            if isinstance(row_subclass_kw, (list, tuple)):
+            """The row's subclass for CMS-table derivation (#93).
+
+            A per-row list gives the ``index``-th entry. A scalar applies to a
+            single document only: in a batch it would mark EVERY row as that
+            subclass (e.g. every row CMS), so batch rows then rely on a
+            ``cms_source_table`` they carry themselves.
+            """
+            if isinstance(row_subclass_kw, list):
                 return row_subclass_kw[index] if index is not None and index < len(row_subclass_kw) else None
-            return row_subclass_kw
+            return row_subclass_kw if index is None else None
 
         def _scope_expected_one(value: Any, index: int | None = None) -> Any:
             """Remove annotation keys and blank absent fields in a GT dictionary.
@@ -964,7 +986,7 @@ class ScoringSuite:
             audit_predictions = (
                 list(predicted) if isinstance(predicted, list) else predicted
             )
-            sub_kw = kwargs.get("doc_subclass") or kwargs.get("expected_subclass")
+            sub_kw = _subclass_kwarg(kwargs)
             if isinstance(expected, list):
                 # ``unlabeled_fields`` on a batch payload is per-row and must
                 # stay aligned with the GT row order: a row whose prediction

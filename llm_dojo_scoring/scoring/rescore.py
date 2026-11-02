@@ -145,7 +145,13 @@ def _rescore_extraction(record: Mapping[str, Any], given: Mapping[str, Any] | No
         field_map=str(record.get("field_map") or "taxonomy.yaml"),
         doc_text=record.get("doc_text"),
         provenance=_provenance(given),
-        expected_subclass=record.get("expected_subclass"),
+        # Same keys the suites accept (``expected_subclass``, else
+        # ``doc_subclass``), so a CMS row stored either way stays CMS.
+        expected_subclass=(
+            record["expected_subclass"]
+            if record.get("expected_subclass") is not None
+            else record.get("doc_subclass")
+        ),
     )
     return {
         "doc_id": record.get("doc_id", record.get("id", record.get("item_id"))),

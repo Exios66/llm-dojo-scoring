@@ -673,12 +673,12 @@ def _scope_footnotes(rows: Sequence[Mapping[str, Any]]) -> list[str]:
     out: list[str] = []
     for (specialist, scope, label), entry in notes.items():
         row = entry["row"]
-        who = f"**{specialist}**"
+        who = f"**{_cell(specialist)}**"
         if per_specialist[specialist] > 1 and entry["experiments"]:
-            who += f" ({', '.join(entry['experiments'])})"
-        text = f"{_SCOPE_MARKS[scope].strip()} {who}: {label}"
+            who += f" ({', '.join(_cell(e) for e in entry['experiments'])})"
+        text = f"{_SCOPE_MARKS[scope].strip()} {who}: {_cell(label)}"
         if scope == "partial" and row.get("unscored_fields"):
-            text += f"; unscored: {', '.join(row['unscored_fields'])}"
+            text += f"; unscored: {', '.join(_cell(f) for f in row['unscored_fields'])}"
         text += (
             ". Scope unknown; do not compare with full-field headlines."
             if scope == "unknown"
@@ -702,8 +702,20 @@ def _fmt_busy_share(value: float | None) -> str:
     return f"{value * 100:.0f}%"
 
 
+def _cell(value: Any) -> str:
+    """Escape free text (specialist / experiment names, labels) for Markdown.
+
+    A ``|`` would split a table cell, ``*`` / backticks would open emphasis or
+    code, and a newline would end the row; all are neutralised.
+    """
+    text = " ".join(str(value).split())
+    for char in ("\\", "|", "*", "`"):
+        text = text.replace(char, "\\" + char)
+    return text
+
+
 def _md(header: Sequence[str], rows: Iterable[Sequence[str]]) -> list[str]:
-    """Return Markdown table lines without escaping cell text."""
+    """Return Markdown table lines; callers escape free text with :func:`_cell`."""
     lines = [
         "| " + " | ".join(header) + " |",
         "|" + "|".join(["---"] * len(header)) + "|",
@@ -728,7 +740,7 @@ def _compact_specialist_rows(rows: Sequence[Mapping[str, Any]]) -> list[list[str
         group = by_specialist[spec]
         out.append(
             [
-                spec,
+                _cell(spec),
                 " \u00b7 ".join(_fmt_score(r) for r in group),
                 " \u00b7 ".join(_fmt_ok(r) for r in group),
                 " \u00b7 ".join(_fmt_num(r["p50_latency_seconds"], 1) for r in group),
@@ -794,8 +806,8 @@ def build_grid_report(
             conc = "n/a" if e["client_concurrency"] is None else str(e["client_concurrency"])
             docs_n = "n/a" if e["documents_per_class"] is None else str(e["documents_per_class"])
             lines.append(
-                f"| {e['experiment']} | {e['posture'] or 'n/a'} | {gpus} | {conc} | "
-                f"{docs_n} | {e['status'] or 'n/a'} |"
+                f"| {_cell(e['experiment'])} | {_cell(e['posture'] or 'n/a')} | {_cell(gpus)} | {conc} | "
+                f"{docs_n} | {_cell(e['status'] or 'n/a')} |"
             )
         lines.append("")
 
@@ -803,7 +815,7 @@ def build_grid_report(
         lines.append("## Serving efficiency (pooled across the specialists)")
         lines.append("")
         eff = card["serving_efficiency"]
-        names = [e["experiment"] for e in eff]
+        names = [_cell(e["experiment"]) for e in eff]
         lines.append("| Metric | " + " | ".join(names) + " |")
         lines.append("| --- |" + "|".join(["---:"] * len(names)) + "|")
         metric_rows = [
@@ -831,7 +843,7 @@ def build_grid_report(
         else:
             rows = [
                 [
-                    f"{r['specialist']} ({r['experiment']})",
+                    f"{_cell(r['specialist'])} ({_cell(r['experiment'])})",
                     _fmt_score(r),
                     _fmt_ok(r),
                     _fmt_num(r["p50_latency_seconds"], 1),
@@ -911,7 +923,7 @@ def build_grid_report(
         lines.append("| Key | Value |")
         lines.append("| --- | --- |")
         for key in sorted(card["provenance"]):
-            lines.append(f"| {key} | {card['provenance'][key]} |")
+            lines.append(f"| {_cell(key)} | {_cell(card['provenance'][key])} |")
         lines.append("")
 
     if card["figures"]:
