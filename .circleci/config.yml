@@ -8,9 +8,17 @@ version: 2.1
 #
 #   ci/circleci: test
 #
-# Runs on every push and PR once the project is followed in CircleCI. Keep the
-# job name `test`: renaming it (or splitting it into a matrix) changes the
-# status context and silently un-requires the gate.
+# Keep the job name `test`: renaming it (or splitting it into a matrix) changes
+# the status context and silently un-requires the gate.
+#
+# Usage burn:
+# - Never test the same code twice. The job keys a "green" marker on the git
+#   TREE hash (file contents, not commit SHA). A merge whose tree equals the PR
+#   head that already passed (branch up to date with main), a re-push, or a
+#   stacked branch carrying identical files restores the marker and halts as a
+#   success in seconds, before any fetch or install.
+# - Installs come from uv.lock through a cached uv store (no pip resolve).
+# - Small executor, single job, no matrix.
 
 executors:
   py:
@@ -24,54 +32,78 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Identify the code under test (git tree hash)
+          command: git rev-parse 'HEAD^{tree}' | tee .ci-tree
+      - restore_cache:
+          keys:
+            - ci-green-v1-{{ checksum ".ci-tree" }}
+      - run:
+          name: Skip if this exact tree already passed
+          command: |
+            if [ -f .ci-green/ok ]; then
+              echo "Tree $(cat .ci-tree) already passed CI; not re-running."
+              circleci-agent step halt
+            fi
+      - run:
           # tests/test_release_tools.py runs `git log vX.Y.Z..HEAD`, so it
           # needs tags and full history.
           name: Fetch tags and full history
-          command: git fetch --tags --force && (git fetch --unshallow 2>/dev/null || true)
+          command: git fetch --quiet --tags --force && (git fetch --quiet --unshallow 2>/dev/null || true)
+      - run:
+          name: Install uv
+          command: pip install --quiet --disable-pip-version-check uv==0.11.32
       - restore_cache:
           keys:
-            - pip-v2-{{ checksum "pyproject.toml" }}
+            - uv-v1-{{ checksum "uv.lock" }}
       - run:
-          name: Install (dev extra + ruff)
-          command: pip install -e ".[dev]" ruff
-      - save_cache:
-          key: pip-v2-{{ checksum "pyproject.toml" }}
-          paths:
-            - ~/.cache/pip
+          name: Install (locked, dev extra)
+          command: uv sync --frozen --extra dev
       - run:
           name: ruff (correctness gate, config in pyproject.toml)
-          command: ruff check llm_dojo_scoring tests scripts examples
+          command: uvx ruff@0.17.3 check llm_dojo_scoring tests scripts examples
       - run:
-          name: Prepare test results dir
-          command: mkdir -p test-results
+          name: Save uv store
+          command: uv cache prune --ci
+      - save_cache:
+          key: uv-v1-{{ checksum "uv.lock" }}
+          paths:
+            - ~/.cache/uv
       - run:
           # One test (test_cli_publish_dry_run_json) calls git ls-remote / gh and
           # skips itself when gh is unavailable; everything else is offline.
           name: Pytest (no network, no real LLM)
-          command: python -m pytest tests -q --junitxml=test-results/junit.xml
+          command: uv run --frozen --no-sync python -m pytest tests -q -p no:cacheprovider --junitxml=test-results/junit.xml
           no_output_timeout: 20m
       - run:
           # Guarded: the script lands with PR #104; until then main skips it.
           name: Golden scores unchanged (scripts/freeze_goldens.py --check)
           command: |
             if [ -f scripts/freeze_goldens.py ]; then
-              python scripts/freeze_goldens.py --check
+              uv run --frozen --no-sync python scripts/freeze_goldens.py --check
             else
               echo "scripts/freeze_goldens.py not present; skipping golden check"
             fi
       - store_test_results:
           path: test-results
+      - run:
+          # Only reached when every step above passed.
+          name: Mark this tree green
+          command: mkdir -p .ci-green && cp .ci-tree .ci-green/ok
+      - save_cache:
+          key: ci-green-v1-{{ checksum ".ci-tree" }}
+          paths:
+            - .ci-green
 
   release-chain:
     # main only. check_chain() errors when pyproject is behind the newest tag, so
     # running it on PRs would turn every branch cut before a release red.
-    # Informational: not a required check.
+    # Informational: not a required check. No install; seconds of runtime.
     executor: py
     steps:
       - checkout
       - run:
           name: Fetch tags and full history
-          command: git fetch --tags --force && (git fetch --unshallow 2>/dev/null || true)
+          command: git fetch --quiet --tags --force && (git fetch --quiet --unshallow 2>/dev/null || true)
       - run:
           name: Release chain is consistent (version / changelog / pins)
           command: python scripts/release.py check
