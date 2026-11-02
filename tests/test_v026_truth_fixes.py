@@ -176,3 +176,57 @@ def test_cms_supporting_documents_match_by_identifier(pred, exp, score):
     from llm_dojo_scoring.scoring.field_scoring import score_cms_doc_ref
 
     assert score_cms_doc_ref(pred, exp) == score
+
+
+# --- PR #106 adversarial review regressions --------------------------------
+
+
+@pytest.mark.parametrize("token", ["pde", "inpatient", "outpatient", "carrier"])
+def test_table_token_on_claim_type_scores_zero_without_cms_detection(token):
+    """No expected_subclass / table key: a table token still earns no fuzzy credit."""
+    out = score_extraction("insurance_claim", {"claim_type": "name"}, {"claim_type": token},
+                           {"claim_type": "health"})
+    assert out.field_scores["claim_type"] == 0.0
+
+
+@pytest.mark.parametrize("pred", [None, {}])
+def test_null_prediction_earns_no_documented_absent_credit(pred):
+    """A missing or unparseable prediction must not collect credit for silence."""
+    exp = {"claim_type": "health", "cms_source_table": "carrier", "adjuster": "", "denial_reasons": ""}
+    out = score_extraction("insurance_claim", {}, pred, exp)
+    assert "adjuster" not in out.field_scores
+    assert "denial_reasons" not in out.field_scores
+
+
+def test_blank_items_in_denial_reasons_count_as_empty():
+    """``[""]`` / ``[None]`` are silence, not a stated reason."""
+    exp = {"claim_type": "health", "cms_source_table": "pde", "denial_reasons": ""}
+    for blank in ([""], [None], ["  "]):
+        out = score_extraction("insurance_claim", {}, {"claim_type": "health", "denial_reasons": blank}, exp)
+        assert out.field_scores["denial_reasons"] == 1.0, blank
+
+
+def test_auditor_does_not_apply_cms_rules_to_a_specialist_reference():
+    """The auditor compares two model outputs; CMS GT rules must not apply."""
+    from llm_dojo_scoring import get_suite
+
+    reference = {"claim_type": "health", "cms_source_table": "carrier", "adjuster": None, "denial_reasons": []}
+    auditor = {"claim_type": "health", "cms_source_table": "carrier", "adjuster": "J Smith", "denial_reasons": []}
+    out = get_suite("insurance_claims_auditor").score(reference, auditor)
+    assert "adjuster" not in out["extraction"].field_scores
+    assert out["audit_disagreement_rate"] == 0.0
+
+
+@pytest.mark.parametrize(
+    ("pred", "exp", "score"),
+    [
+        ("facility provider identifier 0505ZK", "facility provider 0505ZK", 1.0),
+        ("facility provider id: 0505ZK", "facility provider 0505ZK", 1.0),
+        ("facility provider id", "facility provider 0505ZK", 0.0),
+    ],
+)
+def test_facility_id_requires_a_digit_bearing_token(pred, exp, score):
+    """Filler words (id / identifier / number) are never captured as the id."""
+    from llm_dojo_scoring.scoring.field_scoring import score_cms_doc_ref
+
+    assert score_cms_doc_ref(pred, exp) == score
