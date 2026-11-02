@@ -69,3 +69,14 @@ llm_dojo_scoring = ["prompts/*.yaml", "prompts/*.json", "prompts/templates/*.md"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+# Correctness-only gate (syntax errors, undefined names, mutable defaults,
+# useless expressions, pylint errors). Deliberately excludes F401/F841: the
+# package re-exports names on purpose and has ~50 pre-existing unused-import
+# findings. Widen the set only together with a cleanup.
+select = ["E9", "F63", "F7", "F82", "B006", "B018", "PLE"]
