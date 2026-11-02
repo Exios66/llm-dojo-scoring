@@ -5,6 +5,8 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-11-02
+
 ### Added (five-class extraction schema registry)
 
 - `schemas.extraction_schemas`: a document-type schema and a schema per subtype

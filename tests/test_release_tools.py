@@ -38,10 +38,16 @@ def test_status_json_has_identity_fields(release):
 
 
 def test_check_accepts_current_stamped_tree(release):
-    """0.25.0 is stamped; missing local tag is a warning, not an error."""
+    """The stamped version is consistent; a missing local tag is a warning, not an error.
+
+    Compared with the package's own ``__version__`` rather than a literal, so
+    ``release.py cut`` does not have to rewrite this test on every release.
+    """
+    import llm_dojo_scoring
+
     state = release.chain_state()
     errors, warnings = release.check_chain(state)
-    assert state["pyproject_version"] == state["init_version"] == "0.25.0"
+    assert state["pyproject_version"] == state["init_version"] == llm_dojo_scoring.__version__
     assert not errors
 
 
