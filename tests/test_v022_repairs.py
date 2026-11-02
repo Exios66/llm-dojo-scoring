@@ -391,7 +391,10 @@ def test_every_canonical_id_is_allowed_somewhere():
         "pipeline.classification.f1_macro",
         "pipeline.classification.accuracy",
     }
-    assert set(_METRIC_ID_BY_NAME.values()) - allowed <= classification_or_content
+    reviewer_lane = {
+        mid for mid in _METRIC_ID_BY_NAME.values() if mid.startswith("review.lane.")
+    }
+    assert set(_METRIC_ID_BY_NAME.values()) - allowed <= classification_or_content | reviewer_lane
 
 
 @pytest.mark.parametrize("doc_class", LIVE)

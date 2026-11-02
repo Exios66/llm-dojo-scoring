@@ -1,4 +1,4 @@
-# Entity extraction schemas — mailroom-dataset (Dojo v0.20.0)
+# Entity extraction schemas — mailroom-dataset (Dojo v0.20.0; registry v0.26.0)
 
 Pared live field maps for the **five primary document types** in
 [`Lucius-Morningstar/mailroom-dataset`](https://huggingface.co/datasets/Lucius-Morningstar/mailroom-dataset)
@@ -288,14 +288,14 @@ fields the text states.
 
 | Field | Type | Empty | Notes |
 |---|---|---|---|
-| `claim_number` | `id` | `null` | Exact printed id (CLAIM NO., FNOL, CLM_ID, CMS Notice ID) |
+| `claim_number` | `id` | `null` | Exact printed claim id (CLAIM NO., FNOL; CMS rows: the 15-digit claim id) |
 | `policy_number` | `id` | `null` | Exact printed policy number |
 | `insurer` | `name` | `null` | Carrier as written |
 | `insured_party` | `name` | `null` | Named insured / claimant |
 | `claim_type` | `name` | `null` | Extract enum **orthogonal** to subclass (see below) |
 | `date_of_loss` | `date` | `null` | Loss/event date (ISO) |
 | `date_filed` | `date` | `null` | Filing date; not date of loss |
-| `claimed_amount` | `money` | `null` | Amount as stated; CMS MSN = Medicare paid total; do not compute |
+| `claimed_amount` | `money` | `null` | Amount as stated (CMS rows: the paid amount; `0.0` is a stated zero); do not compute |
 | `adjuster` | `name` | `null` | Named adjuster only; CMS/GNOTHEIA/INSURBIAS often `null` (valid) |
 | `damages_description` | `free_text` | `null` | Loss/damages as described |
 | `coverage_determination` | `name` | `null` | As written: `approved` · `denied` · `partial` · `pending`. Never infer from tone |
@@ -309,8 +309,9 @@ fields the text states.
 **Subclass (6, sorter / Hub):** `carrier` · `inpatient` · `outpatient` ·
 `pde` · `property` · `auto`.
 
-**`claim_type` extract enum (11):** those six, plus legacy FNOL lines
-`liability` · `health` · `life` · `workers_comp` · `other`. Product-line
+**`claim_type` scored vocabulary (#93): product lines only**
+(`corpus.INSURANCE_PRODUCT_LINES`): `auto` · `property` · `liability` · `health` ·
+`life` · `workers_comp` · `other`. A CMS table token is **not** a `claim_type`. Product-line
 `health` is **not** a subclass (`normalize_corpus_subclass(..., "health")`
 → `other`).
 
@@ -319,14 +320,25 @@ of truth: each source table (`carrier` · `inpatient` · `outpatient` · `pde`) 
 to `claim_type=health`, subclass = the table, and intent `claim_data_record`.
 `claim_type` (the product line) and the source table are **orthogonal**:
 
-- `claim_type` still folds a CMS token onto GT `health` (SAND-042).
-- The source table is scored as its own label field, `cms_source_table`, whenever
-  the expected row carries it. Derive it with `cms_source_table(doc_type, subclass)`.
-  The specialist's `claim_type` token is the prediction when the extraction has no
-  `cms_source_table` key.
+- The SAND-042 fold is retired: on a CMS row `claim_type` is an exact `label`, so
+  `pde` / `inpatient` / `outpatient` / `carrier` there scores 0 (GT is `health`).
+- The source table is its own label field, `cms_source_table`. The published
+  `gt_fields` never carry it (0 of 1,100 rows); the dojo derives it from
+  `expected_subclass` for CMS rows when it assembles GT (`scoring_gt_fields(...,
+  doc_type=, subclass=)`, suite scoring with `expected_subclass=`). For the frozen
+  prompt, a table token on `claim_type` is still read as the `cms_source_table`
+  prediction when that field is blank — it earns credit there only.
+- CMS-aware fields (CMS rows only): `adjuster` and `denial_reasons` are
+  documented-absent on all 600 rows, so an empty prediction scores 1.0 and a stated
+  value 0.0; `supporting_documents` match by identifier (provider NPI, NDC, facility
+  provider id exact; descriptors such as `HCPCS detail (N codes)` by type label).
+- Non-CMS rows (INSURBIAS / BDR auto, GNOTHEIA property) are unchanged.
 
-The published merge does not carry `cms_source_table` yet. Until it does, consumers
-add it from `expected_subclass`. The sandbox's interim label overlay does this.
+**Current split** (ground_truth config): 1,100 insurance rows — CMS 600
+(`source_corpus == "cms_desynpuf"`, 150 per table) and non-CMS 500 (INSURBIAS auto
+150, BDR auto 150, GNOTHEIA property 200). `claim_checklist` is in the live map but
+no row populates it (the headline is `partial`); intents `loss_report` / `other`
+are unused.
 
 **`claim_checklist` categories:** Coverage Determination; Policy Limits;
 Exclusions Cited; Deductible; Reservation Of Rights; Timely Notice; Proof
@@ -372,6 +384,106 @@ consistency is degenerate on GT-shaped predictions.
    the other four specialist bodies match across families. The retired
    `contracts_specialist_v32` body is gone. Do not mix the
    `docclass` lineage into a comparison table without matching `prompt_id`.
+
+## Scored-enum hints (#96)
+
+Consumers must not hand-maintain the enum values they teach a specialist.
+SAND-042 found a correspondence hint teaching `demand_payment`,
+`schedule_meeting`, … — spellings outside the canonical hint vocabulary. The
+insurance and corporate-record hints had the same defect. `normalize_intent`
+still folds those two aliases to `payment_demand` / `meeting_invite` before
+scoring, so their predictions are not necessarily marked wrong. The hint audit
+flags them anyway, because the alias table is a safety net, not the contract.
+The dojo generates the hints from
+the scored vocabulary instead (`llm_dojo_scoring.schemas.scored_enums`):
+
+| Class | Field | Source of the vocabulary |
+|---|---|---|
+| `corporate_record`, `correspondence`, `insurance_claim` | `intent` | `INTENT_LABELS` |
+| `insurance_claim` | `claim_type` | `INSURANCE_PRODUCT_LINES` (product lines only; CMS tables are `cms_source_table`) |
+| `insurance_claim` | `cms_source_table` | `CMS_SOURCE_TABLES` |
+
+```python
+from llm_dojo_scoring import (
+    enum_hint_violations, scored_enum_hint, scored_enum_schemas,
+)
+
+scored_enum_schemas("insurance_claim")   # {field: {"enum": [..., None], "description": ...}}
+scored_enum_hint("correspondence", "intent")  # prompt line, every token verbatim
+assert enum_hint_violations("correspondence", {"intent": MY_INTENTS}) == []
+```
+
+`enum_hint_violations` reports taught values that are not scored tokens,
+scored tokens a consumer never teaches, and vendored enums the dojo does not
+score. Alias spellings count as violations: `normalize_intent` folds them for
+stored answers, but a hint teaches canonical tokens only. A contract test
+fails if a `label`-typed field in `DEFAULT_FIELD_TYPES` has no hint.
+
+## Schema registry: document type and subtype (v0.26.0)
+
+`llm_dojo_scoring.schemas.extraction_schemas` gives every one of the five classes
+a **document-type schema** plus a **schema per subtype**: 25 contract families,
+5 MAUD consideration types, 11 corporate subclasses, 9 correspondence forms and
+6 insurance subtypes (4 CMS tables, property, auto). That is 61 schemas.
+
+```python
+from llm_dojo_scoring import extraction_schema, iter_extraction_schemas, schema_coverage
+
+pde = extraction_schema("insurance_claim", "pde")      # any corpus surface works too
+pde.schema_id                    # "insurance_claim/pde@v9.2.1"
+pde.scored_fields                # fields that count when the row labels them
+pde.documented_absent_fields     # ("adjuster", "denial_reasons")
+pde.pending_fields               # ("claim_checklist",)
+pde.json_schema()                # strict, typed object for guided decoding
+extraction_schema("contract", "License_Agreements").salient   # CUAD categories
+```
+
+Each field has a status read from the v9.2.1 `ground_truth` rows (Hub branch
+`corporate-labels-v9.2.1` @ `0a2f8292`: v9.2 plus the corporate relabel), frozen in
+`llm_dojo_scoring/schemas/data/extraction_status.json` by
+`scripts/build_extraction_status.py`. The source revision is in the file and in
+`extraction_status_source()`.
+
+| Status | Meaning | Example |
+|---|---|---|
+| `scored` | GT populates it on (nearly) every row | insurance `claim_number` |
+| `partial` | GT labels it on some rows; scored where labelled | auto `adjuster` (50%) |
+| `derived` | truth from a label source or the subtype | contract `parties` (CUAD), `cuad_family`, `cms_source_table` |
+| `documented_absent` | an empty answer is right | CMS / property `adjuster` |
+| `label_task` | scored by a label task, not extraction | correspondence `content_topic` |
+| `pending_annotation` | in the live map, not labelled yet | correspondence `sender`, corporate entities, `claim_checklist` |
+| `not_applicable` | GT marks it n/a for the class | merger `intent` |
+
+What v9.2.1 labels, per class:
+
+- **contract**: CUAD clause labels give the six metadata fields and
+  `cuad_clauses` for 22 families. Most `consulting`, `ip` and `supply` rows are
+  still `pending_annotation`. `contract_value` has no source.
+- **merger_agreement**: `maud_clauses` (MAUD labels) and
+  `merger_consideration` (the subtype). The other five fields are pending.
+- **corporate_record**: `intent`, `subject_matter`, `keywords`, `record_type`
+  (the subtype) and, from the v9.2.1 relabel, `entity_name` (the EDGAR
+  registrant: 92% of rows; `scored` on seven subtypes, `partial` on articles,
+  bylaws and rights instruments). `filing_number` is `not_applicable` except on
+  articles and charter amendments; on `subsidiary_list`, `signatories` and
+  `jurisdiction` are `not_applicable` too. Otherwise `effective_date`,
+  `signatories`, `jurisdiction` and every per-subclass entity (for example
+  indenture `trustee`) are unlabelled in every Hub revision and stay
+  `pending_annotation` until they are annotated.
+- **correspondence**: `intent`, `subject_matter`, `keywords` and
+  `communication_type` (the subtype). Topic and sentiment are label tasks. The
+  envelope fields are pending (#94).
+- **insurance_claim**: 14 fields scored on every subtype. CMS tables add
+  `cms_source_table` and identifier-aware `supporting_documents`, and document
+  `adjuster` / `denial_reasons` as absent; property documents both as absent;
+  auto labels them on some rows. `claim_checklist` is pending everywhere.
+
+`Suite.score_document` (and `score(..., detailed=True)` on one document) adds a
+`schema` block that is additive and changes no score. It holds the `schema_id`,
+the fields this row can score, the scored fields it leaves unlabelled, and the
+schema's pending fields. Pass `expected_subclass=` (or `doc_subclass=`) to get the
+subtype schema. `registry_violations()` checks the registry against the taxonomy
+and the live maps.
 
 ## Import surface
 

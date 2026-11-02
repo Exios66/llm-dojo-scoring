@@ -1,0 +1,3287 @@
+{
+  "dispatch": {
+    "get_suite": {
+      "dynamic": [
+        {
+          "expression": "kind",
+          "file": "src/observability/honest_gaps.py",
+          "line": 42,
+          "repo": "MAIL"
+        },
+        {
+          "expression": "kind",
+          "file": "src/observability/specialist_suites.py",
+          "line": 98,
+          "repo": "MAIL"
+        },
+        {
+          "expression": "kind",
+          "file": "src/observability/specialist_suites.py",
+          "line": 116,
+          "repo": "MAIL"
+        },
+        {
+          "expression": "doc_class",
+          "file": "src/observability/suite_scoring.py",
+          "line": 123,
+          "repo": "MAIL"
+        },
+        {
+          "expression": "retired",
+          "file": "src/scripts/run_hf_pilot.py",
+          "line": 1305,
+          "repo": "MAIL"
+        },
+        {
+          "expression": "kind",
+          "file": "src/scripts/run_hf_pilot.py",
+          "line": 1366,
+          "repo": "MAIL"
+        }
+      ],
+      "literals": {
+        "contract": [
+          {
+            "file": "src/tests/test_dojo_suites.py",
+            "line": 17,
+            "repo": "MAIL"
+          }
+        ],
+        "corporate_records_specialist": [
+          {
+            "file": "src/tests/test_corporate_flat9_candidates.py",
+            "line": 185,
+            "repo": "MAIL"
+          },
+          {
+            "file": "src/tests/test_corporate_flat9_candidates.py",
+            "line": 209,
+            "repo": "MAIL"
+          },
+          {
+            "file": "src/tests/test_corporate_flat9_candidates.py",
+            "line": 261,
+            "repo": "MAIL"
+          }
+        ],
+        "correspondence_specialist": [
+          {
+            "file": "src/tests/test_dojo_suites.py",
+            "line": 42,
+            "repo": "MAIL"
+          }
+        ],
+        "court_opinion": [
+          {
+            "file": "src/tests/test_honest_gaps.py",
+            "line": 38,
+            "repo": "MAIL"
+          }
+        ],
+        "due_diligence": [
+          {
+            "file": "src/tests/test_honest_gaps.py",
+            "line": 39,
+            "repo": "MAIL"
+          }
+        ],
+        "intake": [
+          {
+            "file": "src/observability/suite_scoring.py",
+            "line": 204,
+            "repo": "MAIL"
+          },
+          {
+            "file": "src/scripts/run_hf_pilot.py",
+            "line": 1291,
+            "repo": "MAIL"
+          },
+          {
+            "file": "src/tests/test_dojo_suites.py",
+            "line": 147,
+            "repo": "MAIL"
+          },
+          {
+            "file": "src/tests/test_intake.py",
+            "line": 98,
+            "repo": "MAIL"
+          }
+        ],
+        "local_vs_api": [
+          {
+            "file": "src/tests/test_dojo_v012.py",
+            "line": 34,
+            "repo": "MAIL"
+          },
+          {
+            "file": "src/mailroom_sandbox/eval/scoring.py",
+            "line": 370,
+            "repo": "SBX"
+          },
+          {
+            "file": "src/mailroom_sandbox/eval/scoring.py",
+            "line": 454,
+            "repo": "SBX"
+          },
+          {
+            "file": "tests/test_eval.py",
+            "line": 339,
+            "repo": "SBX"
+          },
+          {
+            "file": "tests/test_serving_parity.py",
+            "line": 67,
+            "repo": "SBX"
+          }
+        ],
+        "merger_agreement": [
+          {
+            "file": "src/tests/test_dojo_suites.py",
+            "line": 16,
+            "repo": "MAIL"
+          },
+          {
+            "file": "src/tests/test_dojo_suites.py",
+            "line": 61,
+            "repo": "MAIL"
+          }
+        ],
+        "sorter": [
+          {
+            "file": "src/mailroom_sandbox/eval/scoring.py",
+            "line": 81,
+            "repo": "SBX"
+          }
+        ]
+      },
+      "supported": [
+        "arbiter",
+        "archivist",
+        "audit_agent",
+        "boss",
+        "compliance_auditor",
+        "compliance_specialist",
+        "contract_auditor",
+        "contracts_specialist",
+        "corporate_records_auditor",
+        "corporate_records_specialist",
+        "correspondence_auditor",
+        "correspondence_specialist",
+        "court_opinions_auditor",
+        "court_opinions_specialist",
+        "due_diligence_auditor",
+        "due_diligence_specialist",
+        "image_extractor",
+        "insurance_claims_auditor",
+        "insurance_claims_specialist",
+        "intake",
+        "judge",
+        "local_vs_api",
+        "merger_agreement_specialist",
+        "pdf_transcriber",
+        "reporter",
+        "sorter",
+        "sorter_reviewer"
+      ]
+    },
+    "score_task": {
+      "dynamic": [],
+      "literals": {
+        "docclass": [
+          {
+            "file": "src/mailroom_sandbox/eval/scoring.py",
+            "line": 91,
+            "repo": "SBX"
+          }
+        ]
+      },
+      "supported": [
+        "cer",
+        "chained",
+        "content_topic",
+        "contracteval",
+        "court_opinion",
+        "doc_class",
+        "docclass",
+        "document-pipeline",
+        "enron_sentiment",
+        "enron_topic",
+        "intake",
+        "legalbench",
+        "maud_clause",
+        "maud_docclass",
+        "maud_extraction",
+        "maud_question",
+        "multiclass",
+        "pipeline",
+        "sentiment",
+        "subtype",
+        "transcription",
+        "wer"
+      ]
+    },
+    "suite_for_doc_type": {
+      "dynamic": [
+        {
+          "expression": "doc_type",
+          "file": "src/mailroom_sandbox/eval/scoring.py",
+          "line": 141,
+          "repo": "SBX"
+        },
+        {
+          "expression": "doc_type",
+          "file": "tests/test_extraction_scope.py",
+          "line": 232,
+          "repo": "SBX"
+        }
+      ],
+      "literals": {
+        "corporate_record": [
+          {
+            "file": "tests/test_corporate_annotation_contract.py",
+            "line": 60,
+            "repo": "SBX"
+          },
+          {
+            "file": "tests/test_corporate_scoring.py",
+            "line": 89,
+            "repo": "SBX"
+          },
+          {
+            "file": "tests/test_corporate_scoring.py",
+            "line": 98,
+            "repo": "SBX"
+          }
+        ]
+      },
+      "supported": [
+        "compliance_filing",
+        "contract",
+        "corporate_record",
+        "correspondence",
+        "court_opinion",
+        "due_diligence",
+        "insurance_claim",
+        "merger_agreement"
+      ]
+    }
+  },
+  "generated_by": "scripts/audit_consumer_surface.py",
+  "generated_from": {
+    "EDA": {
+      "commit": "8d730fc11bb04ff12f27a3379fd77d5d7093f665",
+      "files_scanned": 68,
+      "label": "EDA",
+      "path": "/Users/morningstar/.t3/worktrees/constellation-readmes/Mailroom-Corpus-EDA",
+      "reason": null,
+      "ref": "docs/constellation-readme",
+      "scanned": true
+    },
+    "EE": {
+      "commit": null,
+      "files_scanned": 0,
+      "label": "EE",
+      "path": "/Users/morningstar/Digital-Mailroom/packages/eval-environment",
+      "reason": "path does not exist",
+      "ref": null,
+      "scanned": false
+    },
+    "MAIL": {
+      "commit": "a7d7bf0b1c1b2e93b0f185b49d83e1df61a5f7a1",
+      "files_scanned": 310,
+      "label": "MAIL",
+      "path": "/tmp/llm-mailroom-check",
+      "reason": null,
+      "ref": "main",
+      "scanned": true
+    },
+    "ML": {
+      "commit": "bd8557a8473c6a995d0964f557c232ee7c627d77",
+      "files_scanned": 84,
+      "label": "ML",
+      "path": "/Users/morningstar/.t3/worktrees/constellation-readmes/mailroom-ml",
+      "reason": null,
+      "ref": "docs/constellation-readme",
+      "scanned": true
+    },
+    "SBX": {
+      "commit": "93b76d42367d1758728c46d26bd25c50c8ca895e",
+      "files_scanned": 331,
+      "label": "SBX",
+      "path": "/Users/morningstar/.t3/worktrees/local-mailroom-sandbox/t3-65a57387",
+      "reason": null,
+      "ref": "origin/main",
+      "scanned": true
+    },
+    "TMR": {
+      "commit": "8b0bee5b0c82af6f69035922a9df04c9962d79ee",
+      "files_scanned": 107,
+      "label": "TMR",
+      "path": "/Users/morningstar/Digital-Mailroom/packages/The-Mailroom",
+      "reason": null,
+      "ref": "main",
+      "scanned": true
+    }
+  },
+  "modules": {
+    "analysis.bootstrap": {
+      "attrs": {
+        "DEFAULT_ALPHA": {
+          "consumers": [
+            {
+              "file": "src/observability/bootstrap.py",
+              "line": 3,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "analysis.bootstrap",
+          "private": false
+        },
+        "DEFAULT_N_BOOT": {
+          "consumers": [
+            {
+              "file": "src/observability/bootstrap.py",
+              "line": 3,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "analysis.bootstrap",
+          "private": false
+        },
+        "DEFAULT_SEED": {
+          "consumers": [
+            {
+              "file": "src/observability/bootstrap.py",
+              "line": 3,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "analysis.bootstrap",
+          "private": false
+        },
+        "bootstrap_ci": {
+          "consumers": [
+            {
+              "file": "src/observability/bootstrap.py",
+              "line": 3,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "analysis.bootstrap",
+          "private": false
+        },
+        "delta_significance": {
+          "consumers": [
+            {
+              "file": "src/observability/bootstrap.py",
+              "line": 3,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "analysis.bootstrap",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "analysis.cost": {
+      "attrs": {
+        "tokens_summary": {
+          "consumers": [
+            {
+              "file": "src/legalbench/runner.py",
+              "line": 47,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "analysis.cost",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "analysis.diagnostics": {
+      "attrs": {
+        "DATE_FIELDS": {
+          "consumers": [
+            {
+              "file": "src/observability/metrics.py",
+              "line": 7,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "analysis.diagnostics",
+          "private": false
+        },
+        "DURATION_FIELDS": {
+          "consumers": [
+            {
+              "file": "src/observability/metrics.py",
+              "line": 7,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "analysis.diagnostics",
+          "private": false
+        },
+        "is_entity_list": {
+          "consumers": [
+            {
+              "file": "src/observability/metrics.py",
+              "line": 7,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_scoring",
+          "private": false
+        },
+        "parse_date": {
+          "consumers": [
+            {
+              "file": "src/observability/metrics.py",
+              "line": 7,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_scoring",
+          "private": false
+        },
+        "parse_duration_days": {
+          "consumers": [
+            {
+              "file": "src/observability/metrics.py",
+              "line": 7,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "analysis.diagnostics",
+          "private": false
+        },
+        "parse_money": {
+          "consumers": [
+            {
+              "file": "src/observability/metrics.py",
+              "line": 7,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_scoring",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "analysis.experiment": {
+      "attrs": {
+        "append_experiment": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/experiment_log.py",
+              "line": 8,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "analysis.experiment",
+          "private": false
+        },
+        "git_snapshot": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/experiment_log.py",
+              "line": 8,
+              "repo": "SBX"
+            },
+            {
+              "file": "src/mailroom_sandbox/job/preflight.py",
+              "line": 24,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "analysis.experiment",
+          "private": false
+        },
+        "load_records": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/experiment_log.py",
+              "line": 8,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "analysis.experiment",
+          "private": false
+        },
+        "utc_now": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/experiment_log.py",
+              "line": 8,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "analysis.experiment",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "analysis.serving": {
+      "attrs": {
+        "CANONICAL_SERVING_KEYS": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/scoring.py",
+              "line": 28,
+              "repo": "SBX"
+            },
+            {
+              "file": "src/mailroom_sandbox/eval/serving_parity.py",
+              "line": 24,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "analysis.serving",
+          "private": false
+        },
+        "_LEG_IDENTITY_KEYS": {
+          "consumers": [
+            {
+              "file": "tests/test_serving_groups.py",
+              "line": 16,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "analysis.serving",
+          "private": true
+        },
+        "classify_serving_kind": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/serving_parity.py",
+              "line": 24,
+              "repo": "SBX"
+            },
+            {
+              "file": "tests/test_serving_parity.py",
+              "line": 9,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "analysis.serving",
+          "private": false
+        },
+        "compare_serving": {
+          "consumers": [
+            {
+              "file": "src/tests/test_dojo_v012.py",
+              "line": 13,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/mailroom_sandbox/eval/serving_parity.py",
+              "line": 24,
+              "repo": "SBX"
+            },
+            {
+              "file": "src/mailroom_sandbox/job/metrics.py",
+              "line": 36,
+              "repo": "SBX"
+            },
+            {
+              "file": "tests/test_serving_groups.py",
+              "line": 16,
+              "repo": "SBX"
+            },
+            {
+              "file": "tests/test_serving_parity.py",
+              "line": 9,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "analysis.serving",
+          "private": false
+        },
+        "estimate_cost": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/job/metrics.py",
+              "line": 36,
+              "repo": "SBX"
+            },
+            {
+              "file": "tests/test_serving_parity.py",
+              "line": 9,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "analysis.cost",
+          "private": false
+        },
+        "normalize_serving_record": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/serving_groups.py",
+              "line": 28,
+              "repo": "SBX"
+            },
+            {
+              "file": "tests/test_dojo_cost_alignment.py",
+              "line": 12,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "analysis.serving",
+          "private": false
+        },
+        "pair_comparable_runs": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/scoring.py",
+              "line": 28,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "analysis.serving",
+          "private": false
+        },
+        "price_for": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/job/metrics.py",
+              "line": 36,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "analysis.cost",
+          "private": false
+        },
+        "score_serving_run": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/serving_parity.py",
+              "line": 24,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "analysis.serving",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "config": {
+      "attrs": {
+        "get_settings": {
+          "consumers": [
+            {
+              "file": "src/tests/test_consumer_policy_compat.py",
+              "line": 27,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/tests/test_corporate_flat9_candidates.py",
+              "line": 256,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/tests/test_final_quality_delegation.py",
+              "line": 111,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "config",
+          "private": false
+        }
+      },
+      "legacy": false
+    },
+    "metrics.emitter": {
+      "attrs": {
+        "ScoreRecord": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/runners.py",
+              "line": 30,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "metrics.emitter",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "metrics.pruning": {
+      "attrs": {
+        "headline_metrics": {
+          "consumers": [
+            {
+              "file": "src/tests/test_dojo_v012.py",
+              "line": 10,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "metrics.pruning",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "metrics.registry": {
+      "attrs": {
+        "MetricTier": {
+          "consumers": [
+            {
+              "file": "src/tests/test_dojo_v012.py",
+              "line": 12,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "metrics.registry",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "metrics.scorecard_honesty": {
+      "attrs": {
+        "COST_BASIS_TOKEN_PRICE": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/serving_parity.py",
+              "line": 23,
+              "repo": "SBX"
+            },
+            {
+              "file": "src/mailroom_sandbox/job/metrics.py",
+              "line": 35,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "metrics.scorecard_honesty",
+          "private": false
+        },
+        "ProvenanceExportError": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/cli.py",
+              "line": 184,
+              "repo": "SBX"
+            },
+            {
+              "file": "src/mailroom_sandbox/eval/scoring.py",
+              "line": 27,
+              "repo": "SBX"
+            },
+            {
+              "file": "tests/test_serving_groups.py",
+              "line": 15,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "metrics.scorecard_honesty",
+          "private": false
+        },
+        "SCORER_VERSION": {
+          "consumers": [
+            {
+              "file": "src/tests/test_dojo_v019_wiring.py",
+              "line": 17,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "metrics.scorecard_honesty",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "pipeline.archive": {
+      "attrs": {
+        "archive_entry_hash": {
+          "consumers": [
+            {
+              "file": "src/tests/test_dojo_v019_wiring.py",
+              "line": 16,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.archive",
+          "private": false
+        },
+        "canonical_json": {
+          "consumers": [
+            {
+              "file": "src/tests/test_dojo_v019_wiring.py",
+              "line": 16,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.archive",
+          "private": false
+        },
+        "verify_entry_hash": {
+          "consumers": [
+            {
+              "file": "src/tests/test_dojo_v019_wiring.py",
+              "line": 16,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.archive",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "pipeline.intake": {
+      "attrs": {
+        "INTAKE_LIVE_METHOD": {
+          "consumers": [
+            {
+              "file": "src/agents/intake.py",
+              "line": 49,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.intake",
+          "private": false
+        },
+        "INTAKE_PREP_STEPS": {
+          "consumers": [
+            {
+              "file": "src/agents/intake.py",
+              "line": 49,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.intake",
+          "private": false
+        },
+        "INTAKE_SPAN": {
+          "consumers": [
+            {
+              "file": "src/agents/intake.py",
+              "line": 49,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/tests/test_intake.py",
+              "line": 73,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.intake",
+          "private": false
+        },
+        "INTAKE_SPAN_KEYS": {
+          "consumers": [
+            {
+              "file": "src/agents/intake.py",
+              "line": 49,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/observability/suite_scoring.py",
+              "line": 198,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.intake",
+          "private": false
+        },
+        "deterministic_normalize": {
+          "consumers": [
+            {
+              "file": "src/agents/intake.py",
+              "line": 49,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/tests/test_intake.py",
+              "line": 73,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/mailroom_sandbox/eval/agents.py",
+              "line": 362,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.intake",
+          "private": false
+        },
+        "intake_span_output": {
+          "consumers": [
+            {
+              "file": "src/agents/intake.py",
+              "line": 49,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.intake",
+          "private": false
+        },
+        "looks_messy": {
+          "consumers": [
+            {
+              "file": "src/agents/intake.py",
+              "line": 49,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/graph/build_graph.py",
+              "line": 662,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.intake",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "pipeline.mailroom": {
+      "attrs": {
+        "GROUND_TRUTH_KEYS": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/tracing.py",
+              "line": 52,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.mailroom",
+          "private": false
+        },
+        "HUB_SUBCLASS_INVENTORIES": {
+          "consumers": [
+            {
+              "file": "tests/test_hub57_truth.py",
+              "line": 29,
+              "repo": "EDA"
+            }
+          ],
+          "defined_in": "pipeline.mailroom",
+          "private": false
+        },
+        "LANGFUSE_SCORE_NAME_ALIASES": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/tracing.py",
+              "line": 52,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.mailroom",
+          "private": false
+        },
+        "NODE_OBSERVATION_TYPES": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/tracing.py",
+              "line": 52,
+              "repo": "SBX"
+            },
+            {
+              "file": "tests/test_tracing_braintrust.py",
+              "line": 187,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.mailroom",
+          "private": false
+        },
+        "PIPELINE_TRACE": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/tracing.py",
+              "line": 52,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.mailroom",
+          "private": false
+        },
+        "langfuse_score_name": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/tracing.py",
+              "line": 52,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.mailroom",
+          "private": false
+        },
+        "observation_type_for": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/tracing.py",
+              "line": 52,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.mailroom",
+          "private": false
+        },
+        "score_aligned_classification": {
+          "consumers": [
+            {
+              "file": "src/tests/test_classification_scoring.py",
+              "line": 25,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/tests/test_run_hf_pilot.py",
+              "line": 469,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.mailroom",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "pipeline.pilot_labels": {
+      "attrs": {
+        "catalog_subtypes_equivalent": {
+          "consumers": [
+            {
+              "file": "src/langchain_agents/sorter_agent.py",
+              "line": 225,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.pilot_labels",
+          "private": false
+        },
+        "compact_label": {
+          "consumers": [
+            {
+              "file": "src/langchain_agents/doc_inventories.py",
+              "line": 375,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/scripts/run_hf_pilot.py",
+              "line": 319,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.pilot_labels",
+          "private": false
+        },
+        "loose_label_match": {
+          "consumers": [
+            {
+              "file": "src/scripts/run_hf_pilot.py",
+              "line": 326,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.pilot_labels",
+          "private": false
+        },
+        "normalize_inventory_label": {
+          "consumers": [
+            {
+              "file": "src/langchain_agents/doc_inventories.py",
+              "line": 382,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.pilot_labels",
+          "private": false
+        },
+        "normalize_pilot_consideration": {
+          "consumers": [
+            {
+              "file": "src/langchain_agents/cuad_maud.py",
+              "line": 147,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.pilot_labels",
+          "private": false
+        },
+        "normalize_pipeline_subtype": {
+          "consumers": [
+            {
+              "file": "src/langchain_agents/sorter_agent.py",
+              "line": 232,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.pilot_labels",
+          "private": false
+        },
+        "normalize_sorter_token": {
+          "consumers": [
+            {
+              "file": "src/langchain_agents/doc_inventories.py",
+              "line": 206,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.pilot_labels",
+          "private": false
+        },
+        "pilot_subclass_match": {
+          "consumers": [
+            {
+              "file": "src/scripts/run_hf_pilot.py",
+              "line": 335,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.pilot_labels",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "pipeline.pilot_summary": {
+      "attrs": {
+        "pilot_calibration_error": {
+          "consumers": [
+            {
+              "file": "src/scripts/run_pilot.py",
+              "line": 609,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.pilot_summary",
+          "private": false
+        },
+        "pilot_classification_summary": {
+          "consumers": [
+            {
+              "file": "src/scripts/run_hf_pilot.py",
+              "line": 401,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.pilot_summary",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "pipeline.pipeline_scoring": {
+      "attrs": {
+        "classes_match": {
+          "consumers": [
+            {
+              "file": "src/observability/classification_scoring.py",
+              "line": 6,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.pipeline_scoring",
+          "private": false
+        },
+        "normalize_class": {
+          "consumers": [
+            {
+              "file": "src/observability/classification_scoring.py",
+              "line": 6,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.pipeline_scoring",
+          "private": false
+        },
+        "score_exact_classification": {
+          "consumers": [
+            {
+              "file": "src/observability/classification_scoring.py",
+              "line": 6,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.pipeline_scoring",
+          "private": false
+        },
+        "score_experiment_rows": {
+          "consumers": [
+            {
+              "file": "src/scripts/run_experiment.py",
+              "line": 112,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.pipeline_scoring",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "pipeline.pipeline_verdict": {
+      "attrs": {
+        "deterministic_verdict_label": {
+          "consumers": [
+            {
+              "file": "src/observability/scores.py",
+              "line": 378,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "pipeline.pipeline_verdict",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "pipeline.sandbox_scoring": {
+      "attrs": {
+        "CLEAN_QUESTIONS": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/maud_scoring.py",
+              "line": 8,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.sandbox_scoring",
+          "private": false
+        },
+        "CONFLICT": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/maud_scoring.py",
+              "line": 8,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.sandbox_scoring",
+          "private": false
+        },
+        "FIELD_CATEGORY": {
+          "consumers": [
+            {
+              "file": "scripts/extraction_gate.py",
+              "line": 349,
+              "repo": "SBX"
+            },
+            {
+              "file": "src/mailroom_sandbox/eval/cuad_scoring.py",
+              "line": 8,
+              "repo": "SBX"
+            },
+            {
+              "file": "src/mailroom_sandbox/mock_llm.py",
+              "line": 40,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.sandbox_scoring",
+          "private": false
+        },
+        "MULTI_CLASS_QUESTIONS": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/maud_scoring.py",
+              "line": 8,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.sandbox_scoring",
+          "private": false
+        },
+        "TYPE_OF_CONSIDERATION": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/maud_scoring.py",
+              "line": 8,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.sandbox_scoring",
+          "private": false
+        },
+        "VALUE_FIELDS": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/cuad_scoring.py",
+              "line": 8,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.sandbox_scoring",
+          "private": false
+        },
+        "_empty": {
+          "consumers": [
+            {
+              "file": "scripts/extraction_gate.py",
+              "line": 349,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.sandbox_scoring",
+          "private": true
+        },
+        "_value_ok": {
+          "consumers": [
+            {
+              "file": "scripts/extraction_gate.py",
+              "line": 349,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.sandbox_scoring",
+          "private": true
+        },
+        "gt_categories": {
+          "consumers": [
+            {
+              "file": "scripts/extraction_gate.py",
+              "line": 349,
+              "repo": "SBX"
+            },
+            {
+              "file": "src/mailroom_sandbox/eval/cuad_scoring.py",
+              "line": 8,
+              "repo": "SBX"
+            },
+            {
+              "file": "src/mailroom_sandbox/interim_labels.py",
+              "line": 207,
+              "repo": "SBX"
+            },
+            {
+              "file": "src/mailroom_sandbox/mock_llm.py",
+              "line": 40,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.sandbox_scoring",
+          "private": false
+        },
+        "gt_labels": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/maud_scoring.py",
+              "line": 8,
+              "repo": "SBX"
+            },
+            {
+              "file": "src/mailroom_sandbox/mock_llm.py",
+              "line": 40,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.sandbox_scoring",
+          "private": false
+        },
+        "is_non_answer": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/maud_scoring.py",
+              "line": 8,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.sandbox_scoring",
+          "private": false
+        },
+        "norm": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/maud_scoring.py",
+              "line": 8,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.sandbox_scoring",
+          "private": false
+        },
+        "parse_maud_answers": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/maud_scoring.py",
+              "line": 8,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.sandbox_scoring",
+          "private": false
+        },
+        "predicted_categories": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/cuad_scoring.py",
+              "line": 8,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.sandbox_scoring",
+          "private": false
+        },
+        "same_answer": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/maud_scoring.py",
+              "line": 8,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "pipeline.sandbox_scoring",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "prompts": {
+      "attrs": {
+        "LINEAGE_SOURCE": {
+          "consumers": [
+            {
+              "file": "tests/test_prompt_versions_dojo.py",
+              "line": 18,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "prompts.lineage",
+          "private": false
+        },
+        "default_prompt_version": {
+          "consumers": [
+            {
+              "file": "tests/test_prompt_versions_dojo.py",
+              "line": 18,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "prompts.lineage",
+          "private": false
+        },
+        "get_prompt": {
+          "consumers": [
+            {
+              "file": "src/llm/frozen_v1/__init__.py",
+              "line": 39,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/tests/test_corporate_flat9_candidates.py",
+              "line": 19,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/tests/test_dojo_parity.py",
+              "line": 8,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/tests/test_dojo_v012.py",
+              "line": 11,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/tests/test_frozen_v1_prompts.py",
+              "line": 41,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/tests/test_frozen_v1_prompts.py",
+              "line": 49,
+              "repo": "MAIL"
+            },
+            {
+              "file": "scripts/sync_specialist_prompts.py",
+              "line": 75,
+              "repo": "SBX"
+            },
+            {
+              "file": "tests/test_eval_environment_lineage.py",
+              "line": 275,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "prompts",
+          "private": false
+        },
+        "get_prompt_version": {
+          "consumers": [
+            {
+              "file": "src/tests/test_corporate_flat9_candidates.py",
+              "line": 19,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/tests/test_frozen_v1_prompts.py",
+              "line": 49,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/mailroom_sandbox/prompt_versions.py",
+              "line": 90,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "prompts.lineage",
+          "private": false
+        },
+        "latest_prompt_version": {
+          "consumers": [
+            {
+              "file": "tests/test_prompt_versions_dojo.py",
+              "line": 18,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "prompts.lineage",
+          "private": false
+        },
+        "list_prompt_versions": {
+          "consumers": [
+            {
+              "file": "tests/test_prompt_catalog.py",
+              "line": 10,
+              "repo": "SBX"
+            },
+            {
+              "file": "tests/test_prompt_versions_dojo.py",
+              "line": 18,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "prompts.lineage",
+          "private": false
+        },
+        "list_prompts": {
+          "consumers": [
+            {
+              "file": "src/tests/test_dojo_v012.py",
+              "line": 11,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "prompts",
+          "private": false
+        },
+        "prompt_roles": {
+          "consumers": [
+            {
+              "file": "tests/test_prompt_catalog.py",
+              "line": 10,
+              "repo": "SBX"
+            },
+            {
+              "file": "tests/test_prompt_versions_dojo.py",
+              "line": 18,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "prompts.lineage",
+          "private": false
+        }
+      },
+      "legacy": false
+    },
+    "schemas.corporate_record_relabel": {
+      "attrs": {
+        "relabel_row": {
+          "consumers": [
+            {
+              "file": "tests/test_corporate_presence.py",
+              "line": 122,
+              "repo": "EDA"
+            },
+            {
+              "file": "tests/test_corporate_presence.py",
+              "line": 141,
+              "repo": "EDA"
+            }
+          ],
+          "defined_in": "schemas.corporate_record_relabel",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "schemas.corporate_record_schema": {
+      "attrs": {
+        "ENTITY_CORE_FIELDS": {
+          "consumers": [
+            {
+              "file": "scripts/audit/verify_v9_3_conformance.py",
+              "line": 137,
+              "repo": "EDA"
+            },
+            {
+              "file": "tests/test_corporate_presence.py",
+              "line": 98,
+              "repo": "EDA"
+            }
+          ],
+          "defined_in": "schemas.corporate_record_schema",
+          "private": false
+        },
+        "RECORD_TYPES": {
+          "consumers": [
+            {
+              "file": "scripts/audit/verify_v9_3_conformance.py",
+              "line": 137,
+              "repo": "EDA"
+            },
+            {
+              "file": "tests/test_corporate_presence.py",
+              "line": 98,
+              "repo": "EDA"
+            }
+          ],
+          "defined_in": "schemas.corporate_record_schema",
+          "private": false
+        },
+        "SUBCLASS_SCHEMAS": {
+          "consumers": [
+            {
+              "file": "scripts/audit/verify_v9_3_conformance.py",
+              "line": 136,
+              "repo": "EDA"
+            },
+            {
+              "file": "tests/test_corporate_presence.py",
+              "line": 98,
+              "repo": "EDA"
+            },
+            {
+              "file": "src/mailroom_sandbox/eval/extraction_scope.py",
+              "line": 178,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "schemas.corporate_record_schema",
+          "private": false
+        },
+        "align_unlabeled": {
+          "consumers": [
+            {
+              "file": "tests/test_corporate_scoring.py",
+              "line": 59,
+              "repo": "SBX"
+            },
+            {
+              "file": "tests/test_corporate_scoring.py",
+              "line": 191,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "schemas.corporate_record_schema",
+          "private": false
+        },
+        "entity_field_types": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/schema_adherence.py",
+              "line": 158,
+              "repo": "SBX"
+            },
+            {
+              "file": "src/mailroom_sandbox/eval/schema_adherence.py",
+              "line": 278,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "schemas.corporate_record_schema",
+          "private": false
+        },
+        "unlabeled_fields": {
+          "consumers": [
+            {
+              "file": "tests/test_interim_labels.py",
+              "line": 151,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "schemas.corporate_record_schema",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "schemas.corpus": {
+      "attrs": {
+        "CORPUS_DOC_TYPES": {
+          "consumers": [
+            {
+              "file": "src/tests/test_schema_contract.py",
+              "line": 18,
+              "repo": "MAIL"
+            },
+            {
+              "file": "tests/test_schema_contract.py",
+              "line": 16,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "schemas.corpus",
+          "private": false
+        },
+        "DOC_TYPE_SUBCLASSES": {
+          "consumers": [
+            {
+              "file": "src/langchain_agents/doc_inventories.py",
+              "line": 166,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "schemas.corpus",
+          "private": false
+        },
+        "normalize_corpus_subclass": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/corpus.py",
+              "line": 287,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "schemas.corpus",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "schemas.equivalences": {
+      "attrs": {
+        "normalize_subtype": {
+          "consumers": [
+            {
+              "file": "scripts/calibrate_reviewer.py",
+              "line": 261,
+              "repo": "SBX"
+            },
+            {
+              "file": "scripts/compare_sorter_prompt.py",
+              "line": 47,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "schemas.equivalences",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "schemas.gt_metadata": {
+      "attrs": {
+        "parse_gt_fields": {
+          "consumers": [
+            {
+              "file": "tests/test_corporate_presence.py",
+              "line": 123,
+              "repo": "EDA"
+            },
+            {
+              "file": "tests/test_corporate_presence.py",
+              "line": 142,
+              "repo": "EDA"
+            }
+          ],
+          "defined_in": "schemas.gt_metadata",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "schemas.intents": {
+      "attrs": {
+        "INTENT_ALIASES": {
+          "consumers": [
+            {
+              "file": "src/langchain_agents/doc_inventories.py",
+              "line": 30,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "schemas.intents",
+          "private": false
+        },
+        "INTENT_DESCRIPTIONS": {
+          "consumers": [
+            {
+              "file": "src/langchain_agents/doc_inventories.py",
+              "line": 33,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "schemas.intents",
+          "private": false
+        },
+        "INTENT_LABELS": {
+          "consumers": [
+            {
+              "file": "src/langchain_agents/doc_inventories.py",
+              "line": 33,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "schemas.intents",
+          "private": false
+        },
+        "normalize_intent": {
+          "consumers": [
+            {
+              "file": "src/langchain_agents/doc_inventories.py",
+              "line": 33,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "schemas.intents",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "schemas.maud_schema": {
+      "attrs": {
+        "render_maud_question_block": {
+          "consumers": [
+            {
+              "file": "scripts/gen_maud_v2_prompt.py",
+              "line": 28,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "schemas.maud_schema",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "schemas.schema_contract": {
+      "attrs": {
+        "contract_violations": {
+          "consumers": [
+            {
+              "file": "tests/test_schema_contract.py",
+              "line": 17,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "schemas.schema_contract",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "schemas.sorter_guide": {
+      "attrs": {
+        "format_sorter_subclass_guide": {
+          "consumers": [
+            {
+              "file": "src/langchain_agents/doc_inventories.py",
+              "line": 228,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "schemas.sorter_guide",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "scoring.agent_rubrics": {
+      "attrs": {
+        "decision_valid": {
+          "consumers": [
+            {
+              "file": "src/observability/agent_eval.py",
+              "line": 350,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.agent_rubrics",
+          "private": false
+        },
+        "determination_consistency_is_quality": {
+          "consumers": [
+            {
+              "file": "src/observability/honest_gaps.py",
+              "line": 132,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.agent_rubrics",
+          "private": false
+        },
+        "insurance_expected_set_is_homogeneous": {
+          "consumers": [
+            {
+              "file": "src/observability/honest_gaps.py",
+              "line": 132,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.agent_rubrics",
+          "private": false
+        },
+        "insurance_gt_is_homogeneous": {
+          "consumers": [
+            {
+              "file": "src/observability/honest_gaps.py",
+              "line": 132,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.agent_rubrics",
+          "private": false
+        },
+        "key_presence": {
+          "consumers": [
+            {
+              "file": "src/observability/agent_eval.py",
+              "line": 342,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.agent_rubrics",
+          "private": false
+        },
+        "token_set_f1": {
+          "consumers": [
+            {
+              "file": "src/observability/agent_eval.py",
+              "line": 51,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.agent_rubrics",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "scoring.content_scoring": {
+      "attrs": {
+        "peel_non_extraction_fields": {
+          "consumers": [
+            {
+              "file": "src/tests/test_dojo_suites.py",
+              "line": 27,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.content_scoring",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "scoring.extraction_metrics": {
+      "attrs": {
+        "extraction_binary_metrics": {
+          "consumers": [
+            {
+              "file": "src/mailroom_sandbox/eval/scoring.py",
+              "line": 26,
+              "repo": "SBX"
+            },
+            {
+              "file": "tests/test_schema_adherence.py",
+              "line": 9,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "scoring.extraction_metrics",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "scoring.field_scoring": {
+      "attrs": {
+        "EntityListScore": {
+          "consumers": [
+            {
+              "file": "src/tests/test_field_scoring.py",
+              "line": 22,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_scoring",
+          "private": false
+        },
+        "ExtractionScoreResult": {
+          "consumers": [
+            {
+              "file": "src/observability/suite_scoring.py",
+              "line": 27,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/tests/test_dojo_suites.py",
+              "line": 143,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/tests/test_field_scoring.py",
+              "line": 22,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_scoring",
+          "private": false
+        },
+        "FIELD_SCORERS": {
+          "consumers": [
+            {
+              "file": "src/tests/test_field_scoring.py",
+              "line": 22,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_scoring",
+          "private": false
+        },
+        "embedding_enabled": {
+          "consumers": [
+            {
+              "file": "src/tests/test_corporate_flat9_candidates.py",
+              "line": 257,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_scoring",
+          "private": false
+        },
+        "field_is_ambiguous": {
+          "consumers": [
+            {
+              "file": "src/tests/test_field_scoring.py",
+              "line": 22,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_scoring",
+          "private": false
+        },
+        "get_field_types": {
+          "consumers": [
+            {
+              "file": "src/tests/test_field_scoring.py",
+              "line": 22,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_scoring",
+          "private": false
+        },
+        "get_type_bands": {
+          "consumers": [
+            {
+              "file": "src/tests/test_field_scoring.py",
+              "line": 22,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_scoring",
+          "private": false
+        },
+        "normalize_text": {
+          "consumers": [
+            {
+              "file": "src/tests/test_field_scoring.py",
+              "line": 22,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_scoring",
+          "private": false
+        },
+        "score_category_presence": {
+          "consumers": [
+            {
+              "file": "src/tests/test_category_presence.py",
+              "line": 5,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_scoring",
+          "private": false
+        },
+        "score_date_field": {
+          "consumers": [
+            {
+              "file": "src/tests/test_field_scoring.py",
+              "line": 22,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_scoring",
+          "private": false
+        },
+        "score_entity_list": {
+          "consumers": [
+            {
+              "file": "src/tests/test_field_scoring.py",
+              "line": 22,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_scoring",
+          "private": false
+        },
+        "score_extraction": {
+          "consumers": [
+            {
+              "file": "src/observability/suite_scoring.py",
+              "line": 27,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/tests/test_field_scoring.py",
+              "line": 22,
+              "repo": "MAIL"
+            },
+            {
+              "file": "tests/test_extraction_scope.py",
+              "line": 5,
+              "repo": "SBX"
+            },
+            {
+              "file": "tests/test_schema_adherence.py",
+              "line": 10,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "scoring.field_scoring",
+          "private": false
+        },
+        "score_field": {
+          "consumers": [
+            {
+              "file": "src/tests/test_field_scoring.py",
+              "line": 22,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_scoring",
+          "private": false
+        },
+        "score_free_text_field": {
+          "consumers": [
+            {
+              "file": "src/tests/test_field_scoring.py",
+              "line": 22,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_scoring",
+          "private": false
+        },
+        "score_id_field": {
+          "consumers": [
+            {
+              "file": "src/tests/test_field_scoring.py",
+              "line": 22,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_scoring",
+          "private": false
+        },
+        "score_money_field": {
+          "consumers": [
+            {
+              "file": "src/tests/test_field_scoring.py",
+              "line": 22,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_scoring",
+          "private": false
+        },
+        "score_name_field": {
+          "consumers": [
+            {
+              "file": "src/tests/test_field_scoring.py",
+              "line": 22,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_scoring",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "scoring.field_support": {
+      "attrs": {
+        "pilot_ground_truth_scores": {
+          "consumers": [
+            {
+              "file": "src/scripts/run_pilot.py",
+              "line": 502,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_support",
+          "private": false
+        },
+        "schema_gt_support": {
+          "consumers": [
+            {
+              "file": "src/observability/specialist_suites.py",
+              "line": 176,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.field_support",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "scoring.legalbench_scoring": {
+      "attrs": {
+        "_binary_f1": {
+          "consumers": [
+            {
+              "file": "src/legalbench/scoring.py",
+              "line": 6,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.legalbench_scoring",
+          "private": true
+        },
+        "_mean": {
+          "consumers": [
+            {
+              "file": "src/legalbench/scoring.py",
+              "line": 6,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.legalbench_scoring",
+          "private": true
+        },
+        "_safe_div": {
+          "consumers": [
+            {
+              "file": "src/legalbench/scoring.py",
+              "line": 6,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.legalbench_scoring",
+          "private": true
+        },
+        "expected_calibration_error": {
+          "consumers": [
+            {
+              "file": "src/legalbench/scoring.py",
+              "line": 6,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.legalbench_scoring",
+          "private": false
+        },
+        "score_binary": {
+          "consumers": [
+            {
+              "file": "src/legalbench/scoring.py",
+              "line": 6,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.legalbench_scoring",
+          "private": false
+        },
+        "score_multiclass": {
+          "consumers": [
+            {
+              "file": "src/legalbench/scoring.py",
+              "line": 6,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.legalbench_scoring",
+          "private": false
+        }
+      },
+      "legacy": true
+    },
+    "scoring.suites": {
+      "attrs": {
+        "DEFAULT_FIELD_TYPES": {
+          "consumers": [
+            {
+              "file": "src/tests/test_dojo_parity.py",
+              "line": 9,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/tests/test_schema_contract.py",
+              "line": 19,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.suites",
+          "private": false
+        }
+      },
+      "legacy": true
+    }
+  },
+  "patches": [
+    {
+      "file": "src/tests/test_relations.py",
+      "line": 504,
+      "repo": "MAIL",
+      "target": "llm_dojo_scoring.embed_texts"
+    },
+    {
+      "file": "src/tests/test_relations.py",
+      "line": 512,
+      "repo": "MAIL",
+      "target": "llm_dojo_scoring.embed_texts"
+    },
+    {
+      "file": "src/tests/test_relations.py",
+      "line": 532,
+      "repo": "MAIL",
+      "target": "llm_dojo_scoring.embed_texts"
+    }
+  ],
+  "schema_version": 1,
+  "scores": {
+    "aliases": {
+      "extraction_overall_verified_precision": "extraction_verified_precision"
+    },
+    "registry_ids": [
+      "classification_attempts",
+      "classification_confidence",
+      "content_topic_accuracy",
+      "content_topic_f1_macro",
+      "entity_list_precision",
+      "entity_list_recall",
+      "estimated_cost_usd",
+      "expected_field_presence",
+      "extraction_attempts",
+      "extraction_confidence",
+      "extraction_field_score",
+      "extraction_hallucination_rate",
+      "extraction_overall_score",
+      "extraction_overall_verified_precision",
+      "extraction_verified_precision",
+      "llm_call_count",
+      "mailroom-pipeline-judge",
+      "mailroom-pipeline-quality",
+      "maud_category_accuracy",
+      "maud_clause_presence",
+      "maud_question_accuracy",
+      "maud_question_macro_accuracy",
+      "maud_valid_class_rate",
+      "run_aborted",
+      "run_duration_seconds",
+      "sentiment_accuracy",
+      "sentiment_f1_macro",
+      "total_tokens"
+    ],
+    "visualizer_reads": {
+      "classification_attempts": [
+        {
+          "file": "mailroom_ui/metrics.py",
+          "line": 56,
+          "repo": "TMR"
+        }
+      ],
+      "classification_confidence": [
+        {
+          "file": "mailroom_ui/trace_interpreter.py",
+          "line": 847,
+          "repo": "TMR"
+        }
+      ],
+      "content_topic_accuracy": [
+        {
+          "file": "mailroom_ui/pipeline_schema.py",
+          "line": 402,
+          "repo": "TMR"
+        }
+      ],
+      "content_topic_f1_macro": [
+        {
+          "file": "mailroom_ui/pipeline_schema.py",
+          "line": 403,
+          "repo": "TMR"
+        }
+      ],
+      "entity_list_precision": [
+        {
+          "file": "mailroom_ui/metrics.py",
+          "line": 51,
+          "repo": "TMR"
+        }
+      ],
+      "entity_list_recall": [
+        {
+          "file": "mailroom_ui/metrics.py",
+          "line": 52,
+          "repo": "TMR"
+        }
+      ],
+      "estimated_cost_usd": [
+        {
+          "file": "mailroom_ui/trace_interpreter.py",
+          "line": 798,
+          "repo": "TMR"
+        },
+        {
+          "file": "mailroom_ui/trace_interpreter.py",
+          "line": 807,
+          "repo": "TMR"
+        }
+      ],
+      "expected_field_presence": [
+        {
+          "file": "mailroom_ui/metrics.py",
+          "line": 54,
+          "repo": "TMR"
+        }
+      ],
+      "extraction_attempts": [
+        {
+          "file": "mailroom_ui/metrics.py",
+          "line": 57,
+          "repo": "TMR"
+        }
+      ],
+      "extraction_confidence": [
+        {
+          "file": "mailroom_ui/trace_interpreter.py",
+          "line": 852,
+          "repo": "TMR"
+        }
+      ],
+      "extraction_field_score": [
+        {
+          "file": "mailroom_ui/metrics.py",
+          "line": 49,
+          "repo": "TMR"
+        }
+      ],
+      "extraction_hallucination_rate": [
+        {
+          "file": "mailroom_ui/metrics.py",
+          "line": 53,
+          "repo": "TMR"
+        }
+      ],
+      "extraction_overall_score": [
+        {
+          "file": "mailroom_ui/metrics.py",
+          "line": 50,
+          "repo": "TMR"
+        }
+      ],
+      "extraction_overall_verified_precision": [
+        {
+          "file": "mailroom_ui/metrics.py",
+          "line": 58,
+          "repo": "TMR"
+        }
+      ],
+      "llm_call_count": [
+        {
+          "file": "mailroom_ui/trace_interpreter.py",
+          "line": 810,
+          "repo": "TMR"
+        },
+        {
+          "file": "mailroom_ui/trace_interpreter.py",
+          "line": 814,
+          "repo": "TMR"
+        }
+      ],
+      "mailroom-pipeline-judge": [
+        {
+          "file": "mailroom_ui/trace_interpreter.py",
+          "line": 35,
+          "repo": "TMR"
+        }
+      ],
+      "mailroom-pipeline-quality": [
+        {
+          "file": "mailroom_ui/trace_interpreter.py",
+          "line": 36,
+          "repo": "TMR"
+        }
+      ],
+      "maud_category_accuracy": [
+        {
+          "file": "mailroom_ui/pipeline_schema.py",
+          "line": 410,
+          "repo": "TMR"
+        }
+      ],
+      "maud_clause_presence": [
+        {
+          "file": "mailroom_ui/pipeline_schema.py",
+          "line": 408,
+          "repo": "TMR"
+        }
+      ],
+      "maud_question_accuracy": [
+        {
+          "file": "mailroom_ui/pipeline_schema.py",
+          "line": 406,
+          "repo": "TMR"
+        }
+      ],
+      "maud_question_macro_accuracy": [
+        {
+          "file": "mailroom_ui/pipeline_schema.py",
+          "line": 407,
+          "repo": "TMR"
+        }
+      ],
+      "maud_valid_class_rate": [
+        {
+          "file": "mailroom_ui/pipeline_schema.py",
+          "line": 409,
+          "repo": "TMR"
+        }
+      ],
+      "run_aborted": [
+        {
+          "file": "mailroom_ui/trace_interpreter.py",
+          "line": 859,
+          "repo": "TMR"
+        }
+      ],
+      "run_duration_seconds": [
+        {
+          "file": "mailroom_ui/metrics.py",
+          "line": 55,
+          "repo": "TMR"
+        },
+        {
+          "file": "mailroom_ui/trace_interpreter.py",
+          "line": 741,
+          "repo": "TMR"
+        }
+      ],
+      "sentiment_accuracy": [
+        {
+          "file": "mailroom_ui/pipeline_schema.py",
+          "line": 404,
+          "repo": "TMR"
+        }
+      ],
+      "sentiment_f1_macro": [
+        {
+          "file": "mailroom_ui/pipeline_schema.py",
+          "line": 405,
+          "repo": "TMR"
+        }
+      ],
+      "total_tokens": [
+        {
+          "file": "mailroom_ui/trace_interpreter.py",
+          "line": 790,
+          "repo": "TMR"
+        },
+        {
+          "file": "mailroom_ui/trace_interpreter.py",
+          "line": 795,
+          "repo": "TMR"
+        }
+      ]
+    }
+  },
+  "top_level": {
+    "Emitter": {
+      "consumers": [
+        {
+          "file": "src/mailroom_sandbox/eval/scoring.py",
+          "line": 10,
+          "repo": "SBX"
+        }
+      ],
+      "defined_in": "metrics.emitter",
+      "in_all": true,
+      "kind": "class"
+    },
+    "EntityListScore": {
+      "consumers": [
+        {
+          "file": "src/observability/metrics.py",
+          "line": 5,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/scripts/calibrate_field_scoring.py",
+          "line": 51,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_scoring_ownership.py",
+          "line": 5,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "scoring.field_scoring",
+      "in_all": true,
+      "kind": "class"
+    },
+    "ExtractionScoreResult": {
+      "consumers": [
+        {
+          "file": "src/observability/langfuse_field_scoring.py",
+          "line": 33,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "scoring.field_scoring",
+      "in_all": true,
+      "kind": "class"
+    },
+    "LocalManifestSink": {
+      "consumers": [
+        {
+          "file": "src/mailroom_sandbox/eval/scoring.py",
+          "line": 10,
+          "repo": "SBX"
+        }
+      ],
+      "defined_in": "metrics.emitter",
+      "in_all": true,
+      "kind": "class"
+    },
+    "ScoreRecord": {
+      "consumers": [
+        {
+          "file": "src/mailroom_sandbox/eval/scoring.py",
+          "line": 10,
+          "repo": "SBX"
+        }
+      ],
+      "defined_in": "metrics.emitter",
+      "in_all": true,
+      "kind": "class"
+    },
+    "__version__": {
+      "consumers": [
+        {
+          "file": "src/scripts/run_hf_pilot.py",
+          "line": 61,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_run_hf_pilot.py",
+          "line": 7,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "__init__",
+      "in_all": true,
+      "kind": "constant"
+    },
+    "accuracy": {
+      "consumers": [
+        {
+          "file": "src/mailroom_sandbox/eval/scoring.py",
+          "line": 10,
+          "repo": "SBX"
+        }
+      ],
+      "defined_in": "scoring.classification",
+      "in_all": true,
+      "kind": "function"
+    },
+    "agent_rubrics": {
+      "consumers": [
+        {
+          "file": "src/tests/test_core_engine_delegation.py",
+          "line": 84,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_core_engine_delegation.py",
+          "line": 100,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "scoring.agent_rubrics",
+      "in_all": false,
+      "kind": "module"
+    },
+    "aggregate_sandbox_scores": {
+      "consumers": [
+        {
+          "file": "scripts/sand032/report.py",
+          "line": 28,
+          "repo": "SBX"
+        },
+        {
+          "file": "src/mailroom_sandbox/job/grid_cards.py",
+          "line": 38,
+          "repo": "SBX"
+        }
+      ],
+      "defined_in": "pipeline.sandbox_scoring",
+      "in_all": true,
+      "kind": "function"
+    },
+    "bootstrap": {
+      "consumers": [
+        {
+          "file": "src/tests/test_scoring_ownership.py",
+          "line": 7,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "analysis.bootstrap",
+      "in_all": true,
+      "kind": "module"
+    },
+    "bootstrap_ci": {
+      "consumers": [
+        {
+          "file": "src/mailroom_sandbox/eval/scoring.py",
+          "line": 10,
+          "repo": "SBX"
+        }
+      ],
+      "defined_in": "analysis.bootstrap",
+      "in_all": true,
+      "kind": "function"
+    },
+    "classify_serving_kind": {
+      "consumers": [
+        {
+          "file": "src/mailroom_sandbox/eval/scoring.py",
+          "line": 10,
+          "repo": "SBX"
+        }
+      ],
+      "defined_in": "analysis.serving",
+      "in_all": true,
+      "kind": "function"
+    },
+    "configure": {
+      "consumers": [
+        {
+          "file": "src/scripts/run_hf_pilot.py",
+          "line": 1658,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "config",
+      "in_all": true,
+      "kind": "function"
+    },
+    "configure_from_taxonomy": {
+      "consumers": [
+        {
+          "file": "src/observability/scoring_wiring.py",
+          "line": 29,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "config",
+      "in_all": true,
+      "kind": "function"
+    },
+    "contract_empty_payload": {
+      "consumers": [
+        {
+          "file": "src/tests/test_schema_contract.py",
+          "line": 17,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "schemas.schema_contract",
+      "in_all": true,
+      "kind": "function"
+    },
+    "contract_violations": {
+      "consumers": [
+        {
+          "file": "src/tests/test_schema_contract.py",
+          "line": 17,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "schemas.schema_contract",
+      "in_all": true,
+      "kind": "function"
+    },
+    "diagnostics": {
+      "consumers": [
+        {
+          "file": "src/observability/metrics.py",
+          "line": 6,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_consumer_policy_compat.py",
+          "line": 66,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_scoring_ownership.py",
+          "line": 8,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "analysis.diagnostics",
+      "in_all": true,
+      "kind": "module"
+    },
+    "embed_texts": {
+      "consumers": [
+        {
+          "file": "src/pipeline/relations.py",
+          "line": 221,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_relations.py",
+          "line": 504,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_relations.py",
+          "line": 512,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_relations.py",
+          "line": 532,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "scoring.field_scoring",
+      "in_all": true,
+      "kind": "function"
+    },
+    "emit_serving_scorecard": {
+      "consumers": [
+        {
+          "file": "src/mailroom_sandbox/eval/scoring.py",
+          "line": 10,
+          "repo": "SBX"
+        }
+      ],
+      "defined_in": "analysis.serving",
+      "in_all": true,
+      "kind": "function"
+    },
+    "exact_match": {
+      "consumers": [
+        {
+          "file": "src/mailroom_sandbox/eval/scoring.py",
+          "line": 10,
+          "repo": "SBX"
+        }
+      ],
+      "defined_in": "scoring.classification",
+      "in_all": true,
+      "kind": "function"
+    },
+    "field_scoring": {
+      "consumers": [
+        {
+          "file": "src/tests/test_field_scoring.py",
+          "line": 17,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_field_scoring.py",
+          "line": 21,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "scoring.field_scoring",
+      "in_all": true,
+      "kind": "module"
+    },
+    "get_ambiguous_band": {
+      "consumers": [
+        {
+          "file": "src/scripts/calibrate_field_scoring.py",
+          "line": 51,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "scoring.field_scoring",
+      "in_all": true,
+      "kind": "function"
+    },
+    "get_field_types": {
+      "consumers": [
+        {
+          "file": "src/graph/build_graph.py",
+          "line": 3799,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/langchain_agents/toolkit.py",
+          "line": 86,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/observability/agent_eval.py",
+          "line": 193,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/observability/local_eval_packs.py",
+          "line": 203,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/scripts/calibrate_field_scoring.py",
+          "line": 226,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/scripts/run_hf_pilot.py",
+          "line": 603,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/scripts/run_pilot.py",
+          "line": 546,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_category_presence.py",
+          "line": 7,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "scoring.field_scoring",
+      "in_all": true,
+      "kind": "function"
+    },
+    "get_suite": {
+      "consumers": [
+        {
+          "file": "src/observability/honest_gaps.py",
+          "line": 40,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/observability/specialist_suites.py",
+          "line": 96,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/observability/specialist_suites.py",
+          "line": 114,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/observability/suite_scoring.py",
+          "line": 121,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/observability/suite_scoring.py",
+          "line": 197,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/scripts/run_hf_pilot.py",
+          "line": 1284,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_corporate_flat9_candidates.py",
+          "line": 18,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_dojo_suites.py",
+          "line": 14,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_dojo_suites.py",
+          "line": 26,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_dojo_suites.py",
+          "line": 50,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_dojo_suites.py",
+          "line": 142,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_dojo_v012.py",
+          "line": 9,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_honest_gaps.py",
+          "line": 25,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_intake.py",
+          "line": 88,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/mailroom_sandbox/eval/scoring.py",
+          "line": 10,
+          "repo": "SBX"
+        },
+        {
+          "file": "tests/test_eval.py",
+          "line": 298,
+          "repo": "SBX"
+        },
+        {
+          "file": "tests/test_serving_parity.py",
+          "line": 8,
+          "repo": "SBX"
+        }
+      ],
+      "defined_in": "scoring.suites",
+      "in_all": true,
+      "kind": "function"
+    },
+    "headline_metrics": {
+      "consumers": [
+        {
+          "file": "src/mailroom_sandbox/eval/scoring.py",
+          "line": 10,
+          "repo": "SBX"
+        },
+        {
+          "file": "tests/test_eval.py",
+          "line": 298,
+          "repo": "SBX"
+        }
+      ],
+      "defined_in": "metrics.pruning",
+      "in_all": true,
+      "kind": "function"
+    },
+    "is_entity_list": {
+      "consumers": [
+        {
+          "file": "src/scripts/calibrate_field_scoring.py",
+          "line": 152,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "scoring.field_scoring",
+      "in_all": true,
+      "kind": "function"
+    },
+    "legalbench_scoring": {
+      "consumers": [
+        {
+          "file": "src/tests/test_core_engine_delegation.py",
+          "line": 43,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "scoring.legalbench_scoring",
+      "in_all": false,
+      "kind": "module"
+    },
+    "list_suites": {
+      "consumers": [
+        {
+          "file": "src/tests/test_dojo_v012.py",
+          "line": 9,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_honest_gaps.py",
+          "line": 25,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "scoring.suites",
+      "in_all": true,
+      "kind": "function"
+    },
+    "load_registry": {
+      "consumers": [
+        {
+          "file": "src/observability/scores.py",
+          "line": 160,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/observability/scores.py",
+          "line": 196,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_dojo_v012.py",
+          "line": 9,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/tests/test_failures.py",
+          "line": 5,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "metrics.registry",
+      "in_all": true,
+      "kind": "function"
+    },
+    "normalize_text": {
+      "consumers": [
+        {
+          "file": "src/graph/build_graph.py",
+          "line": 1724,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "scoring.field_scoring",
+      "in_all": true,
+      "kind": "function"
+    },
+    "pipeline_scoring": {
+      "consumers": [
+        {
+          "file": "src/tests/test_core_engine_delegation.py",
+          "line": 27,
+          "repo": "MAIL"
+        },
+        {
+          "file": "mailroom_ui/pipeline_eval.py",
+          "line": 12,
+          "repo": "TMR"
+        }
+      ],
+      "defined_in": "pipeline.pipeline_scoring",
+      "in_all": false,
+      "kind": "module"
+    },
+    "score_category_presence": {
+      "consumers": [
+        {
+          "file": "src/observability/langfuse_field_scoring.py",
+          "line": 247,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "scoring.field_scoring",
+      "in_all": true,
+      "kind": "function"
+    },
+    "score_extraction": {
+      "consumers": [
+        {
+          "file": "src/graph/build_graph.py",
+          "line": 3799,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/scripts/calibrate_field_scoring.py",
+          "line": 51,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/scripts/run_pilot.py",
+          "line": 546,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/mailroom_sandbox/eval/scoring.py",
+          "line": 10,
+          "repo": "SBX"
+        }
+      ],
+      "defined_in": "scoring.field_scoring",
+      "in_all": true,
+      "kind": "function"
+    },
+    "score_serving_run": {
+      "consumers": [
+        {
+          "file": "src/mailroom_sandbox/eval/scoring.py",
+          "line": 10,
+          "repo": "SBX"
+        }
+      ],
+      "defined_in": "analysis.serving",
+      "in_all": true,
+      "kind": "function"
+    },
+    "score_task": {
+      "consumers": [
+        {
+          "file": "src/mailroom_sandbox/eval/scoring.py",
+          "line": 10,
+          "repo": "SBX"
+        }
+      ],
+      "defined_in": "scoring.tasks",
+      "in_all": true,
+      "kind": "function"
+    },
+    "suite_for_doc_type": {
+      "consumers": [
+        {
+          "file": "src/mailroom_sandbox/eval/scoring.py",
+          "line": 10,
+          "repo": "SBX"
+        },
+        {
+          "file": "tests/test_corporate_annotation_contract.py",
+          "line": 51,
+          "repo": "SBX"
+        },
+        {
+          "file": "tests/test_corporate_scoring.py",
+          "line": 58,
+          "repo": "SBX"
+        },
+        {
+          "file": "tests/test_extraction_scope.py",
+          "line": 229,
+          "repo": "SBX"
+        }
+      ],
+      "defined_in": "scoring.suites",
+      "in_all": true,
+      "kind": "function"
+    },
+    "warm_embedding_model": {
+      "consumers": [
+        {
+          "file": "src/api/main.py",
+          "line": 31,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/pipeline/ops_monitor.py",
+          "line": 23,
+          "repo": "MAIL"
+        },
+        {
+          "file": "src/pipeline/watcher.py",
+          "line": 32,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "scoring.field_scoring",
+      "in_all": true,
+      "kind": "function"
+    }
+  }
+}

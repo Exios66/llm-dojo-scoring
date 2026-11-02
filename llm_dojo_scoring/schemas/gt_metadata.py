@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import ast
 import json
+import math
 import re
 from typing import Any, Mapping, Sequence
 
@@ -90,7 +91,9 @@ ANNOTATION_KEYS: frozenset[str] = frozenset(
     }
 )
 
-_NULL_TOKENS: frozenset[str] = frozenset({"null", "none", "n/a", "n.a."})
+#: ``nan`` is the pandas export of a missing cell (350 non-CMS insurance rows
+#: carry it on topic / sentiment keys); it is never a real field value.
+_NULL_TOKENS: frozenset[str] = frozenset({"null", "none", "n/a", "n.a.", "nan"})
 
 #: A scorable clause text must contain at least one alphanumeric character.
 _HAS_ALNUM = re.compile(r"[A-Za-z0-9]")
@@ -117,7 +120,7 @@ def parse_json_container(value: Any) -> Any:
 
 def is_empty_value(value: Any) -> bool:
     """True for ``None``, blank strings, JSON / placeholder absence tokens
-    (``null``, ``none``, ``n/a``), and empty collections — including their
+    (``null``, ``none``, ``n/a``, ``nan``), float NaN, and empty collections — including their
     stringified forms (``"[]"``, ``"{}"``). Numbers and booleans (including
     ``0`` / ``False``) are values.
     """
@@ -128,6 +131,8 @@ def is_empty_value(value: Any) -> bool:
         stripped = value.strip()
         return not stripped or stripped.lower() in _NULL_TOKENS
     if value is None:
+        return True
+    if isinstance(value, float) and math.isnan(value):
         return True
     if isinstance(value, (list, dict, tuple, set)) and len(value) == 0:
         return True
@@ -196,12 +201,18 @@ def normalize_field_values(record: Any) -> Any:
     return {str(key): parse_json_container(value) for key, value in record.items()}
 
 
+#: Derived (never published) GT key naming a CMS row's source table (#93).
+CMS_SOURCE_TABLE_KEY = "cms_source_table"
+
+
 def scoring_gt_fields(
     fields: Mapping[str, Any],
     *,
     field_types: Mapping[str, str] | None = None,
     extra_keys: Sequence[str] = (),
     drop_unmapped: bool = True,
+    doc_type: str | None = None,
+    subclass: Any = None,
 ) -> dict[str, Any]:
     """Scope Hub metadata to one suite's scorable surface.
 
@@ -211,7 +222,13 @@ def scoring_gt_fields(
       leaves unmapped keys intact;
     * replaces fields whose ``gt_presence`` status is
       ``not_applicable`` / ``schema_documented_absence`` /
-      ``pending_annotation`` with ``""`` so they are never expected events.
+      ``pending_annotation`` with ``""`` so they are never expected events;
+    * for an ``insurance_claim`` row whose ``subclass`` (``expected_subclass``)
+      is a CMS source table, adds the derived ``cms_source_table`` (#93): the
+      published ``gt_fields`` never carry it. Non-CMS rows never get it, and a
+      ``cms_source_table`` already present is kept. The scorer treats a row
+      carrying a valid table as a CMS row (documented-absent ``adjuster`` /
+      ``denial_reasons``, identifier-aware ``supporting_documents``).
 
     ``drop_unmapped=False`` keeps the historical behavior for plain field
     dicts (no Hub ``gt_presence``): unmapped keys still reach the heuristic
@@ -231,6 +248,12 @@ def scoring_gt_fields(
             out[key] = ""
             continue
         out[key] = value
+    if doc_type is not None and is_empty_value(out.get(CMS_SOURCE_TABLE_KEY)):
+        from .corpus import cms_source_table
+
+        table = cms_source_table(doc_type, subclass)
+        if table is not None:
+            out[CMS_SOURCE_TABLE_KEY] = table
     return out
 
 
