@@ -28,7 +28,8 @@ from ..scoring.field_scoring import (
     RETIRED_PROMPT_KEYS,
     score_extraction,
 )
-from ..schemas.gt_metadata import is_empty_value
+from ..schemas.corpus import cms_source_table
+from ..schemas.gt_metadata import CMS_SOURCE_TABLE_KEY, is_empty_value
 from ..metrics.scorecard_honesty import (
     _METRIC_ID_BY_NAME,
     ProvenanceExportError,
@@ -370,6 +371,7 @@ def score_archive_block(
     method: str | None = None,
     doc_text: str | None = None,
     provenance: Mapping[str, Any] | None = None,
+    expected_subclass: Any = None,
 ) -> dict[str, Any]:
     """One scoring block for one document (mailroom-issues #237 / #238).
 
@@ -385,10 +387,26 @@ def score_archive_block(
     is stamped onto the block (#22); ``metric_id`` follows ``method`` and a
     contradicting caller value raises
     :class:`~llm_dojo_scoring.metrics.scorecard_honesty.ProvenanceExportError`.
+
+    ``expected_subclass`` (dojo #93): for an ``insurance_claim`` whose subclass
+    is a CMS source table, the derived ``cms_source_table`` is added to the
+    expected fields so the table is scored as its own field and the row gets
+    the CMS-aware ``adjuster`` / ``denial_reasons`` / ``supporting_documents``
+    scoring. The derived field is not part of the live map (``field_map_sha``
+    and ``schema_valid`` are unaffected).
     """
     ftypes = _live_field_types(doc_class, field_types)
     exp = _filter_to_live_map(expected, ftypes)
     pred = _filter_to_live_map(predicted, ftypes)
+    cms_table = cms_source_table(doc_class, expected_subclass)
+    if cms_table is None:
+        # An expected row that already carries the derived key keeps it.
+        carried = (expected or {}).get(CMS_SOURCE_TABLE_KEY)
+        cms_table = cms_source_table(doc_class, carried)
+    if cms_table is not None:
+        exp[CMS_SOURCE_TABLE_KEY] = cms_table
+        if (predicted or {}).get(CMS_SOURCE_TABLE_KEY) is not None:
+            pred[CMS_SOURCE_TABLE_KEY] = predicted[CMS_SOURCE_TABLE_KEY]
 
     result = score_extraction(
         doc_class, ftypes, pred, exp, doc_text=doc_text

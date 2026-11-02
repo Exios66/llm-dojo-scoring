@@ -378,9 +378,13 @@ _HONEST_GAPS: dict[str, str] = {
         "denial_reasons is empty — so determination_consistency is "
         "degenerate (always 1.0 on GT-shaped predictions). The scorer "
         "itself now exists (approved ⇒ empty reasons; denied/partial ⇒ "
-        "non-empty). Mailroom claim_type accepts Hub source-table tokens "
-        "plus legacy FNOL lines; those catalogs are orthogonal and are "
-        "not a KPI. adjuster is Optional (null valid for CMS rows)."
+        "non-empty). claim_type (product line) and the CMS source table "
+        "(cms_source_table, derived for CMS rows from expected_subclass) are "
+        "scored as separate fields (#93). On CMS rows adjuster and "
+        "denial_reasons are documented-absent: an empty prediction is "
+        "correct, a stated value is a false positive. claim_checklist is "
+        "in the live map but no GT row populates it, so the headline is "
+        "partial (headline_scope); loss_report / other intents are unused."
     ),
     "due_diligence_specialist": (
         "HONEST GAP: due_diligence was RETIRED from the live llm-mailroom "
@@ -842,11 +846,21 @@ class ScoringSuite:
                 return _gtm.parse_gt_fields(value)
             return value
 
-        def _scope_expected_one(value: Any) -> Any:
+        row_subclass_kw = kwargs.get("doc_subclass") or kwargs.get("expected_subclass")
+
+        def _subclass_for(index: int | None) -> Any:
+            """The row's ``expected_subclass`` (scalar, or the ``index``-th of a list)."""
+            if isinstance(row_subclass_kw, (list, tuple)):
+                return row_subclass_kw[index] if index is not None and index < len(row_subclass_kw) else None
+            return row_subclass_kw
+
+        def _scope_expected_one(value: Any, index: int | None = None) -> Any:
             """Remove annotation keys and blank absent fields in a GT dictionary.
 
             Apply :func:`scoring_gt_fields` to Hub metadata; preserve unmapped
             keys in plain dictionaries and return non-dict inputs unchanged.
+            An insurance row whose subclass is a CMS source table also gets the
+            derived ``cms_source_table`` (#93), the CMS-row marker.
             """
             if not isinstance(value, dict):
                 return value
@@ -860,13 +874,15 @@ class ScoringSuite:
                 field_types=ftypes,
                 extra_keys=scorable_gt_keys,
                 drop_unmapped=is_hub_metadata,
+                doc_type=doc_class,
+                subclass=_subclass_for(index),
             )
 
         scoped_to_empty = False
         scoped_empty_rows: list[bool] = []
         if isinstance(expected, list):
             parsed_expected = [_parse_expected_one(item) for item in expected]
-            expected = [_scope_expected_one(item) for item in parsed_expected]
+            expected = [_scope_expected_one(item, i) for i, item in enumerate(parsed_expected)]
             # Annotation-only Hub rows (e.g. pending CUAD labels) parse as
             # nonempty but scope to {}; keep the flag per row so batches can
             # mark them unscorable without breaking alignment.
