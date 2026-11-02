@@ -5,6 +5,74 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Added (five-class extraction schema registry)
+
+- `schemas.extraction_schemas`: a document-type schema and a schema per subtype
+  for all five mailroom classes (61 schemas). Field statuses (`scored`,
+  `partial`, `derived`, `documented_absent`, `label_task`,
+  `pending_annotation`, `not_applicable`) are frozen from mailroom-dataset
+  `ground_truth` v9.2.1 (branch `corporate-labels-v9.2.1` @ `0a2f8292`: v9.2
+  plus the corporate relabel, so corporate `entity_name` is labelled;
+  `schemas/data/extraction_status.json`, rebuilt by
+  `scripts/build_extraction_status.py`). Subtype schemas carry their own fields
+  and guidance:
+  - CMS `cms_source_table` and identifier-aware `supporting_documents`;
+  - corporate subclass entities;
+  - CUAD salient categories;
+  - MAUD priority questions.
+
+  Exported from the package root: `extraction_schema`, `extraction_subtypes`,
+  `iter_extraction_schemas`, `schema_coverage`, `ExtractionSchema` and
+  `FieldSchema`.
+- `score_document` / `score(..., detailed=True)` payloads gain an additive
+  `schema` coverage block naming the doc-type or subtype schema. Goldens gained
+  only that block; no score moved.
+
+### Fixed (bug sweep and second #104 review round)
+
+- Reviewer scorecard `acceptance`: an accepted row that has ground truth but no
+  usable reviewer answer (reviewer error, no label, no text) was counted as
+  `n_accepted_without_truth`. It is now `n_accepted_unanswered` (new, additive),
+  and `n_accepted_without_truth` counts only accepts with no GT label. The
+  wrong-accept rate and bound are unchanged.
+- `schema_coverage` (third #104 review round): CUAD / MAUD-derived fields are
+  scorable only when the row carries live clause labels, and a
+  `pending_annotation` / `not_applicable` presence status overrides a stale
+  value. Golden contract and merger rows, which carry no labels, now list those
+  fields as unlabelled. A value supplied directly for a CUAD-derived field
+  also counts, and a documented absence counts only on CMS rows, matching
+  field scoring.
+- `rescore`: stored `NaN` / `Infinity` never become a headline, a scorecard
+  move or a non-standard JSON literal in the rescored JSONL or in
+  `rescore_records` results (they become `null`). `rescore_file` with a
+  dataset join re-scores current-release records against the joined GT
+  (`force_rescore`).
+- Grid: the cost table escapes session names. Scope footnotes: rows sharing a specialist and label but with different
+  unscored fields keep separate notes.
+- CMS rows (#93 follow-ups): a GT row naming a product line other than
+  `health` is never CMS; a stated `adjuster` / `denial_reasons` on a CMS row
+  whose GT omits the key scores 0 (silence there is not scored); hyphenated
+  10-digit NDCs pad per segment to 5-4-2; a scalar subclass is no longer
+  broadcast across a batch for CMS derivation, and NumPy / pandas subclass
+  arrays are read per row; CMS archive blocks carry
+  `method = ARCHIVE_SCORING_METHOD_CMS` (same `metric_id`).
+- `is_empty_value` treats `"nan"` and float NaN as empty (pandas exports).
+- Grid report escapes `|`, `*`, backticks and newlines in free text.
+- Scored-enum JSON-schema fragments carry an explicit `type`.
+- Rescore: raw-input tasks resolve through `TASK_KINDS` (`wer`, `cer`,
+  `maud_clause`), stored JSON-array batches are decoded, `word_accuracy` /
+  `maud_question_accuracy` are headlines, and `doc_subclass` is read for CMS rows.
+- Reviewer lane: a non-finite `cost_usd` falls back to a finite `cost`;
+  `risk_cutoff` and curve cutoffs are exact (unrounded).
+- `audit_consumer_surface`: star imports bind dispatch functions.
+  `freeze_goldens --write` stages each write in a unique temp file.
+
+### Comparability
+
+- Golden scores are unchanged. CMS rows can move only where GT omits a
+  documented-absent key and the model states a value (now 0 on that field), or
+  where a labelled hyphenated NDC is in 5-3-2 / 5-4-1 form (now matches).
+
 ### Added
 
 - `scripts/release.py`: agent-facing release governor (`status`, `check`, `cut`,
@@ -17,8 +85,80 @@ Format based on Keep a Changelog; versioning is SemVer.
   fallback) plus registered project scripts (Setup/Tests/Release status) so
   agent worktrees boot importable and smoke-tested.
 
+- `scoring.reviewer`: `ReviewRecord` and `score_review_lane`, the reviewer-lane
+  scorecard. It reports class/subclass accuracy, wrong auto-accepts with an exact
+  one-sided Clopper-Pearson bound, required sample size, ECE/Brier/reliability,
+  human-review rate and causes, accept-rule violations, model-verdict confusion,
+  reviewer cost, and per-predicted-class operating points. Existing
+  `get_suite("sorter_reviewer").score` behavior is unchanged. Contract:
+  `docs/contracts/REVIEWER_SCORING.md`.
+
+- `analysis.calibration`: exact risk bounds and sample size
+  (`clopper_pearson_upper`, `required_samples`), ECE/Brier/reliability bins,
+  AUROC, Spearman, precision-constrained cutoffs, and five-fold cross-fit.
+  The 1% reviewer bar at 95% confidence needs 299 clean accepts (473 with one
+  error); the old 95%-accuracy target was a 5% error target.
+
+- `scoring.rescore` and `dojo-rescore`: re-score stored predictions under the
+  current scorer, emit fresh provenance, and report old-to-new score moves.
+  Serving records are refused because timings are not reproducible. A record
+  without both ground truth and a prediction is skipped and named.
+
+- `schemas.scored_enums` (#96): `scored_vocabulary`, `scored_enum_schema(s)`,
+  `scored_enum_hint`, and `enum_hint_violations` generate consumer grammar hints
+  for every scored enum (`intent` per class, insurance `claim_type` and
+  `cms_source_table`) from the scored vocabulary, so a consumer can no longer
+  teach labels the scorer marks wrong. Exported from the package root.
+
+- `metrics.scorecard_honesty.headline_scope` (#95): says which live fields a
+  class headline covers (`maud_only` / `mixed` / `partial` / `full` /
+  `unknown`), classified per document so MAUD-only documents beside full-field
+  ones read as `mixed`, never `full`. `aggregate_quality_honest(..., doc_class=)`
+  and `specialist_grid_rows` carry `headline_scope`, `headline_label`,
+  `scored_fields`, `unscored_fields`; the grid keys appear only on rows with
+  field data, so rows without it are unchanged. The report marks MAUD-only and
+  mixed scores (`†`), partial scores (`‡`) and unknown scores (`?`) with
+  per-experiment footnotes. A field counts as scored only for a real-number
+  score. Additive: existing keys and the default aggregate shape are unchanged.
+
+- Correspondence GT audit (#94): `schemas.correspondence_gt_audit` and
+  `scripts/audit_correspondence_gt.py` flag templated `subject_matter` and
+  metadata-derived `keywords` GT, and report the scored population per live
+  field. `metrics.scorecard_honesty.intent_split` (also `intent_split` on
+  `aggregate_quality_honest(..., doc_class=)`) reports `intent` apart from the
+  other fields. No scores change; the Hub audit and relabel are still to run.
+
+- `metrics.score_changelog`: machine ledger of releases that moved a score,
+  used by `compare_serving` to explain a release mismatch.
+
+- `scripts/freeze_goldens.py` and `tests/test_golden_scores.py`: a committed
+  golden baseline for every `TASK_KINDS` key and every live suite (#67).
+
+- `scripts/audit_consumer_surface.py`, `tests/fixtures/consumer_surface.json`,
+  and contract tests pinning every consumer import, dispatch literal, and
+  Langfuse score name (#84).
+
 ### Fixed
 
+- Reviewer/rescore review fixes (PR #103): `clopper_pearson_upper` uses the Beta
+  quantile and no longer overflows on large error counts; `required_samples`
+  validates `confidence` and returns `None` past its search cap;
+  `cross_fit_cutoffs` applies its `confidence`. An unrouted reviewer row is
+  inferred as an auto-accept only when it passes the full accept rule (cutoff,
+  confidence, eligibility); a missing predicted subclass counts as a subclass
+  miss; measured zero cost/tokens are kept; `score_review_lane([])` has the
+  same keys as a non-empty card. `rescore_records` skips rows a scorer rejects
+  with `ValueError`; the dataset join keeps item truth when the dataset row has
+  none; `diff_scorecards` matches by `doc_id`/`id`/`item_id`. Strict
+  `compare_serving` refuses a partially stamped leg, and an unparseable
+  `scorer_version` is flagged `scorer_version_unverified`.
+  `audit_consumer_surface.py` reads git checkouts at HEAD, prunes skipped
+  trees, records submodule aliases, and exits 2 (no write, no false drift) when
+  pinned checkouts are unavailable.
+  `emit_serving_scorecard` keeps each leg's recorded `scorer_version` on the
+  emitted records instead of re-stamping it as the installed release; the
+  golden freezer's idempotence-failure message now says the previous baseline
+  is restored.
 - CUAD `parties` truth: defined-term annotations (`NMS CORP. ("Seller")`) are
   stripped before containment against the `Parties` spans (`party_core`). Found by
   the sandbox's extraction-gate vetting: 34% of correct party lists scored right.
@@ -40,6 +180,26 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Changed
 
+- **Insurance CMS mapping (#93) — insurance_claim scores move on CMS rows;
+  re-score pre-change cards.** `claim_type` and the CMS source table are scored
+  separately: the SAND-042 fold (a table token on `claim_type` credited as
+  `health`) is retired, and on CMS rows `claim_type` is an exact label.
+  `cms_source_table` is derived from `expected_subclass` for the 600 CMS rows
+  (the published GT never carries it). CMS rows also score `adjuster` /
+  `denial_reasons` as documented-absent (a stated value scores 0) and
+  `supporting_documents` by identifier (NPI / NDC / facility provider id). Non-CMS
+  rows are unchanged. `corpus.INSURANCE_PRODUCT_LINES` is the new `claim_type`
+  vocabulary (the scored-enum hint drops the table tokens);
+  `INSURANCE_CLAIM_TYPES` keeps its old contents as the insurance subclass keys,
+  and `canonical_claim_type` stays importable but is no longer used by the scorer.
+  Validated on all 1,100 Hub insurance rows. A table token on `claim_type`
+  scores 0 on every path, even when the row is not detected as CMS. CMS-row
+  rules apply only when GT is scored, not when the auditor compares model
+  outputs. A null prediction earns no documented-absent credit. **Consumers
+  must pass `expected_subclass` when scoring insurance rows** so that CMS rows
+  get `cms_source_table` (coordinated bump: Exios66/llm-mailroom#142 and the
+  sandbox `vendor/` snapshot).
+
 - **Package layout**: the 63 flat modules are nested into `schemas/`, `scoring/`, `pipeline/`, `metrics/`,
   `analysis/` and `integrations/`. Only `config`, `cli` and `prompts/` remain at the root (see
   `llm_dojo_scoring/README.md`).
@@ -47,6 +207,13 @@ Format based on Keep a Changelog; versioning is SemVer.
     `mock.patch` strings (`_layout.LEGACY_MODULES`, `tests/test_package_layout.py`).
   - Module `__name__` is now the subpackage path. Code that matches Dojo frames by name needs a one-line
     update; llm-mailroom's delegation tests are the known case (`docs/guides/MIGRATION.md` §0).
+- **Comparability guard**: `compare_serving` now reads each leg's recorded
+  `scorer_version` and reports `scorer_version_mismatch` (incomparable),
+  `scorer_version_missing`, `scorer_version_mixed`, or
+  `scorer_version_unverified`. `pair_comparable_runs` includes the release in
+  its key. A mismatch also carries the `score_changes` ledger entries between
+  the releases. Guide: `docs/guides/COMPARABILITY.md`.
+
 - **Docs** are grouped into `docs/guides`, `docs/schemas`, `docs/contracts` and `docs/history`, with a new
   index at `docs/README.md`. Stale pages are refreshed:
   - the package README (it described modules that do not exist) and the examples README;
@@ -61,6 +228,11 @@ Format based on Keep a Changelog; versioning is SemVer.
 - Contract `cuad_value_correct` and CUAD presence counts can rise on affected rows.
   Re-score older runs before comparing (#97). Insurance scores change only for rows
   whose expectation includes `cms_source_table`. The published merge has none yet.
+- Reviewer metrics are new in this release, so no earlier card has a comparable
+  reviewer number. The sandbox's v3 `meets_target` used a 95%-accuracy target, not
+  the spec's 1% wrong-accept bound; at 95% confidence, 0/149 supports 1.99% and
+  0/135 supports 2.19%. Corporate (`1/405`, 1.17%) and merger (`0/135`, 2.19%) do
+  not meet the 1% bar on the current v3 sample.
 
 ## [0.25.0] - 2026-11-01
 

@@ -30,6 +30,7 @@ the matching suite.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from collections.abc import Mapping
 from typing import Any, Iterable
 
 from ..metrics.bundles import Bundle, bundle_metric_names
@@ -378,9 +379,13 @@ _HONEST_GAPS: dict[str, str] = {
         "denial_reasons is empty — so determination_consistency is "
         "degenerate (always 1.0 on GT-shaped predictions). The scorer "
         "itself now exists (approved ⇒ empty reasons; denied/partial ⇒ "
-        "non-empty). Mailroom claim_type accepts Hub source-table tokens "
-        "plus legacy FNOL lines; those catalogs are orthogonal and are "
-        "not a KPI. adjuster is Optional (null valid for CMS rows)."
+        "non-empty). claim_type (product line) and the CMS source table "
+        "(cms_source_table, derived for CMS rows from expected_subclass) are "
+        "scored as separate fields (#93). On CMS rows adjuster and "
+        "denial_reasons are documented-absent: an empty prediction is "
+        "correct, a stated value is a false positive. claim_checklist is "
+        "in the live map but no GT row populates it, so the headline is "
+        "partial (headline_scope); loss_report / other intents are unused."
     ),
     "due_diligence_specialist": (
         "HONEST GAP: due_diligence was RETIRED from the live llm-mailroom "
@@ -484,6 +489,21 @@ def _task_key_for(profile: AgentProfile, kind: str) -> str | None:
         return "multiclass"
     return None
 
+
+
+def _subclass_kwarg(kwargs: Mapping[str, Any]) -> Any:
+    """``doc_subclass`` (else ``expected_subclass``) as a scalar or a per-row list.
+
+    NumPy / pandas arrays and other non-string iterables become lists, so
+    they are treated per row instead of being stringified (or raising on an
+    ambiguous truth value).
+    """
+    value = kwargs.get("doc_subclass")
+    if value is None:
+        value = kwargs.get("expected_subclass")
+    if value is not None and not isinstance(value, (str, bytes, Mapping)) and hasattr(value, "__iter__"):
+        return list(value)
+    return value
 
 @dataclass(frozen=True)
 class ScoringSuite:
@@ -631,10 +651,20 @@ class ScoringSuite:
                 f"Emitter using metric_names={self.metric_names()!r}"
             )
         if self.kind == _KIND_EXTRACTION:
-            return self._score_extraction(
+            result = self._score_extraction(
                 expected, predicted, doc_text=doc_text, field_types=field_types,
                 detailed=detailed, **kwargs,
             )
+            if detailed and field_types is None and isinstance(result, dict) \
+                    and not isinstance(expected, list):
+                # Additive: the doc-type / subtype schema this document is
+                # scored under, and which of its fields the GT row labels.
+                # Skipped for a caller field map (the registry describes the
+                # live map).
+                schema = self._schema_coverage(expected, kwargs)
+                if schema is not None:
+                    result["schema"] = schema
+            return result
         if self.kind == _KIND_AUDIT:
             return self._score_audit(
                 expected, predicted, doc_text=doc_text, field_types=field_types
@@ -699,6 +729,26 @@ class ScoringSuite:
                 "score_document is the per-document extraction surface"
             )
         return self.score(expected, predicted, detailed=True, **kwargs)
+
+    def _schema_coverage(self, expected: Any, kwargs: Mapping[str, Any]) -> dict[str, Any] | None:
+        """Schema coverage for one mailroom-class document, else ``None``."""
+        from ..schemas.extraction_schemas import MAILROOM_DOC_TYPES, schema_coverage
+
+        doc_class = self.doc_type or self.name
+        if doc_class not in MAILROOM_DOC_TYPES:
+            return None
+        subtype = _subclass_kwarg(kwargs)
+        if isinstance(subtype, list):
+            subtype = subtype[0] if len(subtype) == 1 else None
+        gt = expected if isinstance(expected, (Mapping, str)) else None
+        try:
+            return schema_coverage(doc_class, subtype, gt)
+        except (KeyError, TypeError, ValueError):
+            # Unknown subtype or unparseable GT: report the doc-type schema only.
+            try:
+                return schema_coverage(doc_class, None, None)
+            except (KeyError, TypeError, ValueError):
+                return None
 
     def validate_metrics(self, metrics: dict[str, Any]) -> dict[str, Any]:
         """Keep only registry-known names; unknown keys are dropped.
@@ -842,11 +892,27 @@ class ScoringSuite:
                 return _gtm.parse_gt_fields(value)
             return value
 
-        def _scope_expected_one(value: Any) -> Any:
+        row_subclass_kw = _subclass_kwarg(kwargs)
+
+        def _subclass_for(index: int | None) -> Any:
+            """The row's subclass for CMS-table derivation (#93).
+
+            A per-row list gives the ``index``-th entry. A scalar applies to a
+            single document only: in a batch it would mark EVERY row as that
+            subclass (e.g. every row CMS), so batch rows then rely on a
+            ``cms_source_table`` they carry themselves.
+            """
+            if isinstance(row_subclass_kw, list):
+                return row_subclass_kw[index] if index is not None and index < len(row_subclass_kw) else None
+            return row_subclass_kw if index is None else None
+
+        def _scope_expected_one(value: Any, index: int | None = None) -> Any:
             """Remove annotation keys and blank absent fields in a GT dictionary.
 
             Apply :func:`scoring_gt_fields` to Hub metadata; preserve unmapped
             keys in plain dictionaries and return non-dict inputs unchanged.
+            An insurance row whose subclass is a CMS source table also gets the
+            derived ``cms_source_table`` (#93), the CMS-row marker.
             """
             if not isinstance(value, dict):
                 return value
@@ -860,13 +926,15 @@ class ScoringSuite:
                 field_types=ftypes,
                 extra_keys=scorable_gt_keys,
                 drop_unmapped=is_hub_metadata,
+                doc_type=doc_class,
+                subclass=_subclass_for(index),
             )
 
         scoped_to_empty = False
         scoped_empty_rows: list[bool] = []
         if isinstance(expected, list):
             parsed_expected = [_parse_expected_one(item) for item in expected]
-            expected = [_scope_expected_one(item) for item in parsed_expected]
+            expected = [_scope_expected_one(item, i) for i, item in enumerate(parsed_expected)]
             # Annotation-only Hub rows (e.g. pending CUAD labels) parse as
             # nonempty but scope to {}; keep the flag per row so batches can
             # mark them unscorable without breaking alignment.
@@ -948,7 +1016,7 @@ class ScoringSuite:
             audit_predictions = (
                 list(predicted) if isinstance(predicted, list) else predicted
             )
-            sub_kw = kwargs.get("doc_subclass") or kwargs.get("expected_subclass")
+            sub_kw = _subclass_kwarg(kwargs)
             if isinstance(expected, list):
                 # ``unlabeled_fields`` on a batch payload is per-row and must
                 # stay aligned with the GT row order: a row whose prediction
@@ -1403,7 +1471,9 @@ class ScoringSuite:
             keys = set(expected) | set(predicted)
             ftypes = {k: "free_text" for k in keys if k != "confidence"}
         result = score_extraction(
-            self.doc_type or "audit", ftypes, predicted, expected, doc_text=doc_text
+            self.doc_type or "audit", ftypes, predicted, expected, doc_text=doc_text,
+            # The reference is a specialist output, not GT: no CMS-row rules.
+            cms_aware=False,
         )
         overall = result.overall_score
         disagreement = None if overall is None else round(1.0 - overall, 4)

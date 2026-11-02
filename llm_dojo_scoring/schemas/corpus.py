@@ -46,6 +46,8 @@ __all__ = [
     "CORRESPONDENCE_TOPICS",
     "CORRESPONDENCE_SENTIMENT_LABELS",
     "INSURANCE_CLAIM_TYPES",
+    "INSURANCE_PRODUCT_LINES",
+    "CMS_DOCUMENTED_ABSENT_FIELDS",
     "CMS_SOURCE_TABLES",
     "cms_source_table",
     "normalize_corpus_subclass",
@@ -121,8 +123,9 @@ DOC_TYPE_SUBCLASSES: dict[str, tuple[str, ...]] = {
     # Insurance claim-document subclass: CMS DE-SynPUF *source table* tokens
     # (carrier/inpatient/outpatient/pde) PLUS the v8 synthetic LOB lines
     # (property = GNOTHEIA FNOL bundles, auto = BDR motor decision letters;
-    # HUB-028/HUB-041). Mailroom ``claim_type`` also accepts these Hub tokens
-    # plus legacy FNOL product lines.
+    # HUB-028/HUB-041). The split is 1,100 rows: 600 CMS (150 per table) and
+    # 500 non-CMS (INSURBIAS auto 150, BDR auto 150, GNOTHEIA property 200).
+    # The table is NOT a ``claim_type``; it is scored as ``cms_source_table``.
     "insurance_claim": (
         "carrier",
         "inpatient",
@@ -464,16 +467,17 @@ CORRESPONDENCE_SENTIMENT_LABELS: tuple[str, ...] = (
     "positive",
 )
 
-#: Specialist ``claim_type`` extraction enum — Hub CMS tokens first, then
-#: legacy FNOL product lines. Orthogonal to the subclass dimension only in
-#: the published merge (all 400 rows use CMS tables as ``expected_subclass``
-#: and ``claim_type=health``); mailroom now accepts CMS tokens on
-#: ``claim_type`` as well (``doc_inventories.INSURANCE_CLAIM_TYPES``).
-INSURANCE_CLAIM_TYPES: tuple[str, ...] = (
-    "pde",
-    "inpatient",
-    "outpatient",
-    "carrier",
+#: Product-line ``claim_type`` vocabulary the scorer credits (dojo #93). The
+#: published Hub GT carries ``claim_type`` on all 1,100 ``insurance_claim``
+#: rows: ``health`` x600 (every CMS row), ``auto`` x300 (INSURBIAS 150 + BDR 150)
+#: and ``property`` x200 (GNOTHEIA); ``liability`` / ``life`` / ``workers_comp``
+#: / ``other`` are legacy FNOL lines no GT row uses yet.
+#:
+#: These are product lines ONLY. A CMS source-table token (``pde``,
+#: ``inpatient``, ``outpatient``, ``carrier``) is not a product line: it is the
+#: separate ``cms_source_table`` field (:data:`CMS_SOURCE_TABLES`), so it is
+#: not part of this vocabulary and a table token on ``claim_type`` scores 0.
+INSURANCE_PRODUCT_LINES: tuple[str, ...] = (
     "auto",
     "property",
     "liability",
@@ -483,17 +487,36 @@ INSURANCE_CLAIM_TYPES: tuple[str, ...] = (
     "other",
 )
 
+#: Subclass keys the sorter may emit for an insurance row, in catalog order:
+#: the CMS source tables (the 600 CMS rows' ``expected_subclass``) then the
+#: product lines. Kept as the historic public name; use
+#: :data:`INSURANCE_PRODUCT_LINES` for the scored ``claim_type`` vocabulary.
+INSURANCE_CLAIM_TYPES: tuple[str, ...] = (
+    "pde",
+    "inpatient",
+    "outpatient",
+    "carrier",
+) + INSURANCE_PRODUCT_LINES
+
 
 #: Explicit CMS DE-SynPUF mapping (dojo #93): source-table token -> the Hub's
 #: ``claim_type`` (product line), the subclass and the intent of the row.
 #: ``claim_type`` and the source table are **orthogonal**: the product line of
 #: every CMS row is ``health``; the table is scored as its own field,
-#: ``cms_source_table``, whenever the expected row carries it (see
-#: :func:`cms_source_table` and ``field_scoring.score_extraction``).
+#: ``cms_source_table`` (type ``label``), derived for CMS rows only from
+#: ``expected_subclass`` (see :func:`cms_source_table`,
+#: ``gt_metadata.scoring_gt_fields`` and ``field_scoring.score_extraction``).
+#: The published ``gt_fields`` never carry the key: 600 CMS rows (150 per
+#: table; ``source_corpus == "cms_desynpuf"``) of 1,100 insurance rows.
 CMS_SOURCE_TABLES: dict[str, dict[str, str]] = {
     table: {"claim_type": "health", "subclass": table, "intent": "claim_data_record"}
     for table in ("carrier", "inpatient", "outpatient", "pde")
 }
+
+#: CMS fields the schema documents as absent from DE-SynPUF (GT presence
+#: ``schema_documented_absence`` on all 600 rows). On a CMS row an empty
+#: prediction is correct and a stated value is a false positive.
+CMS_DOCUMENTED_ABSENT_FIELDS: tuple[str, ...] = ("adjuster", "denial_reasons")
 
 
 def cms_source_table(doc_type: str | None, subclass: Any) -> str | None:

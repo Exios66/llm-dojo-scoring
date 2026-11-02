@@ -103,6 +103,57 @@ require every `PROVENANCE_KEYS` entry on both legs and equal, except the
 for local vs API) and `draw_seed`, which may be absent on both legs. `serving_kind` stays
 `modal` / `api` / `local` — Modal is not remapped to local.
 
+## Headline scope: which fields a class score covers (#95)
+
+A class headline is only comparable with another class's headline when both
+cover their whole live field map (`DEFAULT_FIELD_TYPES`). The merger
+headline has historically been MAUD answer accuracy alone (`maud_clauses`),
+and the correspondence GT carries only a few of its eleven fields, so neither
+may sit unflagged beside a full-field score.
+
+`metrics.scorecard_honesty.headline_scope(doc_class, field_counts, *, n_docs=None,
+maud_only_docs=None, n_docs_with_fields=None)` reports:
+
+| Key | Meaning |
+| --- | --- |
+| `headline_scope` | `"maud_only"` (every document scored on `maud_clauses` alone), `"mixed"` (merger: only *some* documents MAUD-only), `"partial"` (some live fields never carried GT), `"full"`, `"unknown"` (field data exists but no claim is possible), or `None` (nothing scored in the live map, no per-document context) |
+| `headline_label` | Human label, e.g. `MAUD answers only (maud_clauses); not a field-level score`, `1 of 2 documents MAUD answers only; not a field-level score`, `3 of 11 fields carry GT (...)`, or the reason for `unknown` |
+| `scored_fields` | field → number of scored documents |
+| `unscored_fields` | live fields that no document scored (`None` for `unknown`) |
+| `field_coverage` | share of live fields scored at least once (`None` for `unknown`) |
+| `off_map_fields` | scored fields that are not in the live map (never count toward scope) |
+
+Rules:
+
+- A field counts as scored for a document only when its score is a real
+  number (not `None`, not a bool). `field_counts` must be a mapping or a
+  collection of names, never a `str` (`TypeError`); non-numeric or
+  non-positive counts are skipped.
+- Classes are stripped and lower-cased; `SPECIALIST_DOC_TYPES` names resolve.
+- The scope is per document when `n_docs` / `maud_only_docs` are given
+  (`maud_only_docs` = documents whose scored live fields are non-empty and
+  all in `MAUD_HEADLINE_FIELDS`). One MAUD-only document beside a full-field
+  one is `"mixed"`, never `"full"`. Without them the field-union rule applies.
+- `"unknown"` is never silent: the class is unresolved (unknown specialist, or
+  conflicting explicit `doc_class` values), some scored documents lack field
+  data (`field data for 99 of 100 scored documents`), or no live field was
+  scored. Rows with no field data at all make no scope claim.
+
+`aggregate_quality_honest(rows, doc_class=...)` adds these keys when rows carry
+`field_scores` (top level, `extraction.` or `scores.`); without `doc_class` the
+result shape is unchanged. `specialist_grid_rows` adds `headline_scope`,
+`headline_label`, `scored_fields` and `unscored_fields` **only on rows whose
+scored documents carry field data** (`field_scores` or `scored_fields`, a list,
+tuple, set or frozenset; a bare string is one field); a row without field data
+has exactly the pre-#95 key set. The class comes from `doc_class`, the
+specialist name, or `SPECIALIST_DOC_TYPES`.
+
+The grid report marks MAUD-only and mixed scores with `†`, partial scores with
+`‡` and unknown scores with `?`, each with a footnote naming what the score
+covers. Footnotes are keyed on (specialist, scope, label); when one specialist
+has several distinct notes each names its experiment(s), e.g.
+`‡ **correspondence** (e1, e3): ...`.
+
 ## Confidence and reasoning knobs
 
 `confidence` and `reasoning` are model-emitted traces, not extraction

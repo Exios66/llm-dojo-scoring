@@ -37,6 +37,11 @@ from .cost import resolve_cost_basis
 from ..metrics.scorecard_honesty import (
     COST_BASIS_VALUES,
     canonical_error_class,
+    _is_maud_only_doc,
+    _live_fields,
+    _numeric_field_names,
+    _row_field_scores,
+    headline_scope,
     normalize_serving_kind_token,
     summarize_run_completion,
 )
@@ -75,6 +80,12 @@ class GridDocument:
     #: ``"unscorable"`` when the document has no extractable ground truth
     #: (#16): it counts toward ``n`` / errors / cost but never toward quality.
     status: str | None = None
+    #: Native document class, when the specialist name does not already say it.
+    doc_class: str | None = None
+    #: Fields that carried ground truth and were scored for this document
+    #: (from ``field_scores`` keys). ``None`` when the producer did not say;
+    #: used to flag partial / MAUD-only headlines (#95).
+    scored_fields: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -153,7 +164,68 @@ def _doc(value: GridDocument | Mapping[str, Any]) -> GridDocument:
         error=value.get("error"),
         error_class=value.get("error_class"),
         status=_doc_status(value),
+        doc_class=str(value["doc_class"]) if value.get("doc_class") else None,
+        scored_fields=_doc_scored_fields(value),
     )
+
+
+def _doc_scored_fields(value: Mapping[str, Any]) -> tuple[str, ...] | None:
+    """Scored field names from ``scored_fields`` or ``field_scores``, if any.
+
+    ``scored_fields`` may be a list, tuple, set or frozenset (returned sorted);
+    a bare string is one field name. Otherwise the names are the
+    ``field_scores`` keys whose score is a real number (not ``None``, not a
+    bool). ``None`` means the document reported no field data.
+    """
+    explicit = value.get("scored_fields")
+    if isinstance(explicit, str):
+        return (explicit,) if explicit else ()
+    if isinstance(explicit, (list, tuple, set, frozenset)):
+        return tuple(sorted(str(f) for f in explicit))
+    fields = _row_field_scores(value)
+    return tuple(sorted(_numeric_field_names(fields))) if fields is not None else None
+
+
+def _resolve_doc_class(specialist: str, docs: Sequence[GridDocument]) -> str | None:
+    """Native class for a grid row, or ``None`` when it cannot be resolved.
+
+    One explicit ``doc_class`` (stripped, lower-cased) wins; conflicting
+    explicit values resolve to ``None``. Otherwise the specialist name is used
+    when it is a class or a ``SPECIALIST_DOC_TYPES`` name.
+    """
+    explicit = sorted({d.doc_class.strip().lower() for d in docs if d.doc_class and d.doc_class.strip()})
+    if len(explicit) > 1:
+        return None
+    if explicit:
+        return explicit[0]
+    return _live_fields(specialist)[0]
+
+
+def _row_scope(specialist: str, scored_docs: Sequence[GridDocument]) -> dict[str, Any]:
+    """Headline-scope keys for one row; empty when no scored document has field data.
+
+    A row with field data always makes a claim: when it cannot be a real scope
+    (class unresolved, or some scored documents lack field data) the scope is
+    ``"unknown"`` with a label saying why. Scope is classified per document, so
+    MAUD-only documents beside full-field ones read as ``"mixed"``.
+    """
+    reported = [d for d in scored_docs if d.scored_fields is not None]
+    if not reported:
+        return {}
+    doc_class = _resolve_doc_class(specialist, scored_docs)
+    live = set(_live_fields(doc_class)[1])
+    counts: dict[str, int] = {}
+    for doc in reported:
+        for field in set(doc.scored_fields or ()):
+            counts[field] = counts.get(field, 0) + 1
+    scope = headline_scope(
+        doc_class,
+        counts,
+        n_docs=len(scored_docs),
+        n_docs_with_fields=len(reported),
+        maud_only_docs=sum(1 for d in reported if _is_maud_only_doc(d.scored_fields or (), live)),
+    )
+    return {key: scope[key] for key in ("headline_scope", "headline_label", "scored_fields", "unscored_fields")}
 
 
 def _doc_status(value: Mapping[str, Any]) -> str | None:
@@ -290,6 +362,17 @@ def specialist_grid_rows(
     ``ok`` counts explicit ``True`` values, independently of errors; it is
     ``None`` when both that count and the error count are zero.
 
+    When scored documents report their scored fields (``field_scores`` or
+    ``scored_fields``), the row also carries ``headline_scope`` /
+    ``headline_label`` / ``scored_fields`` / ``unscored_fields`` from
+    :func:`~llm_dojo_scoring.metrics.scorecard_honesty.headline_scope`, so a
+    merger row built from MAUD answers alone (``"maud_only"``), partly from
+    them (``"mixed"``) or a class scored on a subset of its fields
+    (``"partial"``) is never read as a full-field headline (#95). Where no
+    claim can be made (class unresolved, or some scored documents lack field
+    data) the scope is ``"unknown"``. These keys are present **only** when
+    field data was given; a row without any has exactly the pre-#95 shape.
+
     Raise ``ValueError`` for mixed nonempty metric IDs within a group or an
     invalid experiment serving kind, and ``TypeError`` for unsupported
     record types. Numeric conversion errors not handled by :func:`_num`
@@ -344,6 +427,7 @@ def specialist_grid_rows(
             "serving_kind": exp.serving_kind if exp else None,
             "gpus": exp.gpus if exp else None,
             "gpu_type": exp.gpu_type if exp else "",
+            **_row_scope(specialist, [d for d in scorable if d.score is not None]),
         }
         rows.append(row)
     order = {name: i for i, name in enumerate(exp_order)}
@@ -554,7 +638,56 @@ def _fmt_score(row: Mapping[str, Any]) -> str:
     text = f"{float(score):.3f}"
     if row.get("coverage") is not None:
         text += f" ({float(row['coverage']) * 100:.0f}%)"
-    return text
+    return text + _SCOPE_MARKS.get(str(row.get("headline_scope")), "")
+
+
+#: Score-cell markers for headlines that do not cover the class's field map (#95).
+#: ``mixed`` shares ``†`` with ``maud_only`` (its footnote gives the k-of-n split);
+#: ``unknown`` is ``?``: field data exists but no scope claim can be made.
+_SCOPE_MARKS = {"maud_only": " †", "mixed": " †", "partial": " ‡", "unknown": " ?"}
+
+
+def _scope_footnotes(rows: Sequence[Mapping[str, Any]]) -> list[str]:
+    """One footnote per flagged (specialist, scope, label) naming what it covers.
+
+    Experiments whose flagged rows share a label share a note. When one
+    specialist ends up with more than one distinct note, each names its
+    experiment(s) in parentheses after the specialist.
+    """
+    notes: dict[tuple[str, str, str, tuple[str, ...]], dict[str, Any]] = {}
+    for row in rows:
+        scope = row.get("headline_scope")
+        if scope not in _SCOPE_MARKS:
+            continue
+        label = str(row.get("headline_label"))
+        # Same label, different class: their unscored fields differ, so do their notes.
+        unscored = tuple(str(f) for f in row.get("unscored_fields") or ()) if scope == "partial" else ()
+        entry = notes.setdefault(
+            (str(row["specialist"]), str(scope), label, unscored),
+            {"scope": scope, "row": row, "experiments": []},
+        )
+        exp = str(row.get("experiment") or "")
+        if exp and exp not in entry["experiments"]:
+            entry["experiments"].append(exp)
+    per_specialist: dict[str, int] = {}
+    for specialist, _, _, _ in notes:
+        per_specialist[specialist] = per_specialist.get(specialist, 0) + 1
+    out: list[str] = []
+    for (specialist, scope, label, _), entry in notes.items():
+        row = entry["row"]
+        who = f"**{_cell(specialist)}**"
+        if per_specialist[specialist] > 1 and entry["experiments"]:
+            who += f" ({', '.join(_cell(e) for e in entry['experiments'])})"
+        text = f"{_SCOPE_MARKS[scope].strip()} {who}: {_cell(label)}"
+        if scope == "partial" and row.get("unscored_fields"):
+            text += f"; unscored: {', '.join(_cell(f) for f in row['unscored_fields'])}"
+        text += (
+            ". Scope unknown; do not compare with full-field headlines."
+            if scope == "unknown"
+            else ". Not comparable with full-field headlines."
+        )
+        out.append(text)
+    return out
 
 
 def _fmt_ok(row: Mapping[str, Any]) -> str:
@@ -571,8 +704,20 @@ def _fmt_busy_share(value: float | None) -> str:
     return f"{value * 100:.0f}%"
 
 
+def _cell(value: Any) -> str:
+    """Escape free text (specialist / experiment names, labels) for Markdown.
+
+    A ``|`` would split a table cell, ``*`` / backticks would open emphasis or
+    code, and a newline would end the row; all are neutralised.
+    """
+    text = " ".join(str(value).split())
+    for char in ("\\", "|", "*", "`"):
+        text = text.replace(char, "\\" + char)
+    return text
+
+
 def _md(header: Sequence[str], rows: Iterable[Sequence[str]]) -> list[str]:
-    """Return Markdown table lines without escaping cell text."""
+    """Return Markdown table lines; callers escape free text with :func:`_cell`."""
     lines = [
         "| " + " | ".join(header) + " |",
         "|" + "|".join(["---"] * len(header)) + "|",
@@ -597,7 +742,7 @@ def _compact_specialist_rows(rows: Sequence[Mapping[str, Any]]) -> list[list[str
         group = by_specialist[spec]
         out.append(
             [
-                spec,
+                _cell(spec),
                 " \u00b7 ".join(_fmt_score(r) for r in group),
                 " \u00b7 ".join(_fmt_ok(r) for r in group),
                 " \u00b7 ".join(_fmt_num(r["p50_latency_seconds"], 1) for r in group),
@@ -663,8 +808,8 @@ def build_grid_report(
             conc = "n/a" if e["client_concurrency"] is None else str(e["client_concurrency"])
             docs_n = "n/a" if e["documents_per_class"] is None else str(e["documents_per_class"])
             lines.append(
-                f"| {e['experiment']} | {e['posture'] or 'n/a'} | {gpus} | {conc} | "
-                f"{docs_n} | {e['status'] or 'n/a'} |"
+                f"| {_cell(e['experiment'])} | {_cell(e['posture'] or 'n/a')} | {_cell(gpus)} | {conc} | "
+                f"{docs_n} | {_cell(e['status'] or 'n/a')} |"
             )
         lines.append("")
 
@@ -672,7 +817,7 @@ def build_grid_report(
         lines.append("## Serving efficiency (pooled across the specialists)")
         lines.append("")
         eff = card["serving_efficiency"]
-        names = [e["experiment"] for e in eff]
+        names = [_cell(e["experiment"]) for e in eff]
         lines.append("| Metric | " + " | ".join(names) + " |")
         lines.append("| --- |" + "|".join(["---:"] * len(names)) + "|")
         metric_rows = [
@@ -700,7 +845,7 @@ def build_grid_report(
         else:
             rows = [
                 [
-                    f"{r['specialist']} ({r['experiment']})",
+                    f"{_cell(r['specialist'])} ({_cell(r['experiment'])})",
                     _fmt_score(r),
                     _fmt_ok(r),
                     _fmt_num(r["p50_latency_seconds"], 1),
@@ -711,6 +856,10 @@ def build_grid_report(
         for row in rows:
             lines.append("| " + " | ".join(row) + " |")
         lines.append("")
+        footnotes = _scope_footnotes(card["specialists"])
+        if footnotes:
+            lines.extend(f"- {note}" for note in footnotes)
+            lines.append("")
 
     if card["cost"]:
         lines.append("## Cost")
@@ -723,7 +872,7 @@ def build_grid_report(
         for row in card["cost"]:
             lines.append(
                 "| {session} | {documents} | {busy} | {metered} | {share} | {per_doc} | {billed} |".format(
-                    session=row["session"],
+                    session=_cell(row["session"]),
                     documents=row["documents"],
                     busy=_fmt_usd(row["busy_gpu_usd"]),
                     metered=_fmt_usd(row["metered_usd"]),
@@ -776,7 +925,7 @@ def build_grid_report(
         lines.append("| Key | Value |")
         lines.append("| --- | --- |")
         for key in sorted(card["provenance"]):
-            lines.append(f"| {key} | {card['provenance'][key]} |")
+            lines.append(f"| {_cell(key)} | {_cell(card['provenance'][key])} |")
         lines.append("")
 
     if card["figures"]:

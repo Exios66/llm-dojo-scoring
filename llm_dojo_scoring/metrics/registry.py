@@ -358,6 +358,52 @@ metrics:
     citation: "ACE / CoNLL / SemEval slot filling; F2 is van Rijsbergen Fβ with β=2 (5PR/(4P+R))."
     inclusion: "Same inclusion as extraction_f1. Partial list matches are not TP."
     ground_truth: required
+  reviewer_class_accuracy:
+    tier: 0
+    description: "Reviewer class accuracy against verified targets"
+    applicable_agents: [sorter_reviewer]
+    aggregation: mean
+    source: "reviewer.score_review_lane"
+    citation: "Exact class match over reviewer-answered rows with a verified target."
+    inclusion: "None when no row has both a target and a reviewer label."
+    ground_truth: required
+  reviewer_wrong_accept_rate:
+    tier: 0
+    description: "Wrong auto-accepts divided by accepted documents with truth"
+    applicable_agents: [sorter_reviewer]
+    aggregation: mean
+    source: "reviewer.score_review_lane"
+    citation: "Accepted = the pipeline routed the document to extraction; wrong = accepted label differs from the verified target."
+    inclusion: "None when no accepted document has truth."
+    ground_truth: required
+  reviewer_wrong_accept_upper_95:
+    tier: 0
+    description: "Exact 95% one-sided upper bound on the wrong-accept rate"
+    applicable_agents: [sorter_reviewer]
+    aggregation: none
+    source: "reviewer.score_review_lane"
+    citation: "Clopper-Pearson exact upper bound (analysis.calibration.clopper_pearson_upper)."
+    inclusion: "None when no accepted document has truth."
+    ground_truth: required
+  reviewer_routed_to_human_review_rate:
+    tier: 0
+    description: "Share of reviewer-reached documents parked for a person"
+    applicable_agents: [sorter_reviewer]
+    aggregation: mean
+    source: "reviewer.score_review_lane"
+    citation: "Pipeline reviewer routing basis: a human verdict, no usable answer, or a confidence below the class cutoff."
+    inclusion: "None when no document reached the reviewer lane."
+    ground_truth: structural
+  reviewer_accept_rule_violations:
+    tier: 0
+    description: "Accepted documents that violate the reviewer accept rule"
+    applicable_agents: [sorter_reviewer]
+    aggregation: sum
+    units: "int"
+    source: "reviewer.score_review_lane"
+    citation: "Every accept must have text, an eligible reviewer label, no causes, a cutoff, and agreement unless the sorter was below its low band."
+    inclusion: "Always defined; 0 means every accepted row passed the rule."
+    ground_truth: structural
 
   # ===================== T1 — CORE =====================
   precision:
@@ -454,6 +500,70 @@ metrics:
     citation: "Money-field exact after one-cent normalize (claims_consistency.amount_exactness)."
     inclusion: "None if either side is empty or unparseable."
     ground_truth: required
+  reviewer_accepted_accuracy:
+    tier: 1
+    description: "Class accuracy among documents the reviewer accepted"
+    applicable_agents: [sorter_reviewer]
+    aggregation: mean
+    source: "reviewer.score_review_lane"
+    citation: "Correct accepted labels divided by accepted documents with truth."
+    inclusion: "None when no accepted document has truth."
+    ground_truth: required
+  reviewer_class_macro_accuracy:
+    tier: 1
+    description: "Unweighted mean of per-class reviewer accuracy"
+    applicable_agents: [sorter_reviewer]
+    aggregation: mean
+    source: "reviewer.score_review_lane"
+    citation: "Macro accuracy over expected classes with at least one reviewer answer."
+    inclusion: "None when no class has a scored answer."
+    ground_truth: required
+  reviewer_subclass_accuracy:
+    tier: 1
+    description: "Subclass accuracy where the reviewer got the class right"
+    applicable_agents: [sorter_reviewer]
+    aggregation: mean
+    source: "reviewer.score_review_lane"
+    citation: "Exact subclass match over class-correct rows with a scorable target subclass; contract keys use normalize_subtype."
+    inclusion: "Merger 'other' and blank targets are unscorable and excluded."
+    ground_truth: required
+  reviewer_verdict_accuracy:
+    tier: 1
+    description: "Reviewer verdict accuracy against the derivable expected verdict"
+    applicable_agents: [sorter_reviewer]
+    aggregation: mean
+    source: "reviewer.score_review_lane"
+    citation: "Expected verdict from the sorter handoff and target: reclassify, correct subclass, or continue."
+    inclusion: "None when no row has both a derivable expected verdict and a model verdict."
+    ground_truth: required
+  reviewer_confidence_ece:
+    tier: 1
+    description: "Expected calibration error of reviewer confidence"
+    applicable_agents: [sorter_reviewer]
+    aggregation: none
+    source: "reviewer.score_review_lane"
+    citation: "Equal-width 10-bin ECE over answered rows with a verified target."
+    inclusion: "None when no answered row carries a valid confidence and target."
+    ground_truth: required
+  reviewer_confidence_brier:
+    tier: 1
+    description: "Brier score of reviewer confidence"
+    applicable_agents: [sorter_reviewer]
+    aggregation: none
+    source: "reviewer.score_review_lane"
+    citation: "Mean squared difference between reviewer confidence and class correctness."
+    inclusion: "None when no answered row carries a valid confidence and target."
+    ground_truth: required
+  reviewer_cost_per_accepted_usd:
+    tier: 1
+    description: "Reviewer cost per accepted document"
+    applicable_agents: [sorter_reviewer]
+    aggregation: none
+    units: "usd"
+    source: "reviewer.score_review_lane"
+    citation: "Measured reviewer cost divided by accepted documents; None unless every row is priced."
+    inclusion: "None when any row is unpriced or no document was accepted."
+    ground_truth: structural
   precision_macro:
     tier: 1
     description: "Unweighted mean of one-vs-rest precision (doc_type)"

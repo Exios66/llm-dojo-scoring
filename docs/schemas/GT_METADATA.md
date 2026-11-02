@@ -56,6 +56,56 @@ Verified against the published corpus (2026-10-04): every `populated` key in
 both splits (3,302 rows) is inside its class's field map or a handled content
 / presence key — there are no orphan GT labels.
 
+## Correspondence GT audit (#94)
+
+The SAND-042 RCA found correspondence scored on three of eleven live fields
+(`intent`, `subject_matter`, `keywords`). It also *inferred*, without checking
+the Hub rows, that `subject_matter` / `keywords` are templated
+(`"Correspondence concerning general_business."`, folder and timestamp
+tokens). `llm_dojo_scoring.schemas.correspondence_gt_audit` measures both:
+
+```bash
+python scripts/audit_correspondence_gt.py ground_truth.parquet   # or a JSONL export; --json for the raw report
+```
+
+| Code | Meaning |
+| --- | --- |
+| `subject_matter_templated` | a `Correspondence concerning <topic>.` frame, or an embedded snake_case topic key |
+| `keywords_metadata` | at least one keyword is *strong* metadata: a topic key, a date **and** time stamp, a path with a folder segment, or an underscore-prefixed folder (`_sent_mail`). *Weak* tokens (communication type such as `email` / `press release`, plain folder names, mailbox ids like `delainey-d` / `williams-w3`, bare dates, bare clock times, email addresses) never fire alone, because genuine content keywords look like them |
+| `keywords_all_metadata` | every keyword is strong or weak, and at least one is strong (the templated 5-slot shape `[topic, communication type, mailbox id, folder, ISO timestamp]`) |
+| `intent_missing` | no usable `intent` GT (population fact; does not fail the script) |
+| `gt_unparseable` | `gt_fields` could not be parsed |
+
+The report also gives `field_population` (rows with GT per live field),
+`populated_field_counts` and `unscored_fields`. Exit status: `0` clean, `1`
+when a templated, metadata or unparseable defect is found, `2` when the audit
+could not run (unreadable or malformed file, a row that is not an object, or
+no correspondence rows; the reason goes to stderr).
+
+`is_metadata_keyword(value)` answers "could be metadata" (strong or weak);
+`metadata_keyword_kind(value)` returns `"strong"`, `"weak"` or `None`.
+
+Known gaps: mailbox ids with underscores or digits in the owner part
+(`bill_williams_iii`) and user-specific folder names (`power`, `tw_commercial_group`)
+are not recognised, so `keywords_all_metadata` slightly under-counts templated
+rows. Mailbox-shaped content words (`plan-b`, `vitamin-c`) are weak, so they
+cannot fire the audit alone.
+
+Status: the detectors are in place. On the 1,000 Hub correspondence rows they
+flag 904 `subject_matter_templated`, 904 `keywords_metadata` and 860
+`keywords_all_metadata`; none of the 96 non-templated rows fires
+`keywords_metadata`. The relabel proposal and human-review export (#94 steps 2–3) wait on
+those numbers. Until the GT is relabelled:
+
+- the correspondence headline is reported with `headline_scope: "partial"`
+  (see [`SCORECARD_HONESTY.md`](../contracts/SCORECARD_HONESTY.md));
+- `aggregate_quality_honest(..., doc_class=...)` adds `intent_split`
+  (intent mean, hit / miss counts, mean of the other fields), so the
+  intent-driven bimodality is visible.
+
+A relabel changes correspondence scores, which is a comparability break that
+must be recorded in the CHANGELOG and `metrics.score_changelog`.
+
 ## Public API
 
 ```python

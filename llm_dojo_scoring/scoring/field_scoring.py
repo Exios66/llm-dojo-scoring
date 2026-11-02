@@ -44,6 +44,7 @@ from typing import Any, Optional
 import structlog
 
 from ..config import get_settings
+from ..schemas.corpus import CMS_DOCUMENTED_ABSENT_FIELDS, CMS_SOURCE_TABLES
 from ..schemas.gt_metadata import ANNOTATION_KEYS, is_empty_value, parse_json_container
 from ..schemas.intents import INTENT_LABELS, normalize_intent
 
@@ -73,23 +74,63 @@ RETIRED_PROMPT_KEYS: frozenset[str] = frozenset(
 # ---------------------------------------------------------------------------
 
 
-#: CMS DE-SynPUF table tokens. The published merge labels every CMS row
-#: ``claim_type=health`` while the frozen insurance prompt (and mailroom's
-#: ``INSURANCE_CLAIM_TYPES``) direct the specialist to the table token, so a
-#: correct, more specific answer used to score as a wrong name (SAND-042 RCA).
+#: CMS DE-SynPUF table tokens. They are a *source table*, not a product line:
+#: the published merge labels every CMS row ``claim_type=health`` and the table
+#: lives in its own field, ``cms_source_table`` (dojo #93). Before #93 a table
+#: token predicted on ``claim_type`` was folded onto ``health`` (the SAND-042
+#: equivalence); that fold is retired for scoring.
 CMS_CLAIM_TYPES: frozenset[str] = frozenset({"pde", "inpatient", "outpatient", "carrier"})
+
+#: Field types the scorer applies on a CMS row, explicitly (never an implicit
+#: heuristic): the derived table is a controlled ``label``; supporting
+#: documents are identifier strings (``provider NPI 5040521237``,
+#: ``NDC 00703051002``, ``HCPCS detail (1 codes)``) compared by
+#: :func:`score_cms_doc_ref`. Not part of ``DEFAULT_FIELD_TYPES``, which
+#: mirrors the mailroom taxonomy and is pinned to it.
+CMS_ROW_FIELD_TYPES: dict[str, str] = {
+    # Closed product-line vocabulary on a CMS row (GT is always ``health``):
+    # exact match, so a table token earns no fuzzy name credit.
+    "claim_type": "label",
+    "cms_source_table": "label",
+    "supporting_documents": "entity_list:cms_doc_ref",
+}
 
 
 def canonical_claim_type(predicted: Any, expected: Any) -> Any:
-    """Fold a CMS table token onto ``health`` when the GT is ``health``.
+    """Legacy SAND-042 fold: a CMS table token onto ``health`` when GT is ``health``.
 
-    Only the CMS → health direction is folded: ``health`` predicted against
-    a CMS-token GT, or one CMS token against another, still mismatches.
+    **No longer used by the scorer (dojo #93).** ``claim_type`` (product line)
+    and ``cms_source_table`` are separate fields, so a table token predicted
+    on ``claim_type`` scores as wrong there; ``score_extraction`` does not call
+    this. The name stays importable for consumers that analysed stored runs
+    under the old equivalence. Behaviour is unchanged: only the CMS -> health
+    direction folds.
     """
     pred = str(predicted).strip().lower()
     if pred in CMS_CLAIM_TYPES and str(expected).strip().lower() == "health":
         return "health"
     return predicted
+
+
+def expected_cms_source_table(doc_class: str | None, expected: Any) -> str | None:
+    """The CMS source table an expected row carries, else ``None``.
+
+    This is what makes a row a CMS row for scoring: the table is derived from
+    ``expected_subclass`` (``scoring_gt_fields`` / ``cms_source_table``) and
+    injected into the expected fields, so every scoring path that assembles GT
+    that way shares one definition. Non-CMS rows never carry it.
+    """
+    if doc_class != "insurance_claim" or not isinstance(expected, dict):
+        return None
+    token = str(parse_json_container(expected.get("cms_source_table")) or "").strip().lower()
+    if token not in CMS_SOURCE_TABLES:
+        return None
+    # Every published CMS row is ``claim_type=health``. A row whose GT names
+    # another product line is not CMS, whatever stray key it carries.
+    claim_type = parse_json_container(expected.get("claim_type"))
+    if not is_empty_value(claim_type) and str(claim_type).strip().lower() != "health":
+        return None
+    return token
 
 
 def get_ambiguous_band() -> tuple[float, float]:
@@ -1193,11 +1234,72 @@ def embed_texts(texts: list[str]) -> Optional[list[list[float]]]:
         return None
 
 
+_CMS_FACILITY_RE = re.compile(
+    r"\bfacility\s+provider\s*(?:\b(?:id|identifier|number|no)\b)?[\s:#.-]*([a-z0-9]*\d[a-z0-9]*)"
+)
+_CMS_NPI_RE = re.compile(r"(?<![a-z0-9])(\d{10})(?![a-z0-9])")
+_CMS_NDC_RE = re.compile(r"(?<![a-z0-9])(\d{9,11})(?![a-z0-9])")
+_CMS_NDC_SEGMENTS_RE = re.compile(r"(?<![a-z0-9-])(\d{4,5})-(\d{3,4})-(\d{1,2})(?![a-z0-9-])")
+
+
+def _cms_doc_signature(text) -> tuple[str, str]:
+    """Classify one CMS supporting-document item as ``(kind, value)``.
+
+    Identifier items compare as exact tokens: ``npi`` (10 digits), ``ndc``
+    (11-digit 5-4-2 form: a hyphenated labelled NDC pads each segment, an
+    unhyphenated one is left-padded) and
+    ``facility_provider`` (alphanumeric id). Anything else is a descriptor
+    (``HCPCS detail (1 codes)``) reduced to its normalized type label: letters
+    only, count and ``code(s)`` words dropped.
+    """
+    raw = str(text or "").strip().lower()
+    facility = _CMS_FACILITY_RE.search(raw)
+    if facility:
+        return "facility_provider", facility.group(1)
+    if re.search(r"\bndc\b", raw):
+        # A hyphenated 10-digit NDC (4-4-2, 5-3-2, 5-4-1) pads the short
+        # segment, not the whole number, to reach the 11-digit 5-4-2 form.
+        segmented = _CMS_NDC_SEGMENTS_RE.search(raw)
+        if segmented:
+            labeler, product, package = segmented.groups()
+            return "ndc", labeler.zfill(5) + product.zfill(4) + package.zfill(2)
+    squeezed = re.sub(r"(?<=\d)-(?=\d)", "", raw)
+    if re.search(r"\bndc\b", squeezed):
+        match = _CMS_NDC_RE.search(squeezed)
+        if match:
+            return "ndc", match.group(1).zfill(11)
+    npi = _CMS_NPI_RE.search(squeezed)
+    if npi:
+        return "npi", npi.group(1)
+    ndc = re.search(r"(?<![a-z0-9])(\d{11})(?![a-z0-9])", squeezed)
+    if ndc:
+        return "ndc", ndc.group(1)
+    words = [w for w in re.sub(r"[^a-z]+", " ", raw).split() if w not in ("code", "codes")]
+    return "descriptor", " ".join(words)
+
+
+def score_cms_doc_ref(pred, exp, embedding=None) -> float:
+    """Identifier-aware match of one CMS supporting-document item (1.0 or 0.0).
+
+    Identifiers (NPI, NDC, facility provider id) must match as exact tokens of
+    the same kind; descriptor items match by normalized type label, so
+    ``HCPCS detail (2 codes)`` matches ``HCPCS detail (1 codes)``. Prose
+    similarity never earns credit: a near-miss identifier is a different
+    provider or drug.
+    """
+    pk, pv = _cms_doc_signature(pred)
+    ek, ev = _cms_doc_signature(exp)
+    if not pv or not ev:
+        return 0.0
+    return 1.0 if (pk, pv) == (ek, ev) else 0.0
+
+
 # ---------------------------------------------------------------------------
 # Dispatch + composite scoring
 # ---------------------------------------------------------------------------
 
 FIELD_SCORERS = {
+    "cms_doc_ref": score_cms_doc_ref,
     "id": score_id_field,
     "date": score_date_field,
     "money": score_money_field,
@@ -1325,8 +1427,12 @@ def score_extraction(
     doc_text: str | None = None,
     *,
     audit_predicted: dict | None = None,
+    cms_aware: bool = True,
 ) -> ExtractionScoreResult:
     """Score one extraction deterministically.
+
+    ``cms_aware=False`` disables the CMS-row rules (#93) — for callers whose
+    ``expected`` is not ground truth (the auditor compares two model outputs).
 
     - Only expected fields with a non-null/non-empty value count toward the
       overall score (null expectations are not requirements). Stringified
@@ -1345,6 +1451,7 @@ def score_extraction(
       annotation keys are excluded. ``audit_predicted``, when supplied,
       preserves predictions omitted from GT scoring for this audit.
     """
+    had_prediction = bool(predicted)
     predicted = predicted or {}
     expected = expected or {}
     partial_gt_fields = get_partial_gt_fields()
@@ -1359,17 +1466,53 @@ def score_extraction(
     ambiguous: list[str] = []
     entity_list_scores: dict[str, EntityListScore] = {}
     entity_list_audit: dict[str, dict] = {}
+    # CMS rows (expected carries a valid ``cms_source_table``) get the CMS-aware
+    # fields: documented-absent adjuster / denial_reasons and identifier-aware
+    # supporting_documents. Non-CMS rows keep the generic behaviour.
+    cms_table = expected_cms_source_table(doc_class, expected) if cms_aware else None
 
-    for key, exp_value in expected.items():
+    expected_items = list(expected.items())
+    if cms_table is not None:
+        # A CMS row whose GT omits a documented-absent key still penalises a
+        # stated value, as the field-micro counts already do (a false
+        # positive). Silence on an omitted key earns no credit: it is not
+        # scored, so partial GT does not inflate the mean.
+        expected_items += [
+            (key, "") for key in CMS_DOCUMENTED_ABSENT_FIELDS
+            if key not in expected
+            and (not field_types or key in field_types)
+            and not is_empty_value(parse_json_container(predicted.get(key)))
+        ]
+
+    for key, exp_value in expected_items:
         if key in NEVER_SCORED_FIELDS:
             continue
         if key in RETIRED_PROMPT_KEYS and key not in field_types:
             continue
         exp_value = parse_json_container(exp_value)
         if is_empty_value(exp_value):
+            if cms_table is not None and key in CMS_DOCUMENTED_ABSENT_FIELDS:
+                # Documented-absent on a CMS row: saying nothing is correct,
+                # a stated value is a false positive. Never skipped.
+                # No parsed prediction earns nothing (a null row must not
+                # collect free credit for staying silent).
+                if had_prediction:
+                    absent_pred = parse_json_container(predicted.get(key))
+                    if isinstance(absent_pred, (list, tuple)):
+                        absent_pred = [i for i in absent_pred if not is_empty_value(i)]
+                    field_scores[key] = 1.0 if is_empty_value(absent_pred) else 0.0
             continue
         field_type = (field_types.get(key)
-                      or ("label" if key == "cms_source_table" else _heuristic_field_type(key, exp_value)))
+                      or (CMS_ROW_FIELD_TYPES["cms_source_table"] if key == "cms_source_table"
+                          else _heuristic_field_type(key, exp_value)))
+        if cms_table is not None and key in CMS_ROW_FIELD_TYPES:
+            field_type = CMS_ROW_FIELD_TYPES[key]
+        if (doc_class == "insurance_claim" and key == "claim_type"
+                and str(parse_json_container(predicted.get(key)) or "").strip().lower() in CMS_CLAIM_TYPES):
+            # A CMS table token is never a product line (#93): exact label
+            # scoring, so it earns no fuzzy credit even when the row was not
+            # detected as CMS (no expected_subclass passed).
+            field_type = "label"
         # Judge escalation uses the configured type's band, not the
         # containment override applied for scoring below.
         original_field_type = field_type
@@ -1380,13 +1523,11 @@ def score_extraction(
             exp_value = normalize_intent(doc_class, exp_value) or exp_value
             if pred_value is not None:
                 pred_value = normalize_intent(doc_class, pred_value) or pred_value
-        if (doc_class == "insurance_claim" and key == "claim_type"
-                and pred_value is not None):
-            pred_value = canonical_claim_type(pred_value, exp_value)
         if doc_class == "insurance_claim" and key == "cms_source_table" and is_empty_value(pred_value):
-            # The specialist reports the table on ``claim_type`` (the frozen
-            # insurance prompt); score it here, orthogonal to the product line.
-            # A blank or null-token table field falls back too.
+            # Compatibility with the frozen insurance prompt, which reports the
+            # table on ``claim_type``: when ``cms_source_table`` itself is blank
+            # the table token is read from there for THIS field only. It earns
+            # nothing on ``claim_type``, which scores the product line alone.
             token = str(predicted.get("claim_type") or "").strip().lower()
             pred_value = token if token in CMS_CLAIM_TYPES else None
         if pred_value is None:

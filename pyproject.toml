@@ -58,6 +58,7 @@ all = [
 dojo-version = "llm_dojo_scoring.integrations.update_awareness:main"
 dojo-analyze = "llm_dojo_scoring.cli:analyze_main"
 dojo-export = "llm_dojo_scoring.cli:export_main"
+dojo-rescore = "llm_dojo_scoring.cli:rescore_main"
 dojo-sync = "llm_dojo_scoring.cli:sync_main"
 
 [tool.setuptools.packages.find]
@@ -67,7 +68,7 @@ include = ["llm_dojo_scoring*"]
 exclude = ["packages*"]
 
 [tool.setuptools.package-data]
-llm_dojo_scoring = ["prompts/*.yaml", "prompts/*.json", "prompts/templates/*.md"]
+llm_dojo_scoring = ["prompts/*.yaml", "prompts/*.json", "prompts/templates/*.md", "schemas/data/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

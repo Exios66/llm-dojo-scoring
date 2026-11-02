@@ -110,6 +110,66 @@ METRIC_META: dict[str, dict[str, str]] = {
         _EXTRACT_SKIP,
         "required",
     ),
+    "reviewer_class_accuracy": _m(
+        "Exact class match over reviewer-answered rows with a verified target (reviewer.score_review_lane).",
+        "None when no row has both a target and a reviewer label.",
+        "required",
+    ),
+    "reviewer_wrong_accept_rate": _m(
+        "Wrong auto-accepts divided by accepted documents with truth (reviewer.score_review_lane).",
+        "None when no accepted document has truth.",
+        "required",
+    ),
+    "reviewer_wrong_accept_upper_95": _m(
+        "Exact one-sided Clopper-Pearson 95% upper bound on the wrong-accept rate (analysis.calibration).",
+        "None when no accepted document has truth.",
+        "required",
+    ),
+    "reviewer_routed_to_human_review_rate": _m(
+        "Share of reviewer-reached documents parked for a person (reviewer.score_review_lane).",
+        "None when no document reached the reviewer lane.",
+        "structural",
+    ),
+    "reviewer_accept_rule_violations": _m(
+        "Accepted documents that violate the reviewer accept rule (reviewer.score_review_lane).",
+        "Always defined; 0 means every accepted row passed the rule.",
+        "structural",
+    ),
+    "reviewer_accepted_accuracy": _m(
+        "Class accuracy among documents the reviewer accepted (reviewer.score_review_lane).",
+        "None when no accepted document has truth.",
+        "required",
+    ),
+    "reviewer_class_macro_accuracy": _m(
+        "Unweighted mean of per-class reviewer accuracy (reviewer.score_review_lane).",
+        "None when no class has a scored answer.",
+        "required",
+    ),
+    "reviewer_subclass_accuracy": _m(
+        "Subclass accuracy where the reviewer got the class right; contract keys use normalize_subtype.",
+        "Merger 'other' and blank targets are unscorable and excluded.",
+        "required",
+    ),
+    "reviewer_verdict_accuracy": _m(
+        "Reviewer verdict accuracy against the derivable expected verdict (reviewer.score_review_lane).",
+        "None when no row has both a derivable expected verdict and a model verdict.",
+        "required",
+    ),
+    "reviewer_confidence_ece": _m(
+        "Equal-width 10-bin expected calibration error of reviewer confidence.",
+        "None when no answered row carries a valid confidence and target.",
+        "required",
+    ),
+    "reviewer_confidence_brier": _m(
+        "Brier score of reviewer confidence against class correctness.",
+        "None when no answered row carries a valid confidence and target.",
+        "required",
+    ),
+    "reviewer_cost_per_accepted_usd": _m(
+        "Measured reviewer cost divided by accepted documents (reviewer.score_review_lane).",
+        "None when any row is unpriced or no document was accepted.",
+        "structural",
+    ),
     "content_topic_f1_macro": _m(
         "Enron correspondence 11-topic catalog; unweighted macro-F1 over "
         "expected topics (content_scoring.score_content_topic).",

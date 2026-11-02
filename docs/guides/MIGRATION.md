@@ -27,6 +27,31 @@ The flat modules moved into subpackages (`schemas/`, `scoring/`, `pipeline/`, `m
 - **Docs moved** into `docs/guides`, `docs/schemas`, `docs/contracts` and `docs/history`.
 - New code should import from the subpackage path.
 
+## 0b. v0.26.0: reviewer scoring and re-score
+
+New, additive surfaces:
+
+```python
+from llm_dojo_scoring import ReviewRecord, score_review_lane
+from llm_dojo_scoring import rescore_file, score_changes_between
+```
+
+- `score_review_lane` takes `ReviewRecord` rows (or mappings with the documented
+  aliases) and returns class/subclass accuracy, wrong-accept risk with an exact
+  upper bound, calibration, routing/causes, verdict confusion, and cost. See
+  [`REVIEWER_SCORING.md`](../contracts/REVIEWER_SCORING.md).
+- `dojo-rescore` re-scores `items.jsonl` against `dataset.jsonl` under the
+  current scorer. See [`COMPARABILITY.md`](COMPARABILITY.md).
+- `compare_serving` now refuses a quality delta across different
+  `scorer_version` values instead of silently comparing them.
+
+`get_suite("sorter_reviewer").score(expected, predicted)` is unchanged.
+
+Scored-enum hints (#96): replace hand-maintained `intent` / `claim_type`
+lists in prompts and grammars with `scored_enum_hint` / `scored_enum_schemas`,
+or keep them vendored and assert `enum_hint_violations(doc_type, {...}) == []`
+in CI. See [`EXTRACTION_SCHEMAS.md`](../schemas/EXTRACTION_SCHEMAS.md#scored-enum-hints-96).
+
 ## 1. Install the package
 
 ```bash

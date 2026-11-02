@@ -1,0 +1,3257 @@
+{
+  "suites": {
+    "arbiter": {
+      "computable": true,
+      "kind": "audit",
+      "score": {
+        "audit_disagreement_rate": 0.5,
+        "audit_resolution_rate": 0.5,
+        "extraction": {
+          "ambiguous_fields": [],
+          "doc_class": "audit",
+          "entity_list_audit": {},
+          "entity_list_scores": {},
+          "field_scores": {
+            "finding": 1.0,
+            "severity": 0.0
+          },
+          "overall_score": 0.5,
+          "trace": {
+            "calibration_error": null,
+            "confidence": null,
+            "confidence_gate": "missing",
+            "n_reasoning_entries": null,
+            "reasoning": null
+          }
+        },
+        "overall_score": 0.5
+      }
+    },
+    "archivist": {
+      "computable": false,
+      "kind": "cost",
+      "metric_names": [
+        "estimated_cost_usd",
+        "cost_per_document",
+        "total_tokens",
+        "llm_call_count"
+      ],
+      "score_raises": "TypeError"
+    },
+    "audit_agent": {
+      "computable": true,
+      "kind": "audit",
+      "score": {
+        "audit_disagreement_rate": 0.5,
+        "audit_resolution_rate": 0.5,
+        "extraction": {
+          "ambiguous_fields": [],
+          "doc_class": "audit",
+          "entity_list_audit": {},
+          "entity_list_scores": {},
+          "field_scores": {
+            "risk": 0.0,
+            "summary": 1.0
+          },
+          "overall_score": 0.5,
+          "trace": {
+            "calibration_error": null,
+            "confidence": null,
+            "confidence_gate": "missing",
+            "n_reasoning_entries": null,
+            "reasoning": null
+          }
+        },
+        "overall_score": 0.5
+      }
+    },
+    "boss": {
+      "computable": false,
+      "kind": "reporter",
+      "metric_names": [
+        "accuracy",
+        "f1_macro",
+        "extraction_overall_score",
+        "success_rate",
+        "cost_per_document"
+      ],
+      "score_raises": "TypeError"
+    },
+    "contract_auditor": {
+      "computable": true,
+      "kind": "audit",
+      "score": {
+        "audit_disagreement_rate": 0.1667,
+        "audit_resolution_rate": 0.8333,
+        "extraction": {
+          "ambiguous_fields": [
+            "parties"
+          ],
+          "doc_class": "contract",
+          "entity_list_audit": {},
+          "entity_list_scores": {
+            "parties": {
+              "f1": 0.6667,
+              "field": "parties",
+              "matched": 1,
+              "n_expected": 2,
+              "n_predicted": 1,
+              "partial_gt": true,
+              "precision": 1.0,
+              "recall": 0.5
+            }
+          },
+          "field_scores": {
+            "effective_date": 1.0,
+            "governing_law": 1.0,
+            "parties": 0.5
+          },
+          "overall_score": 0.8333,
+          "trace": {
+            "calibration_error": null,
+            "confidence": null,
+            "confidence_gate": "missing",
+            "n_reasoning_entries": null,
+            "reasoning": null
+          }
+        },
+        "overall_score": 0.8333
+      }
+    },
+    "contracts_specialist": {
+      "computable": true,
+      "kind": "extraction",
+      "score": {
+        "ambiguous_fields": [],
+        "doc_class": "contract",
+        "entity_list_audit": {},
+        "entity_list_scores": {
+          "parties": {
+            "f1": 1.0,
+            "field": "parties",
+            "matched": 2,
+            "n_expected": 2,
+            "n_predicted": 2,
+            "partial_gt": true,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        "field_scores": {
+          "contract_value": 1.0,
+          "effective_date": 1.0,
+          "parties": 1.0
+        },
+        "overall_score": 1.0,
+        "trace": {
+          "calibration_error": null,
+          "confidence": null,
+          "confidence_gate": "missing",
+          "n_reasoning_entries": null,
+          "reasoning": null
+        }
+      },
+      "score_document": {
+        "detail": {},
+        "entity_list_f1": 1.0,
+        "extraction": {
+          "ambiguous_fields": [],
+          "doc_class": "contract",
+          "entity_list_audit": {},
+          "entity_list_scores": {
+            "parties": {
+              "f1": 1.0,
+              "field": "parties",
+              "matched": 2,
+              "n_expected": 2,
+              "n_predicted": 2,
+              "partial_gt": true,
+              "precision": 1.0,
+              "recall": 1.0
+            }
+          },
+          "field_scores": {
+            "contract_value": 1.0,
+            "effective_date": 1.0,
+            "parties": 1.0
+          },
+          "overall_score": 1.0,
+          "trace": {
+            "calibration_error": null,
+            "confidence": null,
+            "confidence_gate": "missing",
+            "n_reasoning_entries": null,
+            "reasoning": null
+          }
+        },
+        "extraction_f1": 1.0,
+        "extraction_f2": 1.0,
+        "extraction_precision": 1.0,
+        "extraction_recall": 1.0,
+        "metric_id": "pipeline.extraction.overall",
+        "overall_score": 1.0,
+        "parse_ok": 1.0,
+        "provenance": {
+          "dataset_revision": null,
+          "draw_seed": null,
+          "metric_id": "pipeline.extraction.overall",
+          "model_id": null,
+          "prompt_id": null,
+          "scorer_version": "<SCORER_VERSION>",
+          "serving_kind": null,
+          "split": null
+        },
+        "schema": {
+          "doc_type": "contract",
+          "pending_fields": [
+            "contract_value"
+          ],
+          "schema_id": "contract@v9.2.1",
+          "scorable_fields": [
+            "parties",
+            "effective_date",
+            "cuad_family"
+          ],
+          "subtype": null,
+          "unlabelled_fields": [
+            "document_name",
+            "term_length",
+            "governing_law",
+            "renewal_terms",
+            "cuad_clauses"
+          ]
+        },
+        "schema_adherence": 0.2727,
+        "schema_promotion_gate": {
+          "doc_class": "contract",
+          "passes": false,
+          "reason": "schema_valid_below_threshold",
+          "schema_valid": 0.2727,
+          "threshold": 0.9
+        },
+        "schema_valid": 0.2727
+      }
+    },
+    "corporate_records_auditor": {
+      "computable": true,
+      "kind": "audit",
+      "score": {
+        "audit_disagreement_rate": 0.0,
+        "audit_resolution_rate": 1.0,
+        "extraction": {
+          "ambiguous_fields": [],
+          "doc_class": "corporate_record",
+          "entity_list_audit": {},
+          "entity_list_scores": {},
+          "field_scores": {
+            "entity_name": 1.0,
+            "filing_number": 1.0
+          },
+          "overall_score": 1.0,
+          "trace": {
+            "calibration_error": null,
+            "confidence": null,
+            "confidence_gate": "missing",
+            "n_reasoning_entries": null,
+            "reasoning": null
+          }
+        },
+        "overall_score": 1.0
+      }
+    },
+    "corporate_records_specialist": {
+      "computable": true,
+      "kind": "extraction",
+      "score": {
+        "ambiguous_fields": [],
+        "doc_class": "corporate_record",
+        "entity_list_audit": {},
+        "entity_list_scores": {},
+        "field_scores": {
+          "entity_name": 1.0
+        },
+        "overall_score": 1.0,
+        "trace": {
+          "calibration_error": null,
+          "confidence": null,
+          "confidence_gate": "missing",
+          "n_reasoning_entries": null,
+          "reasoning": null
+        }
+      },
+      "score_document": {
+        "detail": {},
+        "entity_list_f1": null,
+        "extraction": {
+          "ambiguous_fields": [],
+          "doc_class": "corporate_record",
+          "entity_list_audit": {},
+          "entity_list_scores": {},
+          "field_scores": {
+            "entity_name": 1.0
+          },
+          "overall_score": 1.0,
+          "trace": {
+            "calibration_error": null,
+            "confidence": null,
+            "confidence_gate": "missing",
+            "n_reasoning_entries": null,
+            "reasoning": null
+          }
+        },
+        "extraction_f1": 1.0,
+        "extraction_f2": 1.0,
+        "extraction_precision": 1.0,
+        "extraction_recall": 1.0,
+        "metric_id": "pipeline.extraction.overall",
+        "overall_score": 1.0,
+        "parse_ok": 1.0,
+        "provenance": {
+          "dataset_revision": null,
+          "draw_seed": null,
+          "metric_id": "pipeline.extraction.overall",
+          "model_id": null,
+          "prompt_id": null,
+          "scorer_version": "<SCORER_VERSION>",
+          "serving_kind": null,
+          "split": null
+        },
+        "schema": {
+          "doc_type": "corporate_record",
+          "pending_fields": [
+            "effective_date",
+            "signatories",
+            "jurisdiction"
+          ],
+          "schema_id": "corporate_record@v9.2.1",
+          "scorable_fields": [
+            "entity_name",
+            "record_type"
+          ],
+          "subtype": null,
+          "unlabelled_fields": [
+            "intent",
+            "subject_matter",
+            "keywords"
+          ]
+        },
+        "schema_adherence": 0.1111,
+        "schema_promotion_gate": {
+          "doc_class": "corporate_record",
+          "passes": false,
+          "reason": "schema_valid_below_threshold",
+          "schema_valid": 0.1111,
+          "threshold": 0.9
+        },
+        "schema_valid": 0.1111,
+        "unlabeled_fields": [
+          "record_type",
+          "effective_date",
+          "signatories",
+          "jurisdiction",
+          "filing_number"
+        ]
+      }
+    },
+    "correspondence_auditor": {
+      "computable": true,
+      "kind": "audit",
+      "score": {
+        "audit_disagreement_rate": 0.375,
+        "audit_resolution_rate": 0.625,
+        "extraction": {
+          "ambiguous_fields": [],
+          "doc_class": "correspondence",
+          "entity_list_audit": {},
+          "entity_list_scores": {},
+          "field_scores": {
+            "recipient": 0.25,
+            "sender": 1.0
+          },
+          "overall_score": 0.625,
+          "trace": {
+            "calibration_error": null,
+            "confidence": null,
+            "confidence_gate": "missing",
+            "n_reasoning_entries": null,
+            "reasoning": null
+          }
+        },
+        "overall_score": 0.625
+      }
+    },
+    "correspondence_specialist": {
+      "computable": true,
+      "kind": "extraction",
+      "score": {
+        "ambiguous_fields": [],
+        "doc_class": "correspondence",
+        "entity_list_audit": {},
+        "entity_list_scores": {},
+        "field_scores": {
+          "sender": 1.0
+        },
+        "overall_score": 1.0,
+        "trace": {
+          "calibration_error": null,
+          "confidence": null,
+          "confidence_gate": "missing",
+          "n_reasoning_entries": null,
+          "reasoning": null
+        }
+      },
+      "score_document": {
+        "detail": {},
+        "entity_list_f1": null,
+        "extraction": {
+          "ambiguous_fields": [],
+          "doc_class": "correspondence",
+          "entity_list_audit": {},
+          "entity_list_scores": {},
+          "field_scores": {
+            "sender": 1.0
+          },
+          "overall_score": 1.0,
+          "trace": {
+            "calibration_error": null,
+            "confidence": null,
+            "confidence_gate": "missing",
+            "n_reasoning_entries": null,
+            "reasoning": null
+          }
+        },
+        "extraction_f1": 1.0,
+        "extraction_f2": 1.0,
+        "extraction_precision": 1.0,
+        "extraction_recall": 1.0,
+        "metric_id": "pipeline.extraction.overall",
+        "overall_score": 1.0,
+        "parse_ok": 1.0,
+        "provenance": {
+          "dataset_revision": null,
+          "draw_seed": null,
+          "metric_id": "pipeline.extraction.overall",
+          "model_id": null,
+          "prompt_id": null,
+          "scorer_version": "<SCORER_VERSION>",
+          "serving_kind": null,
+          "split": null
+        },
+        "schema": {
+          "doc_type": "correspondence",
+          "pending_fields": [
+            "sender",
+            "recipient",
+            "additional_recipients",
+            "communication_date",
+            "demand_amount",
+            "action_items",
+            "urgency"
+          ],
+          "schema_id": "correspondence@v9.2.1",
+          "scorable_fields": [
+            "communication_type"
+          ],
+          "subtype": null,
+          "unlabelled_fields": [
+            "intent",
+            "subject_matter",
+            "keywords"
+          ]
+        },
+        "schema_adherence": 0.0909,
+        "schema_promotion_gate": {
+          "doc_class": "correspondence",
+          "passes": false,
+          "reason": "schema_valid_below_threshold",
+          "schema_valid": 0.0909,
+          "threshold": 0.9
+        },
+        "schema_valid": 0.0909
+      }
+    },
+    "image_extractor": {
+      "computable": true,
+      "kind": "transcription",
+      "score": {
+        "accuracy": 0.5,
+        "cer": 0.3333,
+        "character_accuracy": 0.6667,
+        "f1_macro": 0.75,
+        "n": 2,
+        "wer": 0.3333,
+        "word_accuracy": 0.6667
+      }
+    },
+    "insurance_claims_auditor": {
+      "computable": true,
+      "kind": "audit",
+      "score": {
+        "audit_disagreement_rate": 0.3333,
+        "audit_resolution_rate": 0.6667,
+        "extraction": {
+          "ambiguous_fields": [],
+          "doc_class": "insurance_claim",
+          "entity_list_audit": {},
+          "entity_list_scores": {},
+          "field_scores": {
+            "claim_number": 1.0,
+            "claimed_amount": 0.0,
+            "coverage_determination": 1.0
+          },
+          "overall_score": 0.6667,
+          "trace": {
+            "calibration_error": null,
+            "confidence": null,
+            "confidence_gate": "missing",
+            "n_reasoning_entries": null,
+            "reasoning": null
+          }
+        },
+        "overall_score": 0.6667
+      }
+    },
+    "insurance_claims_specialist": {
+      "computable": true,
+      "kind": "extraction",
+      "score": {
+        "ambiguous_fields": [],
+        "doc_class": "insurance_claim",
+        "entity_list_audit": {},
+        "entity_list_scores": {
+          "supporting_documents": {
+            "f1": 1.0,
+            "field": "supporting_documents",
+            "matched": 2,
+            "n_expected": 2,
+            "n_predicted": 2,
+            "partial_gt": false,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        "field_scores": {
+          "adjuster": 0.0,
+          "claim_number": 1.0,
+          "claim_type": 0.0,
+          "claimed_amount": 1.0,
+          "cms_source_table": 1.0,
+          "coverage_determination": 1.0,
+          "denial_reasons": 1.0,
+          "supporting_documents": 1.0
+        },
+        "overall_score": 0.75,
+        "trace": {
+          "calibration_error": null,
+          "confidence": null,
+          "confidence_gate": "missing",
+          "n_reasoning_entries": null,
+          "reasoning": null
+        }
+      },
+      "score_document": {
+        "amount_exactness": 1.0,
+        "detail": {
+          "amount_exactness": 1.0,
+          "determination_consistency": 1.0
+        },
+        "determination_consistency": 1.0,
+        "entity_list_f1": 1.0,
+        "extraction": {
+          "ambiguous_fields": [],
+          "doc_class": "insurance_claim",
+          "entity_list_audit": {},
+          "entity_list_scores": {
+            "supporting_documents": {
+              "f1": 1.0,
+              "field": "supporting_documents",
+              "matched": 2,
+              "n_expected": 2,
+              "n_predicted": 2,
+              "partial_gt": false,
+              "precision": 1.0,
+              "recall": 1.0
+            }
+          },
+          "field_scores": {
+            "adjuster": 0.0,
+            "claim_number": 1.0,
+            "claim_type": 0.0,
+            "claimed_amount": 1.0,
+            "cms_source_table": 1.0,
+            "coverage_determination": 1.0,
+            "denial_reasons": 1.0,
+            "supporting_documents": 1.0
+          },
+          "overall_score": 0.75,
+          "trace": {
+            "calibration_error": null,
+            "confidence": null,
+            "confidence_gate": "missing",
+            "n_reasoning_entries": null,
+            "reasoning": null
+          }
+        },
+        "extraction_f1": 0.8333,
+        "extraction_f2": 0.8333,
+        "extraction_precision": 0.8333,
+        "extraction_recall": 0.8333,
+        "metric_id": "pipeline.extraction.overall",
+        "overall_score": 0.75,
+        "parse_ok": 1.0,
+        "provenance": {
+          "dataset_revision": null,
+          "draw_seed": null,
+          "metric_id": "pipeline.extraction.overall",
+          "model_id": null,
+          "prompt_id": null,
+          "scorer_version": "<SCORER_VERSION>",
+          "serving_kind": null,
+          "split": null
+        },
+        "schema": {
+          "doc_type": "insurance_claim",
+          "pending_fields": [
+            "claim_checklist"
+          ],
+          "schema_id": "insurance_claim@v9.2.1",
+          "scorable_fields": [
+            "claim_number",
+            "claim_type",
+            "claimed_amount",
+            "coverage_determination",
+            "denial_reasons",
+            "supporting_documents",
+            "cms_source_table"
+          ],
+          "subtype": null,
+          "unlabelled_fields": [
+            "policy_number",
+            "insurer",
+            "insured_party",
+            "date_of_loss",
+            "date_filed",
+            "adjuster",
+            "damages_description",
+            "intent",
+            "subject_matter",
+            "keywords"
+          ]
+        },
+        "schema_adherence": 0.4118,
+        "schema_promotion_gate": {
+          "doc_class": "insurance_claim",
+          "passes": false,
+          "reason": "schema_valid_below_threshold",
+          "schema_valid": 0.4118,
+          "threshold": 0.9
+        },
+        "schema_valid": 0.4118
+      }
+    },
+    "intake": {
+      "computable": true,
+      "kind": "intake",
+      "score": {
+        "accuracy": 1.0,
+        "cleaned_chars": 11,
+        "f1_macro": 1.0,
+        "gold_text": "Hello world",
+        "intake_changed": true,
+        "intake_changed_match": null,
+        "intake_changed_rate": 1.0,
+        "intake_chars": 11,
+        "intake_collapsed_blanks": 0,
+        "intake_collapsed_blanks_match": null,
+        "intake_hyphen_unwraps": 0,
+        "intake_hyphen_unwraps_match": null,
+        "intake_messy": false,
+        "intake_messy_match": null,
+        "intake_messy_rate": 0.0,
+        "intake_method": "deterministic",
+        "intake_method_valid": 1.0,
+        "intake_prep_completeness": 1.0,
+        "kind": "intake",
+        "n": 1,
+        "prep_invariants": {
+          "collapse_blank_runs": true,
+          "collapse_horizontal_space": true,
+          "control_chars": true,
+          "hyphen_unwrap": true,
+          "nbsp_to_space": true,
+          "newline_unify": true,
+          "nfc_normalize": true,
+          "strip_zero_width": true,
+          "trim_edges": true
+        },
+        "raw_chars": 19,
+        "task": "intake"
+      }
+    },
+    "judge": {
+      "computable": true,
+      "kind": "classification",
+      "score": {
+        "accuracy": 0.75,
+        "confusion": {
+          "labels": [
+            "a",
+            "b",
+            "c"
+          ],
+          "matrix": [
+            [
+              1,
+              1,
+              0
+            ],
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ]
+        },
+        "exact_match": 0.75,
+        "exact_match_ci": {
+          "half": 0.375,
+          "hi": 1.0,
+          "lo": 0.25,
+          "method": "percentile-bootstrap",
+          "n": 4,
+          "n_boot": 2000,
+          "seed": 42
+        },
+        "f1_macro": 0.7778,
+        "f2": 0.7963,
+        "f2_macro": 0.7963,
+        "kind": "multiclass",
+        "macro_accuracy": 0.8333,
+        "n": 4,
+        "per_class": {
+          "a": {
+            "accuracy": 0.5,
+            "correct": 1,
+            "f1": 0.6667,
+            "f2": 0.5556,
+            "n": 2,
+            "precision": 1.0,
+            "recall": 0.5
+          },
+          "b": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 0.6667,
+            "f2": 0.8333,
+            "n": 1,
+            "precision": 0.5,
+            "recall": 1.0
+          },
+          "c": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        "precision": 0.8333,
+        "precision_macro": 0.8333,
+        "recall": 0.8333,
+        "recall_macro": 0.8333,
+        "task": "multiclass",
+        "top_confusions": [
+          {
+            "count": 1,
+            "expected": "a",
+            "predicted": "b"
+          }
+        ]
+      }
+    },
+    "local_vs_api": {
+      "computable": true,
+      "kind": "serving",
+      "score": {
+        "api": {
+          "completion_tokens": 100,
+          "cost_per_document": null,
+          "docs_per_second": 1.0,
+          "e2e_ci": null,
+          "e2e_latency_seconds": 1.0,
+          "e2e_p50": 1.0,
+          "e2e_p95": 1.0,
+          "error_rate": 0.0,
+          "estimated_cost_usd": null,
+          "gpu_memory_used_gb": null,
+          "gpu_utilization": null,
+          "honest_gaps": [
+            "gpu_utilization unavailable on API-key providers",
+            "kv_cache_utilization unavailable on API-key providers"
+          ],
+          "identity": {
+            "base_url_host": null,
+            "dataset_fingerprint": null,
+            "dataset_revision": null,
+            "draw_seed": null,
+            "dtype": null,
+            "experiment_name": null,
+            "gpu": null,
+            "gpu_count": null,
+            "max_model_len": null,
+            "model": "qwen/qwen3-8b",
+            "n": null,
+            "profile": null,
+            "prompt_version": null,
+            "provider": "openrouter",
+            "quantization": null,
+            "serving_kind": "api",
+            "split": null,
+            "task": null,
+            "tensor_parallel": null
+          },
+          "kv_cache_utilization": null,
+          "n_docs": 1,
+          "n_requests": 1,
+          "n_runs": 1,
+          "output_tokens_per_second": 125.0,
+          "prompt_tokens": null,
+          "prompt_tokens_per_second": null,
+          "quality": {
+            "extraction_f1": 0.82
+          },
+          "queue_time_seconds": null,
+          "requests_per_second": 1.0,
+          "tokens_per_second": 100.0,
+          "total_tokens": 100,
+          "tpot_seconds": 0.008081,
+          "ttft_ci": null,
+          "ttft_p50": 0.2,
+          "ttft_p95": 0.2,
+          "ttft_seconds": 0.2
+        },
+        "cost": {
+          "api": {
+            "completion_tokens": 100,
+            "cost_basis": null,
+            "cost_per_document": null,
+            "estimated_cost_usd": null,
+            "formula": null,
+            "honest_gap": "no OpenRouter price table for this model slug (do not fabricate electricity)",
+            "model": "qwen/qwen3-8b",
+            "n_docs": 1,
+            "price_per_million_completion": null,
+            "price_per_million_prompt": null,
+            "prompt_tokens": null,
+            "provider": "openrouter",
+            "quantization": null,
+            "serving_kind": "api",
+            "total_tokens": 100
+          },
+          "delta": {
+            "cost_per_document": {
+              "api": null,
+              "delta_local_minus_api": null,
+              "local": null
+            },
+            "estimated_cost_usd": {
+              "api": null,
+              "delta_local_minus_api": null,
+              "local": null
+            }
+          },
+          "local": {
+            "completion_tokens": 100,
+            "cost_basis": null,
+            "cost_per_document": null,
+            "estimated_cost_usd": null,
+            "formula": null,
+            "honest_gap": "no OpenRouter price table for this model slug (do not fabricate electricity)",
+            "model": "qwen3:8b",
+            "n_docs": 1,
+            "price_per_million_completion": null,
+            "price_per_million_prompt": null,
+            "prompt_tokens": null,
+            "provider": "ollama",
+            "quantization": "q4_k_m",
+            "serving_kind": "local",
+            "total_tokens": 100
+          }
+        },
+        "e2e_delta": null,
+        "honest_gaps": [
+          "estimated_cost_usd unknown for local model slug (no price table)",
+          "gpu_utilization unavailable on API-key providers",
+          "kv_cache_utilization unavailable on API-key providers"
+        ],
+        "local": {
+          "completion_tokens": 100,
+          "cost_per_document": null,
+          "docs_per_second": 0.4,
+          "e2e_ci": null,
+          "e2e_latency_seconds": 2.5,
+          "e2e_p50": 2.5,
+          "e2e_p95": 2.5,
+          "error_rate": 0.0,
+          "estimated_cost_usd": null,
+          "gpu_memory_used_gb": null,
+          "gpu_utilization": 0.7,
+          "honest_gaps": [
+            "estimated_cost_usd unknown for local model slug (no price table)"
+          ],
+          "identity": {
+            "base_url_host": null,
+            "dataset_fingerprint": null,
+            "dataset_revision": null,
+            "draw_seed": null,
+            "dtype": null,
+            "experiment_name": null,
+            "gpu": "RTX 4090",
+            "gpu_count": null,
+            "max_model_len": null,
+            "model": "qwen3:8b",
+            "n": null,
+            "profile": null,
+            "prompt_version": null,
+            "provider": "ollama",
+            "quantization": "q4_k_m",
+            "serving_kind": "local",
+            "split": null,
+            "task": null,
+            "tensor_parallel": null
+          },
+          "kv_cache_utilization": null,
+          "n_docs": 1,
+          "n_requests": 1,
+          "n_runs": 1,
+          "output_tokens_per_second": 50.0,
+          "prompt_tokens": null,
+          "prompt_tokens_per_second": null,
+          "quality": {
+            "extraction_f1": 0.8
+          },
+          "queue_time_seconds": null,
+          "requests_per_second": 0.4,
+          "tokens_per_second": 40.0,
+          "total_tokens": 100,
+          "tpot_seconds": 0.020202,
+          "ttft_ci": null,
+          "ttft_p50": 0.5,
+          "ttft_p95": 0.5,
+          "ttft_seconds": 0.5
+        },
+        "markdown": "# local vs API serving scorecard\n\n## Identity\n\n| field | local | api |\n|---|---|---|\n| `serving_kind` | local | api |\n| `provider` | ollama | openrouter |\n| `model` | qwen3:8b | qwen/qwen3-8b |\n| `quantization` | q4_k_m | None |\n| `gpu` | RTX 4090 | None |\n\n## Headlines (T0)\n\n- `ttft_seconds`: local=0.5 · api=0.2 · Δ=0.3 (compared)\n- `tokens_per_second`: local=40 · api=100 · Δ=-60 (compared)\n\n## Scoring table\n\n| metric | tier | local | api | Δ local−api | ratio | status | note |\n|---|---:|---:|---:|---:|---:|---|---|\n| `ttft_seconds` | 0 | 0.5 | 0.2 | 0.3 | 2.5 | compared |  |\n| `tokens_per_second` | 0 | 40 | 100 | -60 | 0.4 | compared |  |\n| `tpot_seconds` | 1 | 0.020202 | 0.008081 | 0.012121 | 2.49994 | compared |  |\n| `e2e_latency_seconds` | 1 | 2.5 | 1 | 1.5 | 2.5 | compared |  |\n| `ttft_p50` | 1 | 0.5 | 0.2 | 0.3 | 2.5 | compared |  |\n| `ttft_p95` | 1 | 0.5 | 0.2 | 0.3 | 2.5 | compared |  |\n| `e2e_p50` | 1 | 2.5 | 1 | 1.5 | 2.5 | compared |  |\n| `e2e_p95` | 1 | 2.5 | 1 | 1.5 | 2.5 | compared |  |\n| `output_tokens_per_second` | 1 | 50 | 125 | -75 | 0.4 | compared |  |\n| `prompt_tokens_per_second` | 1 | None | None | None | None | missing | not recorded |\n| `requests_per_second` | 1 | 0.4 | 1 | -0.6 | 0.4 | compared |  |\n| `docs_per_second` | 1 | 0.4 | 1 | -0.6 | 0.4 | compared |  |\n| `gpu_utilization` | 1 | 0.7 | None | None | None | local_only | API-key providers cannot supply GPU/KV/VRAM |\n| `kv_cache_utilization` | 1 | None | None | None | None | missing | not recorded on either side |\n| `gpu_memory_used_gb` | 1 | None | None | None | None | missing | not recorded on either side |\n| `queue_time_seconds` | 1 | None | None | None | None | missing | not recorded |\n| `error_rate` | 1 | 0 | 0 | 0 | None | compared |  |\n| `prompt_tokens` | 1 | None | None | None | None | missing | tokens/cost not recorded |\n| `completion_tokens` | 1 | 100 | 100 | 0 | 1 | compared |  |\n| `total_tokens` | 3 | 100 | 100 | 0 | 1 | compared |  |\n| `estimated_cost_usd` | 1 | None | None | None | None | missing | tokens/cost not recorded |\n| `cost_per_document` | 1 | None | None | None | None | missing | tokens/cost not recorded |\n\n## Cost calculations\n\n| side | model | prompt tok | completion tok | $/1M in | $/1M out | formula | estimated USD | per doc | note |\n|---|---|---:|---:|---:|---:|---|---:|---:|---|\n| local | qwen3:8b | None | 100 | None | None | None | None | None | no OpenRouter price table for this model slug (do not fabricate electricity) |\n| api | qwen/qwen3-8b | None | 100 | None | None | None | None | None | no OpenRouter price table for this model slug (do not fabricate electricity) |\n\n## Honest gaps\n\n- estimated_cost_usd unknown for local model slug (no price table)\n- gpu_utilization unavailable on API-key providers\n- kv_cache_utilization unavailable on API-key providers\n\n## Missing elements\n\nRecorded as `None` (not 0.0): `prompt_tokens_per_second`, `kv_cache_utilization`, `gpu_memory_used_gb`, `queue_time_seconds`, `prompt_tokens`, `estimated_cost_usd`, `cost_per_document`\n",
+        "metric_id_unverified": true,
+        "metrics": {
+          "completion_tokens": {
+            "api": 100.0,
+            "delta_local_minus_api": 0.0,
+            "local": 100.0,
+            "ratio_local_over_api": 1.0
+          },
+          "docs_per_second": {
+            "api": 1.0,
+            "delta_local_minus_api": -0.6,
+            "local": 0.4,
+            "ratio_local_over_api": 0.4
+          },
+          "e2e_latency_seconds": {
+            "api": 1.0,
+            "delta_local_minus_api": 1.5,
+            "local": 2.5,
+            "ratio_local_over_api": 2.5
+          },
+          "e2e_p50": {
+            "api": 1.0,
+            "delta_local_minus_api": 1.5,
+            "local": 2.5,
+            "ratio_local_over_api": 2.5
+          },
+          "e2e_p95": {
+            "api": 1.0,
+            "delta_local_minus_api": 1.5,
+            "local": 2.5,
+            "ratio_local_over_api": 2.5
+          },
+          "error_rate": {
+            "api": 0.0,
+            "delta_local_minus_api": 0.0,
+            "local": 0.0,
+            "ratio_local_over_api": null
+          },
+          "gpu_utilization": {
+            "api": null,
+            "delta_local_minus_api": null,
+            "local": 0.7,
+            "ratio_local_over_api": null
+          },
+          "output_tokens_per_second": {
+            "api": 125.0,
+            "delta_local_minus_api": -75.0,
+            "local": 50.0,
+            "ratio_local_over_api": 0.4
+          },
+          "requests_per_second": {
+            "api": 1.0,
+            "delta_local_minus_api": -0.6,
+            "local": 0.4,
+            "ratio_local_over_api": 0.4
+          },
+          "tokens_per_second": {
+            "api": 100.0,
+            "delta_local_minus_api": -60.0,
+            "local": 40.0,
+            "ratio_local_over_api": 0.4
+          },
+          "total_tokens": {
+            "api": 100.0,
+            "delta_local_minus_api": 0.0,
+            "local": 100.0,
+            "ratio_local_over_api": 1.0
+          },
+          "tpot_seconds": {
+            "api": 0.008081,
+            "delta_local_minus_api": 0.012121,
+            "local": 0.020202,
+            "ratio_local_over_api": 2.499938
+          },
+          "ttft_p50": {
+            "api": 0.2,
+            "delta_local_minus_api": 0.3,
+            "local": 0.5,
+            "ratio_local_over_api": 2.5
+          },
+          "ttft_p95": {
+            "api": 0.2,
+            "delta_local_minus_api": 0.3,
+            "local": 0.5,
+            "ratio_local_over_api": 2.5
+          },
+          "ttft_seconds": {
+            "api": 0.2,
+            "delta_local_minus_api": 0.3,
+            "local": 0.5,
+            "ratio_local_over_api": 2.5
+          }
+        },
+        "quality": {
+          "api": 0.82,
+          "delta_local_minus_api": -0.02,
+          "local": 0.8,
+          "metric": "extraction_f1"
+        },
+        "scorecard": {
+          "agent": "local_vs_api",
+          "cost": {
+            "api": {
+              "completion_tokens": 100,
+              "cost_basis": null,
+              "cost_per_document": null,
+              "estimated_cost_usd": null,
+              "formula": null,
+              "honest_gap": "no OpenRouter price table for this model slug (do not fabricate electricity)",
+              "model": "qwen/qwen3-8b",
+              "n_docs": 1,
+              "price_per_million_completion": null,
+              "price_per_million_prompt": null,
+              "prompt_tokens": null,
+              "provider": "openrouter",
+              "quantization": null,
+              "serving_kind": "api",
+              "total_tokens": 100
+            },
+            "delta": {
+              "cost_per_document": {
+                "api": null,
+                "delta_local_minus_api": null,
+                "local": null
+              },
+              "estimated_cost_usd": {
+                "api": null,
+                "delta_local_minus_api": null,
+                "local": null
+              }
+            },
+            "local": {
+              "completion_tokens": 100,
+              "cost_basis": null,
+              "cost_per_document": null,
+              "estimated_cost_usd": null,
+              "formula": null,
+              "honest_gap": "no OpenRouter price table for this model slug (do not fabricate electricity)",
+              "model": "qwen3:8b",
+              "n_docs": 1,
+              "price_per_million_completion": null,
+              "price_per_million_prompt": null,
+              "prompt_tokens": null,
+              "provider": "ollama",
+              "quantization": "q4_k_m",
+              "serving_kind": "local",
+              "total_tokens": 100
+            }
+          },
+          "dashboard": {
+            "completion_tokens": {
+              "api": 100.0,
+              "delta_local_minus_api": 0.0,
+              "local": 100.0,
+              "metric": "completion_tokens",
+              "note": null,
+              "ratio_local_over_api": 1.0,
+              "status": "compared",
+              "tier": 1,
+              "units": "count"
+            },
+            "cost_per_document": {
+              "api": null,
+              "delta_local_minus_api": null,
+              "local": null,
+              "metric": "cost_per_document",
+              "note": "tokens/cost not recorded",
+              "ratio_local_over_api": null,
+              "status": "missing",
+              "tier": 1,
+              "units": "USD"
+            },
+            "docs_per_second": {
+              "api": 1.0,
+              "delta_local_minus_api": -0.6,
+              "local": 0.4,
+              "metric": "docs_per_second",
+              "note": null,
+              "ratio_local_over_api": 0.4,
+              "status": "compared",
+              "tier": 1,
+              "units": "docs/s"
+            },
+            "e2e_latency_seconds": {
+              "api": 1.0,
+              "delta_local_minus_api": 1.5,
+              "local": 2.5,
+              "metric": "e2e_latency_seconds",
+              "note": null,
+              "ratio_local_over_api": 2.5,
+              "status": "compared",
+              "tier": 1,
+              "units": "seconds"
+            },
+            "e2e_p50": {
+              "api": 1.0,
+              "delta_local_minus_api": 1.5,
+              "local": 2.5,
+              "metric": "e2e_p50",
+              "note": null,
+              "ratio_local_over_api": 2.5,
+              "status": "compared",
+              "tier": 1,
+              "units": "seconds"
+            },
+            "e2e_p95": {
+              "api": 1.0,
+              "delta_local_minus_api": 1.5,
+              "local": 2.5,
+              "metric": "e2e_p95",
+              "note": null,
+              "ratio_local_over_api": 2.5,
+              "status": "compared",
+              "tier": 1,
+              "units": "seconds"
+            },
+            "error_rate": {
+              "api": 0.0,
+              "delta_local_minus_api": 0.0,
+              "local": 0.0,
+              "metric": "error_rate",
+              "note": null,
+              "ratio_local_over_api": null,
+              "status": "compared",
+              "tier": 1,
+              "units": "float[0,1]"
+            },
+            "estimated_cost_usd": {
+              "api": null,
+              "delta_local_minus_api": null,
+              "local": null,
+              "metric": "estimated_cost_usd",
+              "note": "tokens/cost not recorded",
+              "ratio_local_over_api": null,
+              "status": "missing",
+              "tier": 1,
+              "units": "USD"
+            },
+            "gpu_memory_used_gb": {
+              "api": null,
+              "delta_local_minus_api": null,
+              "local": null,
+              "metric": "gpu_memory_used_gb",
+              "note": "not recorded on either side",
+              "ratio_local_over_api": null,
+              "status": "missing",
+              "tier": 1,
+              "units": "GB"
+            },
+            "gpu_utilization": {
+              "api": null,
+              "delta_local_minus_api": null,
+              "local": 0.7,
+              "metric": "gpu_utilization",
+              "note": "API-key providers cannot supply GPU/KV/VRAM",
+              "ratio_local_over_api": null,
+              "status": "local_only",
+              "tier": 1,
+              "units": "float[0,1]"
+            },
+            "kv_cache_utilization": {
+              "api": null,
+              "delta_local_minus_api": null,
+              "local": null,
+              "metric": "kv_cache_utilization",
+              "note": "not recorded on either side",
+              "ratio_local_over_api": null,
+              "status": "missing",
+              "tier": 1,
+              "units": "float[0,1]"
+            },
+            "output_tokens_per_second": {
+              "api": 125.0,
+              "delta_local_minus_api": -75.0,
+              "local": 50.0,
+              "metric": "output_tokens_per_second",
+              "note": null,
+              "ratio_local_over_api": 0.4,
+              "status": "compared",
+              "tier": 1,
+              "units": "tokens/s"
+            },
+            "prompt_tokens": {
+              "api": null,
+              "delta_local_minus_api": null,
+              "local": null,
+              "metric": "prompt_tokens",
+              "note": "tokens/cost not recorded",
+              "ratio_local_over_api": null,
+              "status": "missing",
+              "tier": 1,
+              "units": "count"
+            },
+            "prompt_tokens_per_second": {
+              "api": null,
+              "delta_local_minus_api": null,
+              "local": null,
+              "metric": "prompt_tokens_per_second",
+              "note": "not recorded",
+              "ratio_local_over_api": null,
+              "status": "missing",
+              "tier": 1,
+              "units": "tokens/s"
+            },
+            "queue_time_seconds": {
+              "api": null,
+              "delta_local_minus_api": null,
+              "local": null,
+              "metric": "queue_time_seconds",
+              "note": "not recorded",
+              "ratio_local_over_api": null,
+              "status": "missing",
+              "tier": 1,
+              "units": "seconds"
+            },
+            "requests_per_second": {
+              "api": 1.0,
+              "delta_local_minus_api": -0.6,
+              "local": 0.4,
+              "metric": "requests_per_second",
+              "note": null,
+              "ratio_local_over_api": 0.4,
+              "status": "compared",
+              "tier": 1,
+              "units": "req/s"
+            },
+            "tokens_per_second": {
+              "api": 100.0,
+              "delta_local_minus_api": -60.0,
+              "local": 40.0,
+              "metric": "tokens_per_second",
+              "note": null,
+              "ratio_local_over_api": 0.4,
+              "status": "compared",
+              "tier": 0,
+              "units": "tokens/s"
+            },
+            "tpot_seconds": {
+              "api": 0.008081,
+              "delta_local_minus_api": 0.012121,
+              "local": 0.020202,
+              "metric": "tpot_seconds",
+              "note": null,
+              "ratio_local_over_api": 2.499938,
+              "status": "compared",
+              "tier": 1,
+              "units": "seconds"
+            },
+            "ttft_p50": {
+              "api": 0.2,
+              "delta_local_minus_api": 0.3,
+              "local": 0.5,
+              "metric": "ttft_p50",
+              "note": null,
+              "ratio_local_over_api": 2.5,
+              "status": "compared",
+              "tier": 1,
+              "units": "seconds"
+            },
+            "ttft_p95": {
+              "api": 0.2,
+              "delta_local_minus_api": 0.3,
+              "local": 0.5,
+              "metric": "ttft_p95",
+              "note": null,
+              "ratio_local_over_api": 2.5,
+              "status": "compared",
+              "tier": 1,
+              "units": "seconds"
+            },
+            "ttft_seconds": {
+              "api": 0.2,
+              "delta_local_minus_api": 0.3,
+              "local": 0.5,
+              "metric": "ttft_seconds",
+              "note": null,
+              "ratio_local_over_api": 2.5,
+              "status": "compared",
+              "tier": 0,
+              "units": "seconds"
+            }
+          },
+          "headlines": {
+            "tokens_per_second": {
+              "api": 100.0,
+              "delta_local_minus_api": -60.0,
+              "local": 40.0,
+              "metric": "tokens_per_second",
+              "note": null,
+              "ratio_local_over_api": 0.4,
+              "status": "compared",
+              "tier": 0,
+              "units": "tokens/s"
+            },
+            "ttft_seconds": {
+              "api": 0.2,
+              "delta_local_minus_api": 0.3,
+              "local": 0.5,
+              "metric": "ttft_seconds",
+              "note": null,
+              "ratio_local_over_api": 2.5,
+              "status": "compared",
+              "tier": 0,
+              "units": "seconds"
+            }
+          },
+          "honest_gaps": [
+            "estimated_cost_usd unknown for local model slug (no price table)",
+            "gpu_utilization unavailable on API-key providers",
+            "kv_cache_utilization unavailable on API-key providers"
+          ],
+          "identity": {
+            "api": {
+              "base_url_host": null,
+              "dataset_fingerprint": null,
+              "dataset_revision": null,
+              "draw_seed": null,
+              "dtype": null,
+              "experiment_name": null,
+              "gpu": null,
+              "gpu_count": null,
+              "max_model_len": null,
+              "model": "qwen/qwen3-8b",
+              "n": null,
+              "profile": null,
+              "prompt_version": null,
+              "provider": "openrouter",
+              "quantization": null,
+              "serving_kind": "api",
+              "split": null,
+              "task": null,
+              "tensor_parallel": null
+            },
+            "local": {
+              "base_url_host": null,
+              "dataset_fingerprint": null,
+              "dataset_revision": null,
+              "draw_seed": null,
+              "dtype": null,
+              "experiment_name": null,
+              "gpu": "RTX 4090",
+              "gpu_count": null,
+              "max_model_len": null,
+              "model": "qwen3:8b",
+              "n": null,
+              "profile": null,
+              "prompt_version": null,
+              "provider": "ollama",
+              "quantization": "q4_k_m",
+              "serving_kind": "local",
+              "split": null,
+              "task": null,
+              "tensor_parallel": null
+            }
+          },
+          "missing": [
+            "prompt_tokens_per_second",
+            "kv_cache_utilization",
+            "gpu_memory_used_gb",
+            "queue_time_seconds",
+            "prompt_tokens",
+            "estimated_cost_usd",
+            "cost_per_document"
+          ],
+          "n_requests": {
+            "api": 1,
+            "local": 1
+          },
+          "quality": {
+            "api": 0.82,
+            "delta_local_minus_api": -0.02,
+            "local": 0.8,
+            "metric": "extraction_f1"
+          }
+        },
+        "scorer_version_unverified": true,
+        "table": [
+          {
+            "api": 0.2,
+            "delta_local_minus_api": 0.3,
+            "local": 0.5,
+            "metric": "ttft_seconds",
+            "note": null,
+            "ratio_local_over_api": 2.5,
+            "status": "compared",
+            "tier": 0,
+            "units": "seconds"
+          },
+          {
+            "api": 100.0,
+            "delta_local_minus_api": -60.0,
+            "local": 40.0,
+            "metric": "tokens_per_second",
+            "note": null,
+            "ratio_local_over_api": 0.4,
+            "status": "compared",
+            "tier": 0,
+            "units": "tokens/s"
+          },
+          {
+            "api": 0.008081,
+            "delta_local_minus_api": 0.012121,
+            "local": 0.020202,
+            "metric": "tpot_seconds",
+            "note": null,
+            "ratio_local_over_api": 2.499938,
+            "status": "compared",
+            "tier": 1,
+            "units": "seconds"
+          },
+          {
+            "api": 1.0,
+            "delta_local_minus_api": 1.5,
+            "local": 2.5,
+            "metric": "e2e_latency_seconds",
+            "note": null,
+            "ratio_local_over_api": 2.5,
+            "status": "compared",
+            "tier": 1,
+            "units": "seconds"
+          },
+          {
+            "api": 0.2,
+            "delta_local_minus_api": 0.3,
+            "local": 0.5,
+            "metric": "ttft_p50",
+            "note": null,
+            "ratio_local_over_api": 2.5,
+            "status": "compared",
+            "tier": 1,
+            "units": "seconds"
+          },
+          {
+            "api": 0.2,
+            "delta_local_minus_api": 0.3,
+            "local": 0.5,
+            "metric": "ttft_p95",
+            "note": null,
+            "ratio_local_over_api": 2.5,
+            "status": "compared",
+            "tier": 1,
+            "units": "seconds"
+          },
+          {
+            "api": 1.0,
+            "delta_local_minus_api": 1.5,
+            "local": 2.5,
+            "metric": "e2e_p50",
+            "note": null,
+            "ratio_local_over_api": 2.5,
+            "status": "compared",
+            "tier": 1,
+            "units": "seconds"
+          },
+          {
+            "api": 1.0,
+            "delta_local_minus_api": 1.5,
+            "local": 2.5,
+            "metric": "e2e_p95",
+            "note": null,
+            "ratio_local_over_api": 2.5,
+            "status": "compared",
+            "tier": 1,
+            "units": "seconds"
+          },
+          {
+            "api": 125.0,
+            "delta_local_minus_api": -75.0,
+            "local": 50.0,
+            "metric": "output_tokens_per_second",
+            "note": null,
+            "ratio_local_over_api": 0.4,
+            "status": "compared",
+            "tier": 1,
+            "units": "tokens/s"
+          },
+          {
+            "api": null,
+            "delta_local_minus_api": null,
+            "local": null,
+            "metric": "prompt_tokens_per_second",
+            "note": "not recorded",
+            "ratio_local_over_api": null,
+            "status": "missing",
+            "tier": 1,
+            "units": "tokens/s"
+          },
+          {
+            "api": 1.0,
+            "delta_local_minus_api": -0.6,
+            "local": 0.4,
+            "metric": "requests_per_second",
+            "note": null,
+            "ratio_local_over_api": 0.4,
+            "status": "compared",
+            "tier": 1,
+            "units": "req/s"
+          },
+          {
+            "api": 1.0,
+            "delta_local_minus_api": -0.6,
+            "local": 0.4,
+            "metric": "docs_per_second",
+            "note": null,
+            "ratio_local_over_api": 0.4,
+            "status": "compared",
+            "tier": 1,
+            "units": "docs/s"
+          },
+          {
+            "api": null,
+            "delta_local_minus_api": null,
+            "local": 0.7,
+            "metric": "gpu_utilization",
+            "note": "API-key providers cannot supply GPU/KV/VRAM",
+            "ratio_local_over_api": null,
+            "status": "local_only",
+            "tier": 1,
+            "units": "float[0,1]"
+          },
+          {
+            "api": null,
+            "delta_local_minus_api": null,
+            "local": null,
+            "metric": "kv_cache_utilization",
+            "note": "not recorded on either side",
+            "ratio_local_over_api": null,
+            "status": "missing",
+            "tier": 1,
+            "units": "float[0,1]"
+          },
+          {
+            "api": null,
+            "delta_local_minus_api": null,
+            "local": null,
+            "metric": "gpu_memory_used_gb",
+            "note": "not recorded on either side",
+            "ratio_local_over_api": null,
+            "status": "missing",
+            "tier": 1,
+            "units": "GB"
+          },
+          {
+            "api": null,
+            "delta_local_minus_api": null,
+            "local": null,
+            "metric": "queue_time_seconds",
+            "note": "not recorded",
+            "ratio_local_over_api": null,
+            "status": "missing",
+            "tier": 1,
+            "units": "seconds"
+          },
+          {
+            "api": 0.0,
+            "delta_local_minus_api": 0.0,
+            "local": 0.0,
+            "metric": "error_rate",
+            "note": null,
+            "ratio_local_over_api": null,
+            "status": "compared",
+            "tier": 1,
+            "units": "float[0,1]"
+          },
+          {
+            "api": null,
+            "delta_local_minus_api": null,
+            "local": null,
+            "metric": "prompt_tokens",
+            "note": "tokens/cost not recorded",
+            "ratio_local_over_api": null,
+            "status": "missing",
+            "tier": 1,
+            "units": "count"
+          },
+          {
+            "api": 100.0,
+            "delta_local_minus_api": 0.0,
+            "local": 100.0,
+            "metric": "completion_tokens",
+            "note": null,
+            "ratio_local_over_api": 1.0,
+            "status": "compared",
+            "tier": 1,
+            "units": "count"
+          },
+          {
+            "api": 100.0,
+            "delta_local_minus_api": 0.0,
+            "local": 100.0,
+            "metric": "total_tokens",
+            "note": null,
+            "ratio_local_over_api": 1.0,
+            "status": "compared",
+            "tier": 3,
+            "units": "count"
+          },
+          {
+            "api": null,
+            "delta_local_minus_api": null,
+            "local": null,
+            "metric": "estimated_cost_usd",
+            "note": "tokens/cost not recorded",
+            "ratio_local_over_api": null,
+            "status": "missing",
+            "tier": 1,
+            "units": "USD"
+          },
+          {
+            "api": null,
+            "delta_local_minus_api": null,
+            "local": null,
+            "metric": "cost_per_document",
+            "note": "tokens/cost not recorded",
+            "ratio_local_over_api": null,
+            "status": "missing",
+            "tier": 1,
+            "units": "USD"
+          }
+        ],
+        "ttft_delta": null
+      }
+    },
+    "merger_agreement_specialist": {
+      "computable": true,
+      "kind": "extraction",
+      "score": {
+        "ambiguous_fields": [],
+        "doc_class": "merger_agreement",
+        "entity_list_audit": {},
+        "entity_list_scores": {},
+        "field_scores": {
+          "document_name": 1.0,
+          "effective_time": 1.0
+        },
+        "overall_score": 1.0,
+        "trace": {
+          "calibration_error": null,
+          "confidence": null,
+          "confidence_gate": "missing",
+          "n_reasoning_entries": null,
+          "reasoning": null
+        }
+      },
+      "score_document": {
+        "detail": {},
+        "entity_list_f1": null,
+        "extraction": {
+          "ambiguous_fields": [],
+          "doc_class": "merger_agreement",
+          "entity_list_audit": {},
+          "entity_list_scores": {},
+          "field_scores": {
+            "document_name": 1.0,
+            "effective_time": 1.0
+          },
+          "overall_score": 1.0,
+          "trace": {
+            "calibration_error": null,
+            "confidence": null,
+            "confidence_gate": "missing",
+            "n_reasoning_entries": null,
+            "reasoning": null
+          }
+        },
+        "extraction_f1": 1.0,
+        "extraction_f2": 1.0,
+        "extraction_precision": 1.0,
+        "extraction_recall": 1.0,
+        "metric_id": "pipeline.extraction.overall",
+        "overall_score": 1.0,
+        "parse_ok": 1.0,
+        "provenance": {
+          "dataset_revision": null,
+          "draw_seed": null,
+          "metric_id": "pipeline.extraction.overall",
+          "model_id": null,
+          "prompt_id": null,
+          "scorer_version": "<SCORER_VERSION>",
+          "serving_kind": null,
+          "split": null
+        },
+        "schema": {
+          "doc_type": "merger_agreement",
+          "pending_fields": [
+            "document_name",
+            "parties",
+            "effective_date",
+            "effective_time",
+            "governing_law"
+          ],
+          "schema_id": "merger_agreement@v9.2.1",
+          "scorable_fields": [
+            "merger_consideration"
+          ],
+          "subtype": null,
+          "unlabelled_fields": [
+            "maud_clauses"
+          ]
+        },
+        "schema_adherence": 0.2,
+        "schema_promotion_gate": {
+          "doc_class": "merger_agreement",
+          "passes": false,
+          "reason": "schema_valid_below_threshold",
+          "schema_valid": 0.2,
+          "threshold": 0.9
+        },
+        "schema_valid": 0.2
+      }
+    },
+    "pdf_transcriber": {
+      "computable": true,
+      "kind": "transcription",
+      "score": {
+        "accuracy": 1.0,
+        "cer": 0.0,
+        "character_accuracy": 1.0,
+        "f1_macro": 1.0,
+        "n": 1,
+        "wer": 0.0,
+        "word_accuracy": 1.0
+      }
+    },
+    "reporter": {
+      "computable": false,
+      "kind": "reporter",
+      "metric_names": [
+        "accuracy",
+        "f1_macro",
+        "extraction_overall_score",
+        "success_rate",
+        "cost_per_document"
+      ],
+      "score_raises": "TypeError"
+    },
+    "sorter": {
+      "computable": true,
+      "kind": "classification",
+      "score": {
+        "accuracy": 0.6667,
+        "doc_type_accuracy": 0.6667,
+        "doc_type_accuracy_ci": {
+          "half": 0.5,
+          "hi": 1.0,
+          "lo": 0.0,
+          "method": "percentile-bootstrap",
+          "n": 3,
+          "n_boot": 2000,
+          "seed": 42
+        },
+        "f1_macro": 0.6667,
+        "f2": 0.6667,
+        "f2_macro": 0.6667,
+        "kind": "docclass",
+        "n": 3,
+        "per_class": {
+          "contract": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "court_opinion": {
+            "accuracy": 0.0,
+            "correct": 0,
+            "f1": 0.0,
+            "f2": 0.0,
+            "n": 1,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "insurance_claim": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        "precision": 0.6667,
+        "precision_macro": 0.6667,
+        "recall": 0.6667,
+        "recall_macro": 0.6667,
+        "task": "docclass"
+      }
+    },
+    "sorter_reviewer": {
+      "computable": true,
+      "kind": "review",
+      "score": {
+        "accuracy": 0.6667,
+        "doc_type_accuracy": 0.6667,
+        "doc_type_accuracy_ci": {
+          "half": 0.5,
+          "hi": 1.0,
+          "lo": 0.0,
+          "method": "percentile-bootstrap",
+          "n": 3,
+          "n_boot": 2000,
+          "seed": 42
+        },
+        "f1_macro": 0.6667,
+        "f2": 0.6667,
+        "f2_macro": 0.6667,
+        "kind": "docclass",
+        "n": 3,
+        "per_class": {
+          "contract": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "insurance_claim": {
+            "accuracy": 0.0,
+            "correct": 0,
+            "f1": 0.0,
+            "f2": 0.0,
+            "n": 1,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "merger_agreement": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        "precision": 0.6667,
+        "precision_macro": 0.6667,
+        "recall": 0.6667,
+        "recall_macro": 0.6667,
+        "task": "docclass"
+      }
+    }
+  },
+  "task_kinds": {
+    "cer": {
+      "kind": "transcription",
+      "score": {
+        "cer": 0.125,
+        "character_accuracy": 0.875,
+        "kind": "transcription",
+        "n": 1,
+        "task": "transcription",
+        "wer": 1.0,
+        "word_accuracy": 0.0
+      }
+    },
+    "chained": {
+      "chained_summary": {
+        "composite": 0.6875,
+        "extractor": {
+          "field_presence": 0.5,
+          "overall_extraction_score": 0.625
+        },
+        "n": 4,
+        "sorter": {
+          "exact_match": 0.875,
+          "subtype_accuracy": 0.75
+        },
+        "weights": {
+          "extractor": 0.75,
+          "sorter": 0.25
+        }
+      },
+      "kind": "chained",
+      "score_task_guard": {
+        "message": "chained runs are scored with chained_composite()/chained_summary() — score_task expects per-document (expected, predicted) pairs",
+        "raises": "ValueError"
+      }
+    },
+    "content_topic": {
+      "kind": "enron_topic",
+      "score": {
+        "accuracy": 0.5,
+        "confusion": {
+          "labels": [
+            "company_news",
+            "hr_policy",
+            "legal_contracts"
+          ],
+          "matrix": [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ]
+        },
+        "content_topic_accuracy": 0.5,
+        "content_topic_f1_macro": 0.5,
+        "exact_match": 0.5,
+        "f1_macro": 0.5,
+        "kind": "enron_topic",
+        "n": 2,
+        "per_class": {
+          "company_news": {
+            "accuracy": 0.0,
+            "correct": 0,
+            "n": 1
+          },
+          "legal_contracts": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "n": 1
+          }
+        },
+        "task": "enron_topic",
+        "top_confusions": [
+          {
+            "count": 1,
+            "expected": "company_news",
+            "predicted": "hr_policy"
+          }
+        ]
+      }
+    },
+    "contracteval": {
+      "kind": "contracteval",
+      "score": {
+        "accuracy": 0.6667,
+        "f1": 0.6667,
+        "f2": 0.5556,
+        "false_no_related_denominator": 1244,
+        "false_no_related_rate": 0.0,
+        "false_no_related_rate_paper": 0.0,
+        "fn": 1,
+        "fp": 0,
+        "jaccard_mean": 0.6667,
+        "jaccard_median": 1.0,
+        "kind": "contracteval",
+        "n_pairs": 3,
+        "n_positive": 2,
+        "no_related_rate": 0.3333,
+        "per_category": {
+          "Anti-Assignment": {
+            "accuracy": 1.0,
+            "f1": 1.0,
+            "f2": 1.0,
+            "fn": 0,
+            "fp": 0,
+            "jaccard_mean": 1.0,
+            "n_pairs": 2,
+            "n_positive": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "tn": 1,
+            "tp": 1
+          },
+          "Clauses": {
+            "accuracy": 0.0,
+            "f1": 0.0,
+            "f2": 0.0,
+            "fn": 1,
+            "fp": 0,
+            "jaccard_mean": 0.3333,
+            "n_pairs": 1,
+            "n_positive": 1,
+            "precision": 0.0,
+            "recall": 0.0,
+            "tn": 0,
+            "tp": 0
+          }
+        },
+        "precision": 1.0,
+        "recall": 0.5,
+        "task": "contracteval",
+        "tn": 1,
+        "tp": 1
+      }
+    },
+    "court_opinion": {
+      "kind": "court_opinion",
+      "score": {
+        "accuracy": 0.6667,
+        "confusion": {
+          "labels": [
+            "contract",
+            "court_opinion"
+          ],
+          "matrix": [
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ]
+          ]
+        },
+        "exact_match": 0.6667,
+        "exact_match_ci": {
+          "half": 0.5,
+          "hi": 1.0,
+          "lo": 0.0,
+          "method": "percentile-bootstrap",
+          "n": 3,
+          "n_boot": 2000,
+          "seed": 42
+        },
+        "f1_macro": 0.6667,
+        "f2": 0.6945,
+        "f2_macro": 0.6945,
+        "kind": "court_opinion",
+        "macro_accuracy": 0.75,
+        "n": 3,
+        "per_class": {
+          "contract": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 0.6667,
+            "f2": 0.8333,
+            "n": 1,
+            "precision": 0.5,
+            "recall": 1.0
+          },
+          "court_opinion": {
+            "accuracy": 0.5,
+            "correct": 1,
+            "f1": 0.6667,
+            "f2": 0.5556,
+            "n": 2,
+            "precision": 1.0,
+            "recall": 0.5
+          }
+        },
+        "precision": 0.75,
+        "precision_macro": 0.75,
+        "recall": 0.75,
+        "recall_macro": 0.75,
+        "task": "court_opinion",
+        "top_confusions": [
+          {
+            "count": 1,
+            "expected": "court_opinion",
+            "predicted": "contract"
+          }
+        ]
+      }
+    },
+    "doc_class": {
+      "kind": "doc_class",
+      "score": {
+        "accuracy": 0.6667,
+        "confusion": {
+          "labels": [
+            "contract",
+            "corporate_record",
+            "correspondence",
+            "insurance_claim"
+          ],
+          "matrix": [
+            [
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        "exact_match": 0.6667,
+        "exact_match_ci": {
+          "half": 0.5,
+          "hi": 1.0,
+          "lo": 0.0,
+          "method": "percentile-bootstrap",
+          "n": 3,
+          "n_boot": 2000,
+          "seed": 42
+        },
+        "f1_macro": 0.6667,
+        "f2": 0.6667,
+        "f2_macro": 0.6667,
+        "kind": "doc_class",
+        "macro_accuracy": 0.6667,
+        "n": 3,
+        "per_class": {
+          "contract": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "corporate_record": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "correspondence": {
+            "accuracy": 0.0,
+            "correct": 0,
+            "f1": 0.0,
+            "f2": 0.0,
+            "n": 1,
+            "precision": 0.0,
+            "recall": 0.0
+          }
+        },
+        "precision": 0.6667,
+        "precision_macro": 0.6667,
+        "recall": 0.6667,
+        "recall_macro": 0.6667,
+        "task": "doc_class",
+        "top_confusions": [
+          {
+            "count": 1,
+            "expected": "correspondence",
+            "predicted": "insurance_claim"
+          }
+        ]
+      }
+    },
+    "docclass": {
+      "kind": "docclass",
+      "score": {
+        "accuracy": 1.0,
+        "doc_type_accuracy": 1.0,
+        "doc_type_accuracy_ci": {
+          "half": 0.0,
+          "hi": 1.0,
+          "lo": 1.0,
+          "method": "percentile-bootstrap",
+          "n": 4,
+          "n_boot": 2000,
+          "seed": 42
+        },
+        "exact_match": 0.75,
+        "exact_match_ci": {
+          "half": 0.375,
+          "hi": 1.0,
+          "lo": 0.25,
+          "method": "percentile-bootstrap",
+          "n": 4,
+          "n_boot": 2000,
+          "seed": 42
+        },
+        "f1_macro": 1.0,
+        "f2": 1.0,
+        "f2_macro": 1.0,
+        "kind": "docclass",
+        "n": 4,
+        "n_subclass_scored": 4,
+        "n_subclass_unannotated": 0,
+        "per_class": {
+          "contract": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "correspondence": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "insurance_claim": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "merger_agreement": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        "per_subclass": {
+          "all_cash": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "attorney_demand": {
+            "accuracy": 0.0,
+            "correct": 0,
+            "f1": 0.0,
+            "f2": 0.0,
+            "n": 1,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "carrier": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "license": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        "precision": 1.0,
+        "precision_macro": 1.0,
+        "recall": 1.0,
+        "recall_macro": 1.0,
+        "subclass_accuracy": 0.75,
+        "subclass_accuracy_ci": {
+          "half": 0.375,
+          "hi": 1.0,
+          "lo": 0.25,
+          "method": "percentile-bootstrap",
+          "n": 4,
+          "n_boot": 2000,
+          "seed": 42
+        },
+        "subclass_accuracy_equiv": 0.75,
+        "subclass_f1_macro": 0.75,
+        "subclass_f2_macro": 0.75,
+        "subclass_precision_macro": 0.75,
+        "subclass_recall_macro": 0.75,
+        "task": "docclass"
+      }
+    },
+    "document-pipeline": {
+      "kind": "pipeline",
+      "score": {
+        "accuracy": 0.5,
+        "aligned_accuracy": 0.5,
+        "exact_accuracy": 0.5,
+        "f1_macro": 0.5,
+        "f2": 0.5,
+        "f2_macro": 0.5,
+        "kind": "pipeline",
+        "n": 2,
+        "n_aligned": 1,
+        "n_exact": 1,
+        "n_subclass_scored": 2,
+        "n_subclass_unannotated": 0,
+        "per_class": {
+          "contract": {
+            "accuracy": 0.0,
+            "correct": 0,
+            "f1": 0.0,
+            "f2": 0.0,
+            "n": 1,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "correspondence": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        "per_subclass": {
+          "email": {
+            "accuracy": 0.0,
+            "correct": 0,
+            "f1": 0.0,
+            "f2": 0.0,
+            "n": 1,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "license": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        "precision": 0.5,
+        "precision_macro": 0.5,
+        "recall": 0.5,
+        "recall_macro": 0.5,
+        "subclass_accuracy": 0.5,
+        "subclass_f1_macro": 0.5,
+        "subclass_f2_macro": 0.5,
+        "subclass_precision_macro": 0.5,
+        "subclass_recall_macro": 0.5,
+        "task": "document-pipeline"
+      }
+    },
+    "enron_sentiment": {
+      "kind": "enron_sentiment",
+      "score": {
+        "accuracy": 0.6667,
+        "confusion": {
+          "labels": [
+            "negative",
+            "neutral",
+            "positive"
+          ],
+          "matrix": [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ]
+        },
+        "exact_match": 0.6667,
+        "f1_macro": 0.5556,
+        "kind": "enron_sentiment",
+        "n": 3,
+        "per_class": {
+          "negative": {
+            "accuracy": 0.0,
+            "correct": 0,
+            "n": 1
+          },
+          "neutral": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "n": 1
+          },
+          "positive": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "n": 1
+          }
+        },
+        "sentiment_accuracy": 0.6667,
+        "sentiment_f1_macro": 0.5556,
+        "task": "enron_sentiment",
+        "top_confusions": [
+          {
+            "count": 1,
+            "expected": "negative",
+            "predicted": "neutral"
+          }
+        ]
+      }
+    },
+    "enron_topic": {
+      "kind": "enron_topic",
+      "score": {
+        "accuracy": 0.6667,
+        "confusion": {
+          "labels": [
+            "company_news",
+            "hr_policy",
+            "legal_contracts"
+          ],
+          "matrix": [
+            [
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ]
+        },
+        "content_topic_accuracy": 0.6667,
+        "content_topic_f1_macro": 0.5556,
+        "exact_match": 0.6667,
+        "f1_macro": 0.5556,
+        "kind": "enron_topic",
+        "n": 3,
+        "per_class": {
+          "company_news": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "n": 1
+          },
+          "hr_policy": {
+            "accuracy": 0.0,
+            "correct": 0,
+            "n": 1
+          },
+          "legal_contracts": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "n": 1
+          }
+        },
+        "task": "enron_topic",
+        "top_confusions": [
+          {
+            "count": 1,
+            "expected": "hr_policy",
+            "predicted": "legal_contracts"
+          }
+        ]
+      }
+    },
+    "intake": {
+      "kind": "intake",
+      "score": {
+        "accuracy": 1.0,
+        "cleaned_chars": 11,
+        "f1_macro": 1.0,
+        "gold_text": "Hello world",
+        "intake_changed": true,
+        "intake_changed_match": null,
+        "intake_changed_rate": 1.0,
+        "intake_chars": 11,
+        "intake_collapsed_blanks": 0,
+        "intake_collapsed_blanks_match": null,
+        "intake_hyphen_unwraps": 0,
+        "intake_hyphen_unwraps_match": null,
+        "intake_messy": false,
+        "intake_messy_match": null,
+        "intake_messy_rate": 0.0,
+        "intake_method": "deterministic",
+        "intake_method_valid": 1.0,
+        "intake_prep_completeness": 1.0,
+        "kind": "intake",
+        "n": 1,
+        "prep_invariants": {
+          "collapse_blank_runs": true,
+          "collapse_horizontal_space": true,
+          "control_chars": true,
+          "hyphen_unwrap": true,
+          "nbsp_to_space": true,
+          "newline_unify": true,
+          "nfc_normalize": true,
+          "strip_zero_width": true,
+          "trim_edges": true
+        },
+        "raw_chars": 19,
+        "task": "intake"
+      }
+    },
+    "legalbench": {
+      "kind": "legalbench",
+      "score": {
+        "accuracy": 0.75,
+        "binary": {
+          "accuracy": 0.75,
+          "f1": 0.8,
+          "f2": 0.9091,
+          "false_negative_rate": 0.0,
+          "false_positive_rate": 0.5,
+          "fn": 0,
+          "fp": 1,
+          "precision": 0.6667,
+          "recall": 1.0,
+          "tn": 1,
+          "tp": 2
+        },
+        "confusion": {
+          "labels": [
+            "no",
+            "yes"
+          ],
+          "matrix": [
+            [
+              1,
+              1
+            ],
+            [
+              0,
+              2
+            ]
+          ]
+        },
+        "exact_match": 0.75,
+        "exact_match_ci": {
+          "half": 0.375,
+          "hi": 1.0,
+          "lo": 0.25,
+          "method": "percentile-bootstrap",
+          "n": 4,
+          "n_boot": 2000,
+          "seed": 42
+        },
+        "f1_macro": 0.7333,
+        "f2": 0.7324,
+        "f2_macro": 0.7324,
+        "kind": "legalbench",
+        "n": 4,
+        "per_class": {
+          "no": {
+            "accuracy": 0.5,
+            "correct": 1,
+            "f1": 0.6667,
+            "f2": 0.5556,
+            "n": 2,
+            "precision": 1.0,
+            "recall": 0.5
+          },
+          "yes": {
+            "accuracy": 1.0,
+            "correct": 2,
+            "f1": 0.8,
+            "f2": 0.9091,
+            "n": 2,
+            "precision": 0.6667,
+            "recall": 1.0
+          }
+        },
+        "precision": 0.8334,
+        "precision_macro": 0.8334,
+        "recall": 0.75,
+        "recall_macro": 0.75,
+        "task": "legalbench",
+        "top_confusions": [
+          {
+            "count": 1,
+            "expected": "no",
+            "predicted": "yes"
+          }
+        ]
+      }
+    },
+    "maud_clause": {
+      "kind": "maud_extraction",
+      "score": {
+        "ambiguous_keys": [],
+        "gt_ambiguous": false,
+        "kind": "maud_extraction",
+        "maud_category_accuracy": null,
+        "maud_clause_presence": 1.0,
+        "maud_precision_answered": 1.0,
+        "maud_question_accuracy": 1.0,
+        "maud_question_macro_accuracy": 1.0,
+        "maud_valid_class_rate": 1.0,
+        "metric_id": "maud.question.micro_accuracy",
+        "n_ambiguous": 0,
+        "n_documents": 1,
+        "n_pred_conflicts": 0,
+        "n_present": 2,
+        "n_questions": 2,
+        "per_document": [
+          {
+            "accuracy": 1.0,
+            "exact": 2,
+            "gt_ambiguous_keys": [],
+            "n_ambiguous": 0,
+            "n_questions": 2,
+            "presence": 1.0,
+            "present": 2
+          }
+        ],
+        "per_question": {
+          "No-Shop": {
+            "accuracy": 1.0,
+            "category_accuracy": null,
+            "gt_ambiguous": false,
+            "n": 1,
+            "presence": 1.0,
+            "status": "scored",
+            "valid_class_rate": 1.0
+          },
+          "Type of Consideration": {
+            "accuracy": 1.0,
+            "category_accuracy": null,
+            "gt_ambiguous": false,
+            "n": 1,
+            "presence": 1.0,
+            "status": "scored",
+            "valid_class_rate": 1.0
+          }
+        },
+        "reason": null,
+        "status": "scored",
+        "task": "maud_extraction"
+      }
+    },
+    "maud_docclass": {
+      "kind": "docclass",
+      "score": {
+        "accuracy": 0.6667,
+        "doc_type_accuracy": 0.6667,
+        "doc_type_accuracy_ci": {
+          "half": 0.5,
+          "hi": 1.0,
+          "lo": 0.0,
+          "method": "percentile-bootstrap",
+          "n": 3,
+          "n_boot": 2000,
+          "seed": 42
+        },
+        "exact_match": 0.6667,
+        "exact_match_ci": {
+          "half": 0.5,
+          "hi": 1.0,
+          "lo": 0.0,
+          "method": "percentile-bootstrap",
+          "n": 3,
+          "n_boot": 2000,
+          "seed": 42
+        },
+        "f1_macro": 0.8,
+        "f2": 0.7143,
+        "f2_macro": 0.7143,
+        "kind": "docclass",
+        "n": 3,
+        "n_subclass_scored": 3,
+        "n_subclass_unannotated": 0,
+        "per_class": {
+          "merger_agreement": {
+            "accuracy": 0.6667,
+            "correct": 2,
+            "f1": 0.8,
+            "f2": 0.7143,
+            "n": 3,
+            "precision": 1.0,
+            "recall": 0.6667
+          }
+        },
+        "per_subclass": {
+          "all_cash": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "all_stock": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "mixed_cash_stock": {
+            "accuracy": 0.0,
+            "correct": 0,
+            "f1": 0.0,
+            "f2": 0.0,
+            "n": 1,
+            "precision": 0.0,
+            "recall": 0.0
+          }
+        },
+        "precision": 1.0,
+        "precision_macro": 1.0,
+        "recall": 0.6667,
+        "recall_macro": 0.6667,
+        "subclass_accuracy": 0.6667,
+        "subclass_accuracy_ci": {
+          "half": 0.5,
+          "hi": 1.0,
+          "lo": 0.0,
+          "method": "percentile-bootstrap",
+          "n": 3,
+          "n_boot": 2000,
+          "seed": 42
+        },
+        "subclass_accuracy_equiv": 1.0,
+        "subclass_f1_macro": 0.6667,
+        "subclass_f2_macro": 0.6667,
+        "subclass_precision_macro": 0.6667,
+        "subclass_recall_macro": 0.6667,
+        "task": "maud_docclass"
+      }
+    },
+    "maud_extraction": {
+      "kind": "maud_extraction",
+      "score": {
+        "ambiguous_keys": [],
+        "gt_ambiguous": false,
+        "kind": "maud_extraction",
+        "maud_category_accuracy": 0.3333,
+        "maud_clause_presence": 0.6667,
+        "maud_precision_answered": 0.5,
+        "maud_question_accuracy": 0.3333,
+        "maud_question_macro_accuracy": 0.3333,
+        "maud_valid_class_rate": 1.0,
+        "metric_id": "maud.question.micro_accuracy",
+        "n_ambiguous": 0,
+        "n_documents": 1,
+        "n_pred_conflicts": 0,
+        "n_present": 2,
+        "n_questions": 3,
+        "per_document": [
+          {
+            "accuracy": 0.3333,
+            "exact": 1,
+            "gt_ambiguous_keys": [],
+            "n_ambiguous": 0,
+            "n_questions": 3,
+            "presence": 0.6667,
+            "present": 2
+          }
+        ],
+        "per_question": {
+          "MAE Definition": {
+            "accuracy": 0.0,
+            "category_accuracy": 0.0,
+            "gt_ambiguous": false,
+            "n": 1,
+            "presence": 0.0,
+            "status": "scored",
+            "valid_class_rate": 0.0
+          },
+          "No-Shop": {
+            "accuracy": 0.0,
+            "category_accuracy": 0.0,
+            "gt_ambiguous": false,
+            "n": 1,
+            "presence": 1.0,
+            "status": "scored",
+            "valid_class_rate": 1.0
+          },
+          "Type of Consideration": {
+            "accuracy": 1.0,
+            "category_accuracy": 1.0,
+            "gt_ambiguous": false,
+            "n": 1,
+            "presence": 1.0,
+            "status": "scored",
+            "valid_class_rate": 1.0
+          }
+        },
+        "reason": null,
+        "status": "scored",
+        "task": "maud_extraction"
+      }
+    },
+    "maud_question": {
+      "kind": "maud_question",
+      "score": {
+        "accuracy": 0.6667,
+        "confusion": {
+          "labels": [
+            "all_cash",
+            "all_stock",
+            "mixed_cash_stock",
+            "other"
+          ],
+          "matrix": [
+            [
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1,
+              0
+            ]
+          ]
+        },
+        "exact_match": 0.6667,
+        "exact_match_ci": {
+          "half": 0.5,
+          "hi": 1.0,
+          "lo": 0.0,
+          "method": "percentile-bootstrap",
+          "n": 3,
+          "n_boot": 2000,
+          "seed": 42
+        },
+        "f1_macro": 0.6667,
+        "f2": 0.6667,
+        "f2_macro": 0.6667,
+        "kind": "maud_question",
+        "macro_accuracy": 0.6667,
+        "n": 3,
+        "per_class": {
+          "all_cash": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "all_stock": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "other": {
+            "accuracy": 0.0,
+            "correct": 0,
+            "f1": 0.0,
+            "f2": 0.0,
+            "n": 1,
+            "precision": 0.0,
+            "recall": 0.0
+          }
+        },
+        "precision": 0.6667,
+        "precision_macro": 0.6667,
+        "recall": 0.6667,
+        "recall_macro": 0.6667,
+        "task": "maud_question",
+        "top_confusions": [
+          {
+            "count": 1,
+            "expected": "other",
+            "predicted": "mixed_cash_stock"
+          }
+        ]
+      }
+    },
+    "multiclass": {
+      "kind": "multiclass",
+      "score": {
+        "accuracy": 0.75,
+        "confusion": {
+          "labels": [
+            "a",
+            "b",
+            "c"
+          ],
+          "matrix": [
+            [
+              1,
+              1,
+              0
+            ],
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ]
+        },
+        "exact_match": 0.75,
+        "exact_match_ci": {
+          "half": 0.375,
+          "hi": 1.0,
+          "lo": 0.25,
+          "method": "percentile-bootstrap",
+          "n": 4,
+          "n_boot": 2000,
+          "seed": 42
+        },
+        "f1_macro": 0.7778,
+        "f2": 0.7963,
+        "f2_macro": 0.7963,
+        "kind": "multiclass",
+        "macro_accuracy": 0.8333,
+        "n": 4,
+        "per_class": {
+          "a": {
+            "accuracy": 0.5,
+            "correct": 1,
+            "f1": 0.6667,
+            "f2": 0.5556,
+            "n": 2,
+            "precision": 1.0,
+            "recall": 0.5
+          },
+          "b": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 0.6667,
+            "f2": 0.8333,
+            "n": 1,
+            "precision": 0.5,
+            "recall": 1.0
+          },
+          "c": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        "precision": 0.8333,
+        "precision_macro": 0.8333,
+        "recall": 0.8333,
+        "recall_macro": 0.8333,
+        "task": "multiclass",
+        "top_confusions": [
+          {
+            "count": 1,
+            "expected": "a",
+            "predicted": "b"
+          }
+        ]
+      }
+    },
+    "pipeline": {
+      "kind": "pipeline",
+      "score": {
+        "accuracy": 1.0,
+        "aligned_accuracy": 1.0,
+        "exact_accuracy": 1.0,
+        "f1_macro": 1.0,
+        "f2": 1.0,
+        "f2_macro": 1.0,
+        "kind": "pipeline",
+        "n": 2,
+        "n_aligned": 2,
+        "n_exact": 2,
+        "n_subclass_scored": 2,
+        "n_subclass_unannotated": 0,
+        "per_class": {
+          "contract": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "merger_agreement": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        "per_subclass": {
+          "all_cash": {
+            "accuracy": 0.0,
+            "correct": 0,
+            "f1": 0.0,
+            "f2": 0.0,
+            "n": 1,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "license": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        "precision": 1.0,
+        "precision_macro": 1.0,
+        "recall": 1.0,
+        "recall_macro": 1.0,
+        "subclass_accuracy": 0.5,
+        "subclass_f1_macro": 0.5,
+        "subclass_f2_macro": 0.5,
+        "subclass_precision_macro": 0.5,
+        "subclass_recall_macro": 0.5,
+        "task": "pipeline"
+      }
+    },
+    "sentiment": {
+      "kind": "enron_sentiment",
+      "score": {
+        "accuracy": 1.0,
+        "confusion": {
+          "labels": [
+            "negative",
+            "positive"
+          ],
+          "matrix": [
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        "exact_match": 1.0,
+        "f1_macro": 1.0,
+        "kind": "enron_sentiment",
+        "n": 2,
+        "per_class": {
+          "negative": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "n": 1
+          },
+          "positive": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "n": 1
+          }
+        },
+        "sentiment_accuracy": 1.0,
+        "sentiment_f1_macro": 1.0,
+        "task": "enron_sentiment",
+        "top_confusions": []
+      }
+    },
+    "subtype": {
+      "kind": "subtype",
+      "score": {
+        "accuracy": 0.3333,
+        "confusion": {
+          "labels": [
+            "affiliate",
+            "joint_venture",
+            "license"
+          ],
+          "matrix": [
+            [
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ]
+          ]
+        },
+        "exact_match": 0.3333,
+        "exact_match_ci": {
+          "half": 0.5,
+          "hi": 1.0,
+          "lo": 0.0,
+          "method": "percentile-bootstrap",
+          "n": 3,
+          "n_boot": 2000,
+          "seed": 42
+        },
+        "f1_macro": 0.5,
+        "f2": 0.5,
+        "f2_macro": 0.5,
+        "kind": "subtype",
+        "macro_accuracy": 0.5,
+        "n": 3,
+        "per_class": {
+          "affiliate": {
+            "accuracy": 0.0,
+            "correct": 0,
+            "f1": 0.0,
+            "f2": 0.0,
+            "n": 1,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "license": {
+            "accuracy": 1.0,
+            "correct": 1,
+            "f1": 1.0,
+            "f2": 1.0,
+            "n": 1,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        "precision": 0.5,
+        "precision_macro": 0.5,
+        "recall": 0.5,
+        "recall_macro": 0.5,
+        "task": "subtype",
+        "top_confusions": [
+          {
+            "count": 1,
+            "expected": "affiliate",
+            "predicted": "joint_venture"
+          }
+        ]
+      }
+    },
+    "transcription": {
+      "kind": "transcription",
+      "score": {
+        "cer": 0.1,
+        "character_accuracy": 0.9,
+        "kind": "transcription",
+        "n": 2,
+        "task": "transcription",
+        "wer": 0.1667,
+        "word_accuracy": 0.8333
+      }
+    },
+    "wer": {
+      "kind": "transcription",
+      "score": {
+        "cer": 0.2727,
+        "character_accuracy": 0.7273,
+        "kind": "transcription",
+        "n": 1,
+        "task": "transcription",
+        "wer": 0.25,
+        "word_accuracy": 0.75
+      }
+    }
+  }
+}

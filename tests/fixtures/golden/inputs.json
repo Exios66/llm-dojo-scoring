@@ -1,0 +1,334 @@
+{
+  "task_cases": {
+    "subtype": {
+      "expected": ["license", "supply", "affiliate"],
+      "predicted": ["license", "ERROR: timeout", "joint_venture"]
+    },
+    "doc_class": {
+      "expected": ["contract", "corporate_record", "correspondence"],
+      "predicted": ["contract", "corporate_record", "insurance_claim"]
+    },
+    "docclass": {
+      "expected": ["contract", "merger_agreement", "insurance_claim", "correspondence"],
+      "predicted": ["contract", "merger_agreement", "insurance_claim", "correspondence"],
+      "expected_subclass": ["License_Agreements", "all_cash", "carrier", "attorney_demand"],
+      "predicted_subclass": ["license", "all_cash", "carrier", "email"]
+    },
+    "maud_docclass": {
+      "expected": ["merger_agreement", "merger_agreement", "merger_agreement"],
+      "predicted": ["merger_agreement", "merger_agreement", "contract"],
+      "expected_subclass": ["all_cash", "all_stock", "mixed_cash_stock"],
+      "predicted_subclass": ["all_cash", "all_stock", "mixed_cash_stock_election"]
+    },
+    "maud_question": {
+      "expected": ["All Cash", "All Stock", "Other"],
+      "predicted": ["all cash", "all_stock", "mixed cash and stock"]
+    },
+    "legalbench": {
+      "expected": ["yes", "no", "yes", "no"],
+      "predicted": ["yes", "yes", "yes", "no"]
+    },
+    "multiclass": {
+      "expected": ["a", "b", "c", "a"],
+      "predicted": ["a", "b", "c", "b"]
+    },
+    "court_opinion": {
+      "expected": ["court_opinion", "court_opinion", "contract"],
+      "predicted": ["court_opinion", "contract", "contract"]
+    },
+    "chained": {
+      "expected": ["a"],
+      "predicted": ["a"],
+      "guard": {
+        "raises": "ValueError"
+      },
+      "summary": {
+        "sorter_exact": 0.875,
+        "sorter_subtype": 0.75,
+        "extractor_overall": 0.625,
+        "extractor_presence": 0.5,
+        "n": 4
+      }
+    },
+    "contracteval": {
+      "expected": [
+        ["NEITHER PARTY SHALL ASSIGN THIS AGREEMENT"],
+        [],
+        ["CLAUSE ONE"]
+      ],
+      "predicted": [
+        "NEITHER PARTY SHALL ASSIGN THIS AGREEMENT",
+        "no related clause",
+        "CLAUSE TWO"
+      ],
+      "categories": ["Anti-Assignment", "Anti-Assignment", "Clauses"]
+    },
+    "pipeline": {
+      "expected": ["contract", "merger_agreement"],
+      "predicted": ["contract", "merger_agreement"],
+      "expected_subclass": ["License_Agreements", "all_cash"],
+      "predicted_subclass": ["license", "mixed_cash_stock"]
+    },
+    "document-pipeline": {
+      "expected": ["correspondence", "contract"],
+      "predicted": ["correspondence", "insurance_claim"],
+      "expected_subclass": ["email", "License_Agreements"],
+      "predicted_subclass": ["letter", "license"]
+    },
+    "enron_topic": {
+      "expected": ["legal_contracts", "company_news", "hr_policy"],
+      "predicted": ["legal_contracts", "company_news", "legal_contracts"]
+    },
+    "content_topic": {
+      "expected": ["legal_contracts", "company_news"],
+      "predicted": ["legal_contracts", "hr_policy"]
+    },
+    "enron_sentiment": {
+      "expected": ["positive", "negative", "neutral"],
+      "predicted": ["positive", "neutral", "neutral"]
+    },
+    "sentiment": {
+      "expected": ["positive", "negative"],
+      "predicted": ["positive", "negative"]
+    },
+    "maud_extraction": {
+      "expected": {
+        "Type of Consideration": {
+          "answer": "All Cash",
+          "category": "General Information"
+        },
+        "No-Shop": {
+          "answer": "Yes",
+          "category": "Deal Protection and Related Provisions"
+        },
+        "MAE Definition": {
+          "answer": "standard MAE",
+          "category": "Material Adverse Effect"
+        }
+      },
+      "predicted": {
+        "Type of Consideration": {
+          "answer": "all cash",
+          "category": "General Information"
+        },
+        "No-Shop": {
+          "answer": "No"
+        }
+      }
+    },
+    "maud_clause": {
+      "expected": [
+        "Type of Consideration: All Stock",
+        "No-Shop: Yes"
+      ],
+      "predicted": [
+        "Type of Consideration: All Stock",
+        "No-Shop: Yes"
+      ]
+    },
+    "transcription": {
+      "expected": ["the parties agree", "notice is given"],
+      "predicted": ["the parties agree", "notice given"]
+    },
+    "wer": {
+      "expected": "alpha beta gamma delta",
+      "predicted": "alpha beta gamma"
+    },
+    "cer": {
+      "expected": "contract",
+      "predicted": "kontract"
+    },
+    "intake": {
+      "expected": "  Hello   world  \n\n",
+      "predicted": "Hello world"
+    }
+  },
+  "suite_cases": {
+    "arbiter": {
+      "expected": {
+        "finding": "consistent",
+        "severity": "low"
+      },
+      "predicted": {
+        "finding": "consistent",
+        "severity": "high"
+      }
+    },
+    "archivist": {
+      "computable": false,
+      "kind": "cost"
+    },
+    "audit_agent": {
+      "expected": {
+        "summary": "ok",
+        "risk": "low"
+      },
+      "predicted": {
+        "summary": "ok",
+        "risk": "high"
+      }
+    },
+    "boss": {
+      "computable": false,
+      "kind": "reporter"
+    },
+    "contract_auditor": {
+      "expected": {
+        "governing_law": "Delaware",
+        "effective_date": "2024-03-03",
+        "parties": ["Acme Corp", "Beta LLC"]
+      },
+      "predicted": {
+        "governing_law": "Delaware",
+        "effective_date": "2024-03-03",
+        "parties": ["Acme Corp"]
+      }
+    },
+    "contracts_specialist": {
+      "expected": {
+        "parties": ["Acme Corp", "Beta LLC"],
+        "effective_date": "2024-03-03",
+        "contract_value": "$1,000.00"
+      },
+      "predicted": {
+        "parties": ["Beta LLC", "Acme Corp"],
+        "effective_date": "March 3, 2024",
+        "contract_value": "1000"
+      }
+    },
+    "corporate_records_auditor": {
+      "expected": {
+        "entity_name": "Acme Holdings",
+        "filing_number": "A-1"
+      },
+      "predicted": {
+        "entity_name": "Acme Holdings",
+        "filing_number": "A-1"
+      }
+    },
+    "corporate_records_specialist": {
+      "expected": {
+        "entity_name": "Acme Corp"
+      },
+      "predicted": {
+        "entity_name": "Acme Corp"
+      }
+    },
+    "correspondence_auditor": {
+      "expected": {
+        "sender": "Alice",
+        "recipient": "Bob"
+      },
+      "predicted": {
+        "sender": "Alice",
+        "recipient": "Carol"
+      }
+    },
+    "correspondence_specialist": {
+      "expected": {
+        "sender": "Alice"
+      },
+      "predicted": {
+        "sender": "Alice"
+      }
+    },
+    "image_extractor": {
+      "expected": ["Invoice total 100", "Paid in full"],
+      "predicted": ["Invoice total 100", "Paid"]
+    },
+    "insurance_claims_auditor": {
+      "expected": {
+        "claim_number": "CLM-1",
+        "claimed_amount": 100.0,
+        "coverage_determination": "approved",
+        "denial_reasons": []
+      },
+      "predicted": {
+        "claim_number": "CLM-1",
+        "claimed_amount": 125.0,
+        "coverage_determination": "approved",
+        "denial_reasons": []
+      }
+    },
+    "insurance_claims_specialist": {
+      "expected": {
+        "claim_number": "887013387879564",
+        "claimed_amount": "30.0",
+        "claim_type": "health",
+        "cms_source_table": "carrier",
+        "coverage_determination": "approved",
+        "denial_reasons": "",
+        "adjuster": "",
+        "supporting_documents": ["provider NPI 5040521237", "HCPCS detail (1 codes)"]
+      },
+      "predicted": {
+        "claim_number": "887013387879564",
+        "claimed_amount": "$30.00",
+        "claim_type": "carrier",
+        "coverage_determination": "approved",
+        "denial_reasons": [],
+        "adjuster": "KELLY P.",
+        "supporting_documents": ["NPI 5040521237", "HCPCS detail (2 codes)"]
+      }
+    },
+    "intake": {
+      "expected": "  Hello   world  \n\n",
+      "predicted": "Hello world"
+    },
+    "judge": {
+      "expected": ["a", "b", "c", "a"],
+      "predicted": ["a", "b", "c", "b"]
+    },
+    "local_vs_api": {
+      "expected": {
+        "provider": "ollama",
+        "model": "qwen3:8b",
+        "quantization": "q4_k_m",
+        "gpu": "RTX 4090",
+        "ttft_seconds": 0.5,
+        "e2e_latency_seconds": 2.5,
+        "completion_tokens": 100,
+        "gpu_utilization": 0.7,
+        "scores": {
+          "extraction_f1": 0.8
+        }
+      },
+      "predicted": {
+        "provider": "openrouter",
+        "model": "qwen/qwen3-8b",
+        "ttft_seconds": 0.2,
+        "e2e_latency_seconds": 1.0,
+        "completion_tokens": 100,
+        "scores": {
+          "extraction_f1": 0.82
+        }
+      }
+    },
+    "merger_agreement_specialist": {
+      "expected": {
+        "document_name": "Project X",
+        "effective_time": "9:00 a.m."
+      },
+      "predicted": {
+        "document_name": "Project X",
+        "effective_time": "9:00 a.m."
+      }
+    },
+    "pdf_transcriber": {
+      "expected": "the parties agree to terminate",
+      "predicted": "the parties agree to terminate"
+    },
+    "reporter": {
+      "computable": false,
+      "kind": "reporter"
+    },
+    "sorter": {
+      "expected": ["contract", "insurance_claim", "court_opinion"],
+      "predicted": ["contract", "insurance_claim", "correspondence"]
+    },
+    "sorter_reviewer": {
+      "expected": ["contract", "merger_agreement", "insurance_claim"],
+      "predicted": ["contract", "merger_agreement", "correspondence"]
+    }
+  }
+}
