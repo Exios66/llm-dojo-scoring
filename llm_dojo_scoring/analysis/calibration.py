@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import math
 import random
+from statistics import NormalDist
 from collections.abc import Iterable, Sequence
 from typing import Any
 
@@ -34,6 +35,9 @@ __all__ = [
 
 Pair = tuple[float, bool]
 
+#: Largest accept count :func:`required_samples` searches before giving up.
+_MAX_REQUIRED_SAMPLES = 1_000_000
+
 
 def _validate_count(value: int, name: str, *, upper: int | None = None) -> int:
     """Require a non-negative integer, optionally bounded by *upper*."""
@@ -52,11 +56,6 @@ def _validate_confidence(confidence: float) -> float:
     return value
 
 
-def _binomial_cdf(errors: int, n: int, p: float) -> float:
-    """P(X <= errors) for X ~ Binomial(n, p)."""
-    return sum(math.comb(n, i) * (p**i) * ((1.0 - p) ** (n - i)) for i in range(errors + 1))
-
-
 def clopper_pearson_upper(
     errors: int, n: int, *, confidence: float = 0.95
 ) -> float | None:
@@ -72,15 +71,15 @@ def clopper_pearson_upper(
         return None
     if errors > n:
         raise ValueError(f"errors ({errors}) cannot exceed n ({n})")
-    alpha = 1.0 - _validate_confidence(confidence)
-    low, high = 0.0, 1.0
-    for _ in range(100):
-        mid = (low + high) / 2.0
-        if _binomial_cdf(errors, n, mid) > alpha:
-            low = mid
-        else:
-            high = mid
-    return high
+    level = _validate_confidence(confidence)
+    if errors == n:
+        return 1.0
+    # The exact bound is the ``confidence`` quantile of Beta(errors + 1, n - errors).
+    # The regularized incomplete-beta inverse needs no binomial coefficients,
+    # so large counts cannot overflow a float (``math.comb(10**6, 67)`` does).
+    from scipy.special import betaincinv
+
+    return float(betaincinv(errors + 1, n - errors, level))
 
 
 def required_samples(
@@ -93,11 +92,15 @@ def required_samples(
     """
     errors = _validate_count(errors, "errors")
     risk = _validate_confidence(risk)
+    confidence = _validate_confidence(confidence)
     if errors == 0:
         # 1 - (1 - risk) ** n <= 1 - confidence
         n = math.ceil(math.log(1.0 - confidence) / math.log(1.0 - risk))
         return max(1, n)
-    low, high = max(errors, 1), 1_000_000
+    low, high = max(errors, 1), _MAX_REQUIRED_SAMPLES
+    if errors > high:
+        # More errors than the search cap allows trials: no sample clears it.
+        return None
     if (clopper_pearson_upper(errors, high, confidence=confidence) or 1.0) > risk:
         return None
     while low < high:
@@ -153,6 +156,7 @@ def cross_fit_cutoffs(
     """
     if folds < 2:
         raise ValueError("folds must be at least 2")
+    _validate_confidence(confidence)
     shuffled = list(rows)
     random.Random(seed).shuffle(shuffled)
     cutoff = cutoff_at_target(shuffled, target)
@@ -176,7 +180,8 @@ def cross_fit_cutoffs(
         fold_right, fold_kept = _accepted(held, fold_cutoff)
         right += fold_right
         kept += fold_kept
-    interval = wilson_ci(right / kept, kept) if kept else None
+    z = NormalDist().inv_cdf(0.5 + _validate_confidence(confidence) / 2.0)
+    interval = wilson_ci(right / kept, kept, z=z) if kept else None
     return {
         "cutoff": cutoff,
         "holdout_documents": len(shuffled),

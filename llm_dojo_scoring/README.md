@@ -8,7 +8,7 @@ llm_dojo_scoring/
 ├── __init__.py        public API re-exports (score_extraction, score_task, suites, …)
 ├── _layout.py         legacy flat import paths → subpackage modules
 ├── config.py          process-wide settings (LLM_DOJO_SCORING_CONFIG)
-├── cli.py             dojo-analyze / dojo-export / dojo-sync / dojo-version
+├── cli.py             dojo-analyze / dojo-export / dojo-rescore / dojo-sync / dojo-version
 ├── prompts/           importable prompt catalog and frozen eval-environment lineage
 ├── schemas/           what the dataset rows mean
 ├── scoring/           deterministic scorers

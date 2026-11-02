@@ -794,6 +794,13 @@ def _record_scorer_version(raw: Mapping[str, Any]) -> str | None:
     return None
 
 
+def _is_release(value: str | None) -> bool:
+    """Whether *value* is a release string the score-change ledger can parse."""
+    from ..metrics.score_changelog import _version
+
+    return _version(value) is not None
+
+
 def _delta_map(local: Mapping[str, Any], api: Mapping[str, Any]) -> dict[str, Any]:
     """Compare available serving metrics using local-minus-API deltas and ratios."""
     out: dict[str, Any] = {}
@@ -1424,6 +1431,9 @@ def compare_serving(
             payload["scorer_version_unverified"] = True
         elif left.get("scorer_version_partial") or right.get("scorer_version_partial"):
             # Some pooled runs predate the stamp; the comparison is usable but unproven.
+            payload["scorer_version_unverified"] = True
+        elif not (_is_release(left_scorer_version) and _is_release(right_scorer_version)):
+            # A stamp the release ledger cannot parse (e.g. "legacy") proves nothing.
             payload["scorer_version_unverified"] = True
     payload["table"] = serving_table_rows(payload)
     payload["scorecard"] = serving_scorecard(payload)

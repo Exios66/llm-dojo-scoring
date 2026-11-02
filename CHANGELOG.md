@@ -48,6 +48,21 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+- Reviewer/rescore review fixes (PR #103): `clopper_pearson_upper` uses the Beta
+  quantile and no longer overflows on large error counts; `required_samples`
+  validates `confidence` and returns `None` past its search cap;
+  `cross_fit_cutoffs` applies its `confidence`. An unrouted reviewer row is
+  inferred as an auto-accept only when it passes the full accept rule (cutoff,
+  confidence, eligibility); a missing predicted subclass counts as a subclass
+  miss; measured zero cost/tokens are kept; `score_review_lane([])` has the
+  same keys as a non-empty card. `rescore_records` skips rows a scorer rejects
+  with `ValueError`; the dataset join keeps item truth when the dataset row has
+  none; `diff_scorecards` matches by `doc_id`/`id`/`item_id`. Strict
+  `compare_serving` refuses a partially stamped leg, and an unparseable
+  `scorer_version` is flagged `scorer_version_unverified`.
+  `audit_consumer_surface.py` reads git checkouts at HEAD, prunes skipped
+  trees, records submodule aliases, and exits 2 (no write, no false drift) when
+  pinned checkouts are unavailable.
 - CUAD `parties` truth: defined-term annotations (`NMS CORP. ("Seller")`) are
   stripped before containment against the `Parties` spans (`party_core`). Found by
   the sandbox's extraction-gate vetting: 34% of correct party lists scored right.

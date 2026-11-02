@@ -372,3 +372,141 @@ def test_human_verdicts_are_the_four_human_routes():
         "out_of_scope",
         "multiple_documents",
     }
+
+
+# --- PR #103 review regressions -------------------------------------------
+
+
+def test_run_item_adapter_keeps_measured_zero_cost_and_tokens():
+    """A free model reporting ``cost: 0.0`` is priced, not unpriced."""
+    record = review_record_from_run_item(
+        {
+            "item_id": "free",
+            "pred": {
+                "doc_type": "contract",
+                "confidence": 0.99,
+                "usage": {"cost": 0.0, "cost_usd": 5.0, "input_tokens": 0, "output_tokens": 0,
+                          "prompt_tokens": 7, "completion_tokens": 9},
+            },
+        },
+        truth={"expected_doc_class": "contract"},
+        handoff={"sorter_doc_type": "contract"},
+        cutoffs={"contract": 0.8},
+    )
+    assert record.cost_usd == 0.0
+    assert record.prompt_tokens == 0
+    assert record.completion_tokens == 0
+    card = score_review_lane([record])
+    assert card["cost"]["complete"] is True
+    assert card["cost"]["total_usd"] == 0.0
+
+
+def test_run_item_adapter_falls_back_when_the_primary_usage_key_is_absent():
+    """``cost_usd`` is used when ``cost`` is absent."""
+    record = review_record_from_run_item(
+        {"item_id": "x", "pred": {"doc_type": "contract", "usage": {"cost_usd": 0.002}}}
+    )
+    assert record.cost_usd == 0.002
+
+
+def test_inferred_route_without_a_cutoff_is_not_an_auto_accept():
+    """With no recorded route, a missing cutoff cannot fall through to extract."""
+    card = score_review_lane([_record(route=None, cutoff=None)])
+    assert card["acceptance"]["n_accepted"] == 0
+    assert card["routing"]["n_human_review"] == 1
+    assert card["routing"]["accept_rule_violations"] == []
+
+
+def test_inferred_route_without_a_confidence_is_not_an_auto_accept():
+    """A missing reviewer confidence keeps an unrouted row out of the accepts."""
+    card = score_review_lane([_record(route=None, reviewer_confidence=None)])
+    assert card["acceptance"]["n_accepted"] == 0
+
+
+def test_inferred_route_with_an_ineligible_label_is_not_an_auto_accept():
+    """An ineligible label keeps an unrouted row out of the accepts."""
+    card = score_review_lane([_record(route=None, eligible=False)])
+    assert card["acceptance"]["n_accepted"] == 0
+    assert card["routing"]["n_human_review"] == 1
+
+
+def test_inferred_route_that_passes_the_accept_rule_is_still_accepted():
+    """A clean unrouted row is still inferred as an auto-accept."""
+    card = score_review_lane([_record(route=None)])
+    assert card["acceptance"]["n_accepted"] == 1
+    assert card["routing"]["accept_rule_ok"] is True
+
+
+def test_recorded_extract_route_still_reports_its_violations():
+    """A pipeline that recorded ``extract`` without a cutoff is flagged, not hidden."""
+    card = score_review_lane([_record(route="extract", cutoff=None)])
+    assert card["acceptance"]["n_accepted"] == 1
+    violations = card["routing"]["accept_rule_violations"]
+    assert violations and "accept_without_cutoff" in violations[0]["violations"]
+
+
+def test_missing_predicted_subclass_counts_as_a_subclass_miss():
+    """A right class with no subclass answer must not inflate subclass accuracy."""
+    card = score_review_lane(
+        [
+            _record(doc_id="a"),
+            _record(doc_id="b", reviewer_doc_subclass=None),
+        ]
+    )
+    subclass = card["quality"]["subclass"]
+    assert subclass["subclass_scored"] == 2
+    assert subclass["subclass_correct"] == 1
+    assert subclass["subclass_accuracy"] == 0.5
+    assert subclass["accepted_subclass_wrong"] == 1
+    assert card["subclass_accuracy"] == 0.5
+
+
+def test_unscorable_target_subclass_is_still_excluded():
+    """Merger ``other`` stays out of subclass scoring even with no prediction."""
+    card = score_review_lane(
+        [
+            _record(
+                expected_doc_type="merger_agreement",
+                expected_doc_subclass="other",
+                sorter_doc_type="merger_agreement",
+                reviewer_doc_type="merger_agreement",
+                reviewer_doc_subclass=None,
+            )
+        ]
+    )
+    assert card["quality"]["subclass"]["subclass_scored"] == 0
+
+
+def _key_shape(value):
+    """Nested key structure of a scorecard (dict keys only, not values)."""
+    if isinstance(value, dict):
+        return {key: _key_shape(item) for key, item in value.items()}
+    return None
+
+
+def test_empty_scorecard_has_the_same_keys_as_a_non_empty_one():
+    """Consumers reading ``card["routed_to_human_review"]`` must not KeyError on []."""
+    empty = score_review_lane([])
+    full = score_review_lane([_record()])
+    assert set(empty) == set(full)
+    for section in ("acceptance", "routing", "calibration", "cost"):
+        assert set(empty[section]) == set(full[section]), section
+    assert set(empty["quality"]) == set(full["quality"])
+    assert set(empty["quality"]["subclass"]) == set(full["quality"]["subclass"])
+    assert set(empty["quality"]["verdict"]) == set(full["quality"]["verdict"])
+
+
+def test_empty_scorecard_values_match_the_zero_accept_defaults():
+    """The empty card uses nulls/zeros and the zero-error sample size."""
+    empty = score_review_lane([], risk=0.02, confidence=0.9)
+    assert empty["n"] == 0
+    assert empty["routed_to_human_review"] == 0
+    assert empty["routed_to_human_review_rate"] is None
+    assert empty["subclass_accuracy"] is None
+    assert empty["verdicts_by_expected"] == {}
+    assert empty["acceptance"]["risk"] == 0.02
+    assert empty["acceptance"]["confidence"] == 0.9
+    assert empty["acceptance"]["meets_risk_bar"] is False
+    from llm_dojo_scoring.analysis.calibration import required_samples
+
+    assert empty["acceptance"]["required_accepts"] == required_samples(0, risk=0.02, confidence=0.9)

@@ -205,3 +205,92 @@ def test_rescore_cli_prints_a_summary(tmp_path: Path, capsys):
     assert "1 re-scored" in text
     assert "moves:" in text
     assert out.is_file()
+
+
+# --- PR #103 review regressions -------------------------------------------
+
+
+def test_rescore_batch_skips_rows_a_scorer_rejects_with_value_error():
+    """A malformed label row (unequal lists) is named, not fatal to the batch."""
+    result = rescore_records(
+        [
+            {"doc_id": "uneven", "task": "docclass", "expected": ["a", "b"], "predicted": ["a"]},
+            _extraction_record(doc_id="ok"),
+        ]
+    )
+    assert result["n_rescored"] == 1
+    assert result["records"][0]["doc_id"] == "ok"
+    assert [item["doc_id"] for item in result["skipped"]] == ["uneven"]
+    assert result["skipped"][0]["reason"]
+
+
+def test_dataset_join_keeps_item_truth_when_the_dataset_row_has_none(tmp_path: Path):
+    """A dataset row without truth must not erase ``expected`` on the item."""
+    items = tmp_path / "items.jsonl"
+    dataset = tmp_path / "dataset.jsonl"
+    items.write_text(
+        json.dumps(
+            {
+                "item_id": "doc-1",
+                "doc_class": "contract",
+                "expected": dict(CONTRACT_EXPECTED),
+                "pred": dict(CONTRACT_EXPECTED),
+                "score": 0.25,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    dataset.write_text(json.dumps({"id": "doc-1"}) + "\n", encoding="utf-8")
+    result = rescore_file(items, dataset_path=dataset, out_path=tmp_path / "out.jsonl")
+    assert result["n_skipped"] == 0
+    assert result["records"][0]["score"] == 1.0
+
+
+def test_diff_scorecards_aligns_item_id_rows_when_a_leading_row_is_skipped():
+    """Run-store rows carry only ``item_id``; a skip must not shift pairs."""
+    before = [
+        {"item_id": "bad", "score": 0.9},
+        {"item_id": "good", "score": 0.25},
+    ]
+    after = [{"doc_id": "good", "score": 1.0}]
+    moves = diff_scorecards(before, after)
+    assert moves["n"] == 1
+    assert moves["old_mean"] == 0.25
+    assert moves["delta"] == 0.75
+
+
+def test_diff_scorecards_does_not_pair_an_unmatched_id_by_position():
+    """An id with no old match stays unpaired instead of borrowing a neighbour."""
+    moves = diff_scorecards([{"doc_id": "a", "score": 0.1}], [{"doc_id": "b", "score": 1.0}])
+    assert moves["n"] == 0
+    assert moves["delta"] is None
+
+
+def test_diff_scorecards_still_pairs_id_less_rows_by_position():
+    """Rows with no id at all keep the positional fallback."""
+    moves = diff_scorecards([{"score": 0.5}], [{"score": 1.0}])
+    assert moves["n"] == 1
+    assert moves["delta"] == 0.5
+
+
+def test_rescore_file_without_dataset_reports_moves_for_item_id_rows(tmp_path: Path):
+    """End to end: a skipped first item does not shift the second item's move."""
+    items = tmp_path / "items.jsonl"
+    rows = [
+        {"item_id": "bad", "task": "extraction", "doc_class": "contract", "score": 0.9},
+        {
+            "item_id": "good",
+            "task": "extraction",
+            "doc_class": "contract",
+            "expected": dict(CONTRACT_EXPECTED),
+            "pred": dict(CONTRACT_EXPECTED),
+            "score": 0.25,
+        },
+    ]
+    items.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+    result = rescore_file(items, out_path=tmp_path / "out.jsonl")
+    assert result["n_skipped"] == 1
+    assert result["moves"]["n"] == 1
+    assert result["moves"]["old_mean"] == 0.25
+    assert result["moves"]["delta"] == 0.75
