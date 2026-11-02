@@ -311,6 +311,14 @@ class ReviewRecord:
         }
 
 
+def _first_present(*values: Any) -> Any:
+    """Return the first value that is not ``None``, keeping measured zeros."""
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
 def review_record_from_run_item(
     item: Mapping[str, Any],
     *,
@@ -359,9 +367,11 @@ def review_record_from_run_item(
             "error": item.get("error"),
             "reviewer_model": reviewer_cfg.get("model") or pred.get("served_model"),
             "question_set": reviewer_cfg.get("questions") or lock.get("questions"),
-            "prompt_tokens": usage.get("input_tokens") or usage.get("prompt_tokens"),
-            "completion_tokens": usage.get("output_tokens") or usage.get("completion_tokens"),
-            "cost_usd": usage.get("cost") or usage.get("cost_usd"),
+            "prompt_tokens": _first_present(usage.get("input_tokens"), usage.get("prompt_tokens")),
+            "completion_tokens": _first_present(
+                usage.get("output_tokens"), usage.get("completion_tokens")
+            ),
+            "cost_usd": _first_present(usage.get("cost"), usage.get("cost_usd")),
             "dataset_revision": dataset.get("revision"),
             "split": dataset.get("split"),
             "draw_seed": dataset.get("sample_seed"),
@@ -388,8 +398,17 @@ def _route(record: ReviewRecord) -> str | None:
         if record.reviewer_confidence < record.cutoff:
             return "human_review"
     if record.sorter_doc_type and not record.sorter_below_low_band:
-        return "extract" if _same_label(record.sorter_doc_type, record.reviewer_doc_type) else "human_review"
-    return "extract" if record.sorter_below_low_band else None
+        inferred = (
+            "extract" if _same_label(record.sorter_doc_type, record.reviewer_doc_type) else "human_review"
+        )
+    else:
+        inferred = "extract" if record.sorter_below_low_band else None
+    if inferred == "extract" and _accept_rule_violations(record):
+        # No route was recorded, so the scorecard applies the accept rule
+        # itself: a row with no cutoff, no confidence, or an ineligible label
+        # cannot be inferred into the auto-accept population.
+        return "human_review"
+    return inferred
 
 
 def _answered(record: ReviewRecord) -> bool:
@@ -503,7 +522,12 @@ def _subclass_metrics(records: Sequence[ReviewRecord]) -> dict[str, Any]:
             continue
         if not record.expected_subclass_scorable:
             continue
-        same = _same_subclass(doc_type, record.reviewer_doc_subclass, record.expected_doc_subclass)
+        if _label(record.reviewer_doc_subclass) is None:
+            # A scorable target with no predicted subclass is a miss, as in
+            # the pipeline subclass scorer; skipping it would inflate accuracy.
+            same: bool | None = False
+        else:
+            same = _same_subclass(doc_type, record.reviewer_doc_subclass, record.expected_doc_subclass)
         if same is None:
             continue
         by_class[doc_type]["scored"] += 1
@@ -937,16 +961,24 @@ def score_review_lane(
     ]
     if not normalized:
         payload = _empty_scorecard()
-        payload["by_model"] = {}
-        payload["by_question_set"] = {}
-        payload["provenance"] = _provenance([])
-        return payload
-    payload = _core(
-        normalized,
-        risk=risk,
-        confidence=confidence,
-        target_accuracy=target_accuracy,
-    )
+        # Same acceptance keys as a non-empty card: zero accepts still need
+        # the zero-error sample size to clear the bar.
+        needed = required_samples(0, risk=risk, confidence=confidence)
+        payload["acceptance"].update(
+            {
+                "required_accepts": needed,
+                "sample_shortfall": needed,
+                "risk": risk,
+                "confidence": confidence,
+            }
+        )
+    else:
+        payload = _core(
+            normalized,
+            risk=risk,
+            confidence=confidence,
+            target_accuracy=target_accuracy,
+        )
     by_model: dict[str, Any] = {}
     grouped_model: dict[str, list[ReviewRecord]] = defaultdict(list)
     for record in normalized:

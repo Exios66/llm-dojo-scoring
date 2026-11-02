@@ -13,6 +13,8 @@ Usage::
 
 ``--check`` (the default) regenerates the manifest in memory and exits 1 when
 the pinned surface drifts from the fixture.  ``--write`` refreshes the fixture.
+Both exit 2, without touching the fixture, when a checkout the fixture pins as
+scanned is unavailable on this machine.
 """
 
 from __future__ import annotations
@@ -158,14 +160,22 @@ def _skip(rel: Path) -> bool:
 
 
 def _read_filesystem_tree(root: Path) -> dict[str, str]:
-    """Read every consumer ``.py`` file below ``root``."""
+    """Read every consumer ``.py`` file below ``root``.
+
+    Skipped trees (``.venv``, ``node_modules`` ...) are pruned before descent,
+    and only regular files are read, so a directory named ``*.py`` is ignored.
+    """
     files: dict[str, str] = {}
-    for path in sorted(root.rglob("*.py")):
-        rel = path.relative_to(root)
-        if _skip(rel):
-            continue
-        files[rel.as_posix()] = path.read_text(encoding="utf-8")
-    return files
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = sorted(name for name in dirnames if name not in SKIP_DIRS)
+        for filename in sorted(filenames):
+            if not filename.endswith(".py"):
+                continue
+            path = Path(dirpath) / filename
+            if not path.is_file():
+                continue
+            files[path.relative_to(root).as_posix()] = path.read_text(encoding="utf-8")
+    return dict(sorted(files.items()))
 
 
 def _read_git_tree(root: Path, ref: str) -> dict[str, str]:
@@ -219,8 +229,17 @@ def scan_repo(spec: RepoSpec) -> tuple[dict[str, str], dict[str, Any]]:
         meta["files_scanned"] = len(files)
         return files, meta
 
-    files = _read_filesystem_tree(root)
-    meta["ref"], meta["commit"] = _head_metadata(root)
+    if _is_git_checkout(root) and _git_rev(root, spec.ref or "HEAD") is not None:
+        # A git checkout is read from committed blobs, so uncommitted edits and
+        # untracked scratch files never leak into the pinned surface.
+        ref = spec.ref or "HEAD"
+        files = _read_git_tree(root, ref)
+        branch, _ = _head_metadata(root)
+        meta["ref"] = spec.ref or branch
+        meta["commit"] = _git_rev(root, ref)
+    else:
+        files = _read_filesystem_tree(root)
+        meta["ref"], meta["commit"] = _head_metadata(root)
     meta["scanned"] = True
     meta["files_scanned"] = len(files)
     return files, meta
@@ -369,9 +388,13 @@ class Surface:
                         if alias.name in self.index.module_names:
                             module_aliases.add(alias.asname or alias.name)
                 elif module.startswith(PACKAGE + "."):
+                    canonical, _ = self.index.resolve(module[len(PACKAGE) + 1 :])
                     for alias in node.names:
                         if alias.name in DISPATCH_FUNCS:
                             function_aliases[alias.asname or alias.name] = alias.name
+                        elif f"{canonical}.{alias.name}" in self.index.module_paths:
+                            # ``from llm_dojo_scoring.scoring import suites``
+                            module_aliases.add(alias.asname or alias.name)
 
         for node in ast.walk(tree):
             site: Site = (repo, rel, getattr(node, "lineno", 0))
@@ -789,6 +812,16 @@ def _print_coverage(data: dict[str, Any]) -> None:
             print(f"  {label}: skipped ({meta['reason']})")
 
 
+def _lost_checkouts(existing: dict[str, Any] | None, data: dict[str, Any]) -> list[str]:
+    """Checkouts the pinned fixture scanned that this machine could not scan."""
+    pinned = (existing or {}).get("generated_from", {})
+    return sorted(
+        label
+        for label, meta in data["generated_from"].items()
+        if not meta["scanned"] and pinned.get(label, {}).get("scanned")
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run the audit: refresh the fixture or check it for drift."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -802,16 +835,38 @@ def main(argv: list[str] | None = None) -> int:
     text = _dump(data)
     counts = f"{len(data['top_level'])} top-level names, {len(data['modules'])} modules"
 
+    existing: dict[str, Any] | None = None
+    if FIXTURE_PATH.is_file():
+        existing = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+    lost = _lost_checkouts(existing, data)
+
     if args.write:
+        if lost:
+            # Writing now would silently erase the pinned surface of these repos.
+            print(
+                "refusing --write; pinned checkouts are unavailable here: "
+                + ", ".join(lost)
+                + " (set their *_ROOT environment variables)",
+                file=sys.stderr,
+            )
+            return 2
         FIXTURE_PATH.parent.mkdir(parents=True, exist_ok=True)
         FIXTURE_PATH.write_text(text, encoding="utf-8")
         print(f"wrote {FIXTURE_PATH.relative_to(REPO_ROOT)} ({counts})")
         return 0
 
-    if not FIXTURE_PATH.is_file():
+    if existing is None:
         print(f"missing fixture: {FIXTURE_PATH.relative_to(REPO_ROOT)}", file=sys.stderr)
         return 1
-    existing = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+    if lost:
+        # Not drift: the surface cannot be checked without these checkouts.
+        print(
+            "cannot check consumer surface; pinned checkouts are unavailable here: "
+            + ", ".join(lost)
+            + " (set their *_ROOT environment variables)",
+            file=sys.stderr,
+        )
+        return 2
     if _surface_view(existing) == _surface_view(data):
         print(f"OK {FIXTURE_PATH.relative_to(REPO_ROOT)} ({counts})")
         return 0

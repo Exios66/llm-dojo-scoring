@@ -232,8 +232,13 @@ def _collect_suite_case(name: str, case: dict[str, Any]) -> dict[str, Any]:
             )
         try:
             suite.score(None, None)
-        except TypeError:
-            pass
+        except TypeError as exc:
+            # Only the documented emit-only refusal counts; an unrelated
+            # TypeError from inside the scorer is a regression, not the contract.
+            if "emit-only" not in str(exc):
+                raise RuntimeError(
+                    f"emit-only suite {name!r} raised an unexpected TypeError: {exc}"
+                ) from exc
         else:  # pragma: no cover - emit-only suites must keep refusing
             raise RuntimeError(f"emit-only suite {name!r} did not raise TypeError")
         return {
@@ -328,14 +333,23 @@ def main(argv: list[str] | None = None) -> int:
         previous = (
             SCORES_PATH.read_text(encoding="utf-8") if SCORES_PATH.exists() else None
         )
-        SCORES_PATH.parent.mkdir(parents=True, exist_ok=True)
-        SCORES_PATH.write_text(regenerated, encoding="utf-8")
-        recollected = render_goldens(collect_goldens(load_inputs()))
-        if recollected != regenerated:
+        def _restore() -> None:
+            """Put the previous baseline back (or remove a newly created one)."""
             if previous is None:
                 SCORES_PATH.unlink(missing_ok=True)
             else:
                 SCORES_PATH.write_text(previous, encoding="utf-8")
+
+        SCORES_PATH.parent.mkdir(parents=True, exist_ok=True)
+        SCORES_PATH.write_text(regenerated, encoding="utf-8")
+        try:
+            recollected = render_goldens(collect_goldens(load_inputs()))
+        except BaseException:
+            # A failed second collection must not leave an unverified baseline.
+            _restore()
+            raise
+        if recollected != regenerated:
+            _restore()
             print(
                 "error: golden generation is not idempotent; baseline left in place",
                 file=sys.stderr,

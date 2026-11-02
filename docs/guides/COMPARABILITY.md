@@ -32,15 +32,20 @@ dojo-rescore --items items.jsonl --dataset dataset.jsonl \
 ```
 
 `--items` is the run store's `items.jsonl` shape (`item_id`, `pred`, `score`);
-`--dataset` joins `expected_doc_class` / `expected_fields` by id. The output is
-one JSONL row per document with a fresh `score`, `field_scores`, `metric_id`,
-`scorer_version`, and `rescored_from`. `--compare` prints old-to-new mean
-moves. A row without both ground truth and a prediction is skipped and named;
+`--dataset` joins `expected_doc_class` / `expected_fields` by id (truth the
+item already carries is kept when the dataset row has none). The output is one
+JSONL row per document with these top-level keys: `doc_id`, `task`,
+`doc_class`, `score` (the headline number), `payload` (the full score block,
+including field scores and `metric_id` where the scorer emits them),
+`provenance` (with the current `scorer_version`), and `rescored_from` (the old
+`scorer_version` and `score`). A row that is already current also carries
+`already_current: true`. `--compare` prints old-to-new mean moves. A row without both ground truth and a prediction is skipped and named;
 nothing is reconstructed from a stored score. Serving records are refused
 because timings and hardware counters are not reproducible.
 
 The Python surface is `rescore_record`, `rescore_records`, and
-`rescore_file`; `diff_scorecards` aligns by `doc_id`.
+`rescore_file`; `diff_scorecards` aligns by `doc_id` / `id` / `item_id` and
+pairs by position only when a row carries no id at all.
 
 ## Release ledger
 
@@ -64,7 +69,12 @@ identical does not need an entry; a release that moves a number does.
 1. Check `scorer_version` on both legs. If they differ, do not compare the
    quality delta.
 2. Read `score_changes` or the ledger for the interval.
-3. Re-score the older run with `dojo-rescore` before comparing.
-4. If re-scoring is impossible (the run store lost predictions or GT), label
+3. For a quality record (extraction, label tasks, reviewer), re-score the
+   older run with `dojo-rescore` before comparing.
+4. A serving card cannot be re-scored: `dojo-rescore` refuses serving records
+   because timings and hardware counters are not reproducible. Compare its
+   timing and cost metrics as recorded, and treat its quality delta across a
+   release mismatch as incomparable.
+5. If re-scoring is impossible (the run store lost predictions or GT), label
    the card with the supported bound and the unverified release; never present
    the delta as a model effect.

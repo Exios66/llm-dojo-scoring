@@ -188,3 +188,79 @@ def test_canonicalizer_preserves_none_and_zero():
         "zero": 0.0,
         "int_zero": 0,
     }
+
+
+# --- PR #103 review regressions -------------------------------------------
+
+
+def _emit_only_case():
+    """One live emit-only suite name plus its golden input case."""
+    inputs = _FREEZE.load_inputs()
+    for name in list_suites(live_only=True):
+        if not get_suite(name).computable:
+            case = inputs["suite_cases"][name]
+            return name, case
+    pytest.skip("no emit-only live suite")
+
+
+def test_freeze_rejects_an_unrelated_type_error_from_an_emit_only_suite(monkeypatch):
+    """Only the documented emit-only refusal satisfies the golden contract."""
+    name, case = _emit_only_case()
+    suite = get_suite(name)
+
+    def broken_score(*_args, **_kwargs):
+        """Raise a TypeError that is not the emit-only refusal."""
+        raise TypeError("unsupported operand type(s) for +: 'int' and 'str'")
+
+    monkeypatch.setattr(type(suite), "score", broken_score)
+    with pytest.raises(RuntimeError, match="unexpected TypeError"):
+        _FREEZE._collect_suite_case(name, case)
+
+
+def test_freeze_accepts_the_documented_emit_only_refusal():
+    """The real emit-only TypeError is still recorded as the contract."""
+    name, case = _emit_only_case()
+    out = _FREEZE._collect_suite_case(name, case)
+    assert out["computable"] is False
+    assert out["score_raises"] == "TypeError"
+
+
+def test_freeze_write_restores_the_baseline_when_recollection_fails(monkeypatch, tmp_path):
+    """A crash in the idempotence pass must not leave an unverified baseline."""
+    scores = tmp_path / "scores.json"
+    scores.write_text("previous\n", encoding="utf-8")
+    monkeypatch.setattr(_FREEZE, "SCORES_PATH", scores)
+    calls = {"n": 0}
+    real_collect = _FREEZE.collect_goldens
+
+    def flaky_collect(inputs):
+        """Fail on the second (idempotence) collection only."""
+        calls["n"] += 1
+        if calls["n"] == 2:
+            raise RuntimeError("boom")
+        return real_collect(inputs)
+
+    monkeypatch.setattr(_FREEZE, "collect_goldens", flaky_collect)
+    with pytest.raises(RuntimeError, match="boom"):
+        _FREEZE.main(["--write", "--reason", "test"])
+    assert scores.read_text(encoding="utf-8") == "previous\n"
+
+
+def test_freeze_write_removes_a_new_baseline_when_recollection_fails(monkeypatch, tmp_path):
+    """With no previous baseline, a failed recollection removes the new file."""
+    scores = tmp_path / "scores.json"
+    monkeypatch.setattr(_FREEZE, "SCORES_PATH", scores)
+    calls = {"n": 0}
+    real_collect = _FREEZE.collect_goldens
+
+    def flaky_collect(inputs):
+        """Fail on the second (idempotence) collection only."""
+        calls["n"] += 1
+        if calls["n"] == 2:
+            raise RuntimeError("boom")
+        return real_collect(inputs)
+
+    monkeypatch.setattr(_FREEZE, "collect_goldens", flaky_collect)
+    with pytest.raises(RuntimeError):
+        _FREEZE.main(["--write", "--reason", "test"])
+    assert not scores.exists()

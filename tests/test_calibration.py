@@ -97,3 +97,62 @@ def test_cutoff_for_precision_keeps_the_most_coverage():
     cut = cutoff_for_precision([0.9, 0.8, 0.7, 0.1], [True, True, False, False], 0.9)
     assert cut == {"cutoff": 0.8, "precision": 1.0, "accept_rate": 0.5, "recall": 1.0}
     assert cutoff_for_precision([0.1], [True], 1.0)["cutoff"] == 0.1
+
+
+# --- PR #103 review regressions -------------------------------------------
+
+
+def test_clopper_pearson_upper_does_not_overflow_on_large_error_counts():
+    """``math.comb(10**6, 67)`` exceeds float range; the Beta form must not."""
+    big = clopper_pearson_upper(250, 3000)
+    assert 250 / 3000 < big < 0.1
+    huge = clopper_pearson_upper(200, 1_000_000)
+    assert 200 / 1_000_000 < huge < 0.001
+
+
+def test_clopper_pearson_upper_boundaries():
+    """All errors gives 1.0; a higher confidence gives a looser bound."""
+    assert clopper_pearson_upper(5, 5) == 1.0
+    assert clopper_pearson_upper(1, 473) == pytest.approx(0.00999, abs=1e-5)
+    assert clopper_pearson_upper(0, 135) == pytest.approx(0.0219, abs=1e-4)
+    assert clopper_pearson_upper(3, 100, confidence=0.99) > clopper_pearson_upper(3, 100)
+    with pytest.raises(ValueError):
+        clopper_pearson_upper(1, 10, confidence=1.0)
+
+
+def test_required_samples_handles_many_errors_without_raising():
+    """80 wrong accepts used to overflow inside the 1e6 probe."""
+    needed = required_samples(80)
+    assert isinstance(needed, int)
+    assert clopper_pearson_upper(80, needed) <= 0.01
+    assert clopper_pearson_upper(80, needed - 1) > 0.01
+
+
+def test_required_samples_returns_none_past_the_search_cap():
+    """More errors than the one-million cap can never clear the bar: ``None``."""
+    assert required_samples(2_000_000) is None
+
+
+@pytest.mark.parametrize("confidence", [0.0, 1.0, -0.5])
+def test_required_samples_validates_confidence_with_zero_errors(confidence):
+    """The zero-error closed form used to skip confidence validation."""
+    with pytest.raises(ValueError):
+        required_samples(0, confidence=confidence)
+
+
+def test_cross_fit_cutoffs_applies_its_confidence_level():
+    """A 99% interval is wider than a 95% one and can fail the target."""
+    rows = [(0.9, True)] * 100 + [(0.5, False)] * 20
+    at_95 = cross_fit_cutoffs(rows, target=0.95)
+    at_99 = cross_fit_cutoffs(rows, target=0.95, confidence=0.99)
+    assert at_95["holdout_accuracy_ci"]["z"] == pytest.approx(1.959964, abs=1e-6)
+    assert at_99["holdout_accuracy_ci"]["z"] == pytest.approx(2.575829, abs=1e-6)
+    assert at_99["holdout_accuracy_ci"]["lo"] < at_95["holdout_accuracy_ci"]["lo"]
+    assert at_95["meets_target"] is True
+    assert at_99["meets_target"] is False
+
+
+def test_cross_fit_cutoffs_rejects_an_invalid_confidence():
+    """A confidence outside (0, 1) is rejected."""
+    with pytest.raises(ValueError):
+        cross_fit_cutoffs([(0.9, True)] * 10, confidence=1.5)

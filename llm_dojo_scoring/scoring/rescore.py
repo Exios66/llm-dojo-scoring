@@ -260,7 +260,7 @@ def rescore_records(
     for index, record in enumerate(records):
         try:
             results.append(rescore_record(record, provenance=provenance))
-        except RescoreError as exc:
+        except ValueError as exc:  # RescoreError, or a scorer refusing a malformed row
             skipped.append(
                 {
                     "index": index,
@@ -312,6 +312,12 @@ def _join_dataset(items: list[dict[str, Any]], dataset_path: Path) -> list[dict[
         expected = row.get("expected_fields")
         if expected is None and row.get("expected") is not None:
             expected = row["expected"]
+        if expected is None:
+            # A dataset row without truth must not erase truth the item carries.
+            expected = item.get("expected", item.get("expected_fields"))
+        expected_subclass = row.get("expected_subclass")
+        if expected_subclass is None:
+            expected_subclass = item.get("expected_subclass")
         joined.append(
             {
                 **item,
@@ -320,7 +326,7 @@ def _join_dataset(items: list[dict[str, Any]], dataset_path: Path) -> list[dict[
                 "doc_class": item.get("doc_class") or row.get("expected_doc_class"),
                 "expected": expected,
                 "predicted": item.get("predicted", item.get("pred")),
-                "expected_subclass": row.get("expected_subclass"),
+                "expected_subclass": expected_subclass,
                 "predicted_subclass": item.get("predicted_subclass"),
                 "scorer_version": item.get("scorer_version")
                 or (item.get("provenance") or {}).get("scorer_version"),
@@ -362,28 +368,39 @@ def rescore_file(
     return result
 
 
+def _row_id(row: Mapping[str, Any]) -> str | None:
+    """Resolve a stored or re-scored row's id through ``doc_id``/``id``/``item_id``."""
+    for key in ("doc_id", "id", "item_id"):
+        value = row.get(key)
+        if value not in (None, ""):
+            return str(value)
+    return None
+
+
 def diff_scorecards(
     before: Iterable[Mapping[str, Any]],
     after: Iterable[Mapping[str, Any]],
 ) -> dict[str, Any]:
     """Summarize old-to-new headline moves for the records that carry both.
 
-    Records are matched by ``doc_id`` when both sides have one, so a skipped
-    row cannot shift every later comparison. Records without ids fall back to
-    their position in the two sequences.
+    Records are matched by id (``doc_id``, then ``id``, then ``item_id``, the
+    same chain the re-scorers use), so a skipped row cannot shift every later
+    comparison. Only a new record without any id falls back to its position;
+    an id with no old match is left unpaired rather than paired by position.
     """
     before_rows = list(before)
     after_rows = list(after)
     before_by_id = {
-        str(row.get("doc_id")): row for row in before_rows if row.get("doc_id") is not None
+        row_id: row for row in before_rows if (row_id := _row_id(row)) is not None
     }
     old_values: list[float] = []
     new_values: list[float] = []
     changed = 0
     for index, new_record in enumerate(after_rows):
-        doc_id = new_record.get("doc_id")
-        old_record = before_by_id.get(str(doc_id)) if doc_id is not None else None
-        if old_record is None:
+        doc_id = _row_id(new_record)
+        if doc_id is not None:
+            old_record = before_by_id.get(doc_id)
+        else:
             old_record = before_rows[index] if index < len(before_rows) else None
         if old_record is None:
             continue

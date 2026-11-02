@@ -512,3 +512,74 @@ def test_consumer_surface_sites_are_repo_relative():
         site for site in _iter_consumer_sites(surface) if Path(site["file"]).is_absolute()
     ]
     assert not absolute, f"absolute consumer paths in fixture: {absolute}"
+
+
+def test_pinned_legacy_module_paths_still_import():
+    """A module pinned as reached through a legacy flat path still imports there.
+
+    The manifest canonicalizes ``llm_dojo_scoring.pilot_labels`` to
+    ``pipeline.pilot_labels`` and keeps only a ``legacy`` flag, so the flat
+    path is recovered from ``LEGACY_MODULES`` and imported directly.
+    """
+    from llm_dojo_scoring._layout import LEGACY_MODULES
+
+    surface = _consumer_surface()
+    flat_by_canonical: dict[str, list[str]] = {}
+    for flat, canonical in LEGACY_MODULES.items():
+        flat_by_canonical.setdefault(canonical, []).append(flat)
+    legacy_entries = {path: entry for path, entry in surface["modules"].items() if entry["legacy"]}
+    assert legacy_entries, "manifest pins no legacy module path"
+    failures: list[str] = []
+    for canonical, entry in legacy_entries.items():
+        flats = flat_by_canonical.get(canonical)
+        if not flats:
+            failures.append(f"{canonical}: pinned as legacy but has no flat alias")
+            continue
+        target = importlib.import_module(f"llm_dojo_scoring.{canonical}")
+        for flat in flats:
+            try:
+                module = importlib.import_module(f"llm_dojo_scoring.{flat}")
+            except Exception as exc:  # pragma: no cover - failure detail path
+                failures.append(f"llm_dojo_scoring.{flat}: {type(exc).__name__}: {exc}")
+                continue
+            if module is not target:
+                failures.append(f"llm_dojo_scoring.{flat} is not llm_dojo_scoring.{canonical}")
+            failures.extend(
+                f"llm_dojo_scoring.{flat}.{attr}"
+                for attr in entry["attrs"]
+                if not hasattr(module, attr)
+            )
+    assert not failures, "legacy consumer paths broken:\n" + "\n".join(failures)
+
+
+def test_pinned_dispatch_literals_still_resolve():
+    """Every literal a consumer passes to a dispatcher is still accepted by it."""
+    dispatch = _consumer_surface()["dispatch"]
+    failures: list[str] = []
+    for value in dispatch["get_suite"]["literals"]:
+        try:
+            dojo.get_suite(value)
+        except Exception as exc:  # pragma: no cover - failure detail path
+            failures.append(f"get_suite({value!r}): {type(exc).__name__}: {exc}")
+    for value in dispatch["suite_for_doc_type"]["literals"]:
+        try:
+            suite = dojo.suite_for_doc_type(value)
+        except Exception as exc:  # pragma: no cover - failure detail path
+            failures.append(f"suite_for_doc_type({value!r}): {type(exc).__name__}: {exc}")
+            continue
+        if suite.doc_type != value:
+            failures.append(f"suite_for_doc_type({value!r}) returned doc_type {suite.doc_type!r}")
+    for value in dispatch["score_task"]["literals"]:
+        if value not in TASK_KINDS:
+            failures.append(f"score_task({value!r}): not a task kind")
+    assert not failures, "pinned dispatch inputs no longer resolve:\n" + "\n".join(failures)
+
+
+def test_pinned_contract_suite_alias_resolves_to_the_contract_suite():
+    """``get_suite("contract")`` (pinned from llm-mailroom) stays the contract suite."""
+    assert "contract" in _consumer_surface()["dispatch"]["get_suite"]["literals"]
+    suite = dojo.get_suite("contract")
+    assert suite.doc_type == "contract"
+    assert suite is dojo.suite_for_doc_type("contract") or suite.name == dojo.suite_for_doc_type(
+        "contract"
+    ).name

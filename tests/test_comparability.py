@@ -175,3 +175,30 @@ def test_strict_provenance_refuses_a_partially_stamped_leg():
             _leg("openrouter", SCORER_VERSION),
             require_provenance={"local": {}, "api": {}},
         )
+
+
+# --- PR #103 review regressions -------------------------------------------
+
+
+@pytest.mark.parametrize("stamp", ["legacy", "unknown", "v-next"])
+def test_unparseable_matching_scorer_versions_are_unverified(stamp):
+    """A stamp the release ledger cannot parse proves nothing about the scorer."""
+    out = compare_serving(_leg("vllm", stamp), _leg("openrouter", stamp))
+    assert not out.get("incomparable")
+    assert out["scorer_version_unverified"] is True
+
+
+def test_one_unparseable_scorer_version_is_unverified_or_incomparable():
+    """An invalid stamp on one leg never yields a clean, verified comparison."""
+    out = compare_serving(_leg("vllm", "legacy"), _leg("openrouter", "0.26.0"))
+    assert out.get("incomparable") or out.get("scorer_version_unverified")
+    assert out["quality"]["delta_local_minus_api"] is None or out.get(
+        "scorer_version_unverified"
+    )
+
+
+def test_valid_matching_scorer_versions_stay_verified():
+    """Parseable, equal releases are not flagged."""
+    out = compare_serving(_leg("vllm", "0.26.0"), _leg("openrouter", "0.26.0"))
+    assert not out.get("incomparable")
+    assert "scorer_version_unverified" not in out
