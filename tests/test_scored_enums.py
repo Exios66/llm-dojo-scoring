@@ -157,3 +157,41 @@ def test_module_docstring_states_the_cms_claim_type_exception():
     for token in ("pde", "inpatient", "outpatient", "carrier"):
         assert token in doc
         assert token in scored_vocabulary("insurance_claim", "claim_type")
+
+
+def test_scored_enum_fields_outer_mapping_is_read_only():
+    """Assigning to the outer mapping raises and leaves the vocabulary unchanged."""
+    before = scored_vocabulary("correspondence", "intent")
+    with pytest.raises(TypeError):
+        SCORED_ENUM_FIELDS["correspondence"] = {}  # type: ignore[index]
+    assert scored_vocabulary("correspondence", "intent") == before
+
+
+def test_scored_enum_fields_inner_mapping_is_read_only():
+    """Assigning to an inner field mapping raises and leaves every caller's vocabulary unchanged."""
+    before = scored_vocabulary("correspondence", "intent")
+    with pytest.raises(TypeError):
+        SCORED_ENUM_FIELDS["correspondence"]["intent"] = ((), "x")  # type: ignore[index]
+    with pytest.raises(TypeError):
+        SCORED_ENUM_FIELDS["insurance_claim"]["claim_type"] = ((), "x")  # type: ignore[index]
+    assert scored_vocabulary("correspondence", "intent") == before
+    assert enum_hint_violations("correspondence", {"intent": list(before)}) == []
+
+
+def test_non_iterable_vendored_value_is_reported_not_raised():
+    """An int vendored value is one reported problem, and the remaining fields are still checked."""
+    problems = enum_hint_violations(
+        "insurance_claim",
+        {"claim_type": 5, "cms_source_table": ["carrier"]},
+    )
+    assert "insurance_claim.claim_type: vendored value is not a list of values" in problems
+    assert any("cms_source_table" in p and "never teaches scored values" in p for p in problems)
+
+
+def test_uppercase_spelling_is_reported_as_unscored():
+    """Matching is case-sensitive: a hint teaching 'AUTO' is reported, not folded to 'auto'."""
+    vendored = list(scored_vocabulary("insurance_claim", "claim_type"))
+    vendored[vendored.index("auto")] = "AUTO"
+    problems = enum_hint_violations("insurance_claim", {"claim_type": vendored})
+    assert "insurance_claim.claim_type: teaches unscored values ['AUTO']" in problems
+    assert "insurance_claim.claim_type: never teaches scored values ['auto']" in problems

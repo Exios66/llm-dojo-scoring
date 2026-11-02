@@ -29,6 +29,7 @@ for stored answers, not a vocabulary.
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
+from types import MappingProxyType
 from typing import Any
 
 from .corpus import CMS_SOURCE_TABLES, INSURANCE_CLAIM_TYPES
@@ -53,19 +54,26 @@ _CMS_SOURCE_TABLE_DESCRIPTION = (
     "null for a non-CMS claim."
 )
 
-#: doc_type -> field -> (scored vocabulary, description). Every ``label``-typed
-#: field in ``DEFAULT_FIELD_TYPES`` appears here, plus the insurance enums the
-#: scorer canonicalizes (``claim_type``) or scores as a label (``cms_source_table``).
-SCORED_ENUM_FIELDS: dict[str, dict[str, tuple[tuple[str, ...], str]]] = {
+_scored_enum_fields: dict[str, dict[str, tuple[tuple[str, ...], str]]] = {
     doc_type: {"intent": (labels, INTENT_DESCRIPTIONS[doc_type])}
     for doc_type, labels in INTENT_LABELS.items()
 }
-SCORED_ENUM_FIELDS["insurance_claim"].update(
+_scored_enum_fields["insurance_claim"].update(
     {
         "claim_type": (tuple(INSURANCE_CLAIM_TYPES), _CLAIM_TYPE_DESCRIPTION),
         "cms_source_table": (tuple(sorted(CMS_SOURCE_TABLES)), _CMS_SOURCE_TABLE_DESCRIPTION),
     }
 )
+
+#: doc_type -> field -> (scored vocabulary, description). Every ``label``-typed
+#: field in ``DEFAULT_FIELD_TYPES`` appears here, plus the insurance enums the
+#: scorer canonicalizes (``claim_type``) or scores as a label (``cms_source_table``).
+#: Read-only at both levels: a mutation would silently change the vocabulary
+#: for every caller in the process, so the mappings are frozen after building.
+SCORED_ENUM_FIELDS: Mapping[str, Mapping[str, tuple[tuple[str, ...], str]]] = MappingProxyType(
+    {doc_type: MappingProxyType(fields) for doc_type, fields in _scored_enum_fields.items()}
+)
+del _scored_enum_fields
 
 
 def _entry(doc_type: str, field: str) -> tuple[tuple[str, ...], str]:
@@ -125,7 +133,13 @@ def enum_hint_violations(
 
     - a taught value that is not a scored token (the SAND-042 failure);
     - a scored token the consumer never teaches (a right answer it cannot give);
-    - a vendored field that the dojo does not score as an enum.
+    - a vendored field that the dojo does not score as an enum;
+    - a vendored value that is neither a string nor iterable (reported, not raised).
+
+    Matching is case-sensitive after stripping surrounding whitespace, on
+    purpose: a hint must teach the canonical token, even though the scorer
+    folds case. ``'AUTO'`` is reported as unscored for ``claim_type`` because
+    the prompt would teach a spelling the scorer does not credit.
     """
     problems: list[str] = []
     known = SCORED_ENUM_FIELDS.get(doc_type, {})
@@ -137,7 +151,11 @@ def enum_hint_violations(
         values = vendored[field]
         if isinstance(values, (str, bytes)):
             values = [values]  # a bare string is one value, not its characters
-        taught = [str(value).strip() for value in values if value is not None]
+        try:
+            taught = [str(value).strip() for value in values if value is not None]
+        except TypeError:  # neither a string nor iterable (e.g. an int)
+            problems.append(f"{doc_type}.{field}: vendored value is not a list of values")
+            continue
         unscored = sorted({value for value in taught if value not in scored})
         missing = [token for token in scored if token not in set(taught)]
         if unscored:
