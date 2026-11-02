@@ -7,7 +7,7 @@ from llm_dojo_scoring import (
     LEGACY_FULL_EXTRACTION_FIELD_TYPES,
     get_suite,
 )
-from llm_dojo_scoring.corpus import CORPUS_EXTRACTION_FIELDS
+from llm_dojo_scoring.schemas.corpus import CORPUS_EXTRACTION_FIELDS
 from llm_dojo_scoring.config import FieldScoringSettings
 
 

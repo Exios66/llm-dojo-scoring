@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 from conftest import load_script
-from llm_dojo_scoring.corpus import MAUD_QUESTION_KEYS
+from llm_dojo_scoring.schemas.corpus import MAUD_QUESTION_KEYS
 
 generator = load_script("gen_maud_catalog")
 

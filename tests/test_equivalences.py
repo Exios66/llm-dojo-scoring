@@ -8,7 +8,7 @@ from llm_dojo_scoring.config import (
     configure,
     load_settings,
 )
-from llm_dojo_scoring.equivalences import (
+from llm_dojo_scoring.schemas.equivalences import (
     equivalent_doc_subclasses,
     equivalent_subtypes,
     normalize_doc_subclass,

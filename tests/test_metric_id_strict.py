@@ -1,4 +1,4 @@
-"""#17 remainder: strict metric_id resolver + docs/METRIC_IDS.md ↔ code parity."""
+"""#17 remainder: strict metric_id resolver + docs/contracts/METRIC_IDS.md ↔ code parity."""
 
 from __future__ import annotations
 
@@ -7,15 +7,15 @@ from pathlib import Path
 
 import pytest
 
-from llm_dojo_scoring.registry import get_registry
-from llm_dojo_scoring.scorecard_honesty import (
+from llm_dojo_scoring.metrics.registry import get_registry
+from llm_dojo_scoring.metrics.scorecard_honesty import (
     _CLASS_METRIC_IDS,
     _METRIC_ID_BY_NAME,
     UnknownMetricNameError,
     metric_id_for,
 )
 
-DOC = Path(__file__).resolve().parents[1] / "docs" / "METRIC_IDS.md"
+DOC = Path(__file__).resolve().parents[1] / "docs" / "contracts" / "METRIC_IDS.md"
 # Headline aliases documented next to their registry name, not registry entries.
 _DOCUMENTED_ALIASES = {"overall_score"}
 

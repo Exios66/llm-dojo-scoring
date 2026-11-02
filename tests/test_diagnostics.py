@@ -1,7 +1,7 @@
 """Check extraction error decomposition and date, duration, list, and span diagnostics."""
 import pytest
 
-from llm_dojo_scoring.diagnostics import (
+from llm_dojo_scoring.analysis.diagnostics import (
     DURATION_FIELDS,
     extraction_diagnostics,
     parse_duration_days,

@@ -7,16 +7,16 @@ from __future__ import annotations
 
 import pytest
 
-from llm_dojo_scoring.bundles import bundle_metric_names
-from llm_dojo_scoring.claims_consistency import (
+from llm_dojo_scoring.metrics.bundles import bundle_metric_names
+from llm_dojo_scoring.scoring.claims_consistency import (
     amount_exactness,
     determination_consistency,
 )
-from llm_dojo_scoring.classification import fbeta, macro_prf
-from llm_dojo_scoring.extraction_metrics import extraction_binary_metrics
-from llm_dojo_scoring.pruning import dashboard_metrics, headline_metrics
-from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES, get_suite
-from llm_dojo_scoring.tasks import score_task
+from llm_dojo_scoring.scoring.classification import fbeta, macro_prf
+from llm_dojo_scoring.scoring.extraction_metrics import extraction_binary_metrics
+from llm_dojo_scoring.metrics.pruning import dashboard_metrics, headline_metrics
+from llm_dojo_scoring.scoring.suites import DEFAULT_FIELD_TYPES, get_suite
+from llm_dojo_scoring.scoring.tasks import score_task
 
 
 # ---------------------------------------------------------------------------

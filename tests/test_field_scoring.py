@@ -4,7 +4,7 @@ composite score_extraction (ported behavior)."""
 import pytest
 
 from llm_dojo_scoring import field_scoring as fs
-from llm_dojo_scoring.gt_metadata import ANNOTATION_KEYS
+from llm_dojo_scoring.schemas.gt_metadata import ANNOTATION_KEYS
 
 
 @pytest.mark.parametrize("key", sorted(ANNOTATION_KEYS))

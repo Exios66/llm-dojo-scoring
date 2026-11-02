@@ -6,7 +6,7 @@ from functools import partial
 
 import pytest
 
-from llm_dojo_scoring.intake import (
+from llm_dojo_scoring.pipeline.intake import (
     INTAKE_LIVE_METHOD,
     INTAKE_METHODS,
     INTAKE_PREP_STEPS,
@@ -18,10 +18,10 @@ from llm_dojo_scoring.intake import (
     looks_messy,
     score_intake,
 )
-from llm_dojo_scoring.mailroom import INTAKE_HANDOFF_NODE, observation_type_for
-from llm_dojo_scoring.profiles import get_profile
-from llm_dojo_scoring.suites import get_suite
-from llm_dojo_scoring.tasks import score_task
+from llm_dojo_scoring.pipeline.mailroom import INTAKE_HANDOFF_NODE, observation_type_for
+from llm_dojo_scoring.metrics.profiles import get_profile
+from llm_dojo_scoring.scoring.suites import get_suite
+from llm_dojo_scoring.scoring.tasks import score_task
 
 
 @pytest.fixture(params=["direct", "dispatch"])
@@ -38,7 +38,7 @@ def test_unequal_intake_payload_batches_fail_before_normalizing(
 ):
     """Reject incomplete payload batches before normalizing any paired row."""
     mocker.patch(
-        "llm_dojo_scoring.intake.deterministic_normalize",
+        "llm_dojo_scoring.pipeline.intake.deterministic_normalize",
         side_effect=AssertionError("An incomplete batch must not be scored"),
     )
     n_expected, n_predicted = sizes

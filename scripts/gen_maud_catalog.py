@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate ``llm_dojo_scoring/maud.py`` and ``tests/fixtures/maud_valid_classes.json``.
+"""Generate ``llm_dojo_scoring/schemas/maud.py`` and ``tests/fixtures/maud_valid_classes.json``.
 
 The catalog is built from the published ``mailroom-dataset`` ground_truth
 merger rows (config ``ground_truth``, both splits) at a pinned revision, so
@@ -312,7 +312,7 @@ def build_artifacts(parquet_dir: Path | None, revision: str, generated: str) -> 
     question has no catalog. Loading and scanning errors propagate.
     """
     sys.path.insert(0, str(ROOT))
-    from llm_dojo_scoring.corpus import MAUD_QUESTION_KEYS
+    from llm_dojo_scoring.schemas.corpus import MAUD_QUESTION_KEYS
 
     union: dict[str, set] = defaultdict(set)
     rows_per_q: Counter = Counter()
@@ -422,7 +422,7 @@ def main() -> int:
     module, fixture = build_artifacts(args.parquet_dir, args.revision, args.generated)
 
     if args.check:
-        problems = _diff("llm_dojo_scoring/maud.py", MODULE_PATH.read_text(), module)
+        problems = _diff("llm_dojo_scoring/schemas/maud.py", MODULE_PATH.read_text(), module)
         problems += _diff(
             "tests/fixtures/maud_valid_classes.json", FIXTURE_PATH.read_text(), fixture
         )
