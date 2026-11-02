@@ -37,7 +37,7 @@ Format based on Keep a Changelog; versioning is SemVer.
   fields as unlabelled.
 - `rescore`: stored `NaN` / `Infinity` never become a headline, a scorecard
   move or a non-standard JSON literal in the rescored JSONL (they become `null`).
-- Grid scope footnotes: rows sharing a specialist and label but with different
+- Grid: the cost table escapes session names. Scope footnotes: rows sharing a specialist and label but with different
   unscored fields keep separate notes.
 - CMS rows (#93 follow-ups): a GT row naming a product line other than
   `health` is never CMS; a stated `adjuster` / `denial_reasons` on a CMS row
