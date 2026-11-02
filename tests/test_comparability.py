@@ -165,3 +165,13 @@ def test_strict_provenance_accepts_matching_releases():
         require_provenance={"local": {}, "api": {}},
     )
     assert not out.get("incomparable")
+
+
+def test_strict_provenance_refuses_a_partially_stamped_leg():
+    """A leg mixing stamped and unstamped runs cannot be certified strict."""
+    with pytest.raises(ProvenanceExportError, match="unstamped"):
+        compare_serving(
+            [_leg("vllm", "0.25.0"), _leg("vllm")],
+            _leg("openrouter", SCORER_VERSION),
+            require_provenance={"local": {}, "api": {}},
+        )

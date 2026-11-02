@@ -1450,6 +1450,14 @@ def _refuse_mixed_leg(side: str, agg: Mapping[str, Any] | None) -> None:
             f"{side} leg pools runs from different scorer versions "
             f"({', '.join(map(str, versions))}); re-score them before comparing"
         )
+    if (agg or {}).get("scorer_version_partial"):
+        from ..metrics.scorecard_honesty import ProvenanceExportError
+
+        raise ProvenanceExportError(
+            f"{side} leg pools unstamped runs with some stamped runs; "
+            "strict export cannot certify an unknown origin - emit one release per leg "
+            "or re-score the unstamped runs"
+        )
 
 
 def _leg_provenance(
