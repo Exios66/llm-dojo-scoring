@@ -8,12 +8,17 @@ extend this list in the same PR that documents the pin bump.
 from __future__ import annotations
 
 import importlib
+import json
 import re
 from pathlib import Path
 
 import llm_dojo_scoring as dojo
 from llm_dojo_scoring import load_registry
+from llm_dojo_scoring.config import TASK_KINDS
 from llm_dojo_scoring.metrics.registry import MetricTier
+
+
+_CONSUMER_SURFACE_PATH = Path(__file__).resolve().parent / "fixtures" / "consumer_surface.json"
 
 
 # Top-level names imported by local-mailroom-sandbox + llm-mailroom tests.
@@ -393,3 +398,117 @@ def test_sandbox_local_vs_api_emit_call_shape(tmp_path):
     assert {r.metadata["provenance"]["draw_seed"] for r in em._records} == {
         "fixture-serving-v0"
     }
+
+
+# ---------------------------------------------------------------------------
+# Pinned consumer-surface manifest (#84)
+# ---------------------------------------------------------------------------
+
+
+def _consumer_surface() -> dict:
+    """Load the pinned downstream import/dispatch manifest.
+
+    Regenerate with ``uv run python scripts/audit_consumer_surface.py --write``.
+    The test only reads the fixture, so it never needs the consumer checkouts.
+    """
+    return json.loads(_CONSUMER_SURFACE_PATH.read_text(encoding="utf-8"))
+
+
+def _iter_consumer_sites(surface: dict):
+    """Yield every consumer site recorded in the manifest."""
+    for entry in surface["top_level"].values():
+        yield from entry["consumers"]
+    for entry in surface["modules"].values():
+        for spec in entry["attrs"].values():
+            yield from spec["consumers"]
+    for section in surface["dispatch"].values():
+        for sites in section["literals"].values():
+            yield from sites
+        yield from section["dynamic"]
+    for patch in surface["patches"]:
+        yield {key: patch[key] for key in ("repo", "file", "line")}
+    for sites in surface["scores"]["visualizer_reads"].values():
+        yield from sites
+
+
+def test_pinned_consumer_surface_imports_resolve():
+    """Every recorded top-level name and module attr still imports from its path."""
+    surface = _consumer_surface()
+    assert surface["schema_version"] == 1
+    assert surface["top_level"] and surface["modules"], "manifest pins no consumer surface"
+    failures: list[str] = []
+
+    for name, entry in surface["top_level"].items():
+        if entry["kind"] == "module":
+            try:
+                importlib.import_module(f"llm_dojo_scoring.{name}")
+            except Exception as exc:  # pragma: no cover - failure detail path
+                failures.append(f"llm_dojo_scoring.{name}: {type(exc).__name__}: {exc}")
+            continue
+        if not hasattr(dojo, name):
+            failures.append(f"from llm_dojo_scoring import {name}")
+            continue
+        defined_in = entry.get("defined_in")
+        if defined_in:
+            defining = importlib.import_module(f"llm_dojo_scoring.{defined_in}")
+            if not hasattr(defining, name):
+                failures.append(f"llm_dojo_scoring.{defined_in}.{name}")
+
+    for module_path, entry in surface["modules"].items():
+        try:
+            module = importlib.import_module(f"llm_dojo_scoring.{module_path}")
+        except Exception as exc:  # pragma: no cover - failure detail path
+            failures.append(f"llm_dojo_scoring.{module_path}: {type(exc).__name__}: {exc}")
+            continue
+        for attr, spec in entry["attrs"].items():
+            if not hasattr(module, attr):
+                failures.append(f"llm_dojo_scoring.{module_path}.{attr}")
+                continue
+            defined_in = spec.get("defined_in")
+            if defined_in:
+                defining = importlib.import_module(f"llm_dojo_scoring.{defined_in}")
+                if not hasattr(defining, attr):
+                    failures.append(f"llm_dojo_scoring.{defined_in}.{attr}")
+
+    assert not failures, "consumer surface missing:\n" + "\n".join(failures)
+
+
+def _dispatch_covers(section: dict, value: str) -> bool:
+    """True when a dispatch value is literal, supported, or documented dynamic."""
+    if value in section["literals"] or value in section["supported"]:
+        return True
+    return any(item.get("value") == value for item in section["dynamic"])
+
+
+def test_pinned_dispatch_surface_covers_task_and_suite_vocabulary():
+    """Every task kind and live suite is represented in the pinned dispatch section."""
+    dispatch = _consumer_surface()["dispatch"]
+
+    missing_tasks = [key for key in TASK_KINDS if not _dispatch_covers(dispatch["score_task"], key)]
+    assert not missing_tasks, f"score_task dispatch missing task kinds: {missing_tasks}"
+
+    live_suites = dojo.list_suites(live_only=True)
+    missing_suites = [
+        name for name in live_suites if not _dispatch_covers(dispatch["get_suite"], name)
+    ]
+    assert not missing_suites, f"get_suite dispatch missing live suites: {missing_suites}"
+
+
+def test_pinned_langfuse_score_names_resolve():
+    """Aliases and visualizer score reads stay resolvable in the registry."""
+    scores = _consumer_surface()["scores"]
+    registry = load_registry()
+    names = set(scores["registry_ids"]) | set(scores["visualizer_reads"])
+    for canonical, wire in scores["aliases"].items():
+        names.update((canonical, wire))
+    missing = sorted(name for name in names if name not in registry.metrics)
+    assert not missing, f"pinned Langfuse score names missing from registry: {missing}"
+
+
+def test_consumer_surface_sites_are_repo_relative():
+    """Manifest consumer sites never embed absolute checkout paths."""
+    surface = _consumer_surface()
+    absolute = [
+        site for site in _iter_consumer_sites(surface) if Path(site["file"]).is_absolute()
+    ]
+    assert not absolute, f"absolute consumer paths in fixture: {absolute}"
