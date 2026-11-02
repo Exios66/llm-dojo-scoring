@@ -88,6 +88,9 @@ CMS_CLAIM_TYPES: frozenset[str] = frozenset({"pde", "inpatient", "outpatient", "
 #: :func:`score_cms_doc_ref`. Not part of ``DEFAULT_FIELD_TYPES``, which
 #: mirrors the mailroom taxonomy and is pinned to it.
 CMS_ROW_FIELD_TYPES: dict[str, str] = {
+    # Closed product-line vocabulary on a CMS row (GT is always ``health``):
+    # exact match, so a table token earns no fuzzy name credit.
+    "claim_type": "label",
     "cms_source_table": "label",
     "supporting_documents": "entity_list:cms_doc_ref",
 }

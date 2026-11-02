@@ -52,7 +52,11 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         ),
         "change": (
             "CUAD parties strip defined-term annotations and effective_date may use "
-            "the agreement date; insurance scores cms_source_table orthogonally."
+            "the agreement date; insurance scores cms_source_table orthogonally. "
+            "#93: on CMS rows claim_type is an exact product-line label (a table "
+            "token no longer folds onto health), cms_source_table is derived from "
+            "expected_subclass, adjuster/denial_reasons are documented-absent "
+            "(a stated value scores 0) and supporting_documents match by identifier."
         ),
         "rescore_required": True,
     },

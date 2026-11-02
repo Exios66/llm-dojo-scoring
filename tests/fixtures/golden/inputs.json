@@ -252,16 +252,23 @@
     },
     "insurance_claims_specialist": {
       "expected": {
-        "claim_number": "CLM-1",
-        "claimed_amount": 100.0,
+        "claim_number": "887013387879564",
+        "claimed_amount": "30.0",
+        "claim_type": "health",
+        "cms_source_table": "carrier",
         "coverage_determination": "approved",
-        "denial_reasons": []
+        "denial_reasons": "",
+        "adjuster": "",
+        "supporting_documents": ["provider NPI 5040521237", "HCPCS detail (1 codes)"]
       },
       "predicted": {
-        "claim_number": "CLM-1",
-        "claimed_amount": 100.0,
+        "claim_number": "887013387879564",
+        "claimed_amount": "$30.00",
+        "claim_type": "carrier",
         "coverage_determination": "approved",
-        "denial_reasons": []
+        "denial_reasons": [],
+        "adjuster": "KELLY P.",
+        "supporting_documents": ["NPI 5040521237", "HCPCS detail (2 codes)"]
       }
     },
     "intake": {

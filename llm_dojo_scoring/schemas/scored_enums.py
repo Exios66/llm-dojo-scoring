@@ -16,12 +16,11 @@ now owns the hints as well, the way :mod:`.maud_schema` already does for MAUD:
 - :func:`enum_hint_violations` — a consumer asserts its vendored hint lists
   match the dojo's instead of re-implementing the check.
 
-Only the scored vocabulary is taught, and it is canonical tokens with one
-deliberate exception: ``insurance_claim.claim_type`` also lists the CMS
-source-table tokens (``pde``, ``inpatient``, ``outpatient``, ``carrier``),
-because the specialist prompt teaches them for CMS / DE-SynPUF rows and the
-scorer credits them against GT ``health`` (``canonical_claim_type``). The
-scorer still folds intent aliases (``normalize_intent``), but a hint that
+Only canonical scored tokens are taught. ``insurance_claim.claim_type`` is
+the product line only (:data:`.corpus.INSURANCE_PRODUCT_LINES`); since #93 the
+CMS source-table tokens (``pde``, ``inpatient``, ``outpatient``, ``carrier``)
+are the separate ``cms_source_table`` field and score 0 on ``claim_type``
+(a CMS row's product line is ``health``). The scorer still folds intent aliases (``normalize_intent``), but a hint that
 relies on that leniency is reported, because the alias table is a safety net
 for stored answers, not a vocabulary.
 """
@@ -32,7 +31,7 @@ from collections.abc import Iterable, Mapping
 from types import MappingProxyType
 from typing import Any
 
-from .corpus import CMS_SOURCE_TABLES, INSURANCE_CLAIM_TYPES
+from .corpus import CMS_SOURCE_TABLES, INSURANCE_PRODUCT_LINES
 from .intents import INTENT_DESCRIPTIONS, INTENT_LABELS
 
 __all__ = [
@@ -45,9 +44,9 @@ __all__ = [
 ]
 
 _CLAIM_TYPE_DESCRIPTION = (
-    "Product line of THIS claim. For a CMS / DE-SynPUF row the source-table token "
-    "(pde, inpatient, outpatient, carrier) is accepted and scored as health; "
-    "otherwise auto, property, liability, health, life, workers_comp, or other."
+    "Product line of THIS claim: auto, property, liability, health, life, "
+    "workers_comp, or other. A CMS / DE-SynPUF row is health; its source table "
+    "(pde, inpatient, outpatient, carrier) goes in cms_source_table, not here."
 )
 _CMS_SOURCE_TABLE_DESCRIPTION = (
     "CMS / DE-SynPUF source table of THIS row (carrier, inpatient, outpatient, pde); "
@@ -60,14 +59,14 @@ _scored_enum_fields: dict[str, dict[str, tuple[tuple[str, ...], str]]] = {
 }
 _scored_enum_fields["insurance_claim"].update(
     {
-        "claim_type": (tuple(INSURANCE_CLAIM_TYPES), _CLAIM_TYPE_DESCRIPTION),
+        "claim_type": (tuple(INSURANCE_PRODUCT_LINES), _CLAIM_TYPE_DESCRIPTION),
         "cms_source_table": (tuple(sorted(CMS_SOURCE_TABLES)), _CMS_SOURCE_TABLE_DESCRIPTION),
     }
 )
 
 #: doc_type -> field -> (scored vocabulary, description). Every ``label``-typed
 #: field in ``DEFAULT_FIELD_TYPES`` appears here, plus the insurance enums the
-#: scorer canonicalizes (``claim_type``) or scores as a label (``cms_source_table``).
+#: scorer scores as the product line (``claim_type``) or the CMS table (``cms_source_table``).
 #: Read-only at both levels: a mutation would silently change the vocabulary
 #: for every caller in the process, so the mappings are frozen after building.
 SCORED_ENUM_FIELDS: Mapping[str, Mapping[str, tuple[tuple[str, ...], str]]] = MappingProxyType(
