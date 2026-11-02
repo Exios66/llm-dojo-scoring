@@ -10,6 +10,7 @@ counters are not reproducible from a saved card).
 from __future__ import annotations
 
 import json
+import math
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
@@ -53,9 +54,25 @@ def _headline(payload: Mapping[str, Any] | None) -> float | None:
         "score",
     ):
         value = payload.get(key)
-        if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if _is_number(value):
             return float(value)
     return None
+
+
+def _is_number(value: Any) -> bool:
+    """A finite int/float that is not a bool (stored NaN / Infinity never counts)."""
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def _finite(value: Any) -> Any:
+    """``value`` with non-finite floats replaced by ``None``, so output stays strict JSON."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, Mapping):
+        return {key: _finite(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_finite(item) for item in value]
+    return value
 
 
 def _mapping(value: Any, field: str) -> Mapping[str, Any]:
@@ -280,7 +297,7 @@ def rescore_record(record: Mapping[str, Any], *, provenance: Mapping[str, Any] |
                 if task == "reviewer"
                 else _headline(stored_payload)
             ),
-            "payload": dict(stored_payload),
+            "payload": _finite(dict(stored_payload)),
             "provenance": dict(stored_prov),
             "rescored_from": record.get("rescored_from") or {},
             "already_current": True,
@@ -414,7 +431,7 @@ def rescore_file(
     target.parent.mkdir(parents=True, exist_ok=True)
     with target.open("w", encoding="utf-8") as handle:
         for record in result["records"]:
-            handle.write(json.dumps(record, sort_keys=True, default=str) + "\n")
+            handle.write(json.dumps(_finite(record), sort_keys=True, default=str, allow_nan=False) + "\n")
     result["output"] = str(target)
     result["moves"] = diff_scorecards([record for record in records], result["records"])
     return result
@@ -460,9 +477,7 @@ def diff_scorecards(
         if isinstance(old_score, Mapping):
             old_score = _headline(old_score)
         new_score = new_record.get("score")
-        if not isinstance(old_score, (int, float)) or isinstance(old_score, bool):
-            continue
-        if not isinstance(new_score, (int, float)) or isinstance(new_score, bool):
+        if not _is_number(old_score) or not _is_number(new_score):
             continue
         old_values.append(float(old_score))
         new_values.append(float(new_score))

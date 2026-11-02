@@ -389,12 +389,12 @@ consistency is degenerate on GT-shaped predictions.
 
 Consumers must not hand-maintain the enum values they teach a specialist.
 SAND-042 found a correspondence hint teaching `demand_payment`,
-`schedule_meeting`, … — spellings outside the canonical hint vocabulary.
-(`normalize_intent` still folds those two aliases to `payment_demand` /
-`meeting_invite` before scoring, so their predictions are not necessarily
-marked wrong; the hint audit flags them because the alias table is a safety
-net, not the contract.) — and the insurance and
-corporate-record hints had the same defect. The dojo generates the hints from
+`schedule_meeting`, … — spellings outside the canonical hint vocabulary. The
+insurance and corporate-record hints had the same defect. `normalize_intent`
+still folds those two aliases to `payment_demand` / `meeting_invite` before
+scoring, so their predictions are not necessarily marked wrong. The hint audit
+flags them anyway, because the alias table is a safety net, not the contract.
+The dojo generates the hints from
 the scored vocabulary instead (`llm_dojo_scoring.schemas.scored_enums`):
 
 | Class | Field | Source of the vocabulary |
@@ -463,11 +463,12 @@ What v9.2.1 labels, per class:
   `merger_consideration` (the subtype). The other five fields are pending.
 - **corporate_record**: `intent`, `subject_matter`, `keywords`, `record_type`
   (the subtype) and, from the v9.2.1 relabel, `entity_name` (the EDGAR
-  registrant: 92% of rows; scored on six subtypes, partial on articles, bylaws
-  and rights instruments). `filing_number` is `not_applicable` except on
-  articles and charter amendments. `effective_date`, `signatories`,
-  `jurisdiction` and every per-subclass entity (for example indenture
-  `trustee`) are unlabelled in every Hub revision and stay
+  registrant: 92% of rows; `scored` on seven subtypes, `partial` on articles,
+  bylaws and rights instruments). `filing_number` is `not_applicable` except on
+  articles and charter amendments; on `subsidiary_list`, `signatories` and
+  `jurisdiction` are `not_applicable` too. Otherwise `effective_date`,
+  `signatories`, `jurisdiction` and every per-subclass entity (for example
+  indenture `trustee`) are unlabelled in every Hub revision and stay
   `pending_annotation` until they are annotated.
 - **correspondence**: `intent`, `subject_matter`, `keywords` and
   `communication_type` (the subtype). Topic and sentiment are label tasks. The

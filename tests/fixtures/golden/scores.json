@@ -208,17 +208,18 @@
           ],
           "schema_id": "contract@v9.2.1",
           "scorable_fields": [
+            "cuad_family"
+          ],
+          "subtype": null,
+          "unlabelled_fields": [
             "document_name",
             "parties",
             "effective_date",
             "term_length",
             "governing_law",
             "renewal_terms",
-            "cuad_family",
             "cuad_clauses"
-          ],
-          "subtype": null,
-          "unlabelled_fields": []
+          ]
         },
         "schema_adherence": 0.2727,
         "schema_promotion_gate": {
@@ -1740,11 +1741,12 @@
           ],
           "schema_id": "merger_agreement@v9.2.1",
           "scorable_fields": [
-            "merger_consideration",
-            "maud_clauses"
+            "merger_consideration"
           ],
           "subtype": null,
-          "unlabelled_fields": []
+          "unlabelled_fields": [
+            "maud_clauses"
+          ]
         },
         "schema_adherence": 0.2,
         "schema_promotion_gate": {

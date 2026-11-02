@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+import pathlib
 
 import numpy as np
 import pytest
@@ -85,9 +86,20 @@ def test_numpy_subclass_array_is_per_row():
     """A NumPy subclass array is read per row, not stringified or truth-tested."""
     suite = get_suite("insurance_claims_specialist")
     rows = [dict(_CMS), dict(_CMS)]
-    preds = [{**_CMS, "cms_source_table": "pde"}, {**_CMS, "cms_source_table": "pde"}]
-    out = suite.score(rows, preds, expected_subclass=np.array(["pde", "auto"]))
-    assert out is not None
+    # Row 0 states an adjuster (wrong on a CMS row); row 1 names the wrong table
+    # (wrong only if row 1 were CMS). Each per-row reading scores differently.
+    preds = [{**_CMS, "cms_source_table": "pde", "adjuster": "JOHN D."},
+             {**_CMS, "cms_source_table": "carrier"}]
+
+    def score(subclass):
+        """Batch extraction score and precision under one subclass reading."""
+        out = suite.score(rows, preds, expected_subclass=subclass)
+        return out["extraction"], out["extraction_precision"]
+
+    array = score(np.array(["pde", "auto"]))
+    assert array == score(["pde", "auto"])
+    assert array != score(["auto", "auto"])  # row 0 must be CMS
+    assert array != score(["pde", "pde"])  # row 1 must not be
 
 
 def test_scalar_subclass_does_not_mark_every_batch_row_cms():
@@ -124,3 +136,38 @@ def test_enum_fragment_has_a_type(nullable):
     fragment = scored_enum_schema("insurance_claim", "claim_type", nullable=nullable)
     assert fragment["type"] == (["string", "null"] if nullable else "string")
     assert json.loads(json.dumps(fragment)) == fragment
+
+
+def test_partial_notes_with_different_unscored_fields_stay_separate():
+    """Same specialist and label, different classes: one note per unscored list."""
+    rows = [
+        {"specialist": "s", "experiment": "e1", "headline_scope": "partial",
+         "headline_label": "parties only", "unscored_fields": ["a"]},
+        {"specialist": "s", "experiment": "e2", "headline_scope": "partial",
+         "headline_label": "parties only", "unscored_fields": ["b"]},
+    ]
+    notes = _scope_footnotes(rows)
+    assert len(notes) == 2
+    assert any("unscored: a" in n and "e1" in n for n in notes)
+    assert any("unscored: b" in n and "e2" in n for n in notes)
+
+
+def test_rescore_drops_non_finite_stored_values(tmp_path):
+    """Stored NaN / Infinity never reach the headline, the moves or the JSONL."""
+    from llm_dojo_scoring.metrics.scorecard_honesty import SCORER_VERSION
+    from llm_dojo_scoring.scoring.rescore import diff_scorecards, rescore_file
+
+    stored = {"task": "extraction", "doc_id": "d1", "score": float("nan"),
+              "payload": {"overall_score": float("nan"), "parts": [float("inf"), 1.0]},
+              "provenance": {"scorer_version": SCORER_VERSION}}
+    out = rescore_record(stored)
+    assert out["score"] is None
+    assert out["payload"] == {"overall_score": None, "parts": [None, 1.0]}
+    moves = diff_scorecards([{"doc_id": "d1", "score": float("nan")}], [{"doc_id": "d1", "score": 0.5}])
+    assert moves["n"] == 0 and moves["delta"] is None
+    items = tmp_path / "items.jsonl"
+    items.write_text(json.dumps(stored) + "\n", encoding="utf-8")
+    result = rescore_file(items)
+    text = pathlib.Path(result["output"]).read_text(encoding="utf-8")
+    assert "NaN" not in text and "Infinity" not in text
+    json.loads(text, parse_constant=lambda c: pytest.fail(c))

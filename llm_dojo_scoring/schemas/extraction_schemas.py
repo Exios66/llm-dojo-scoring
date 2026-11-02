@@ -120,6 +120,9 @@ _SUBTYPE_DERIVED: dict[str, str] = {
     "correspondence": "communication_type",
 }
 
+#: Hub label columns that CUAD / MAUD derived fields read their truth from.
+_LABEL_SOURCES: frozenset[str] = frozenset({"cuad_clause_labels", "maud_clause_labels"})
+
 #: Fields one class's live map carries for another class (never this class's truth).
 _FOREIGN: dict[str, frozenset[str]] = {
     "contract": frozenset({"merger_consideration", "maud_clauses"}),
@@ -484,23 +487,30 @@ def schema_coverage(
     labelled, or documented-absent), the schema-scored fields the row leaves
     unlabelled, and the schema's pending fields. Additive reporting only.
     """
-    from .gt_metadata import gt_presence_map, is_empty_value, parse_gt_fields
+    from .gt_metadata import ABSENT_PRESENCE_STATUSES, gt_presence_map, is_empty_value, parse_gt_fields
 
     schema = extraction_schema(doc_type, subtype)
     gt = parse_gt_fields(expected) if expected is not None else {}
     presence = gt_presence_map(gt)
+
+    def carries(key: str) -> bool:
+        """The row labels ``key``: a pending / n/a / absent status overrides a stale value."""
+        return presence.get(key) not in ABSENT_PRESENCE_STATUSES and not is_empty_value(gt.get(key))
+
     labelled: list[str] = []
     unlabelled: list[str] = []
     for name in schema.scored_fields:
         spec = schema.fields[name]
-        if spec.status == "documented_absent" or spec.source != "gt_fields":
-            labelled.append(name)
+        if spec.status == "documented_absent" or spec.source == "subtype":
+            ok = True
+        elif spec.source in _LABEL_SOURCES:
+            # CUAD / MAUD derived fields score only when the row's label source does.
+            ok = carries(spec.source)
         elif presence.get(name) == "schema_documented_absence":
-            labelled.append(name)
-        elif not is_empty_value(gt.get(name)):
-            labelled.append(name)
+            ok = True
         else:
-            unlabelled.append(name)
+            ok = carries(name)
+        (labelled if ok else unlabelled).append(name)
     return {
         "schema_id": schema.schema_id,
         "doc_type": doc_type,
