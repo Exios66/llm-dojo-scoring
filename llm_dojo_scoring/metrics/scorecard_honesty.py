@@ -6,6 +6,8 @@ Live-run calibration for issues Exios66/llm-dojo-scoring #16–#22 (hub #233).
 from __future__ import annotations
 
 import json
+import math
+import numbers
 import re
 from dataclasses import dataclass
 from statistics import fmean
@@ -423,37 +425,108 @@ def _row_field_scores(row: Mapping[str, Any]) -> Mapping[str, Any] | None:
     return None
 
 
+def _is_real_score(value: Any) -> bool:
+    """True for a finite real number that is not a bool (a field that was scored)."""
+    return (
+        isinstance(value, numbers.Real)
+        and not isinstance(value, bool)
+        and math.isfinite(float(value))
+    )
+
+
+def _numeric_field_names(fields: Mapping[str, Any]) -> list[str]:
+    """Names of the fields whose score is a real number (not ``None``, not a bool)."""
+    return [str(name) for name, value in fields.items() if _is_real_score(value)]
+
+
+def _live_fields(doc_class: str | None) -> tuple[str | None, list[str]]:
+    """Resolve *doc_class* (stripped, lower-cased; specialist names accepted).
+
+    Returns ``(native_class, live_fields)``; ``(None, [])`` when the class is
+    not in ``DEFAULT_FIELD_TYPES`` and is not a ``SPECIALIST_DOC_TYPES`` name.
+    """
+    from ..scoring.suites import DEFAULT_FIELD_TYPES, SPECIALIST_DOC_TYPES
+
+    if doc_class is None:
+        return None, []
+    name = str(doc_class).strip().lower()
+    if name not in DEFAULT_FIELD_TYPES:
+        name = SPECIALIST_DOC_TYPES.get(name, "")
+    if name not in DEFAULT_FIELD_TYPES:
+        return None, []
+    return name, list(DEFAULT_FIELD_TYPES[name])
+
+
+def _is_maud_only_doc(scored_fields: Sequence[str], live: set[str]) -> bool:
+    """True when a document scored at least one live field and all are MAUD fields."""
+    scored_live = {f for f in scored_fields if f in live}
+    return bool(scored_live) and scored_live <= MAUD_HEADLINE_FIELDS
+
+
+def _normalise_counts(field_counts: Any) -> dict[str, int]:
+    """Field → positive document count; unusable counts are skipped, not fatal."""
+    if isinstance(field_counts, (str, bytes)):
+        raise TypeError(
+            "field_counts must be a mapping of field -> count or a collection of "
+            f"field names, not {type(field_counts).__name__}"
+        )
+    if isinstance(field_counts, Mapping):
+        counts: dict[str, int] = {}
+        for name, n in field_counts.items():
+            if isinstance(n, bool) or not isinstance(n, (int, float)):
+                continue
+            if isinstance(n, float) and not math.isfinite(n):
+                continue
+            if int(n) >= 1:
+                counts[str(name)] = int(n)
+        return counts
+    return {str(name): 1 for name in field_counts}
+
+
 def headline_scope(
     doc_class: str | None,
     field_counts: Mapping[str, int] | Sequence[str],
+    *,
+    n_docs: int | None = None,
+    maud_only_docs: int | None = None,
+    n_docs_with_fields: int | None = None,
 ) -> dict[str, Any]:
     """Which live fields a class headline actually covers (#95, #94).
 
     ``field_counts`` maps each scored field to the number of documents that
-    scored it (or is a plain list of scored fields). The live field map comes
-    from ``DEFAULT_FIELD_TYPES``. ``headline_scope`` is:
+    scored it (or is a plain collection of scored fields). A ``str`` raises
+    ``TypeError``; counts that are not positive ints/floats are skipped. The
+    live field map comes from ``DEFAULT_FIELD_TYPES``; *doc_class* is stripped
+    and lower-cased, and a ``SPECIALIST_DOC_TYPES`` name is accepted.
+    ``headline_scope`` is:
 
     - ``"maud_only"`` — a merger headline built from MAUD answers alone; its
       ``headline_label`` says so, because it is MAUD accuracy, not a field mean;
+    - ``"mixed"`` — a merger headline where only some documents are MAUD-only
+      (the field union alone would read as ``"full"``); needs *n_docs* and
+      *maud_only_docs*;
     - ``"partial"`` — some live fields never carried ground truth, so the
       headline is not comparable with a class scored on its whole field map;
     - ``"full"`` — every live field was scored at least once;
-    - ``None`` — no scored field is in the live map (nothing scored, an
-      unknown class, or only off-map fields).
+    - ``"unknown"`` — the caller has field data but no claim can be made: the
+      class is unresolved, some scored documents lack field data, or no live
+      field was scored. The label says why. Unresolved classes need scored
+      fields to trigger this; the other two need *n_docs*;
+    - ``None`` — no scored field is in the live map and the caller gave no
+      per-document context (nothing scored, or only off-map fields).
+
+    Per-document context (all optional; ``None`` keeps the field-union rule):
+    *n_docs* is the number of scored documents, *n_docs_with_fields* how many
+    of them carried field data, and *maud_only_docs* how many documents scored
+    at least one live field and only MAUD ones (``MAUD_HEADLINE_FIELDS``).
 
     Scored fields outside the live map are listed in ``off_map_fields`` and
     kept in ``scored_fields``, but never count toward the scope,
     ``field_coverage`` or ``unscored_fields``.
     """
-    from ..scoring.suites import DEFAULT_FIELD_TYPES
-
-    counts = (
-        {str(k): int(v) for k, v in field_counts.items()}
-        if isinstance(field_counts, Mapping)
-        else {str(k): 1 for k in field_counts}
-    )
-    scored = sorted(field for field, n in counts.items() if n > 0)
-    live = list(DEFAULT_FIELD_TYPES.get(str(doc_class or ""), {}))
+    resolved, live = _live_fields(doc_class)
+    counts = _normalise_counts(field_counts)
+    scored = sorted(counts)
     live_set = set(live)
     scored_live = [field for field in scored if field in live_set]
     unscored = [field for field in live if field not in set(scored_live)]
@@ -465,11 +538,36 @@ def headline_scope(
         "off_map_fields": [field for field in scored if field not in live_set],
         "field_coverage": (round(len(scored_live) / len(live), 6) if live else None),
     }
+    reason: str | None = None
+    if n_docs and n_docs_with_fields is not None and n_docs_with_fields < n_docs:
+        reason = f"field data for {n_docs_with_fields} of {n_docs} scored documents"
+    elif resolved is None and (scored or n_docs):
+        reason = "document class unresolved"
+    elif not scored_live and n_docs:
+        reason = "no scored field in the live field map"
+    if reason is not None:
+        out.update(
+            headline_scope="unknown",
+            headline_label=reason,
+            unscored_fields=None,
+            field_coverage=None,
+        )
+        return out
     if not scored_live:
         return out
-    if doc_class == "merger_agreement" and set(scored_live) <= MAUD_HEADLINE_FIELDS:
+    k = None
+    if resolved == "merger_agreement" and n_docs and maud_only_docs is not None:
+        k = min(max(int(maud_only_docs), 0), int(n_docs))
+    if resolved == "merger_agreement" and (
+        k == n_docs if k is not None else set(scored_live) <= MAUD_HEADLINE_FIELDS
+    ):
         out["headline_scope"] = "maud_only"
         out["headline_label"] = "MAUD answers only (maud_clauses); not a field-level score"
+    elif k:
+        out["headline_scope"] = "mixed"
+        out["headline_label"] = (
+            f"{k} of {n_docs} documents MAUD answers only; not a field-level score"
+        )
     elif unscored:
         out["headline_scope"] = "partial"
         out["headline_label"] = (
@@ -502,6 +600,10 @@ def intent_split(
 
     Returns ``None`` when no row scored ``field``.
 
+    Field scores are expected in ``[0, 1]``. Non-finite values (``nan``,
+    ``inf``) are skipped for both the intent field and the other fields, so
+    ``n_intent_hit + n_intent_missed == n_intent``.
+
     Standalone, this skips only rows marked ``status == "unscorable"``. It does
     not check that a row has a numeric headline score; :func:`aggregate_quality_honest`
     therefore passes it only the rows that actually entered the headline mean.
@@ -515,12 +617,15 @@ def intent_split(
         if not fields:
             continue
         value = fields.get(field)
-        if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value):
             intents.append(float(value))
         rest = [
             float(v)
             for k, v in fields.items()
-            if k != field and isinstance(v, (int, float)) and not isinstance(v, bool)
+            if k != field
+            and isinstance(v, (int, float))
+            and not isinstance(v, bool)
+            and math.isfinite(v)
         ]
         if rest:
             others.append(fmean(rest))
@@ -553,7 +658,9 @@ def aggregate_quality_honest(
     When ``doc_class`` is given and rows carry ``field_scores``, the result
     also reports the scored population (:func:`headline_scope`): which live
     fields carried GT, in how many documents, and whether the headline covers
-    the whole field map (#95), and, when rows score ``intent``, an
+    the whole field map (#95; per-document, so a row mixing MAUD-only and
+    full-field documents is ``"mixed"``, and a row where some scored documents
+    lack field data is ``"unknown"``), and, when rows score ``intent``, an
     ``intent_split`` (:func:`intent_split`) so a bimodal intent-driven
     headline is visible (#94).
     """
@@ -561,6 +668,7 @@ def aggregate_quality_honest(
     scored_rows: list[Mapping[str, Any]] = []
     n_unscorable = 0
     field_counts: dict[str, int] = {}
+    doc_fields: list[list[str]] = []
     saw_fields = False
     for row in doc_results:
         if row.get("status") == "unscorable":
@@ -575,12 +683,21 @@ def aggregate_quality_honest(
             fields = _row_field_scores(row)
             if fields is not None:
                 saw_fields = True
-                for field in fields:
-                    field_counts[str(field)] = field_counts.get(str(field), 0) + 1
+                doc_fields.append(_numeric_field_names(fields))
     n_scored = len(scored_vals)
     population: dict[str, Any] = {}
     if doc_class is not None and saw_fields:
-        population = headline_scope(doc_class, field_counts)
+        live = set(_live_fields(doc_class)[1])
+        for names in doc_fields:
+            for field in set(names):
+                field_counts[field] = field_counts.get(field, 0) + 1
+        population = headline_scope(
+            doc_class,
+            field_counts,
+            n_docs=n_scored,
+            n_docs_with_fields=len(doc_fields),
+            maud_only_docs=sum(1 for names in doc_fields if _is_maud_only_doc(names, live)),
+        )
         split = intent_split(scored_rows)
         if split is not None:
             population["intent_split"] = split
