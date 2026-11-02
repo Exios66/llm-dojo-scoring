@@ -457,13 +457,29 @@
         "ambiguous_fields": [],
         "doc_class": "insurance_claim",
         "entity_list_audit": {},
-        "entity_list_scores": {},
-        "field_scores": {
-          "claim_number": 1.0,
-          "claimed_amount": 1.0,
-          "coverage_determination": 1.0
+        "entity_list_scores": {
+          "supporting_documents": {
+            "f1": 1.0,
+            "field": "supporting_documents",
+            "matched": 2,
+            "n_expected": 2,
+            "n_predicted": 2,
+            "partial_gt": false,
+            "precision": 1.0,
+            "recall": 1.0
+          }
         },
-        "overall_score": 1.0,
+        "field_scores": {
+          "adjuster": 0.0,
+          "claim_number": 1.0,
+          "claim_type": 0.0,
+          "claimed_amount": 1.0,
+          "cms_source_table": 1.0,
+          "coverage_determination": 1.0,
+          "denial_reasons": 1.0,
+          "supporting_documents": 1.0
+        },
+        "overall_score": 0.75,
         "trace": {
           "calibration_error": null,
           "confidence": null,
@@ -479,18 +495,34 @@
           "determination_consistency": 1.0
         },
         "determination_consistency": 1.0,
-        "entity_list_f1": null,
+        "entity_list_f1": 1.0,
         "extraction": {
           "ambiguous_fields": [],
           "doc_class": "insurance_claim",
           "entity_list_audit": {},
-          "entity_list_scores": {},
-          "field_scores": {
-            "claim_number": 1.0,
-            "claimed_amount": 1.0,
-            "coverage_determination": 1.0
+          "entity_list_scores": {
+            "supporting_documents": {
+              "f1": 1.0,
+              "field": "supporting_documents",
+              "matched": 2,
+              "n_expected": 2,
+              "n_predicted": 2,
+              "partial_gt": false,
+              "precision": 1.0,
+              "recall": 1.0
+            }
           },
-          "overall_score": 1.0,
+          "field_scores": {
+            "adjuster": 0.0,
+            "claim_number": 1.0,
+            "claim_type": 0.0,
+            "claimed_amount": 1.0,
+            "cms_source_table": 1.0,
+            "coverage_determination": 1.0,
+            "denial_reasons": 1.0,
+            "supporting_documents": 1.0
+          },
+          "overall_score": 0.75,
           "trace": {
             "calibration_error": null,
             "confidence": null,
@@ -499,12 +531,12 @@
             "reasoning": null
           }
         },
-        "extraction_f1": 1.0,
-        "extraction_f2": 1.0,
-        "extraction_precision": 1.0,
-        "extraction_recall": 1.0,
+        "extraction_f1": 0.8333,
+        "extraction_f2": 0.8333,
+        "extraction_precision": 0.8333,
+        "extraction_recall": 0.8333,
         "metric_id": "pipeline.extraction.overall",
-        "overall_score": 1.0,
+        "overall_score": 0.75,
         "parse_ok": 1.0,
         "provenance": {
           "dataset_revision": null,
@@ -516,15 +548,15 @@
           "serving_kind": null,
           "split": null
         },
-        "schema_adherence": 0.2353,
+        "schema_adherence": 0.4118,
         "schema_promotion_gate": {
           "doc_class": "insurance_claim",
           "passes": false,
           "reason": "schema_valid_below_threshold",
-          "schema_valid": 0.2353,
+          "schema_valid": 0.4118,
           "threshold": 0.9
         },
-        "schema_valid": 0.2353
+        "schema_valid": 0.4118
       }
     },
     "intake": {

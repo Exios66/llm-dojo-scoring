@@ -32,9 +32,10 @@ corporate_record    450 rows (10 record-shape subclasses; per-subclass entity
                     extraction benchmark
 compliance_filing   zero rows in the published merge — extraction schema
 court_opinion       zero rows in the published merge; LegalBench metrics
-insurance_claim     CMS DE-SynPUF (400 rows, source-table subclass) —
+insurance_claim     1,100 rows: 600 CMS DE-SynPUF (source-table subclass,
+                    150 each) + 500 non-CMS (auto 300, property 200) —
                     determination_consistency + amount_exactness computed;
-                    GT is homogeneous (all-approved / empty denials)
+                    CMS GT is homogeneous (all-approved / empty denials)
 ==================  =====================================================
 """
 
