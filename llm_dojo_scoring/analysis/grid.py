@@ -654,24 +654,26 @@ def _scope_footnotes(rows: Sequence[Mapping[str, Any]]) -> list[str]:
     specialist ends up with more than one distinct note, each names its
     experiment(s) in parentheses after the specialist.
     """
-    notes: dict[tuple[str, str, str], dict[str, Any]] = {}
+    notes: dict[tuple[str, str, str, tuple[str, ...]], dict[str, Any]] = {}
     for row in rows:
         scope = row.get("headline_scope")
         if scope not in _SCOPE_MARKS:
             continue
         label = str(row.get("headline_label"))
+        # Same label, different class: their unscored fields differ, so do their notes.
+        unscored = tuple(str(f) for f in row.get("unscored_fields") or ()) if scope == "partial" else ()
         entry = notes.setdefault(
-            (str(row["specialist"]), str(scope), label),
+            (str(row["specialist"]), str(scope), label, unscored),
             {"scope": scope, "row": row, "experiments": []},
         )
         exp = str(row.get("experiment") or "")
         if exp and exp not in entry["experiments"]:
             entry["experiments"].append(exp)
     per_specialist: dict[str, int] = {}
-    for specialist, _, _ in notes:
+    for specialist, _, _, _ in notes:
         per_specialist[specialist] = per_specialist.get(specialist, 0) + 1
     out: list[str] = []
-    for (specialist, scope, label), entry in notes.items():
+    for (specialist, scope, label, _), entry in notes.items():
         row = entry["row"]
         who = f"**{_cell(specialist)}**"
         if per_specialist[specialist] > 1 and entry["experiments"]:

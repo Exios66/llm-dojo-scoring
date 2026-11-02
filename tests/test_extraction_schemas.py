@@ -164,3 +164,25 @@ def test_corporate_entity_name_is_labelled_from_the_relabel():
     indenture = extraction_schema("corporate_record", "indenture")
     assert "entity_name" in indenture.scored_fields
     assert all(indenture.fields[name].status == "pending_annotation" for name in indenture.extensions)
+
+
+def test_label_derived_fields_need_the_rows_labels():
+    """CUAD-derived fields are scorable only when the row carries live clause labels."""
+    labels = json.dumps({"Parties": [{"text": "Acme"}]})
+    with_labels = schema_coverage("contract", "license", {"cuad_clause_labels": labels})
+    assert "parties" in with_labels["scorable_fields"]
+    bare = schema_coverage("contract", "license", {})
+    assert "parties" in bare["unlabelled_fields"] and "parties" not in bare["scorable_fields"]
+    stale = schema_coverage("contract", "license", {
+        "cuad_clause_labels": labels,
+        "gt_presence": {"cuad_clause_labels": "pending_annotation"},
+    })
+    assert "parties" in stale["unlabelled_fields"]
+    assert "cuad_family" in bare["scorable_fields"]  # subtype-derived needs no label
+
+
+def test_pending_presence_overrides_a_stale_gt_value():
+    """A ``pending_annotation`` field is unlabelled even with a value attached."""
+    gt = {"claim_number": "1", "claim_type": "health", "gt_presence": {"claim_number": "pending_annotation"}}
+    cov = schema_coverage("insurance_claim", "carrier", gt)
+    assert "claim_number" in cov["unlabelled_fields"]

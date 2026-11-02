@@ -30,10 +30,13 @@ scores needs a CHANGELOG comparability note and a `score_changelog` entry.
   the Hub data. Decide whether hints should still teach them.
 - [x] **PR #106 adversarial review:** confirmed findings 1–3, 5 and 6 are fixed in
   #106 (`fcca394`).
-- [x] **CMS detection still sniffs the key.** A plain-dict GT that carries
+- [ ] **CMS detection still sniffs the key.** A plain-dict GT that carries
   `cms_source_table` puts a non-CMS row into CMS mode (#106 review, finding 4).
   Replace key-sniffing with an explicit flag set where GT is scoped.
-  Fixed: a row whose GT names a product line other than `health` is never CMS.
+  Narrowed, not closed: a row whose GT names a product line other than
+  `health` is never CMS, and the token must be a known CMS table. A `health` or
+  `claim_type`-less plain dict that carries the key is still treated as CMS
+  until detection reads explicit provenance.
 - [x] **Scalar `expected_subclass` with a list `expected`.** In batch scoring this
   marks every row as CMS. Numpy or pandas subclass arrays silently miss detection,
   and `rescore` reads only the `expected_subclass` key (#106 review).
