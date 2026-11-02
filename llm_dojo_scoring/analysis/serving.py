@@ -378,6 +378,8 @@ class ServingRun:
     cost_basis: str | None = None
     #: Quality ``metric_id`` the record was scored under (#17), if stamped.
     metric_id: str | None = None
+    #: Scorer release that produced the quality scores (#97), if stamped.
+    scorer_version: str | None = None
 
 
 def _identity_from(record: Mapping[str, Any]) -> ServingIdentity:
@@ -582,6 +584,7 @@ def normalize_serving_record(record: Mapping[str, Any] | ServingRun) -> ServingR
         honest_gaps=gaps,
         cost_basis=cost_basis,
         metric_id=_record_metric_id(record),
+        scorer_version=_record_scorer_version(record),
     )
 
 
@@ -718,6 +721,16 @@ def aggregate_serving(
             # A leg that mixes metrics (or mixes stamped and unstamped runs)
             # has no single identity to compare on (#17).
             out["metric_id_conflict"] = distinct
+    scorer_versions = [r.scorer_version for r in normalized if r.scorer_version]
+    if scorer_versions:
+        distinct_versions = sorted(set(scorer_versions))
+        out["scorer_version"] = distinct_versions[0] if len(distinct_versions) == 1 else None
+        if len(distinct_versions) > 1:
+            # Two scorer generations in one leg cannot share one quality identity.
+            out["scorer_version_conflict"] = distinct_versions
+        elif len(scorer_versions) != len(normalized):
+            # Some runs predate the stamp: the leg is comparable only as unverified.
+            out["scorer_version_partial"] = True
     costed = [r for r in normalized if r.estimated_cost_usd is not None]
     bases = {r.cost_basis for r in costed}
     if cost is not None and len(bases) == 1 and None not in bases:
@@ -756,6 +769,29 @@ def _record_metric_id(raw: Mapping[str, Any]) -> str | None:
     if not mid and isinstance(q, Mapping):
         mid = q.get("metric_id")
     return str(mid) if mid else None
+
+
+def _record_scorer_version(raw: Mapping[str, Any]) -> str | None:
+    """Read the scorer release from the record, its provenance, or nested quality.
+
+    Emitted records carry ``provenance.scorer_version``; older records may
+    carry a top-level value. A missing version stays ``None`` so a comparison
+    can flag it instead of assuming today's release.
+    """
+    candidates = [raw.get("scorer_version")]
+    prov = raw.get("provenance")
+    if isinstance(prov, Mapping):
+        candidates.append(prov.get("scorer_version"))
+    quality = raw.get("quality")
+    if isinstance(quality, Mapping):
+        candidates.append(quality.get("scorer_version"))
+        nested = quality.get("provenance")
+        if isinstance(nested, Mapping):
+            candidates.append(nested.get("scorer_version"))
+    for value in candidates:
+        if value not in (None, ""):
+            return str(value)
+    return None
 
 
 def _delta_map(local: Mapping[str, Any], api: Mapping[str, Any]) -> dict[str, Any]:
@@ -1274,6 +1310,8 @@ def compare_serving(
 
     left_metric_id = left.get("metric_id") or (left.get("quality") or {}).get("metric_id")
     right_metric_id = right.get("metric_id") or (right.get("quality") or {}).get("metric_id")
+    left_scorer_version = left.get("scorer_version")
+    right_scorer_version = right.get("scorer_version")
     reason: str | None = None
     if left.get("metric_id_conflict") or right.get("metric_id_conflict"):
         reason = "metric_id_mixed"
@@ -1282,6 +1320,14 @@ def compare_serving(
     elif bool(left_metric_id) != bool(right_metric_id):
         # One leg names its metric, the other does not: no shared identity.
         reason = "metric_id_missing"
+    elif left.get("scorer_version_conflict") or right.get("scorer_version_conflict"):
+        reason = "scorer_version_mixed"
+    elif left_scorer_version and right_scorer_version and left_scorer_version != right_scorer_version:
+        # The scores were produced by different scorer generations (#97).
+        reason = "scorer_version_mismatch"
+    elif bool(left_scorer_version) != bool(right_scorer_version):
+        # One leg names its scorer release, the other does not.
+        reason = "scorer_version_missing"
     elif left.get("identity_conflict") or right.get("identity_conflict"):
         reason = "identity_mixed"
     incomparable: dict[str, Any] | None = None
@@ -1292,6 +1338,8 @@ def compare_serving(
             "incomparable_reason": reason,
             "left_metric_id": left_metric_id,
             "right_metric_id": right_metric_id,
+            "left_scorer_version": left_scorer_version,
+            "right_scorer_version": right_scorer_version,
         }
     if require_provenance:
         from ..metrics.scorecard_honesty import validate_comparison_provenance
@@ -1359,11 +1407,24 @@ def compare_serving(
         "e2e_delta": delta_significance(api_e2e, local_e2e),
         "honest_gaps": gaps,
     }
+    if left_scorer_version and right_scorer_version and left_scorer_version != right_scorer_version:
+        from ..metrics.score_changelog import score_changes_between
+
+        payload["score_changes"] = score_changes_between(
+            left_scorer_version, right_scorer_version
+        )
     if incomparable:
         payload.update(incomparable)
-    elif not left_metric_id and not right_metric_id:
-        # Comparable by default, but nothing proves the legs share a metric.
-        payload["metric_id_unverified"] = True
+    else:
+        if not left_metric_id and not right_metric_id:
+            # Comparable by default, but nothing proves the legs share a metric.
+            payload["metric_id_unverified"] = True
+        if not left.get("scorer_version") and not right.get("scorer_version"):
+            # Legacy records: no scorer release on either leg.
+            payload["scorer_version_unverified"] = True
+        elif left.get("scorer_version_partial") or right.get("scorer_version_partial"):
+            # Some pooled runs predate the stamp; the comparison is usable but unproven.
+            payload["scorer_version_unverified"] = True
     payload["table"] = serving_table_rows(payload)
     payload["scorecard"] = serving_scorecard(payload)
     payload["cost"] = payload["scorecard"]["cost"]
@@ -1380,6 +1441,14 @@ def _refuse_mixed_leg(side: str, agg: Mapping[str, Any] | None) -> None:
         raise ProvenanceExportError(
             f"{side} leg pools runs that differ on {', '.join(mixed)}; "
             "compare or emit one identity per leg"
+        )
+    versions = (agg or {}).get("scorer_version_conflict")
+    if versions:
+        from ..metrics.scorecard_honesty import ProvenanceExportError
+
+        raise ProvenanceExportError(
+            f"{side} leg pools runs from different scorer versions "
+            f"({', '.join(map(str, versions))}); re-score them before comparing"
         )
 
 
@@ -1400,7 +1469,10 @@ def _leg_provenance(
     }
     from ..metrics.scorecard_honesty import SCORER_VERSION
 
-    prov["scorer_version"] = SCORER_VERSION
+    # Use the leg's own release. Legacy records without a stamp keep the old
+    # compatibility fallback for strict export; compare_serving flags them as
+    # scorer_version_unverified rather than pretending they are current.
+    prov["scorer_version"] = agg.get("scorer_version") or SCORER_VERSION
     prov.update({k: v for k, v in dict(given or {}).items() if v is not None})
     return prov
 
@@ -1446,6 +1518,7 @@ def pair_comparable_runs(
             ident.split,
             ident.draw_seed,
             _record_metric_id(rec),
+            _record_scorer_version(rec),
         )
 
     api_by: dict[tuple[Any, ...], list[Mapping[str, Any]]] = {}

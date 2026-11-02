@@ -305,8 +305,8 @@
       "scanned": true
     },
     "SBX": {
-      "commit": "1bd2c3a71a08de4be8452f2035a89a20e44f6fb9",
-      "files_scanned": 329,
+      "commit": "93b76d42367d1758728c46d26bd25c50c8ca895e",
+      "files_scanned": 331,
       "label": "SBX",
       "path": "/Users/morningstar/.t3/worktrees/local-mailroom-sandbox/t3-65a57387",
       "reason": null,

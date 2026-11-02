@@ -1,0 +1,167 @@
+"""Cross-scorer-version comparability (issue #97).
+
+A card built from two scorer releases can look comparable when only the
+``metric_id`` agrees. These tests pin the release guard: mismatch is
+incomparable, a one-sided stamp is missing, and jointly missing stamps are
+comparable but explicitly unverified.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from llm_dojo_scoring.analysis.serving import (
+    aggregate_serving,
+    compare_serving,
+    pair_comparable_runs,
+)
+from llm_dojo_scoring.metrics.score_changelog import (
+    score_changes_between,
+    score_changes_for_metric,
+)
+from llm_dojo_scoring.metrics.scorecard_honesty import ProvenanceExportError, SCORER_VERSION
+
+
+def _leg(provider: str, version: str | None = None, **kw):
+    """Build one serving leg with a fixed quality score and optional release stamp."""
+    record = {
+        "provider": provider,
+        "ttft_seconds": 0.2,
+        "scores": {"extraction_overall_score": 0.8},
+        "metric_id": "pipeline.extraction.overall",
+        "dataset_revision": "r1",
+        "split": "test",
+        "draw_seed": "42",
+        "prompt_id": "p1",
+        "prompt_version": "p1",
+        "model": "qwen3:8b",
+    }
+    if version is not None:
+        record["provenance"] = {"scorer_version": version}
+    record.update(kw)
+    return record
+
+
+def test_scorer_version_mismatch_is_incomparable():
+    """Different scorer releases suppress the quality delta and name the reason."""
+    out = compare_serving(_leg("vllm", "0.25.0"), _leg("openrouter", "0.26.0"))
+    assert out["incomparable"] is True
+    assert out["incomparable_reason"] == "scorer_version_mismatch"
+    assert out["quality"]["delta_local_minus_api"] is None
+    assert out["left_scorer_version"] == "0.25.0"
+    assert out["right_scorer_version"] == "0.26.0"
+    assert "scorer_version_mismatch" in out["markdown"]
+
+
+def test_one_sided_scorer_version_is_missing():
+    """A leg that names its release cannot compare against an unstamped leg."""
+    out = compare_serving(_leg("vllm", "0.25.0"), _leg("openrouter"))
+    assert out["incomparable"] is True
+    assert out["incomparable_reason"] == "scorer_version_missing"
+    assert out["quality"]["delta_local_minus_api"] is None
+
+
+def test_jointly_missing_scorer_versions_are_unverified():
+    """Legacy records without a release are comparable only with a flag."""
+    out = compare_serving(_leg("vllm"), _leg("openrouter"))
+    assert not out.get("incomparable")
+    assert out["scorer_version_unverified"] is True
+    assert out["quality"]["delta_local_minus_api"] == pytest.approx(0.0)
+
+
+def test_partially_stamped_leg_is_unverified():
+    """A leg pooling stamped and unstamped runs is comparable but unproven."""
+    out = compare_serving(
+        [_leg("vllm", "0.25.0"), _leg("vllm")],
+        _leg("openrouter", "0.25.0"),
+    )
+    assert not out.get("incomparable")
+    assert out["scorer_version_unverified"] is True
+    assert out["local"]["scorer_version_partial"] is True
+
+
+def test_mixed_scorer_versions_in_one_leg_are_incomparable():
+    """A leg cannot pool two scorer generations under one quality identity."""
+    out = compare_serving(
+        [_leg("vllm", "0.25.0"), _leg("vllm", "0.26.0")],
+        _leg("openrouter", "0.26.0"),
+    )
+    assert out["incomparable"] is True
+    assert out["incomparable_reason"] == "scorer_version_mixed"
+    assert out["local"]["scorer_version_conflict"] == ["0.25.0", "0.26.0"]
+
+
+def test_aggregate_reports_the_uniform_version():
+    """One release across a leg is carried onto the aggregate."""
+    agg = aggregate_serving([_leg("vllm", "0.26.0")])
+    assert agg["scorer_version"] == "0.26.0"
+    assert "scorer_version_conflict" not in agg
+
+
+def test_pair_comparable_runs_separates_scorer_versions():
+    """Pairing never crosses a scorer release, even with matching metrics."""
+    common = {
+        "task": "sorter",
+        "prompt_version": "p1",
+        "dataset_fingerprint": "fp",
+        "dataset_revision": "r1",
+        "metric_id": "pipeline.extraction.overall",
+    }
+    records = [
+        {**common, "provider": "vllm", "scorer_version": "0.25.0"},
+        {**common, "provider": "openrouter", "scorer_version": "0.26.0"},
+    ]
+    assert pair_comparable_runs(records) == []
+    records[1]["scorer_version"] = "0.25.0"
+    assert len(pair_comparable_runs(records)) == 1
+
+
+def test_score_changelog_lists_releases_between_two_versions():
+    """The ledger names every release in the interval, oldest first."""
+    changes = score_changes_between("0.24.0", "0.26.0")
+    assert [entry["version"] for entry in changes] == ["0.25.0", "0.26.0"]
+    assert all(entry["rescore_required"] for entry in changes)
+
+
+def test_score_changelog_can_filter_one_metric():
+    """A metric query returns only the releases that moved that metric."""
+    changes = score_changes_for_metric(
+        "cuad.clause_presence.micro_f1", "0.25.0", "0.26.0"
+    )
+    assert len(changes) == 1
+    assert changes[0]["version"] == "0.26.0"
+
+
+def test_score_changelog_handles_reversed_and_invalid_versions():
+    """Reversing the pair is harmless; missing or junk releases yield nothing."""
+    assert score_changes_between("0.26.0", "0.24.0") == score_changes_between(
+        "0.24.0", "0.26.0"
+    )
+    assert score_changes_between(None, "0.26.0") == []
+    assert score_changes_between("not-a-version", "0.26.0") == []
+
+
+def test_compare_payload_carries_the_score_changes():
+    """A mismatch names the scorer fixes behind the incomparable delta."""
+    out = compare_serving(_leg("vllm", "0.24.0"), _leg("openrouter", "0.26.0"))
+    assert [entry["version"] for entry in out["score_changes"]] == ["0.25.0", "0.26.0"]
+
+
+def test_strict_provenance_uses_each_legs_recorded_release():
+    """Strict export catches a release mismatch instead of restamping today."""
+    with pytest.raises(ProvenanceExportError, match="scorer_version"):
+        compare_serving(
+            _leg("vllm", "0.25.0"),
+            _leg("openrouter", "0.26.0"),
+            require_provenance={"local": {}, "api": {}},
+        )
+
+
+def test_strict_provenance_accepts_matching_releases():
+    """Matching recorded releases pass strict export."""
+    out = compare_serving(
+        _leg("vllm", SCORER_VERSION),
+        _leg("openrouter", SCORER_VERSION),
+        require_provenance={"local": {}, "api": {}},
+    )
+    assert not out.get("incomparable")

@@ -17,6 +17,35 @@ Format based on Keep a Changelog; versioning is SemVer.
   fallback) plus registered project scripts (Setup/Tests/Release status) so
   agent worktrees boot importable and smoke-tested.
 
+- `scoring.reviewer`: `ReviewRecord` and `score_review_lane`, the reviewer-lane
+  scorecard. It reports class/subclass accuracy, wrong auto-accepts with an exact
+  one-sided Clopper-Pearson bound, required sample size, ECE/Brier/reliability,
+  human-review rate and causes, accept-rule violations, model-verdict confusion,
+  reviewer cost, and per-predicted-class operating points. Existing
+  `get_suite("sorter_reviewer").score` behavior is unchanged. Contract:
+  `docs/contracts/REVIEWER_SCORING.md`.
+
+- `analysis.calibration`: exact risk bounds and sample size
+  (`clopper_pearson_upper`, `required_samples`), ECE/Brier/reliability bins,
+  AUROC, Spearman, precision-constrained cutoffs, and five-fold cross-fit.
+  The 1% reviewer bar at 95% confidence needs 299 clean accepts (473 with one
+  error); the old 95%-accuracy target was a 5% error target.
+
+- `scoring.rescore` and `dojo-rescore`: re-score stored predictions under the
+  current scorer, emit fresh provenance, and report old-to-new score moves.
+  Serving records are refused because timings are not reproducible. A record
+  without both ground truth and a prediction is skipped and named.
+
+- `metrics.score_changelog`: machine ledger of releases that moved a score,
+  used by `compare_serving` to explain a release mismatch.
+
+- `scripts/freeze_goldens.py` and `tests/test_golden_scores.py`: a committed
+  golden baseline for every `TASK_KINDS` key and every live suite (#67).
+
+- `scripts/audit_consumer_surface.py`, `tests/fixtures/consumer_surface.json`,
+  and contract tests pinning every consumer import, dispatch literal, and
+  Langfuse score name (#84).
+
 ### Fixed
 
 - CUAD `parties` truth: defined-term annotations (`NMS CORP. ("Seller")`) are
@@ -47,6 +76,13 @@ Format based on Keep a Changelog; versioning is SemVer.
     `mock.patch` strings (`_layout.LEGACY_MODULES`, `tests/test_package_layout.py`).
   - Module `__name__` is now the subpackage path. Code that matches Dojo frames by name needs a one-line
     update; llm-mailroom's delegation tests are the known case (`docs/guides/MIGRATION.md` §0).
+- **Comparability guard**: `compare_serving` now reads each leg's recorded
+  `scorer_version` and reports `scorer_version_mismatch` (incomparable),
+  `scorer_version_missing`, `scorer_version_mixed`, or
+  `scorer_version_unverified`. `pair_comparable_runs` includes the release in
+  its key. A mismatch also carries the `score_changes` ledger entries between
+  the releases. Guide: `docs/guides/COMPARABILITY.md`.
+
 - **Docs** are grouped into `docs/guides`, `docs/schemas`, `docs/contracts` and `docs/history`, with a new
   index at `docs/README.md`. Stale pages are refreshed:
   - the package README (it described modules that do not exist) and the examples README;
@@ -61,6 +97,11 @@ Format based on Keep a Changelog; versioning is SemVer.
 - Contract `cuad_value_correct` and CUAD presence counts can rise on affected rows.
   Re-score older runs before comparing (#97). Insurance scores change only for rows
   whose expectation includes `cms_source_table`. The published merge has none yet.
+- Reviewer metrics are new in this release, so no earlier card has a comparable
+  reviewer number. The sandbox's v3 `meets_target` used a 95%-accuracy target, not
+  the spec's 1% wrong-accept bound; at 95% confidence, 0/149 supports 1.99% and
+  0/135 supports 2.19%. Corporate (`1/405`, 1.17%) and merger (`0/135`, 2.19%) do
+  not meet the 1% bar on the current v3 sample.
 
 ## [0.25.0] - 2026-11-01
 

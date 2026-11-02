@@ -6,11 +6,14 @@
   codebooks from a JSONL log.
 - ``dojo-sync`` — pull live experiment traces from Langfuse (and report the
   local Phoenix sink status) into the reference workbook + analysis frame.
+- ``dojo-rescore`` — re-score a stored run under the current scorer and report
+  old-to-new score moves (#97).
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 
@@ -228,6 +231,61 @@ def _cli_export(argv: list[str]) -> int:
     return 0
 
 
+def _cli_rescore(argv: list[str]) -> int:
+    """Re-score a stored run under the current scorer and report score moves."""
+    parser = argparse.ArgumentParser(
+        prog="dojo-rescore",
+        description="Re-score stored predictions under the current deterministic "
+                    "scorer and stamp fresh provenance (#97).",
+    )
+    parser.add_argument("--items", required=True,
+                        help="Path to the run store's items.jsonl")
+    parser.add_argument("--dataset", default=None,
+                        help="Optional dataset.jsonl to join ground truth by id")
+    parser.add_argument("--task", default="auto",
+                        help="Task to apply: extraction, reviewer, or a TASK_KINDS "
+                             "key. 'auto' uses each record's task/doc_class.")
+    parser.add_argument("--doc-class", default=None,
+                        help="Override the extraction document class")
+    parser.add_argument("--out", default=None,
+                        help="Output JSONL (default: <items>.rescored.jsonl)")
+    parser.add_argument("--compare", action="store_true",
+                        help="Print the old-to-new score moves")
+    parser.add_argument("--json", action="store_true",
+                        help="Print the full summary as JSON")
+    args = parser.parse_args(argv)
+
+    from .scoring.rescore import RescoreError, rescore_file
+
+    try:
+        result = rescore_file(
+            args.items,
+            dataset_path=args.dataset,
+            task=args.task,
+            doc_class=args.doc_class,
+            out_path=args.out,
+        )
+    except (OSError, RescoreError) as exc:
+        print(f"[dojo-rescore] {exc}", file=sys.stderr)
+        return 1
+    if args.json:
+        print(json.dumps(result, indent=2, sort_keys=True, default=str))
+        return 0
+    print(
+        f"[dojo-rescore] {result['n_rescored']} re-scored, "
+        f"{result['n_skipped']} skipped -> {result['output']}"
+    )
+    for item in result["skipped"][:10]:
+        print(f"[dojo-rescore]   skipped {item['doc_id']}: {item['reason']}")
+    if args.compare:
+        moves = result["moves"]
+        print(
+            f"[dojo-rescore] moves: n={moves['n']} changed={moves['n_changed']} "
+            f"old={moves['old_mean']} new={moves['new_mean']} delta={moves['delta']}"
+        )
+    return 0
+
+
 def analyze_main(argv: list[str] | None = None) -> None:
     """Run the analysis CLI and exit with its status code."""
     raise SystemExit(_cli_analyze(sys.argv[1:] if argv is None else argv))
@@ -243,12 +301,18 @@ def sync_main(argv: list[str] | None = None) -> None:
     raise SystemExit(_cli_sync(sys.argv[1:] if argv is None else argv))
 
 
-__all__ = ["_cli_analyze", "_cli_export", "_cli_sync",
-           "analyze_main", "export_main", "sync_main"]
+def rescore_main(argv: list[str] | None = None) -> None:
+    """Run the re-score CLI and exit with its status code."""
+    raise SystemExit(_cli_rescore(sys.argv[1:] if argv is None else argv))
+
+
+__all__ = ["_cli_analyze", "_cli_export", "_cli_rescore", "_cli_sync",
+           "analyze_main", "export_main", "rescore_main", "sync_main"]
 
 _COMMANDS = {
     "analyze": analyze_main,
     "export": export_main,
+    "rescore": rescore_main,
     "sync": sync_main,
 }
 
