@@ -497,17 +497,26 @@ def schema_coverage(
         """The row labels ``key``: a pending / n/a / absent status overrides a stale value."""
         return presence.get(key) not in ABSENT_PRESENCE_STATUSES and not is_empty_value(gt.get(key))
 
+    from .corpus import CMS_DOCUMENTED_ABSENT_FIELDS, cms_source_table
+
+    # Field scoring credits a documented absence only on CMS rows (#93); the
+    # table comes from the row's own key when set, else from the subtype.
+    table = gt.get("cms_source_table")
+    is_cms = cms_source_table(doc_type, subtype if is_empty_value(table) else table) is not None
+
     labelled: list[str] = []
     unlabelled: list[str] = []
     for name in schema.scored_fields:
         spec = schema.fields[name]
-        if spec.status == "documented_absent" or spec.source == "subtype":
+        absent = spec.status == "documented_absent" or presence.get(name) == "schema_documented_absence"
+        if spec.source == "subtype":
+            ok = True
+        elif absent and is_cms and name in CMS_DOCUMENTED_ABSENT_FIELDS:
             ok = True
         elif spec.source in _LABEL_SOURCES:
-            # CUAD / MAUD derived fields score only when the row's label source does.
-            ok = carries(spec.source)
-        elif presence.get(name) == "schema_documented_absence":
-            ok = True
+            # CUAD / MAUD derived fields score from the row's label source, or a
+            # value supplied directly for the field.
+            ok = carries(name) or carries(spec.source)
         else:
             ok = carries(name)
         (labelled if ok else unlabelled).append(name)

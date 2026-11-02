@@ -186,3 +186,21 @@ def test_pending_presence_overrides_a_stale_gt_value():
     gt = {"claim_number": "1", "claim_type": "health", "gt_presence": {"claim_number": "pending_annotation"}}
     cov = schema_coverage("insurance_claim", "carrier", gt)
     assert "claim_number" in cov["unlabelled_fields"]
+
+
+def test_direct_field_value_counts_without_clause_labels():
+    """A ``parties`` value supplied directly is scored, so coverage counts it."""
+    cov = schema_coverage("contract", "license", {"parties": ["Acme"]})
+    assert "parties" in cov["scorable_fields"]
+    pending = schema_coverage("contract", "license", {
+        "parties": ["Acme"], "gt_presence": {"parties": "pending_annotation"},
+    })
+    assert "parties" in pending["unlabelled_fields"]
+
+
+def test_documented_absence_counts_only_on_cms_rows():
+    """Field scoring credits an empty adjuster only on CMS rows."""
+    prop = schema_coverage("insurance_claim", "property", {"claim_type": "property", "adjuster": ""})
+    assert "adjuster" not in prop["scorable_fields"]
+    cms = schema_coverage("insurance_claim", "pde", {"claim_type": "health", "cms_source_table": None})
+    assert {"adjuster", "denial_reasons"} <= set(cms["scorable_fields"])

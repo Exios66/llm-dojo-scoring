@@ -270,12 +270,19 @@ def _rescore_reviewer(record: Mapping[str, Any], given: Mapping[str, Any] | None
     }
 
 
-def rescore_record(record: Mapping[str, Any], *, provenance: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def rescore_record(
+    record: Mapping[str, Any],
+    *,
+    provenance: Mapping[str, Any] | None = None,
+    force_rescore: bool = False,
+) -> dict[str, Any]:
     """Re-score one stored record without inventing a missing side.
 
     Extraction records need ``doc_class`` plus ``expected``/``predicted``.
     Label records need a task in :data:`TASK_KINDS` plus two parallel lists.
     Reviewer records need ``review_records``. Serving records are refused.
+    A record already scored by this release is returned as is unless
+    ``force_rescore`` is set.
     """
     task = str(record.get("task") or "").strip().lower()
     if task in _SERVING_TASKS:
@@ -283,7 +290,8 @@ def rescore_record(record: Mapping[str, Any], *, provenance: Mapping[str, Any] |
     stored_payload = record.get("payload")
     stored_prov = record.get("provenance")
     if (
-        isinstance(stored_payload, Mapping)
+        not force_rescore
+        and isinstance(stored_payload, Mapping)
         and isinstance(stored_prov, Mapping)
         and str(stored_prov.get("scorer_version")) == SCORER_VERSION
     ):
@@ -322,13 +330,19 @@ def rescore_records(
     records: Iterable[Mapping[str, Any]],
     *,
     provenance: Mapping[str, Any] | None = None,
+    force_rescore: bool = False,
 ) -> dict[str, Any]:
-    """Re-score a batch and report every skipped record with its reason."""
+    """Re-score a batch and report every skipped record with its reason.
+
+    ``force_rescore`` skips the already-current shortcut (used when GT was
+    joined from a dataset and may differ from what the payload was scored on).
+    Returned records carry no non-finite floats.
+    """
     results: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
     for index, record in enumerate(records):
         try:
-            results.append(rescore_record(record, provenance=provenance))
+            results.append(_finite(rescore_record(record, provenance=provenance, force_rescore=force_rescore)))
         except ValueError as exc:  # RescoreError, or a scorer refusing a malformed row
             skipped.append(
                 {
@@ -426,7 +440,8 @@ def rescore_file(
             record["task"] = task
         if doc_class:
             record["doc_class"] = doc_class
-    result = rescore_records(records, provenance=provenance)
+    # Joined GT may differ from what the stored payload was scored against.
+    result = rescore_records(records, provenance=provenance, force_rescore=bool(dataset_path))
     target = Path(out_path or Path(items_path).with_suffix(".rescored.jsonl"))
     target.parent.mkdir(parents=True, exist_ok=True)
     with target.open("w", encoding="utf-8") as handle:

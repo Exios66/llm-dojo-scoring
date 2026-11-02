@@ -182,3 +182,29 @@ def test_grid_cost_table_escapes_session_names():
         experiments=[{"name": "gpu|baseline"}],
     )
     assert "gpu|baseline" not in md.replace("gpu\\|baseline", "")
+
+
+def test_rescore_records_returns_finite_values():
+    """Batch results are sanitized, not only the JSONL copy."""
+    from llm_dojo_scoring.metrics.scorecard_honesty import SCORER_VERSION
+    from llm_dojo_scoring.scoring.rescore import rescore_records
+
+    stored = {"task": "extraction", "doc_id": "d1", "rescored_from": {"score": float("nan")},
+              "payload": {"overall_score": 0.5, "x": float("-inf")},
+              "provenance": {"scorer_version": SCORER_VERSION}}
+    out = rescore_records([stored])["records"][0]
+    assert out["payload"]["x"] is None and out["rescored_from"]["score"] is None
+    json.dumps(out, allow_nan=False)
+
+
+def test_dataset_join_bypasses_the_already_current_shortcut():
+    """With force_rescore, a current-release record is scored against its GT again."""
+    from llm_dojo_scoring.metrics.scorecard_honesty import SCORER_VERSION
+
+    record = {"task": "extraction", "doc_class": "insurance_claim", "doc_id": "d1",
+              "expected": dict(_CMS), "predicted": dict(_CMS), "doc_subclass": "pde",
+              "payload": {"overall_score": 0.0}, "provenance": {"scorer_version": SCORER_VERSION}}
+    assert rescore_record(record)["already_current"] is True
+    fresh = rescore_record(record, force_rescore=True)
+    assert not fresh.get("already_current")
+    assert fresh["score"] != 0.0
