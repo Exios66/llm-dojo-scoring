@@ -69,6 +69,10 @@ def _mapping(value: Any, field: str) -> Mapping[str, Any]:
     raise RescoreError(f"{field} must be an object, got {type(value).__name__}")
 
 
+#: Label tasks whose scorers accept mappings or scalar text, not only arrays.
+_RAW_INPUT_TASKS = frozenset({"maud_extraction", "transcription", "intake"})
+
+
 def _sequence(value: Any, field: str) -> list[Any]:
     """Require a list, parsing the JSON-array strings used by stored rows."""
     if isinstance(value, (list, tuple)):
@@ -143,8 +147,13 @@ def _rescore_classification(record: Mapping[str, Any], given: Mapping[str, Any] 
         raise RescoreError("classification record has no expected labels")
     if predicted is None:
         raise RescoreError("classification record has no predicted labels")
-    expected_list = _sequence(expected, "expected")
-    predicted_list = _sequence(predicted, "predicted")
+    if task in _RAW_INPUT_TASKS:
+        # These scorers take label maps / scalar text themselves; forcing an
+        # array would refuse valid stored records.
+        expected_list, predicted_list = expected, predicted
+    else:
+        expected_list = _sequence(expected, "expected")
+        predicted_list = _sequence(predicted, "predicted")
     kwargs: dict[str, Any] = {}
     if record.get("expected_subclass") is not None:
         kwargs["expected_subclass"] = _sequence(record["expected_subclass"], "expected_subclass")
@@ -171,6 +180,15 @@ def _rescore_classification(record: Mapping[str, Any], given: Mapping[str, Any] 
     }
 
 
+def _reviewer_headline(payload: Mapping[str, Any]) -> Any:
+    """The review lane's headline: ``quality.class_accuracy`` unless a generic one exists."""
+    quality = payload.get("quality") or {}
+    headline = _headline(quality)
+    if headline is None:
+        headline = quality.get("class_accuracy")
+    return headline
+
+
 def _rescore_reviewer(record: Mapping[str, Any], given: Mapping[str, Any] | None) -> dict[str, Any]:
     """Re-score one reviewer record through the review-lane scorecard."""
     try:
@@ -183,13 +201,13 @@ def _rescore_reviewer(record: Mapping[str, Any], given: Mapping[str, Any] | None
         raise RescoreError("reviewer record needs a non-empty review_records list")
     payload = score_review_lane(records)
     if given:
+        canonical_metric_id = payload["provenance"].get("metric_id")
         payload["provenance"].update(dict(given))
+        if canonical_metric_id is not None:
+            # Caller evidence never relabels the measure this lane computed.
+            payload["provenance"]["metric_id"] = canonical_metric_id
     payload["provenance"]["scorer_version"] = SCORER_VERSION
-    quality = payload.get("quality") or {}
-    headline = _headline(quality)
-    if headline is None:
-        # The review lane's headline number is class_accuracy, not "accuracy".
-        headline = quality.get("class_accuracy")
+    headline = _reviewer_headline(payload)
     return {
         "doc_id": record.get("doc_id", record.get("id", record.get("item_id"))),
         "task": "reviewer",
@@ -227,7 +245,11 @@ def rescore_record(record: Mapping[str, Any], *, provenance: Mapping[str, Any] |
             "doc_id": record.get("doc_id", record.get("id", record.get("item_id"))),
             "task": task or "unknown",
             "doc_class": record.get("doc_class"),
-            "score": _headline(stored_payload),
+            "score": (
+                _reviewer_headline(stored_payload)
+                if task == "reviewer"
+                else _headline(stored_payload)
+            ),
             "payload": dict(stored_payload),
             "provenance": dict(stored_prov),
             "rescored_from": record.get("rescored_from") or {},

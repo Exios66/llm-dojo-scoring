@@ -431,6 +431,14 @@ def _iter_consumer_sites(surface: dict):
         yield from sites
 
 
+def _defining_module(defined_in: str):
+    """Import a recorded defining module; ``__init__`` is the package itself
+    (importing ``llm_dojo_scoring.__init__`` would load a second copy)."""
+    if defined_in == "__init__":
+        return dojo
+    return importlib.import_module(f"llm_dojo_scoring.{defined_in}")
+
+
 def test_pinned_consumer_surface_imports_resolve():
     """Every recorded top-level name and module attr still imports from its path."""
     surface = _consumer_surface()
@@ -450,9 +458,11 @@ def test_pinned_consumer_surface_imports_resolve():
             continue
         defined_in = entry.get("defined_in")
         if defined_in:
-            defining = importlib.import_module(f"llm_dojo_scoring.{defined_in}")
+            defining = _defining_module(defined_in)
             if not hasattr(defining, name):
                 failures.append(f"llm_dojo_scoring.{defined_in}.{name}")
+            elif getattr(defining, name) is not getattr(dojo, name):
+                failures.append(f"llm_dojo_scoring.{name} is not {defined_in}.{name}")
 
     for module_path, entry in surface["modules"].items():
         try:
@@ -466,9 +476,13 @@ def test_pinned_consumer_surface_imports_resolve():
                 continue
             defined_in = spec.get("defined_in")
             if defined_in:
-                defining = importlib.import_module(f"llm_dojo_scoring.{defined_in}")
+                defining = _defining_module(defined_in)
                 if not hasattr(defining, attr):
                     failures.append(f"llm_dojo_scoring.{defined_in}.{attr}")
+                elif getattr(defining, attr) is not getattr(module, attr):
+                    failures.append(
+                        f"llm_dojo_scoring.{module_path}.{attr} is not {defined_in}.{attr}"
+                    )
 
     assert not failures, "consumer surface missing:\n" + "\n".join(failures)
 
@@ -503,6 +517,13 @@ def test_pinned_langfuse_score_names_resolve():
         names.update((canonical, wire))
     missing = sorted(name for name in names if name not in registry.metrics)
     assert not missing, f"pinned Langfuse score names missing from registry: {missing}"
+
+
+def test_pinned_langfuse_alias_mapping_matches_emitter():
+    """The pinned canonical → wire alias map is exactly what the emitter uses."""
+    from llm_dojo_scoring.pipeline.mailroom import LANGFUSE_SCORE_NAME_ALIASES
+
+    assert dict(_consumer_surface()["scores"]["aliases"]) == dict(LANGFUSE_SCORE_NAME_ALIASES)
 
 
 def test_consumer_surface_sites_are_repo_relative():

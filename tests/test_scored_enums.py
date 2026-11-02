@@ -112,9 +112,10 @@ def test_alias_spellings_are_not_accepted_as_a_vocabulary():
 
 def test_unknown_vendored_field_is_reported():
     """A consumer enum the dojo does not score is named, not silently passed."""
-    assert enum_hint_violations("correspondence", {"tone": ["formal"]}) == [
-        "correspondence.tone: not a scored enum field"
-    ]
+    problems = enum_hint_violations("correspondence", {"tone": ["formal"]})
+    assert "correspondence.tone: not a scored enum field" in problems
+    # The scored fields the consumer omitted are reported too.
+    assert "correspondence.intent: scored enum field missing from vendored hints" in problems
 
 
 def test_unknown_class_or_field_raises_with_the_known_names():

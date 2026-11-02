@@ -55,6 +55,9 @@ SKIP_DIRS = frozenset(
 
 DISPATCH_FUNCS = ("get_suite", "score_task", "suite_for_doc_type")
 
+#: The first (dispatch) parameter of each function, for keyword calls.
+_DISPATCH_PARAM = {"get_suite": "name", "score_task": "task", "suite_for_doc_type": "doc_type"}
+
 #: The variables The-Mailroom's runtime reads Langfuse scores into.  Values are
 #: (repo-relative file, assignment name, literal container kind).
 TMR_SCORE_VARIABLES = (
@@ -186,10 +189,14 @@ def _read_git_tree(root: Path, ref: str) -> dict[str, str]:
     if verify.returncode != 0:
         raise RuntimeError(f"git ref {ref!r} not found")
 
-    listing = _run_git(root, "ls-tree", "-r", "--name-only", ref)
+    # ``-z``: NUL-separated, unquoted paths (core.quotePath would otherwise
+    # quote non-ASCII names and silently drop them from the surface).
+    listing = _run_git(root, "ls-tree", "-r", "-z", "--name-only", ref)
     files: dict[str, str] = {}
-    for raw in listing.stdout.splitlines():
-        rel = Path(raw.strip())
+    for raw in listing.stdout.split("\0"):
+        if not raw:
+            continue
+        rel = Path(raw)
         if rel.suffix != ".py" or _skip(rel):
             continue
         blob = _run_git(root, "show", f"{ref}:{rel.as_posix()}")
@@ -406,12 +413,19 @@ class Surface:
                 module = node.module or ""
                 if module == PACKAGE:
                     for alias in node.names:
-                        if alias.name != "*":
+                        if alias.name == "*":
+                            # A star import binds every exported name: pin them all.
+                            for star in _star_names(PACKAGE):
+                                self.record_top_level(star, site)
+                        else:
                             self.record_top_level(alias.name, site)
                 elif module.startswith(PACKAGE + "."):
                     canonical, entry = self.module_entry(module[len(PACKAGE) + 1 :])
                     for alias in node.names:
-                        if alias.name != "*":
+                        if alias.name == "*":
+                            for star in _star_names(f"{PACKAGE}.{canonical}"):
+                                self.record_attr(canonical, entry, star, site)
+                        else:
                             self.record_attr(canonical, entry, alias.name, site)
             elif isinstance(node, ast.Call):
                 self._collect_call(node, site, function_aliases, module_aliases)
@@ -442,14 +456,34 @@ class Surface:
         name, is_dojo_call = _dispatch_call_name(node.func, function_aliases, module_aliases)
         if not is_dojo_call or name is None:
             return
-        if not node.args:
-            self.dispatch_dynamic[name].add((*site, "<no-argument>"))
-            return
-        arg = node.args[0]
+        if node.args:
+            arg = node.args[0]
+        else:
+            # ``get_suite(name="sorter")``: the dispatch parameter by keyword.
+            keywords = [
+                keyword for keyword in node.keywords
+                if keyword.arg == _DISPATCH_PARAM.get(name)
+            ]
+            if not keywords:
+                self.dispatch_dynamic[name].add((*site, "<no-argument>"))
+                return
+            arg = keywords[0].value
         if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
             self.dispatch_literals[name][arg.value].add(site)
         else:
             self.dispatch_dynamic[name].add((*site, ast.unparse(arg)))
+
+
+def _star_names(module_name: str) -> list[str]:
+    """Names ``from module_name import *`` binds: ``__all__``, else public names."""
+    try:
+        module = importlib.import_module(module_name)
+    except Exception:
+        return []
+    names = getattr(module, "__all__", None)
+    if names is None:
+        names = [name for name in vars(module) if not name.startswith("_")]
+    return sorted(str(name) for name in names)
 
 
 def _root_name(node: ast.AST) -> str | None:
@@ -514,10 +548,11 @@ def _identity_defined_in(
 ) -> str | None:
     """Find the module whose attribute is the same object as ``obj``."""
     candidates = index.definitions.get(name, ())
-    ordered: list[str] = []
-    if fallback:
+    # Defining modules first: the import path (``fallback``) always re-exports
+    # ``obj``, so checking it first would hide where the name is defined.
+    ordered = sorted(candidates)
+    if fallback and fallback not in ordered:
         ordered.append(fallback)
-    ordered.extend(candidate for candidate in sorted(candidates) if candidate != fallback)
     if obj is not _MISSING:
         for candidate in ordered:
             try:

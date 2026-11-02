@@ -32,11 +32,14 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
     },
     {
         "version": "0.25.0",
-        "metric_ids": (
-            "pipeline.classification.accuracy",
-            "pipeline.classification.f1_macro",
+        # Subclass scores only: doc-type accuracy / f1_macro are computed
+        # before subclass scoring and did not move. No canonical pipeline
+        # subclass metric_id exists yet, so this entry names none.
+        "metric_ids": (),
+        "change": (
+            "Merger subclass 'other' is unannotated and excluded from subclass "
+            "scoring. Affects subclass scores only; no canonical metric_id covers them."
         ),
-        "change": "Merger subclass 'other' is unannotated and excluded from subclass scoring.",
         "rescore_required": True,
     },
     {
