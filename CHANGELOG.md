@@ -34,9 +34,14 @@ Format based on Keep a Changelog; versioning is SemVer.
   scorable only when the row carries live clause labels, and a
   `pending_annotation` / `not_applicable` presence status overrides a stale
   value. Golden contract and merger rows, which carry no labels, now list those
-  fields as unlabelled.
+  fields as unlabelled. A value supplied directly for a CUAD-derived field
+  also counts, and a documented absence counts only on CMS rows, matching
+  field scoring.
 - `rescore`: stored `NaN` / `Infinity` never become a headline, a scorecard
-  move or a non-standard JSON literal in the rescored JSONL (they become `null`).
+  move or a non-standard JSON literal in the rescored JSONL or in
+  `rescore_records` results (they become `null`). `rescore_file` with a
+  dataset join re-scores current-release records against the joined GT
+  (`force_rescore`).
 - Grid: the cost table escapes session names. Scope footnotes: rows sharing a specialist and label but with different
   unscored fields keep separate notes.
 - CMS rows (#93 follow-ups): a GT row naming a product line other than

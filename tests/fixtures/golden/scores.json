@@ -208,13 +208,13 @@
           ],
           "schema_id": "contract@v9.2.1",
           "scorable_fields": [
+            "parties",
+            "effective_date",
             "cuad_family"
           ],
           "subtype": null,
           "unlabelled_fields": [
             "document_name",
-            "parties",
-            "effective_date",
             "term_length",
             "governing_law",
             "renewal_terms",
