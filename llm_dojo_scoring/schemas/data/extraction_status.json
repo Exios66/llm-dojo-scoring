@@ -1,5 +1,5 @@
 {
- "commit": "1eb5b42c26fc180cd60199627ab50fbcbd9c29dc",
+ "commit": "0a2f829248525cf434ed49e38c3ac43b05090ba6",
  "config": "ground_truth",
  "dataset": "Lucius-Morningstar/mailroom-dataset",
  "doc_types": {
@@ -290,27 +290,42 @@
   "corporate_record": {
    "articles_of_incorporation": {
     "fields": {
+     "entity_name": {
+      "populated": 43
+     },
      "intent": {
-      "populated": 62
+      "populated": 54
      },
      "keywords": {
-      "populated": 62
+      "populated": 54
+     },
+     "record_type": {
+      "populated": 54
      },
      "subject_matter": {
-      "populated": 62
+      "populated": 54
      }
     },
-    "rows": 62,
+    "rows": 54,
     "surfaces": {
-     "articles_of_incorporation": 62
+     "articles_of_incorporation": 54
     }
    },
    "board_resolution": {
     "fields": {
+     "entity_name": {
+      "populated": 32
+     },
+     "filing_number": {
+      "not_applicable": 32
+     },
      "intent": {
       "populated": 32
      },
      "keywords": {
+      "populated": 32
+     },
+     "record_type": {
       "populated": 32
      },
      "subject_matter": {
@@ -324,27 +339,42 @@
    },
    "bylaws": {
     "fields": {
+     "entity_name": {
+      "populated": 26
+     },
+     "filing_number": {
+      "not_applicable": 36
+     },
      "intent": {
-      "populated": 28
+      "populated": 36
      },
      "keywords": {
-      "populated": 28
+      "populated": 36
+     },
+     "record_type": {
+      "populated": 36
      },
      "subject_matter": {
-      "populated": 28
+      "populated": 36
      }
     },
-    "rows": 28,
+    "rows": 36,
     "surfaces": {
-     "bylaws": 28
+     "bylaws": 36
     }
    },
    "charter_amendment": {
     "fields": {
+     "entity_name": {
+      "populated": 80
+     },
      "intent": {
       "populated": 80
      },
      "keywords": {
+      "populated": 80
+     },
+     "record_type": {
       "populated": 80
      },
      "subject_matter": {
@@ -358,10 +388,19 @@
    },
    "indenture": {
     "fields": {
+     "entity_name": {
+      "populated": 57
+     },
+     "filing_number": {
+      "not_applicable": 57
+     },
      "intent": {
       "populated": 57
      },
      "keywords": {
+      "populated": 57
+     },
+     "record_type": {
       "populated": 57
      },
      "subject_matter": {
@@ -375,10 +414,19 @@
    },
    "officer_certificate": {
     "fields": {
+     "entity_name": {
+      "populated": 61
+     },
+     "filing_number": {
+      "not_applicable": 61
+     },
      "intent": {
       "populated": 61
      },
      "keywords": {
+      "populated": 61
+     },
+     "record_type": {
       "populated": 61
      },
      "subject_matter": {
@@ -392,62 +440,101 @@
    },
    "other": {
     "fields": {
+     "entity_name": {
+      "populated": 2
+     },
      "intent": {
-      "populated": 3
+      "populated": 2
      },
      "keywords": {
-      "populated": 3
+      "populated": 2
+     },
+     "record_type": {
+      "populated": 2
      },
      "subject_matter": {
-      "populated": 3
+      "populated": 2
      }
     },
-    "rows": 3,
+    "rows": 2,
     "surfaces": {
-     "other": 3
+     "other": 2
     }
    },
    "powers_of_attorney": {
     "fields": {
+     "entity_name": {
+      "populated": 26
+     },
+     "filing_number": {
+      "not_applicable": 26
+     },
      "intent": {
-      "populated": 28
+      "populated": 26
      },
      "keywords": {
-      "populated": 28
+      "populated": 26
+     },
+     "record_type": {
+      "populated": 26
      },
      "subject_matter": {
-      "populated": 28
+      "populated": 26
      }
     },
-    "rows": 28,
+    "rows": 26,
     "surfaces": {
-     "powers_of_attorney": 28
+     "powers_of_attorney": 26
     }
    },
    "rights_instrument": {
     "fields": {
+     "entity_name": {
+      "populated": 32
+     },
+     "filing_number": {
+      "not_applicable": 49
+     },
      "intent": {
-      "populated": 46
+      "populated": 49
      },
      "keywords": {
-      "populated": 46
+      "populated": 49
+     },
+     "record_type": {
+      "populated": 49
      },
      "subject_matter": {
-      "populated": 46
+      "populated": 49
      }
     },
-    "rows": 46,
+    "rows": 49,
     "surfaces": {
-     "rights_instrument": 46
+     "rights_instrument": 49
     }
    },
    "subsidiary_list": {
     "fields": {
+     "entity_name": {
+      "populated": 53
+     },
+     "filing_number": {
+      "not_applicable": 53
+     },
      "intent": {
       "populated": 53
      },
+     "jurisdiction": {
+      "not_applicable": 53
+     },
      "keywords": {
       "populated": 53
+     },
+     "record_type": {
+      "populated": 53
+     },
+     "signatories": {
+      "not_applicable": 53
      },
      "subject_matter": {
       "populated": 53
@@ -1089,6 +1176,6 @@
    }
   }
  },
- "revision": "v9.2",
+ "revision": "v9.2.1",
  "rows": 3302
 }

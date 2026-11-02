@@ -430,7 +430,7 @@ a **document-type schema** plus a **schema per subtype**: 25 contract families,
 from llm_dojo_scoring import extraction_schema, iter_extraction_schemas, schema_coverage
 
 pde = extraction_schema("insurance_claim", "pde")      # any corpus surface works too
-pde.schema_id                    # "insurance_claim/pde@v9.2"
+pde.schema_id                    # "insurance_claim/pde@v9.2.1"
 pde.scored_fields                # fields that count when the row labels them
 pde.documented_absent_fields     # ("adjuster", "denial_reasons")
 pde.pending_fields               # ("claim_checklist",)
@@ -438,7 +438,8 @@ pde.json_schema()                # strict, typed object for guided decoding
 extraction_schema("contract", "License_Agreements").salient   # CUAD categories
 ```
 
-Each field has a status read from the v9.2 `ground_truth` rows, frozen in
+Each field has a status read from the v9.2.1 `ground_truth` rows (Hub branch
+`corporate-labels-v9.2.1` @ `0a2f8292`: v9.2 plus the corporate relabel), frozen in
 `llm_dojo_scoring/schemas/data/extraction_status.json` by
 `scripts/build_extraction_status.py`. The source revision is in the file and in
 `extraction_status_source()`.
@@ -453,18 +454,21 @@ Each field has a status read from the v9.2 `ground_truth` rows, frozen in
 | `pending_annotation` | in the live map, not labelled yet | correspondence `sender`, corporate entities, `claim_checklist` |
 | `not_applicable` | GT marks it n/a for the class | merger `intent` |
 
-What v9.2 labels, per class:
+What v9.2.1 labels, per class:
 
 - **contract**: CUAD clause labels give the six metadata fields and
   `cuad_clauses` for 22 families. Most `consulting`, `ip` and `supply` rows are
   still `pending_annotation`. `contract_value` has no source.
 - **merger_agreement**: `maud_clauses` (MAUD labels) and
   `merger_consideration` (the subtype). The other five fields are pending.
-- **corporate_record**: `intent`, `subject_matter`, `keywords` and `record_type`
-  (the subtype). The core entity fields and the per-subclass entities (for
-  example indenture `trustee`) are pending at v9.2. The Hub branch
-  `corporate-labels-v9.2.1` carries corporate relabels; rebuild the status file
-  when that branch is tagged.
+- **corporate_record**: `intent`, `subject_matter`, `keywords`, `record_type`
+  (the subtype) and, from the v9.2.1 relabel, `entity_name` (the EDGAR
+  registrant: 92% of rows; scored on six subtypes, partial on articles, bylaws
+  and rights instruments). `filing_number` is `not_applicable` except on
+  articles and charter amendments. `effective_date`, `signatories`,
+  `jurisdiction` and every per-subclass entity (for example indenture
+  `trustee`) are unlabelled in every Hub revision and stay
+  `pending_annotation` until they are annotated.
 - **correspondence**: `intent`, `subject_matter`, `keywords` and
   `communication_type` (the subtype). Topic and sentiment are label tasks. The
   envelope fields are pending (#94).

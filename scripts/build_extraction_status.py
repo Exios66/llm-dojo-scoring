@@ -12,8 +12,8 @@ coverage for the CUAD / MAUD derived fields. The extraction-schema registry
 Usage (pyarrow is not a Dojo dependency)::
 
     uv run --extra dev --with pyarrow python scripts/build_extraction_status.py \\
-        --parquet-dir path/to/parquet/ground_truth --revision v9.2 \\
-        --commit 1eb5b42c26fc180cd60199627ab50fbcbd9c29dc
+        --parquet-dir path/to/parquet/ground_truth --revision v9.2.1 \\
+        --commit 0a2f829248525cf434ed49e38c3ac43b05090ba6
 
 ``--check`` rebuilds in memory and exits 1 when the tracked file differs.
 """
