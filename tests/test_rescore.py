@@ -83,6 +83,34 @@ def test_rescore_refuses_serving_records():
         rescore_record({"task": "serving", "expected": {}, "predicted": {}})
 
 
+def test_rescore_reviewer_reports_the_class_accuracy_headline():
+    """A reviewer record re-scores through the lane scorecard, not as null."""
+    out = rescore_record(
+        {
+            "doc_id": "doc-r1",
+            "task": "reviewer",
+            "scorer_version": "0.25.0",
+            "review_records": [
+                {
+                    "doc_id": "doc-r1",
+                    "expected_doc_type": "contract",
+                    "sorter_doc_type": "contract",
+                    "reviewer_doc_type": "contract",
+                    "reviewer_confidence": 0.95,
+                    "route": "extract",
+                    "cutoff": 0.8,
+                    "old_score": 0.0,
+                }
+            ],
+        }
+    )
+    assert out["task"] == "reviewer"
+    assert out["score"] == 1.0
+    assert out["rescored_from"]["scorer_version"] == "0.25.0"
+    assert out["provenance"]["scorer_version"] == SCORER_VERSION
+    assert out["payload"]["quality"]["class_accuracy"] == 1.0
+
+
 def test_rescore_output_is_idempotent():
     """Re-running a current output is a no-op, not a missing-evidence error."""
     first = rescore_record(_extraction_record())
