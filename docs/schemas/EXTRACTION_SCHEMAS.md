@@ -1,4 +1,4 @@
-# Entity extraction schemas — mailroom-dataset (Dojo v0.20.0)
+# Entity extraction schemas — mailroom-dataset (Dojo v0.20.0; registry v0.26.0)
 
 Pared live field maps for the **five primary document types** in
 [`Lucius-Morningstar/mailroom-dataset`](https://huggingface.co/datasets/Lucius-Morningstar/mailroom-dataset)
@@ -418,6 +418,67 @@ scored tokens a consumer never teaches, and vendored enums the dojo does not
 score. Alias spellings count as violations: `normalize_intent` folds them for
 stored answers, but a hint teaches canonical tokens only. A contract test
 fails if a `label`-typed field in `DEFAULT_FIELD_TYPES` has no hint.
+
+## Schema registry: document type and subtype (v0.26.0)
+
+`llm_dojo_scoring.schemas.extraction_schemas` gives every one of the five classes
+a **document-type schema** plus a **schema per subtype**: 25 contract families,
+5 MAUD consideration types, 11 corporate subclasses, 9 correspondence forms and
+6 insurance subtypes (4 CMS tables, property, auto). That is 61 schemas.
+
+```python
+from llm_dojo_scoring import extraction_schema, iter_extraction_schemas, schema_coverage
+
+pde = extraction_schema("insurance_claim", "pde")      # any corpus surface works too
+pde.schema_id                    # "insurance_claim/pde@v9.2"
+pde.scored_fields                # fields that count when the row labels them
+pde.documented_absent_fields     # ("adjuster", "denial_reasons")
+pde.pending_fields               # ("claim_checklist",)
+pde.json_schema()                # strict, typed object for guided decoding
+extraction_schema("contract", "License_Agreements").salient   # CUAD categories
+```
+
+Each field has a status read from the v9.2 `ground_truth` rows, frozen in
+`llm_dojo_scoring/schemas/data/extraction_status.json` by
+`scripts/build_extraction_status.py`. The source revision is in the file and in
+`extraction_status_source()`.
+
+| Status | Meaning | Example |
+|---|---|---|
+| `scored` | GT populates it on (nearly) every row | insurance `claim_number` |
+| `partial` | GT labels it on some rows; scored where labelled | auto `adjuster` (50%) |
+| `derived` | truth from a label source or the subtype | contract `parties` (CUAD), `cuad_family`, `cms_source_table` |
+| `documented_absent` | an empty answer is right | CMS / property `adjuster` |
+| `label_task` | scored by a label task, not extraction | correspondence `content_topic` |
+| `pending_annotation` | in the live map, not labelled yet | correspondence `sender`, corporate entities, `claim_checklist` |
+| `not_applicable` | GT marks it n/a for the class | merger `intent` |
+
+What v9.2 labels, per class:
+
+- **contract**: CUAD clause labels give the six metadata fields and
+  `cuad_clauses` for 22 families. Most `consulting`, `ip` and `supply` rows are
+  still `pending_annotation`. `contract_value` has no source.
+- **merger_agreement**: `maud_clauses` (MAUD labels) and
+  `merger_consideration` (the subtype). The other five fields are pending.
+- **corporate_record**: `intent`, `subject_matter`, `keywords` and `record_type`
+  (the subtype). The core entity fields and the per-subclass entities (for
+  example indenture `trustee`) are pending at v9.2. The Hub branch
+  `corporate-labels-v9.2.1` carries corporate relabels; rebuild the status file
+  when that branch is tagged.
+- **correspondence**: `intent`, `subject_matter`, `keywords` and
+  `communication_type` (the subtype). Topic and sentiment are label tasks. The
+  envelope fields are pending (#94).
+- **insurance_claim**: 14 fields scored on every subtype. CMS tables add
+  `cms_source_table` and identifier-aware `supporting_documents`, and document
+  `adjuster` / `denial_reasons` as absent; property documents both as absent;
+  auto labels them on some rows. `claim_checklist` is pending everywhere.
+
+`Suite.score_document` (and `score(..., detailed=True)` on one document) adds a
+`schema` block that is additive and changes no score. It holds the `schema_id`,
+the fields this row can score, the scored fields it leaves unlabelled, and the
+schema's pending fields. Pass `expected_subclass=` (or `doc_subclass=`) to get the
+subtype schema. `registry_violations()` checks the registry against the taxonomy
+and the live maps.
 
 ## Import surface
 

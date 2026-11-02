@@ -66,7 +66,7 @@ where = ["."]
 include = ["llm_dojo_scoring*"]
 
 [tool.setuptools.package-data]
-llm_dojo_scoring = ["prompts/*.yaml", "prompts/*.json", "prompts/templates/*.md"]
+llm_dojo_scoring = ["prompts/*.yaml", "prompts/*.json", "prompts/templates/*.md", "schemas/data/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

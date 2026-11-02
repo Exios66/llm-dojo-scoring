@@ -274,6 +274,10 @@ from .schemas.scored_enums import (  # noqa: E402
     SCORED_ENUM_FIELDS, enum_hint_violations, scored_enum_hint, scored_enum_schema,
     scored_enum_schemas, scored_vocabulary,
 )
+from .schemas.extraction_schemas import (  # noqa: E402
+    ExtractionSchema, FieldSchema, extraction_schema,
+    extraction_subtypes, iter_extraction_schemas, schema_coverage,
+)
 from .pipeline.mailroom import (
     EXTRACT_CLASS_ALIASES,
     LIVE_DOC_TYPES,
@@ -420,6 +424,8 @@ __all__ = [
     "contract_empty_payload", "contract_violations",
     "SCORED_ENUM_FIELDS", "enum_hint_violations", "scored_enum_hint", "scored_enum_schema",
     "scored_enum_schemas", "scored_vocabulary",
+    "ExtractionSchema", "FieldSchema", "extraction_schema",
+    "extraction_subtypes", "iter_extraction_schemas", "schema_coverage",
     "parse_gt_fields", "scoring_gt_fields", "normalize_field_values",
     "parse_json_container", "is_empty_value", "gt_presence_map",
     "presence_expectations_from_cuad_labels", "derive_presence_from_gt",

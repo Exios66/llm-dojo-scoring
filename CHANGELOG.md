@@ -5,6 +5,27 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Added (five-class extraction schema registry)
+
+- `schemas.extraction_schemas`: a document-type schema and a schema per subtype
+  for all five mailroom classes (61 schemas). Field statuses (`scored`,
+  `partial`, `derived`, `documented_absent`, `label_task`,
+  `pending_annotation`, `not_applicable`) are frozen from mailroom-dataset
+  `ground_truth` v9.2 (`schemas/data/extraction_status.json`, rebuilt by
+  `scripts/build_extraction_status.py`). Subtype schemas carry their own fields
+  and guidance:
+  - CMS `cms_source_table` and identifier-aware `supporting_documents`;
+  - corporate subclass entities;
+  - CUAD salient categories;
+  - MAUD priority questions.
+
+  Exported from the package root: `extraction_schema`, `extraction_subtypes`,
+  `iter_extraction_schemas`, `schema_coverage`, `ExtractionSchema` and
+  `FieldSchema`.
+- `score_document` / `score(..., detailed=True)` payloads gain an additive
+  `schema` coverage block naming the doc-type or subtype schema. Goldens gained
+  only that block; no score moved.
+
 ### Fixed (bug sweep and second #104 review round)
 
 - CMS rows (#93 follow-ups): a GT row naming a product line other than
