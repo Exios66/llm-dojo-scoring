@@ -636,11 +636,12 @@ def _acceptance_metrics(
 ) -> dict[str, Any]:
     """Auto-accept risk: wrong accepts, exact bound, and required sample size."""
     accepted = [record for record in records if _accepted(record)]
-    with_truth = [
-        record
-        for record in accepted
-        if record.expected_doc_type and _answered(record)
-    ]
+    labelled = [record for record in accepted if record.expected_doc_type]
+    with_truth = [record for record in labelled if _answered(record)]
+    # A labelled row that continued unattended with no usable reviewer answer
+    # (reviewer error, no label or no text) cannot be graded, but it is not
+    # missing ground truth either: count it on its own so it stays visible.
+    unanswered = len(labelled) - len(with_truth)
     wrong = sum(
         1 for record in with_truth if not _same_label(record.expected_doc_type, record.reviewer_doc_type)
     )
@@ -650,7 +651,8 @@ def _acceptance_metrics(
     return {
         "n_accepted": len(accepted),
         "n_accepted_with_truth": n,
-        "n_accepted_without_truth": len(accepted) - n,
+        "n_accepted_without_truth": len(accepted) - len(labelled),
+        "n_accepted_unanswered": unanswered,
         "n_wrong_accepts": wrong,
         "wrong_accept_rate": round(wrong / n, 6) if n else None,
         "wrong_accept_upper_95": round(upper, 6) if upper is not None else None,
@@ -902,6 +904,7 @@ def _empty_scorecard() -> dict[str, Any]:
             "n_accepted": 0,
             "n_accepted_with_truth": 0,
             "n_accepted_without_truth": 0,
+            "n_accepted_unanswered": 0,
             "n_wrong_accepts": 0,
             "wrong_accept_rate": None,
             "wrong_accept_upper_95": None,

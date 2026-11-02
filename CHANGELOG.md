@@ -30,6 +30,11 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed (bug sweep and second #104 review round)
 
+- Reviewer scorecard `acceptance`: an accepted row that has ground truth but no
+  usable reviewer answer (reviewer error, no label, no text) was counted as
+  `n_accepted_without_truth`. It is now `n_accepted_unanswered` (new, additive),
+  and `n_accepted_without_truth` counts only accepts with no GT label. The
+  wrong-accept rate and bound are unchanged.
 - `schema_coverage` (third #104 review round): CUAD / MAUD-derived fields are
   scorable only when the row carries live clause labels, and a
   `pending_annotation` / `not_applicable` presence status overrides a stale

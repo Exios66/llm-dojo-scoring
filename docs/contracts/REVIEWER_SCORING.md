@@ -46,7 +46,7 @@ returns:
 | Section | Contents |
 | --- | --- |
 | `quality` | Class accuracy/CI/macro, per-class P/R/F1, confusion, coverage; subclass accuracy; verdict accuracy/confusion |
-| `acceptance` | Accepted count, wrong accepts, wrong rate, exact 95% upper bound, required accepts, shortfall, `meets_risk_bar`, accepted accuracy |
+| `acceptance` | Accepted count (split into graded, `n_accepted_without_truth` with no GT label, and `n_accepted_unanswered` labelled but with no usable reviewer answer), wrong accepts, wrong rate, exact 95% upper bound, required accepts, shortfall, `meets_risk_bar`, accepted accuracy |
 | `calibration` | ECE, Brier, reliability bins, mean confidence overall/correct/wrong |
 | `routing` | Human-review count/rate/by class, cause counts/rates, accept-rule violations |
 | `cost` | Priced/unpriced counts, total only when every row is priced, per accepted |

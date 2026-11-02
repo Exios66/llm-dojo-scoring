@@ -510,3 +510,18 @@ def test_empty_scorecard_values_match_the_zero_accept_defaults():
     from llm_dojo_scoring.analysis.calibration import required_samples
 
     assert empty["acceptance"]["required_accepts"] == required_samples(0, risk=0.02, confidence=0.9)
+
+
+def test_unanswered_accept_with_truth_is_not_counted_as_missing_truth():
+    """A labelled accept with no usable reviewer answer is counted on its own."""
+    records = [
+        _record(doc_id="graded"),
+        _record(doc_id="no-gt", expected_doc_type=None, expected_doc_subclass=None),
+        _record(doc_id="reviewer-error", error="timeout", reviewer_doc_type=None),
+    ]
+    acceptance = score_review_lane(records)["acceptance"]
+    assert acceptance["n_accepted"] == 3
+    assert acceptance["n_accepted_with_truth"] == 1
+    assert acceptance["n_accepted_without_truth"] == 1
+    assert acceptance["n_accepted_unanswered"] == 1
+    assert score_review_lane([])["acceptance"]["n_accepted_unanswered"] == 0
