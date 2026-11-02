@@ -120,6 +120,7 @@ may sit unflagged beside a full-field score.
 | `scored_fields` | field → number of scored documents |
 | `unscored_fields` | live fields that no document scored |
 | `field_coverage` | share of live fields scored at least once |
+| `off_map_fields` | scored fields that are not in the live map (never count toward scope) |
 
 `aggregate_quality_honest(rows, doc_class=...)` adds these keys when rows carry
 `field_scores` (top level, `extraction.` or `scores.`); without `doc_class` the

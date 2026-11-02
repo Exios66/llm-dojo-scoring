@@ -37,6 +37,7 @@ from .cost import resolve_cost_basis
 from ..metrics.scorecard_honesty import (
     COST_BASIS_VALUES,
     canonical_error_class,
+    _row_field_scores,
     headline_scope,
     normalize_serving_kind_token,
     summarize_run_completion,
@@ -170,10 +171,8 @@ def _doc_scored_fields(value: Mapping[str, Any]) -> tuple[str, ...] | None:
     explicit = value.get("scored_fields")
     if isinstance(explicit, (list, tuple)):
         return tuple(sorted(str(f) for f in explicit))
-    for holder in (value, value.get("scores"), value.get("extraction")):
-        if isinstance(holder, Mapping) and isinstance(holder.get("field_scores"), Mapping):
-            return tuple(sorted(str(f) for f in holder["field_scores"]))
-    return None
+    fields = _row_field_scores(value)
+    return tuple(sorted(str(f) for f in fields)) if fields is not None else None
 
 
 def _resolve_doc_class(specialist: str, docs: Sequence[GridDocument]) -> str | None:
@@ -191,7 +190,9 @@ def _resolve_doc_class(specialist: str, docs: Sequence[GridDocument]) -> str | N
 def _row_scope(specialist: str, scored_docs: Sequence[GridDocument]) -> dict[str, Any]:
     """Headline-scope keys for one row; all ``None`` when no field data was given."""
     reported = [d for d in scored_docs if d.scored_fields is not None]
-    if not reported:
+    if not reported or len(reported) != len(scored_docs):
+        # No field data, or some scored documents did not report theirs: the
+        # headline mean includes documents of unknown scope, so make no claim.
         return {
             "headline_scope": None,
             "headline_label": None,
@@ -621,12 +622,13 @@ _SCOPE_MARKS = {"maud_only": " †", "partial": " ‡"}
 
 
 def _scope_footnotes(rows: Sequence[Mapping[str, Any]]) -> list[str]:
-    """One footnote per flagged specialist naming what its score actually covers."""
-    notes: dict[str, str] = {}
+    """One footnote per flagged (specialist, scope) naming what its score covers."""
+    notes: dict[tuple[str, str], str] = {}
     for row in rows:
         scope = row.get("headline_scope")
-        if scope in _SCOPE_MARKS and row["specialist"] not in notes:
-            notes[str(row["specialist"])] = (
+        key = (str(row["specialist"]), str(scope))
+        if scope in _SCOPE_MARKS and key not in notes:
+            notes[key] = (
                 f"{_SCOPE_MARKS[scope].strip()} **{row['specialist']}**: {row['headline_label']}"
                 + (
                     f"; unscored: {', '.join(row['unscored_fields'])}"

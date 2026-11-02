@@ -132,3 +132,62 @@ def test_grid_report_marks_and_footnotes_non_comparable_headlines():
     assert "† **merger_agreement**: MAUD answers only" in md
     assert "‡ **correspondence**: 3 of" in md
     assert "Not comparable with full-field headlines." in md
+
+
+def test_off_map_fields_do_not_claim_scope():
+    """Scored fields outside the live map are reported, never counted as scope."""
+    only_junk = headline_scope("merger_agreement", {"junk": 2})
+    assert only_junk["headline_scope"] is None
+    assert only_junk["off_map_fields"] == ["junk"]
+    assert only_junk["field_coverage"] == 0.0
+    mixed = headline_scope("merger_agreement", {"maud_clauses": 3, "junk": 1})
+    assert mixed["headline_scope"] == "maud_only"
+    assert mixed["off_map_fields"] == ["junk"]
+    assert mixed["scored_fields"] == {"junk": 1, "maud_clauses": 3}
+    n_live = len(DEFAULT_FIELD_TYPES["merger_agreement"])
+    assert mixed["field_coverage"] == pytest.approx(1 / n_live, abs=1e-6)
+    assert "junk" not in mixed["unscored_fields"]
+    assert headline_scope("contract", list(DEFAULT_FIELD_TYPES["contract"]))["off_map_fields"] == []
+
+
+def test_field_score_lookup_skips_empty_holders():
+    """An empty top-level ``field_scores`` does not hide nested data (aggregate and grid)."""
+    row = {"overall_score": 0.5, "field_scores": {}, "scores": {"field_scores": {"maud_clauses": 0.5}}}
+    out = aggregate_quality_honest([row], doc_class="merger_agreement")
+    assert out["scored_fields"] == {"maud_clauses": 1}
+    grid = specialist_grid_rows(
+        [_grid_doc("merger_agreement", 0.5, {}, extraction={"field_scores": {"maud_clauses": 0.5}})]
+    )
+    assert grid[0]["scored_fields"] == {"maud_clauses": 1}
+    explicit = specialist_grid_rows(
+        [_grid_doc("merger_agreement", 0.5, {"parties": 1.0}, scored_fields=["maud_clauses"])]
+    )
+    assert explicit[0]["scored_fields"] == {"maud_clauses": 1}
+
+
+def test_grid_footnotes_dedupe_by_specialist_and_scope():
+    """The same specialist flagged ``†`` and ``‡`` in two experiments gets both notes."""
+    md = build_grid_report(
+        documents=[
+            _grid_doc("merger_agreement", 0.9, {"maud_clauses": 0.9}, experiment="e1"),
+            _grid_doc("merger_agreement", 0.9, {"maud_clauses": 0.9, "parties": 0.9}, experiment="e2"),
+        ],
+        experiments=[{"name": "e1"}, {"name": "e2"}],
+    )
+    assert "0.900 †" in md
+    assert "0.900 ‡" in md
+    assert "† **merger_agreement**" in md
+    assert "‡ **merger_agreement**" in md
+
+
+def test_grid_row_makes_no_scope_claim_when_some_docs_lack_fields():
+    """A headline mixing documents with unknown fields is not labelled MAUD-only."""
+    rows = specialist_grid_rows(
+        [
+            _grid_doc("merger_agreement", 0.9, {"maud_clauses": 0.9}),
+            _grid_doc("merger_agreement", 0.5),
+        ]
+    )
+    assert rows[0]["headline_scope"] is None
+    assert rows[0]["scored_fields"] is None
+    assert rows[0]["unscored_fields"] is None

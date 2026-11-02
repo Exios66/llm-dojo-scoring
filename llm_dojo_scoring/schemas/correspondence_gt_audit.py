@@ -14,11 +14,17 @@ rows, the way :func:`~.corporate_record_schema.audit_gt_rows` does for
 corporate records. Its rules are deliberately narrow, so a flagged value is
 template- or metadata-shaped rather than merely terse:
 
-- ``subject_matter_templated`` — the value is a fixed sentence frame around a
-  topic key (``Correspondence concerning <topic>.``), or it embeds a
-  snake_case topic key from :data:`.corpus.CORRESPONDENCE_TOPICS`;
-- ``keywords_metadata`` — at least one keyword is a topic key, a date or time
-  stamp, a mailbox-folder name or path, or an email address;
+- ``subject_matter_templated`` — the value starts with a fixed sentence frame
+  around a topic key (``Correspondence concerning <topic>`` followed by the end,
+  ``.`` or ``:`` and anything, as in ``"Correspondence concerning
+  general_business: Construction Duration"``), or it embeds a snake_case topic
+  key from :data:`.corpus.CORRESPONDENCE_TOPICS`;
+- ``keywords_metadata`` — at least one keyword is a topic key, a
+  communication-type token (the ``correspondence`` vocabulary of
+  :data:`.corpus.CORPUS_SUBCLASS_SURFACES`, i.e. the 8 ``communication_type``
+  tokens), a date or time stamp (including ISO timestamps with an offset),
+  an Enron maildir mailbox id (``delainey-d``), a mailbox-folder name, a path
+  with a folder segment, or an email address;
 - ``keywords_all_metadata`` — every keyword is one of the above;
 - ``intent_missing`` — the row has no usable ``intent`` GT;
 - ``gt_unparseable`` — ``gt_fields`` could not be parsed.
@@ -35,7 +41,7 @@ import re
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from .corpus import CORRESPONDENCE_TOPICS
+from .corpus import CORPUS_SUBCLASS_SURFACES, CORRESPONDENCE_TOPICS
 from .gt_metadata import (
     ABSENT_PRESENCE_STATUSES,
     gt_presence_map,
@@ -62,19 +68,39 @@ CORRESPONDENCE_DEFECT_CODES: tuple[str, ...] = (
 )
 
 _TOPIC_KEYS = frozenset(CORRESPONDENCE_TOPICS)
+#: ``communication_type`` vocabulary (the 8 Hub tokens), normalized like keywords.
+_COMMUNICATION_TYPES = frozenset(CORPUS_SUBCLASS_SURFACES["correspondence"])
+# The frame must START the value; the topic is followed by the end, a period,
+# or a colon and anything (the real GT appends ": <title>" to the frame).
 _TEMPLATE_FRAME = re.compile(
     r"^\s*(?:an?\s+)?(?:correspondence|email|e-mail|message|communication)\s+"
-    r"(?:concerning|regarding|about|re:?|on)\s+([a-z_ ]+?)\s*\.?\s*$",
+    r"(?:concerning|regarding|about|re:?|on)\s+([a-z_ ]+?)\s*(?=$|\.|:)",
     re.IGNORECASE,
 )
 _SNAKE_TOKEN = re.compile(r"\b[a-z]+(?:_[a-z]+)+\b")
+_MONTH = r"(?:0?[1-9]|1[0-2])"
+_DAY = r"(?:0?[1-9]|[12]\d|3[01])"
+_CLOCK = r"\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?"
+_ZONE = r"(?:\s*(?:z|utc|gmt|[+-]\d{2}:?\d{2}))"
+_TIME = rf"{_CLOCK}(?:\s*[ap]\.?m\.?)?{_ZONE}?"
 _DATE_OR_TIME = re.compile(
-    r"^(?:\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}(?:[ t]\d{1,2}:\d{2}(?::\d{2})?)?"
-    r"|\d{1,2}:\d{2}(?::\d{2})?(?:\s*[ap]\.?m\.?)?"
-    r"|\d{8,14})$",
+    # Year-first date (any of - / .), optionally with a time and zone:
+    # 2001-05-14, 2000-06-26T09:40:00+00:00, 2001/5/14 9:32.
+    rf"^(?:(?:19|20)\d{{2}}[-/.]{_MONTH}[-/.]{_DAY}(?:[ t]{_TIME})?"
+    # Day/month-first date; dots only with a four-digit year, so version
+    # numbers like 2.0.1 and 10.12.15 are not dates: 05/14/2001 09:32.
+    rf"|\d{{1,2}}[-/]\d{{1,2}}[-/](?:\d{{4}}|\d{{2}})(?:[ t]{_TIME})?"
+    rf"|\d{{1,2}}\.\d{{1,2}}\.\d{{4}}(?:[ t]{_TIME})?"
+    # Bare clock time: 9:32 am, 09:40:00Z.
+    rf"|{_TIME}"
+    # Compact stamp YYYYMMDD[hhmm[ss]] with a plausible month, day and time.
+    r"|(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])"
+    r"(?:(?:[01]\d|2[0-3])[0-5]\d(?:[0-5]\d)?)?)$",
     re.IGNORECASE,
 )
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[a-z]{2,}$", re.IGNORECASE)
+#: Enron maildir mailbox id: ``lastname-i`` (``delainey-d``, ``sanders-r``).
+_MAILBOX_ID = re.compile(r"^[a-z]+(?:-[a-z]+)*-[a-z]$")
 #: Enron / Outlook mailbox folder names (lower-case, spaces as underscores).
 _FOLDER_NAMES = frozenset(
     {
@@ -112,20 +138,25 @@ def is_templated_subject_matter(value: Any) -> bool:
 
 
 def is_metadata_keyword(value: Any) -> bool:
-    """True for a keyword that is a topic key, timestamp, folder or address."""
+    """True for a keyword that is metadata, not a content phrase.
+
+    Metadata is a topic key, a communication-type token, a date or time stamp,
+    an Enron mailbox id, a folder name, a path with a folder segment, or an
+    email address. A ``/`` alone does not make a path (``SPP/Entergy``).
+    """
     if not isinstance(value, str):
         return False
     text = value.strip()
     if not text:
         return False
     token = _norm_token(text)
-    if token in _TOPIC_KEYS or token in _FOLDER_NAMES:
+    if token in _TOPIC_KEYS or token in _FOLDER_NAMES or token in _COMMUNICATION_TYPES:
         return True
-    if _DATE_OR_TIME.match(text) or _EMAIL.match(text):
+    if _DATE_OR_TIME.match(text) or _EMAIL.match(text) or _MAILBOX_ID.match(text):
         return True
     if "/" in text or "\\" in text:
-        last = re.split(r"[\\/]+", text.rstrip("/\\"))[-1]
-        return _norm_token(last) in _FOLDER_NAMES or text.startswith(("/", "\\"))
+        segments = [seg for seg in re.split(r"[\\/]+", text) if seg]
+        return any(_norm_token(seg) in _FOLDER_NAMES for seg in segments)
     return False
 
 
