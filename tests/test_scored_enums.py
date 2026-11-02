@@ -148,15 +148,14 @@ def test_bare_string_vendored_value_is_one_value():
     assert any("teaches unscored values ['demand_payment']" in p for p in bad)
 
 
-def test_module_docstring_states_the_cms_claim_type_exception():
-    """The docstring names the CMS tokens that claim_type teaches beyond canonical ones."""
-    from llm_dojo_scoring.schemas import scored_enums
-
-    doc = scored_enums.__doc__ or ""
-    assert "Only canonical tokens are taught" not in doc
-    for token in ("pde", "inpatient", "outpatient", "carrier"):
-        assert token in doc
-        assert token in scored_vocabulary("insurance_claim", "claim_type")
+def test_claim_type_teaches_product_lines_only():
+    """#93: CMS table tokens are cms_source_table values, never claim_type hints."""
+    claim_types = scored_vocabulary("insurance_claim", "claim_type")
+    tables = scored_vocabulary("insurance_claim", "cms_source_table")
+    assert "health" in claim_types
+    assert not set(claim_types) & set(tables)
+    problems = enum_hint_violations("insurance_claim", {"claim_type": [*claim_types, "pde"]})
+    assert problems == ["insurance_claim.claim_type: teaches unscored values ['pde']"]
 
 
 def test_scored_enum_fields_outer_mapping_is_read_only():

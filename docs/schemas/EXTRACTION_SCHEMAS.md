@@ -288,14 +288,14 @@ fields the text states.
 
 | Field | Type | Empty | Notes |
 |---|---|---|---|
-| `claim_number` | `id` | `null` | Exact printed id (CLAIM NO., FNOL, CLM_ID, CMS Notice ID) |
+| `claim_number` | `id` | `null` | Exact printed claim id (CLAIM NO., FNOL; CMS rows: the 15-digit claim id) |
 | `policy_number` | `id` | `null` | Exact printed policy number |
 | `insurer` | `name` | `null` | Carrier as written |
 | `insured_party` | `name` | `null` | Named insured / claimant |
 | `claim_type` | `name` | `null` | Extract enum **orthogonal** to subclass (see below) |
 | `date_of_loss` | `date` | `null` | Loss/event date (ISO) |
 | `date_filed` | `date` | `null` | Filing date; not date of loss |
-| `claimed_amount` | `money` | `null` | Amount as stated; CMS MSN = Medicare paid total; do not compute |
+| `claimed_amount` | `money` | `null` | Amount as stated (CMS rows: the paid amount; `0.0` is a stated zero); do not compute |
 | `adjuster` | `name` | `null` | Named adjuster only; CMS/GNOTHEIA/INSURBIAS often `null` (valid) |
 | `damages_description` | `free_text` | `null` | Loss/damages as described |
 | `coverage_determination` | `name` | `null` | As written: `approved` · `denied` · `partial` · `pending`. Never infer from tone |
@@ -309,8 +309,9 @@ fields the text states.
 **Subclass (6, sorter / Hub):** `carrier` · `inpatient` · `outpatient` ·
 `pde` · `property` · `auto`.
 
-**`claim_type` extract enum (11):** those six, plus legacy FNOL lines
-`liability` · `health` · `life` · `workers_comp` · `other`. Product-line
+**`claim_type` scored vocabulary (#93): product lines only**
+(`corpus.INSURANCE_PRODUCT_LINES`): `auto` · `property` · `liability` · `health` ·
+`life` · `workers_comp` · `other`. A CMS table token is **not** a `claim_type`. Product-line
 `health` is **not** a subclass (`normalize_corpus_subclass(..., "health")`
 → `other`).
 
@@ -319,14 +320,25 @@ of truth: each source table (`carrier` · `inpatient` · `outpatient` · `pde`) 
 to `claim_type=health`, subclass = the table, and intent `claim_data_record`.
 `claim_type` (the product line) and the source table are **orthogonal**:
 
-- `claim_type` still folds a CMS token onto GT `health` (SAND-042).
-- The source table is scored as its own label field, `cms_source_table`, whenever
-  the expected row carries it. Derive it with `cms_source_table(doc_type, subclass)`.
-  The specialist's `claim_type` token is the prediction when the extraction has no
-  `cms_source_table` key.
+- The SAND-042 fold is retired: on a CMS row `claim_type` is an exact `label`, so
+  `pde` / `inpatient` / `outpatient` / `carrier` there scores 0 (GT is `health`).
+- The source table is its own label field, `cms_source_table`. The published
+  `gt_fields` never carry it (0 of 1,100 rows); the dojo derives it from
+  `expected_subclass` for CMS rows when it assembles GT (`scoring_gt_fields(...,
+  doc_type=, subclass=)`, suite scoring with `expected_subclass=`). For the frozen
+  prompt, a table token on `claim_type` is still read as the `cms_source_table`
+  prediction when that field is blank — it earns credit there only.
+- CMS-aware fields (CMS rows only): `adjuster` and `denial_reasons` are
+  documented-absent on all 600 rows, so an empty prediction scores 1.0 and a stated
+  value 0.0; `supporting_documents` match by identifier (provider NPI, NDC, facility
+  provider id exact; descriptors such as `HCPCS detail (N codes)` by type label).
+- Non-CMS rows (INSURBIAS / BDR auto, GNOTHEIA property) are unchanged.
 
-The published merge does not carry `cms_source_table` yet. Until it does, consumers
-add it from `expected_subclass`. The sandbox's interim label overlay does this.
+**Current split** (ground_truth config): 1,100 insurance rows — CMS 600
+(`source_corpus == "cms_desynpuf"`, 150 per table) and non-CMS 500 (INSURBIAS auto
+150, BDR auto 150, GNOTHEIA property 200). `claim_checklist` is in the live map but
+no row populates it (the headline is `partial`); intents `loss_report` / `other`
+are unused.
 
 **`claim_checklist` categories:** Coverage Determination; Policy Limits;
 Exclusions Cited; Deductible; Reservation Of Rights; Timely Notice; Proof
@@ -384,7 +396,7 @@ the scored vocabulary instead (`llm_dojo_scoring.schemas.scored_enums`):
 | Class | Field | Source of the vocabulary |
 |---|---|---|
 | `corporate_record`, `correspondence`, `insurance_claim` | `intent` | `INTENT_LABELS` |
-| `insurance_claim` | `claim_type` | `INSURANCE_CLAIM_TYPES` (CMS tokens score as `health`) |
+| `insurance_claim` | `claim_type` | `INSURANCE_PRODUCT_LINES` (product lines only; CMS tables are `cms_source_table`) |
 | `insurance_claim` | `cms_source_table` | `CMS_SOURCE_TABLES` |
 
 ```python
