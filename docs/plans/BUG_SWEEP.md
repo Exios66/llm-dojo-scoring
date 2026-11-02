@@ -27,7 +27,22 @@ scores needs a CHANGELOG comparability note and a `score_changelog` entry.
   empty for every class that maps those keys.
 - [ ] **Intents never seen in GT:** `loss_report` and `other` (insurance) never occur in
   the Hub data. Decide whether hints should still teach them.
-- [ ] **PR #106 adversarial review findings:** add them here when the review lands.
+- [x] **PR #106 adversarial review:** confirmed findings 1–3, 5 and 6 are fixed in
+  #106 (`fcca394`).
+- [ ] **CMS detection still sniffs the key.** A plain-dict GT that carries
+  `cms_source_table` puts a non-CMS row into CMS mode (#106 review, finding 4).
+  Replace key-sniffing with an explicit flag set where GT is scoped.
+- [ ] **Scalar `expected_subclass` with a list `expected`.** In batch scoring this
+  marks every row as CMS. Numpy or pandas subclass arrays silently miss detection,
+  and `rescore` reads only the `expected_subclass` key (#106 review).
+- [ ] **Archive method label is wrong for CMS blocks.** The `method` label
+  `unweighted_mean_of_nonempty_expected_fields` no longer describes them, because
+  documented-absent fields join the mean (`n_fields_scored` 14 → 17).
+- [ ] **CMS branch skipped when `adjuster` is missing.** If the expected dict has no
+  `adjuster` key, the CMS branch is skipped, while field-micro metrics still count a
+  stated adjuster as a false positive.
+- [ ] **NDC padding.** `zfill(11)` mis-normalizes the 5-3-2 / 5-4-1 forms of a
+  10-digit NDC, causing false negatives in `_cms_doc_signature`.
 
 ## Reporting / honesty
 
