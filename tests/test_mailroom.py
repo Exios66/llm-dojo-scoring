@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from llm_dojo_scoring.mailroom import (
+from llm_dojo_scoring.pipeline.mailroom import (
     EXTRACT_CLASS_ALIASES,
     INTAKE_AGENT,
     LIVE_DOC_TYPES,
@@ -24,10 +24,10 @@ from llm_dojo_scoring.mailroom import (
     score_aligned_classification,
     trace_identity,
 )
-from llm_dojo_scoring.profiles import get_profile, list_profiles
-from llm_dojo_scoring.registry import LIVE_SPECIALIST_AGENTS, load_registry
-from llm_dojo_scoring.suites import get_suite, list_suites
-from llm_dojo_scoring.tasks import score_task
+from llm_dojo_scoring.metrics.profiles import get_profile, list_profiles
+from llm_dojo_scoring.metrics.registry import LIVE_SPECIALIST_AGENTS, load_registry
+from llm_dojo_scoring.scoring.suites import get_suite, list_suites
+from llm_dojo_scoring.scoring.tasks import score_task
 
 
 def test_live_roster_is_five_specialists():

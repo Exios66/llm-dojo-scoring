@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from llm_dojo_scoring.emitter import (
+from llm_dojo_scoring.metrics.emitter import (
     Emitter,
     get_emitter,
     LangfuseSink,
@@ -14,7 +14,7 @@ from llm_dojo_scoring.emitter import (
     reset_default_emitter,
     ScoreRecord,
 )
-from llm_dojo_scoring.registry import clear_registry_cache, MetricTier, Registry
+from llm_dojo_scoring.metrics.registry import clear_registry_cache, MetricTier, Registry
 
 PROV = {
     "dataset_revision": "46a4d3c2",
@@ -36,7 +36,7 @@ def _clean():
 
 def _tiny_registry() -> Registry:
     """Build a registry with one headline metric and one unaggregated log metric."""
-    from llm_dojo_scoring.registry import MetricDef
+    from llm_dojo_scoring.metrics.registry import MetricDef
 
     reg = Registry()
     reg.metrics["f1_macro"] = MetricDef(name="f1_macro", tier=MetricTier.HEADLINE)
@@ -100,7 +100,7 @@ def test_compare_headlines_delta(tmp_path):
 
 def test_sum_aggregation_for_cost(tmp_path):
     """Sum emitted cost values instead of averaging them."""
-    from llm_dojo_scoring.registry import MetricDef
+    from llm_dojo_scoring.metrics.registry import MetricDef
 
     reg = Registry()
     reg.metrics["estimated_cost_usd"] = MetricDef(
@@ -174,7 +174,7 @@ def test_default_emitter_singleton():
 
 def test_register_metric_adhoc(tmp_path):
     """Allow an ad hoc registered metric to appear in scorecards."""
-    from llm_dojo_scoring.registry import MetricDef
+    from llm_dojo_scoring.metrics.registry import MetricDef
 
     em = Emitter(sinks=[], registry=Registry())
     em.register_metric("custom_kpi", 0, description="ad hoc")
@@ -200,11 +200,11 @@ def test_langfuse_sink_emit_failure_is_counted_and_loud(caplog):
             """Allow flushing so the simulated failure remains limited to score emission."""
             return None
 
-    from llm_dojo_scoring.emitter import SINK_EMIT_FAILURES, sink_failure_counts
+    from llm_dojo_scoring.metrics.emitter import SINK_EMIT_FAILURES, sink_failure_counts
 
     before = sink_failure_counts()["emit_failures"]
     sink = LangfuseSink(client=_BrokenClient())
-    with caplog.at_level("ERROR", logger="llm_dojo_scoring.emitter"):
+    with caplog.at_level("ERROR", logger="llm_dojo_scoring.metrics.emitter"):
         sink.emit(ScoreRecord(agent="x", metric="f1_macro", value=0.9, metadata={"trace_id": "t1"}))
     after = sink_failure_counts()["emit_failures"]
     assert after == before + 1
@@ -224,11 +224,11 @@ def test_langfuse_sink_flush_failure_is_counted_and_loud(caplog):
             """Raise a flush error to exercise failure counting and logging."""
             raise RuntimeError("flush down")
 
-    from llm_dojo_scoring.emitter import sink_failure_counts
+    from llm_dojo_scoring.metrics.emitter import sink_failure_counts
 
     before = sink_failure_counts()["flush_failures"]
     sink = LangfuseSink(client=_BrokenClient())
-    with caplog.at_level("ERROR", logger="llm_dojo_scoring.emitter"):
+    with caplog.at_level("ERROR", logger="llm_dojo_scoring.metrics.emitter"):
         sink.flush()
     after = sink_failure_counts()["flush_failures"]
     assert after == before + 1

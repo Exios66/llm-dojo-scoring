@@ -11,8 +11,8 @@ from llm_dojo_scoring.config import (
     configure_from_taxonomy,
     get_settings,
 )
-from llm_dojo_scoring.field_scoring import score_category_presence, score_extraction
-from llm_dojo_scoring.trace_knobs import (
+from llm_dojo_scoring.scoring.field_scoring import score_category_presence, score_extraction
+from llm_dojo_scoring.scoring.trace_knobs import (
     capture_trace_knobs,
     confidence_calibration_error,
     parse_confidence,

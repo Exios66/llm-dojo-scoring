@@ -28,5 +28,6 @@ reports/
 
 # Local config
 .env
+.claude/settings.local.json
 *.local.yaml
 *.pyc

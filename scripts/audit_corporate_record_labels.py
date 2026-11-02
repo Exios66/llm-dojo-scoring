@@ -8,7 +8,7 @@ Usage::
 Each PATH is a mailroom-dataset ``ground_truth`` parquet (or a ``.bin`` HF
 cache copy) or a JSONL file with ``expected`` / ``expected_subclass`` /
 ``gt_fields``. Prints defect counts per subclass (see
-``llm_dojo_scoring.corporate_record_schema.audit_gt_row``). Parquet needs
+``llm_dojo_scoring.schemas.corporate_record_schema.audit_gt_row``). Parquet needs
 ``pyarrow``. Exit status is 1 when any defect is found.
 """
 
@@ -20,7 +20,7 @@ import math
 import sys
 from pathlib import Path
 
-from llm_dojo_scoring.corporate_record_schema import audit_gt_row, audit_gt_rows
+from llm_dojo_scoring.schemas.corporate_record_schema import audit_gt_row, audit_gt_rows
 
 
 def _rows(path: Path, *, include_context: bool = False):

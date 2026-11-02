@@ -1,31 +1,14 @@
-<div align="center">
+# Examples
 
-# 📝 LLM Dojo Scoring Examples
-
-**Usage examples for the scoring engine package.**
-
-</div>
-
----
-
-## Examples
-
-| Example | Description |
+| Example | What it shows |
 |:---|:---|
-| `basic_scoring.py` | Basic field-type scoring |
-| `entity_list_scoring.py` | Entity list scoring with bipartite matching |
-| `regression_diagnostics.py` | MAE/R² regression diagnostics |
-| `factuality_audit.py` | Factuality audit with hallucination counts |
+| [`analyze_sorter_results.py`](analyze_sorter_results.py) | Load a sorter results workbook, then score, interpret and plot it |
 
-## Usage
+Run from the repository root after `pip install -e ".[dev]"`:
 
 ```bash
-cd packages/llm-dojo-scoring
-python examples/basic_scoring.py
+python examples/analyze_sorter_results.py
 ```
 
-## Related Files
-
-- `llm_dojo_scoring/` — Source code
-- `docs/` — Documentation
-- `tests/` — Test suites
+For library calls (field scoring, suites, bootstrap, the emitter), see the
+[README's library usage](../README.md#library-usage) and [`docs/guides/SCORING.md`](../docs/guides/SCORING.md).

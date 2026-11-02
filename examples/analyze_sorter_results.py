@@ -20,7 +20,7 @@ from llm_dojo_scoring import error_analysis as ea
 from llm_dojo_scoring import interpret as interp
 from llm_dojo_scoring import report as dojo_report
 from llm_dojo_scoring import visualize as viz
-from llm_dojo_scoring.io import normalize_results_frame, read_workbook
+from llm_dojo_scoring.analysis.io import normalize_results_frame, read_workbook
 
 
 def main() -> int:

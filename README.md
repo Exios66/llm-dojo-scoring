@@ -8,19 +8,45 @@
 <br/>
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](pyproject.toml)
-[![Release v0.24.0](https://img.shields.io/badge/release-v0.24.0-6C63FF?style=for-the-badge)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.24.0)
-[![Offline core](https://img.shields.io/badge/scoring-offline_core-22C55E?style=for-the-badge)](docs/SCORING.md)
+[![Release v0.25.0](https://img.shields.io/badge/release-v0.25.0-6C63FF?style=for-the-badge)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.25.0)
+[![Offline core](https://img.shields.io/badge/scoring-offline_core-22C55E?style=for-the-badge)](docs/guides/SCORING.md)
 [![MIT](https://img.shields.io/badge/license-MIT-0EA5E9?style=for-the-badge)](pyproject.toml)
 
 [![Hub](https://img.shields.io/badge/🏛️_hub-Digital--Mailroom-000?style=flat-square)](https://github.com/LLM-Mailroom-Services/Digital-Mailroom)
-[![Scoring tables](https://img.shields.io/badge/📐_scoring_tables-SCORING.md-555?style=flat-square)](docs/SCORING.md)
-[![Migration](https://img.shields.io/badge/🔀_migration-MIGRATION.md-555?style=flat-square)](docs/MIGRATION.md)
+[![Scoring tables](https://img.shields.io/badge/📐_scoring_tables-SCORING.md-555?style=flat-square)](docs/guides/SCORING.md)
+[![Migration](https://img.shields.io/badge/🔀_migration-MIGRATION.md-555?style=flat-square)](docs/guides/MIGRATION.md)
 
 **[Quickstart](#quickstart)** · **[How it works](#how-it-works)** · **[Workflows](#workflows)** · **[API](#library-usage)** · **[Where it fits](#where-it-fits)** · **[Docs](#documentation)**
 
 </div>
 
 ---
+
+<!-- readme-v2.1 -->
+<details>
+<summary><b>📑 Contents</b></summary>
+
+- [🥋 What is this?](#what-this-does)
+- [🤔 When to reach for it](#when-to-reach-for-it)
+- [📦 Install](#install)
+- [🚀 Quickstart](#quickstart)
+- [🧭 How it works](#how-it-works)
+- [📟 At a glance](#at-a-glance)
+- [🌌 Where it fits](#where-it-fits)
+- [🔧 Workflows](#workflows)
+- [🗺️ Module map](#module-map)
+- [🎯 Task coverage](#task-coverage)
+- [🧰 Library usage](#library-usage)
+- [⚙️ Configuration](#configuration)
+- [✅ Testing](#testing)
+- [⌨️ CLI reference](#cli-reference)
+- [📖 Documentation](#documentation)
+- [🚢 Releases & monorepo sync](#releases--monorepo-sync)
+- [❓ FAQ](#faq)
+- [🙏 Built on](#built-on)
+- [🤝 Contributing, security and license](#contributing-security-and-license)
+
+</details>
 
 <a id="what-this-does"></a>
 
@@ -44,6 +70,16 @@ key or tracing service.
 </picture>
 </div>
 
+<a id="when-to-reach-for-it"></a>
+
+## 🤔 When to reach for it
+
+| ✅ Reach for it when… | ↪️ Look elsewhere when… |
+| :--- | :--- |
+| You score document classes or structured extractions against ground truth and want the same answer on every run | You want an LLM-as-a-judge rubric. The core never calls a model; the Judge agent and the Langfuse LLM-as-a-judge evaluators live in llm-mailroom |
+| Your fields have types (dates, money, IDs, names, free text, entity lists) and plain string equality would mislead you | You need a general-purpose eval framework. The suites, profiles and bundles are built around the Mailroom document classes |
+| You want confidence intervals and a failure-mode breakdown rather than one bare accuracy number | You want a live dashboard. The Dojo writes Markdown reports, plots and JSONL score manifests; it serves no UI |
+
 <a id="install"></a>
 
 ## 📦 Install
@@ -55,7 +91,7 @@ key or tracing service.
 <div align="center">
 
 ```bash
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.24.0"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.25.0"
 pip install -e .                # from a local checkout
 ```
 
@@ -79,12 +115,12 @@ A standalone consumer can pin this release explicitly:
 ```toml
 [project]
 dependencies = [
-    "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.24.0",
+    "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.25.0",
 ]
 ```
 
-The pipeline currently pins **v0.23.1** in its own source. A new Dojo
-release and a consuming application's pin are separate decisions; update
+The pipeline currently pins the **v0.25.0** release commit (`e35504d`) in its own
+source. A new Dojo release and a consuming application's pin are separate decisions; update
 consumers through their release workflow rather than treating this example
 as their current configuration.
 
@@ -200,11 +236,11 @@ dojo-version --check --force --json
 dojo-version --check --offline --json
 ```
 
-The opt-in `llm_dojo_scoring.update_awareness.UpdateChecker` shares a daily
+The opt-in `llm_dojo_scoring.integrations.update_awareness.UpdateChecker` shares a daily
 per-user cache across application startup hooks and limits notices per consumer
 and release. Pure imports and scoring stay offline. Set
 `LLM_DOJO_UPDATE_CHECK=0` to disable all update checks and cache I/O. No packages
-are upgraded automatically. See [update awareness](docs/UPDATE_AWARENESS.md)
+are upgraded automatically. See [update awareness](docs/guides/UPDATE_AWARENESS.md)
 for startup semantics, failure/exit codes, privacy and concurrency limits.
 Available in v0.24.0; dependency pins remain operator controlled.
 
@@ -212,35 +248,24 @@ Available in v0.24.0; dependency pins remain operator controlled.
 
 ## 🗺️ Module map
 
-<details>
-<summary><b>The module map: what each module does</b></summary>
+Modules are grouped into subpackages by what they are about. The full module table is in
+[`llm_dojo_scoring/README.md`](llm_dojo_scoring/README.md).
 
 <div align="center">
 
-| Module | What it does |
+| Subpackage | What lives there |
 |:---|:---|
-| `update_awareness` | Opt-in shared release discovery, startup cache and `dojo-version` |
-| `field_scoring` | Field-type-aware deterministic extraction scoring (date/money/id/name/free_text/entity_list) |
-| `classification` | Label normalization, exact match, per-class P/R/F1/F2, macro-PRF, confusion matrices |
-| `extraction_metrics` | Field-micro extraction P/R/F1/F2 over (field, value) events |
-| `claims_consistency` | Insurance `determination_consistency` and `amount_exactness` |
-| `failure_modes` | Failure-mode taxonomy + `classify_failure`, per-subtype accuracy |
-| `bootstrap` | Bootstrap CIs, two-sample delta significance, Wilson intervals |
-| `cost` | Price lookup, cost estimation, usage aggregation |
-| `diagnostics` | Run-level diagnostics: date/duration/money MAE+R², span drift, field error decomposition |
-| `experiment` | JSONL record append/load, dotted-path access, git snapshot |
-| `tasks` | Task-aware scoring across the full document hierarchy (MAUD, LegalBench, chained, etc.) |
-| `suites` | Dedicated scoring suite per pipeline agent — the API consumers should call |
-| `registry` | Metric definitions registry: every score name → tier (T0 HEADLINE → T3 LOG) |
-| `bundles` | Eleven pre-built task bundles (classification, extraction, cost, factuality, etc.) |
-| `profiles` | 27 agent profiles — each agent's scoring identity |
-| `emitter` | Unified score emitter: JSONL manifest sink + inert Langfuse sink |
-| `langfuse_sync` | Pull live experiment traces into run records + reference workbook |
-| `phoenix_sync` | Local Phoenix/OTLP sink probe + span reader |
+| `schemas/` | Corpus alignment, GT metadata, intents, CUAD/MAUD/corporate-record contracts, sorter guide |
+| `scoring/` | `field_scoring`, classification, extraction metrics, content, claims, LegalBench, `tasks`, `suites` |
+| `pipeline/` | Mailroom pipeline contract, intake, pilot labels, verdicts, archive, sandbox rubrics |
+| `metrics/` | Registry, metric metadata, bundles, profiles, emitter, scorecard honesty |
+| `analysis/` | Bootstrap, diagnostics, failure modes, interpretation, reports, plots, export, grid, serving, cost |
+| `integrations/` | Langfuse and Phoenix sync, update awareness |
+| root | `config`, `cli`, `prompts/`, and the public API in `__init__` |
 
 </div>
 
-</details>
+The pre-v0.26.0 flat paths (`llm_dojo_scoring.field_scoring`, …) remain importable as the same module objects.
 
 <a id="task-coverage"></a>
 
@@ -356,7 +381,12 @@ dojo-sync    [--task TRACE_NAME] [--session NAME] [--max-items N]
 
 ## 📖 Documentation
 
-See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the exact import swap. Scoring tables: [`docs/SCORING.md`](docs/SCORING.md). Prompt catalog and eval-environment prompt lineage (`list_prompt_versions`, `prompt_chain`, `diff_prompt_versions`): [`docs/PROMPTS.md`](docs/PROMPTS.md).
+Start at [`docs/README.md`](docs/README.md). The docs are grouped into guides, schemas, contracts and history.
+
+- **Migrating a pipeline project**, including the v0.26.0 subpackage layout: [`docs/guides/MIGRATION.md`](docs/guides/MIGRATION.md)
+- **Scoring tables**: [`docs/guides/SCORING.md`](docs/guides/SCORING.md)
+- **Prompt catalog and eval-environment lineage** (`list_prompt_versions`, `prompt_chain`, `diff_prompt_versions`): [`docs/guides/PROMPTS.md`](docs/guides/PROMPTS.md)
+- **Releases**: [`docs/guides/RELEASES.md`](docs/guides/RELEASES.md)
 
 <a id="releases--monorepo-sync"></a>
 
@@ -381,6 +411,69 @@ events.
   the sandbox vendor tree (`scripts/sync_vendor.py`). Verify the changed
   package and every dependant; source and vendor imports must identify the
   same release code, even when unrelated distribution metadata is installed.
+
+<a id="faq"></a>
+
+## ❓ FAQ
+
+<details>
+<summary><b>Does scoring need an API key or a network connection?</b></summary>
+
+No. The deterministic core needs no model, API key or tracing service. Embedding rescue (`[embeddings]`) and the Langfuse/Phoenix sinks (`[tracing]`) are opt-in extras, and release checks only run through the opt-in `UpdateChecker`; `LLM_DOJO_UPDATE_CHECK=0` turns them off entirely.
+
+</details>
+
+<details>
+<summary><b>Why not just compare the strings?</b></summary>
+
+Because `"March 3, 2026"` and `"2026-03-03"` are the same fact. `field_scoring` uses one algorithm per field type: IDs are normalized then matched exactly, dates are parsed to ISO with partial-credit fallbacks, money is parsed and compared with a one-cent tolerance, names use Jaro-Winkler plus a token-set ratio, free text uses SQuAD-style token F1, and entity lists use Hungarian bipartite matching.
+
+</details>
+
+<details>
+<summary><b>Which function should my project call?</b></summary>
+
+Consumers should call the dedicated suite for each pipeline agent, `get_suite("<agent>")`. `score_task(...)` is the single entry point for classification tasks and `score_extraction(...)` scores one extraction. See [Library usage](#library-usage) and [Task coverage](#task-coverage).
+
+</details>
+
+<details>
+<summary><b>What do the tiers T0 to T3 mean?</b></summary>
+
+They are the dashboard discipline in `registry`: **T0 HEADLINE** is one board-level number per agent, **T1 CORE** answers "what broke yesterday?", **T2 DEEP** is root-cause investigation (confusion matrices, failure modes) and **T3 LOG** is audit trail and regression comparison only.
+
+</details>
+
+<details>
+<summary><b>How does a new Dojo release reach the pipeline?</b></summary>
+
+Only at release time. The pin is bumped in the llm-mailroom source with `src/scripts/bump_dojo_scoring.py`, and the hub then imports both sources and refreshes the sandbox vendor snapshot. Pin lines are never deleted; see [Releases & monorepo sync](#releases--monorepo-sync).
+
+</details>
+
+<a id="built-on"></a>
+
+## 🙏 Built on
+
+The deterministic core stands on a small, boring stack:
+
+| Project | What it does here |
+| :--- | :--- |
+| [pandas](https://pandas.pydata.org/) · [SciPy](https://scipy.org/) | Score tables, and the Hungarian matcher (`linear_sum_assignment`) for entity lists. Bootstrap CIs use only the standard library |
+| [jellyfish](https://github.com/jamesturk/jellyfish) | Jaro-Winkler similarity for name fields |
+| [python-dateutil](https://github.com/dateutil/dateutil) | Date parsing before comparison |
+| [Matplotlib](https://matplotlib.org/) · [openpyxl](https://openpyxl.readthedocs.io/) | `dojo-analyze` plots and the Excel workbooks |
+| [Langfuse](https://langfuse.com/) · [Arize Phoenix](https://phoenix.arize.com/) (optional) | `dojo-sync` and the tracing sinks, behind the `[tracing]` extra |
+
+<a id="contributing-security-and-license"></a>
+
+## 🤝 Contributing, security and license
+
+| | |
+| :--- | :--- |
+| **Contributing** | Scoring logic and metrics are authored here first, with tests and docstrings (the [docstring coverage gate](#testing) is part of the suite). The hub [contributing guide](https://github.com/LLM-Mailroom-Services/Digital-Mailroom/blob/main/CONTRIBUTING.md) covers the card workflow and the import into Digital-Mailroom. |
+| **Security** | Report vulnerabilities privately as described in the hub [security policy](https://github.com/LLM-Mailroom-Services/Digital-Mailroom/blob/main/SECURITY.md), which covers this package; never post exploit details in a public issue. |
+| **License** | MIT, declared in [`pyproject.toml`](pyproject.toml). There is no standalone `LICENSE` file yet. |
 
 ---
 

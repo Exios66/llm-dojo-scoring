@@ -5,12 +5,12 @@ from __future__ import annotations
 import pytest
 
 from llm_dojo_scoring import compare_serving, get_suite
-from llm_dojo_scoring.content_scoring import score_maud_extraction
-from llm_dojo_scoring.cost import estimate_for_record, tokens_summary
-from llm_dojo_scoring.extraction_metrics import extraction_binary_metrics
-from llm_dojo_scoring.export import validate_comparison_export
-from llm_dojo_scoring.failure_modes import classify_extraction_failure
-from llm_dojo_scoring.scorecard_honesty import (
+from llm_dojo_scoring.scoring.content_scoring import score_maud_extraction
+from llm_dojo_scoring.analysis.cost import estimate_for_record, tokens_summary
+from llm_dojo_scoring.scoring.extraction_metrics import extraction_binary_metrics
+from llm_dojo_scoring.analysis.export import validate_comparison_export
+from llm_dojo_scoring.analysis.failure_modes import classify_extraction_failure
+from llm_dojo_scoring.metrics.scorecard_honesty import (
     IncomparableMetricsError,
     ProvenanceExportError,
     aggregate_quality_honest,
@@ -23,8 +23,8 @@ from llm_dojo_scoring.scorecard_honesty import (
     stamp_provenance,
     summarize_run_completion,
 )
-from llm_dojo_scoring.serving import classify_serving_kind, split_local_api
-from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES
+from llm_dojo_scoring.analysis.serving import classify_serving_kind, split_local_api
+from llm_dojo_scoring.scoring.suites import DEFAULT_FIELD_TYPES
 
 
 def test_unscorable_triage_only_contracts_gt_not_zero():
@@ -205,7 +205,7 @@ def test_correctly_empty_fields_score_one():
     assert prf["fp"] == 0
     assert prf["n_correctly_empty"] == 1
     assert prf["empty_field_credit"] == 1.0
-    from llm_dojo_scoring.field_scoring import score_extraction
+    from llm_dojo_scoring.scoring.field_scoring import score_extraction
 
     result = score_extraction("insurance_claim", field_map, predicted, expected)
     assert "adjuster" not in result.field_scores

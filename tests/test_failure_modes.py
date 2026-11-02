@@ -1,7 +1,7 @@
 """Check sorter failure categorization, subtype accuracy, and confusion counts."""
 import pytest
 
-from llm_dojo_scoring.failure_modes import (
+from llm_dojo_scoring.analysis.failure_modes import (
     classify_docclass_failure,
     classify_failure,
     confusion_from_rows,

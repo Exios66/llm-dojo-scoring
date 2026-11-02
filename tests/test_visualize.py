@@ -8,7 +8,7 @@ import pytest
 from matplotlib.figure import Figure
 
 from llm_dojo_scoring import visualize as viz
-from llm_dojo_scoring.io import normalize_results_frame
+from llm_dojo_scoring.analysis.io import normalize_results_frame
 
 
 @pytest.fixture

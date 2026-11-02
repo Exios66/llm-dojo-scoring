@@ -12,7 +12,7 @@ from decimal import Decimal
 
 import pytest
 
-from llm_dojo_scoring.archive import (
+from llm_dojo_scoring.pipeline.archive import (
     ARCHIVE_SCORING_KEYS,
     ARCHIVE_SCORING_METHOD,
     AUDIT_DETAIL_KEYS,
@@ -30,8 +30,8 @@ from llm_dojo_scoring.archive import (
     upsert_archive_scoring,
     validate_audit_entry,
 )
-from llm_dojo_scoring.mailroom import EXTRACT_CLASS_ALIASES, resolve_extract_class
-from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES, get_suite
+from llm_dojo_scoring.pipeline.mailroom import EXTRACT_CLASS_ALIASES, resolve_extract_class
+from llm_dojo_scoring.scoring.suites import DEFAULT_FIELD_TYPES, get_suite
 
 
 def _fill_schema(doc_class: str, values: dict) -> dict:
@@ -705,7 +705,7 @@ def test_mailroom_oracle_hash_row_verifies_in_dojo():
     )
     assert entry["entry_hash"] == mailroom_digest
     entry["entry_hash"] = mailroom_digest
-    from llm_dojo_scoring.archive import verify_entry_hash
+    from llm_dojo_scoring.pipeline.archive import verify_entry_hash
 
     assert verify_entry_hash(entry) is True
 

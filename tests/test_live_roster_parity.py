@@ -21,9 +21,9 @@ from llm_dojo_scoring.config import (
     LIVE_DOC_CLASS_KEYS,
     RETIRED_DOC_CLASS_KEYS,
 )
-from llm_dojo_scoring.corpus import CORPUS_EXTRACTION_FIELDS
-from llm_dojo_scoring.field_scoring import ExtractionScoreResult
-from llm_dojo_scoring.mailroom import (
+from llm_dojo_scoring.schemas.corpus import CORPUS_EXTRACTION_FIELDS
+from llm_dojo_scoring.scoring.field_scoring import ExtractionScoreResult
+from llm_dojo_scoring.pipeline.mailroom import (
     EXTRACT_CLASS_ALIASES,
     LIVE_DOC_TYPES,
     LIVE_SPECIALISTS,
@@ -31,12 +31,12 @@ from llm_dojo_scoring.mailroom import (
     is_live_extract_class,
     resolve_extract_class,
 )
-from llm_dojo_scoring.scorecard_honesty import (
+from llm_dojo_scoring.metrics.scorecard_honesty import (
     metric_id_allowed,
     metric_id_for,
     metric_ids_for_class,
 )
-from llm_dojo_scoring.suites import DEFAULT_FIELD_TYPES, get_suite
+from llm_dojo_scoring.scoring.suites import DEFAULT_FIELD_TYPES, get_suite
 
 _FIXTURE_PATH = Path(__file__).parent / "fixtures" / "taxonomy_field_types.json"
 _FIXTURE = json.loads(_FIXTURE_PATH.read_text())
@@ -163,8 +163,8 @@ def _schema_table_fields(section_body: str) -> set[str]:
 
 
 def test_extraction_schemas_doc_covers_live_field_maps():
-    """docs/EXTRACTION_SCHEMAS.md must name every live schema class and field."""
-    report = (Path(__file__).resolve().parents[1] / "docs" / "EXTRACTION_SCHEMAS.md").read_text(
+    """docs/schemas/EXTRACTION_SCHEMAS.md must name every live schema class and field."""
+    report = (Path(__file__).resolve().parents[1] / "docs" / "schemas" / "EXTRACTION_SCHEMAS.md").read_text(
         encoding="utf-8"
     )
     sections = {m.group("doc_type"): m for m in _SCHEMA_SECTION.finditer(report)}

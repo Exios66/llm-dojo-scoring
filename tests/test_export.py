@@ -7,7 +7,7 @@ import os
 import pandas as pd
 import pytest
 
-from llm_dojo_scoring.export import (
+from llm_dojo_scoring.analysis.export import (
     build_sweep_workbook,
     dotted_get,
     extraction_columns,
@@ -17,7 +17,7 @@ from llm_dojo_scoring.export import (
     write_codebook,
     write_workbook,
 )
-from llm_dojo_scoring.io import normalize_results_frame, read_codebook, read_workbook
+from llm_dojo_scoring.analysis.io import normalize_results_frame, read_codebook, read_workbook
 
 PER_SUB = ["license", "franchise", "reseller", "distributor"]
 
@@ -139,14 +139,14 @@ def test_sweep_workbook(tmp_path, records):
 
 def test_sweep_picks_champion_prompt(records):
     """Choose the prompt version belonging to the best sorter run."""
-    from llm_dojo_scoring.export import champion_prompt_version
+    from llm_dojo_scoring.analysis.export import champion_prompt_version
 
     assert champion_prompt_version(records) == "v13"
 
 
 def test_sorter_records_filter(records):
     """Separate sorter experiments from extraction records."""
-    from llm_dojo_scoring.export import extraction_records
+    from llm_dojo_scoring.analysis.export import extraction_records
 
     assert len(sorter_records(records)) == 3
     assert len(extraction_records(records)) == 0
