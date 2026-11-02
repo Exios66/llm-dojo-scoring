@@ -103,6 +103,32 @@ require every `PROVENANCE_KEYS` entry on both legs and equal, except the
 for local vs API) and `draw_seed`, which may be absent on both legs. `serving_kind` stays
 `modal` / `api` / `local` — Modal is not remapped to local.
 
+## Headline scope: which fields a class score covers (#95)
+
+A class headline is only comparable with another class's headline when both
+cover their whole live field map (`DEFAULT_FIELD_TYPES`). The merger
+headline has historically been MAUD answer accuracy alone (`maud_clauses`),
+and the correspondence GT carries only a few of its eleven fields, so neither
+may sit unflagged beside a full-field score.
+
+`metrics.scorecard_honesty.headline_scope(doc_class, field_counts)` reports:
+
+| Key | Meaning |
+| --- | --- |
+| `headline_scope` | `"maud_only"` (merger scored on `maud_clauses` alone), `"partial"` (some live fields never carried GT), `"full"`, or `None` (no field data / unknown class) |
+| `headline_label` | Human label, e.g. `MAUD answers only (maud_clauses); not a field-level score` or `3 of 11 fields carry GT (...)` |
+| `scored_fields` | field → number of scored documents |
+| `unscored_fields` | live fields that no document scored |
+| `field_coverage` | share of live fields scored at least once |
+
+`aggregate_quality_honest(rows, doc_class=...)` adds these keys when rows carry
+`field_scores` (top level, `extraction.` or `scores.`); without `doc_class` the
+result shape is unchanged. `specialist_grid_rows` adds the same keys per row
+when documents carry `field_scores` or `scored_fields`, resolving the class
+from `doc_class`, the specialist name, or `SPECIALIST_DOC_TYPES`. The grid
+report marks a MAUD-only score with `†` and a partial score with `‡`, with a
+footnote naming what the score covers.
+
 ## Confidence and reasoning knobs
 
 `confidence` and `reasoning` are model-emitted traces, not extraction

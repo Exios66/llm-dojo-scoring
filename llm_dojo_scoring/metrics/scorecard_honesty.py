@@ -30,6 +30,8 @@ __all__ = [
     "assess_extraction_gt",
     "unscorable_extraction_result",
     "aggregate_quality_honest",
+    "headline_scope",
+    "MAUD_HEADLINE_FIELDS",
     "export_quality_verdict",
     "score_format_layer",
     "check_schema_promotion_gate",
@@ -398,20 +400,94 @@ def unscorable_extraction_result(
     }
 
 
+#: Merger fields that carry MAUD answers. A merger headline whose scored
+#: fields are all in this set is MAUD accuracy, not a field-level score (#95).
+MAUD_HEADLINE_FIELDS: frozenset[str] = frozenset({"maud_clauses"})
+
+
+def _row_field_scores(row: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    """The per-field scores a document row carries, wherever it nests them."""
+    for holder in (row, row.get("extraction"), row.get("scores")):
+        if isinstance(holder, Mapping) and isinstance(holder.get("field_scores"), Mapping):
+            return holder["field_scores"]
+    return None
+
+
+def headline_scope(
+    doc_class: str | None,
+    field_counts: Mapping[str, int] | Sequence[str],
+) -> dict[str, Any]:
+    """Which live fields a class headline actually covers (#95, #94).
+
+    ``field_counts`` maps each scored field to the number of documents that
+    scored it (or is a plain list of scored fields). The live field map comes
+    from ``DEFAULT_FIELD_TYPES``. ``headline_scope`` is:
+
+    - ``"maud_only"`` — a merger headline built from MAUD answers alone; its
+      ``headline_label`` says so, because it is MAUD accuracy, not a field mean;
+    - ``"partial"`` — some live fields never carried ground truth, so the
+      headline is not comparable with a class scored on its whole field map;
+    - ``"full"`` — every live field was scored at least once;
+    - ``None`` — nothing was scored or the class has no live field map.
+    """
+    from ..scoring.suites import DEFAULT_FIELD_TYPES
+
+    counts = (
+        {str(k): int(v) for k, v in field_counts.items()}
+        if isinstance(field_counts, Mapping)
+        else {str(k): 1 for k in field_counts}
+    )
+    scored = sorted(field for field, n in counts.items() if n > 0)
+    live = list(DEFAULT_FIELD_TYPES.get(str(doc_class or ""), {}))
+    unscored = [field for field in live if field not in set(scored)]
+    out: dict[str, Any] = {
+        "headline_scope": None,
+        "headline_label": None,
+        "scored_fields": {field: counts[field] for field in scored},
+        "unscored_fields": unscored,
+        "field_coverage": (
+            round(sum(1 for f in live if f in set(scored)) / len(live), 6) if live else None
+        ),
+    }
+    if not scored or not live:
+        return out
+    if doc_class == "merger_agreement" and set(scored) <= MAUD_HEADLINE_FIELDS:
+        out["headline_scope"] = "maud_only"
+        out["headline_label"] = "MAUD answers only (maud_clauses); not a field-level score"
+    elif unscored:
+        out["headline_scope"] = "partial"
+        out["headline_label"] = (
+            f"{len(live) - len(unscored)} of {len(live)} fields carry GT "
+            f"({', '.join(f for f in live if f not in set(unscored))})"
+        )
+    else:
+        out["headline_scope"] = "full"
+        out["headline_label"] = f"all {len(live)} fields"
+    return out
+
+
 def aggregate_quality_honest(
     doc_results: Sequence[Mapping[str, Any]],
     *,
     score_key: str = "overall_score",
     precision: int | None = 4,
+    doc_class: str | None = None,
 ) -> dict[str, Any]:
     """Quality mean excludes unscorable rows, retaining real zero (#16).
 
     The default keeps four-decimal fmean behavior. ``precision=None`` preserves
     legacy consumer sum/length arithmetic without rounding; population and
     empty-support policy remain canonical for either precision mode.
+
+    When ``doc_class`` is given and rows carry ``field_scores``, the result
+    also reports the scored population (:func:`headline_scope`): which live
+    fields carried GT, in how many documents, and whether the headline covers
+    the whole field map (#95).
     """
     scored_vals: list[float] = []
     n_unscorable = 0
+    field_counts: dict[str, int] = {}
+    saw_fields = False
     for row in doc_results:
         if row.get("status") == "unscorable":
             n_unscorable += 1
@@ -421,8 +497,17 @@ def aggregate_quality_honest(
             val = row["extraction"].get("overall_score")
         if isinstance(val, (int, float)) and not isinstance(val, bool):
             scored_vals.append(float(val))
+            fields = _row_field_scores(row)
+            if fields is not None:
+                saw_fields = True
+                for field in fields:
+                    field_counts[str(field)] = field_counts.get(str(field), 0) + 1
     n_scored = len(scored_vals)
+    population: dict[str, Any] = {}
+    if doc_class is not None and saw_fields:
+        population = headline_scope(doc_class, field_counts)
     return {
+        **population,
         "n_scored": n_scored,
         "n_unscorable": n_unscorable,
         "quality_mean": (
