@@ -872,7 +872,7 @@ def build_grid_report(
         for row in card["cost"]:
             lines.append(
                 "| {session} | {documents} | {busy} | {metered} | {share} | {per_doc} | {billed} |".format(
-                    session=row["session"],
+                    session=_cell(row["session"]),
                     documents=row["documents"],
                     busy=_fmt_usd(row["busy_gpu_usd"]),
                     metered=_fmt_usd(row["metered_usd"]),

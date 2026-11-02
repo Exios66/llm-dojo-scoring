@@ -171,3 +171,14 @@ def test_rescore_drops_non_finite_stored_values(tmp_path):
     text = pathlib.Path(result["output"]).read_text(encoding="utf-8")
     assert "NaN" not in text and "Infinity" not in text
     json.loads(text, parse_constant=lambda c: pytest.fail(c))
+
+
+def test_grid_cost_table_escapes_session_names():
+    """A ``|`` in an experiment name cannot split the cost row into extra columns."""
+    from llm_dojo_scoring.analysis.grid import build_grid_report
+
+    md = build_grid_report(
+        documents=[{"experiment": "gpu|baseline", "specialist": "contract", "status": "ok"}],
+        experiments=[{"name": "gpu|baseline"}],
+    )
+    assert "gpu|baseline" not in md.replace("gpu\\|baseline", "")
