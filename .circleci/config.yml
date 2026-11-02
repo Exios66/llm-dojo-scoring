@@ -1,44 +1,26 @@
 version: 2.1
 
 # Free-tier CircleCI gate for the Dojo (shared scoring engine for llm-mailroom
-# and local-mailroom-sandbox, so a red main here breaks both). Same service and
-# shape as local-mailroom-sandbox/.circleci/config.yml. Runs on every push and
-# PR automatically once the repo is followed in CircleCI; to BLOCK merges, mark
-# these checks as required in the GitHub branch protection rule for main:
-#   ci/circleci: lint
-#   ci/circleci: test-3.11
-#   ci/circleci: test-3.12
-# (matrix jobs are named test-<version>; there is no plain "test" check).
+# and local-mailroom-sandbox, so a red main here breaks both). Same shape as
+# llm-mailroom/.circleci/config.yml: ONE job named `test` that runs every
+# network-free, key-free correctness check, so branch protection needs a single
+# required context:
+#
+#   ci/circleci: test
+#
+# Runs on every push and PR once the project is followed in CircleCI. Keep the
+# job name `test`: renaming it (or splitting it into a matrix) changes the
+# status context and silently un-requires the gate.
 
 executors:
   py:
-    parameters:
-      version:
-        type: string
-        default: "3.11"
     docker:
-      - image: cimg/python:<< parameters.version >>
+      - image: cimg/python:3.11
     resource_class: small
 
 jobs:
-  lint:
-    executor: py
-    steps:
-      - checkout
-      - run:
-          name: Install ruff
-          command: pip install --quiet ruff
-      - run:
-          name: ruff (correctness gate, config in pyproject.toml)
-          command: ruff check llm_dojo_scoring tests scripts examples
-
   test:
-    parameters:
-      version:
-        type: string
-    executor:
-      name: py
-      version: << parameters.version >>
+    executor: py
     steps:
       - checkout
       - run:
@@ -48,28 +30,43 @@ jobs:
           command: git fetch --tags --force && (git fetch --unshallow 2>/dev/null || true)
       - restore_cache:
           keys:
-            - pip-v1-<< parameters.version >>-{{ checksum "pyproject.toml" }}
+            - pip-v2-{{ checksum "pyproject.toml" }}
       - run:
-          name: Install (dev extra)
-          command: pip install -e ".[dev]"
+          name: Install (dev extra + ruff)
+          command: pip install -e ".[dev]" ruff
       - save_cache:
-          key: pip-v1-<< parameters.version >>-{{ checksum "pyproject.toml" }}
+          key: pip-v2-{{ checksum "pyproject.toml" }}
           paths:
             - ~/.cache/pip
       - run:
+          name: ruff (correctness gate, config in pyproject.toml)
+          command: ruff check llm_dojo_scoring tests scripts examples
+      - run:
+          name: Prepare test results dir
+          command: mkdir -p test-results
+      - run:
           # One test (test_cli_publish_dry_run_json) calls git ls-remote / gh and
           # skips itself when gh is unavailable; everything else is offline.
-          name: Pytest
+          name: Pytest (no network, no real LLM)
           command: python -m pytest tests -q --junitxml=test-results/junit.xml
+          no_output_timeout: 20m
+      - run:
+          # Guarded: the script lands with PR #104; until then main skips it.
+          name: Golden scores unchanged (scripts/freeze_goldens.py --check)
+          command: |
+            if [ -f scripts/freeze_goldens.py ]; then
+              python scripts/freeze_goldens.py --check
+            else
+              echo "scripts/freeze_goldens.py not present; skipping golden check"
+            fi
       - store_test_results:
           path: test-results
 
   release-chain:
     # main only. check_chain() errors when pyproject is behind the newest tag, so
     # running it on PRs would turn every branch cut before a release red.
-    executor:
-      name: py
-      version: "3.11"
+    # Informational: not a required check.
+    executor: py
     steps:
       - checkout
       - run:
@@ -82,11 +79,13 @@ jobs:
 workflows:
   ci:
     jobs:
-      - lint
       - test:
-          matrix:
-            parameters:
-              version: ["3.11", "3.12"]
+          filters:
+            branches:
+              ignore:
+                - gh-pages
+            tags:
+              ignore: /.*/
       - release-chain:
           filters:
             branches:
