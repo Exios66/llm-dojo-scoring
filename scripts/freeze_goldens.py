@@ -341,7 +341,15 @@ def main(argv: list[str] | None = None) -> int:
                 SCORES_PATH.write_text(previous, encoding="utf-8")
 
         SCORES_PATH.parent.mkdir(parents=True, exist_ok=True)
-        SCORES_PATH.write_text(regenerated, encoding="utf-8")
+        # Write a sibling temp file and atomically replace: a failed or partial
+        # write never truncates the committed baseline.
+        staged = SCORES_PATH.with_name(SCORES_PATH.name + ".tmp")
+        try:
+            staged.write_text(regenerated, encoding="utf-8")
+            os.replace(staged, SCORES_PATH)
+        except BaseException:
+            staged.unlink(missing_ok=True)
+            raise
         try:
             recollected = render_goldens(collect_goldens(load_inputs()))
         except BaseException:

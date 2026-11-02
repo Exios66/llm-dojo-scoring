@@ -377,7 +377,11 @@ consistency is degenerate on GT-shaped predictions.
 
 Consumers must not hand-maintain the enum values they teach a specialist.
 SAND-042 found a correspondence hint teaching `demand_payment`,
-`schedule_meeting`, … — labels the scorer marks wrong — and the insurance and
+`schedule_meeting`, … — spellings outside the canonical hint vocabulary.
+(`normalize_intent` still folds those two aliases to `payment_demand` /
+`meeting_invite` before scoring, so their predictions are not necessarily
+marked wrong; the hint audit flags them because the alias table is a safety
+net, not the contract.) — and the insurance and
 corporate-record hints had the same defect. The dojo generates the hints from
 the scored vocabulary instead (`llm_dojo_scoring.schemas.scored_enums`):
 

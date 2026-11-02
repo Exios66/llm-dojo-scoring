@@ -3,8 +3,11 @@
 SAND-042 found that every consumer hand-maintained the ``intent`` values it
 appended to extraction prompts, and those lists had drifted from the scored
 vocabulary: the model was taught ``demand_payment`` / ``schedule_meeting``
-while the scorer only credits ``payment_demand`` / ``meeting_invite``. The
-same defect sat in the insurance and corporate-record hints.
+while the canonical tokens are ``payment_demand`` / ``meeting_invite``. Those
+two spellings are folded by ``normalize_intent`` before scoring, so they are not
+necessarily marked wrong, but other drifted values are, and a hint must teach
+the canonical vocabulary. The same defect sat in the insurance and
+corporate-record hints.
 
 The dojo owns the scored vocabulary (:mod:`.intents`, :mod:`.corpus`), so it
 now owns the hints as well, the way :mod:`.maud_schema` already does for MAUD:
@@ -134,6 +137,7 @@ def enum_hint_violations(
     - a taught value that is not a scored token (the SAND-042 failure);
     - a scored token the consumer never teaches (a right answer it cannot give);
     - a vendored field that the dojo does not score as an enum;
+    - a scored enum field absent from ``vendored`` (an empty mapping fails);
     - a vendored value that is neither a string nor iterable (reported, not raised).
 
     Matching is case-sensitive after stripping surrounding whitespace, on
@@ -143,6 +147,8 @@ def enum_hint_violations(
     """
     problems: list[str] = []
     known = SCORED_ENUM_FIELDS.get(doc_type, {})
+    for field in sorted(set(known) - set(vendored)):
+        problems.append(f"{doc_type}.{field}: scored enum field missing from vendored hints")
     for field in sorted(vendored):
         if field not in known:
             problems.append(f"{doc_type}.{field}: not a scored enum field")

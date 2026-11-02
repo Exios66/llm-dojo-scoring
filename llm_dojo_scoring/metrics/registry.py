@@ -361,7 +361,7 @@ metrics:
   reviewer_class_accuracy:
     tier: 0
     description: "Reviewer class accuracy against verified targets"
-    applicable_agents: [CLASSIFIERS]
+    applicable_agents: [sorter_reviewer]
     aggregation: mean
     source: "reviewer.score_review_lane"
     citation: "Exact class match over reviewer-answered rows with a verified target."
@@ -370,7 +370,7 @@ metrics:
   reviewer_wrong_accept_rate:
     tier: 0
     description: "Wrong auto-accepts divided by accepted documents with truth"
-    applicable_agents: [CLASSIFIERS]
+    applicable_agents: [sorter_reviewer]
     aggregation: mean
     source: "reviewer.score_review_lane"
     citation: "Accepted = the pipeline routed the document to extraction; wrong = accepted label differs from the verified target."
@@ -379,7 +379,7 @@ metrics:
   reviewer_wrong_accept_upper_95:
     tier: 0
     description: "Exact 95% one-sided upper bound on the wrong-accept rate"
-    applicable_agents: [CLASSIFIERS]
+    applicable_agents: [sorter_reviewer]
     aggregation: none
     source: "reviewer.score_review_lane"
     citation: "Clopper-Pearson exact upper bound (analysis.calibration.clopper_pearson_upper)."
@@ -388,7 +388,7 @@ metrics:
   reviewer_routed_to_human_review_rate:
     tier: 0
     description: "Share of reviewer-reached documents parked for a person"
-    applicable_agents: [CLASSIFIERS]
+    applicable_agents: [sorter_reviewer]
     aggregation: mean
     source: "reviewer.score_review_lane"
     citation: "Pipeline reviewer routing basis: a human verdict, no usable answer, or a confidence below the class cutoff."
@@ -397,7 +397,7 @@ metrics:
   reviewer_accept_rule_violations:
     tier: 0
     description: "Accepted documents that violate the reviewer accept rule"
-    applicable_agents: [CLASSIFIERS]
+    applicable_agents: [sorter_reviewer]
     aggregation: sum
     units: "int"
     source: "reviewer.score_review_lane"
@@ -503,7 +503,7 @@ metrics:
   reviewer_accepted_accuracy:
     tier: 1
     description: "Class accuracy among documents the reviewer accepted"
-    applicable_agents: [CLASSIFIERS]
+    applicable_agents: [sorter_reviewer]
     aggregation: mean
     source: "reviewer.score_review_lane"
     citation: "Correct accepted labels divided by accepted documents with truth."
@@ -512,7 +512,7 @@ metrics:
   reviewer_class_macro_accuracy:
     tier: 1
     description: "Unweighted mean of per-class reviewer accuracy"
-    applicable_agents: [CLASSIFIERS]
+    applicable_agents: [sorter_reviewer]
     aggregation: mean
     source: "reviewer.score_review_lane"
     citation: "Macro accuracy over expected classes with at least one reviewer answer."
@@ -521,7 +521,7 @@ metrics:
   reviewer_subclass_accuracy:
     tier: 1
     description: "Subclass accuracy where the reviewer got the class right"
-    applicable_agents: [CLASSIFIERS]
+    applicable_agents: [sorter_reviewer]
     aggregation: mean
     source: "reviewer.score_review_lane"
     citation: "Exact subclass match over class-correct rows with a scorable target subclass; contract keys use normalize_subtype."
@@ -530,7 +530,7 @@ metrics:
   reviewer_verdict_accuracy:
     tier: 1
     description: "Reviewer verdict accuracy against the derivable expected verdict"
-    applicable_agents: [CLASSIFIERS]
+    applicable_agents: [sorter_reviewer]
     aggregation: mean
     source: "reviewer.score_review_lane"
     citation: "Expected verdict from the sorter handoff and target: reclassify, correct subclass, or continue."
@@ -539,7 +539,7 @@ metrics:
   reviewer_confidence_ece:
     tier: 1
     description: "Expected calibration error of reviewer confidence"
-    applicable_agents: [CLASSIFIERS]
+    applicable_agents: [sorter_reviewer]
     aggregation: none
     source: "reviewer.score_review_lane"
     citation: "Equal-width 10-bin ECE over answered rows with a verified target."
@@ -548,7 +548,7 @@ metrics:
   reviewer_confidence_brier:
     tier: 1
     description: "Brier score of reviewer confidence"
-    applicable_agents: [CLASSIFIERS]
+    applicable_agents: [sorter_reviewer]
     aggregation: none
     source: "reviewer.score_review_lane"
     citation: "Mean squared difference between reviewer confidence and class correctness."
@@ -557,7 +557,7 @@ metrics:
   reviewer_cost_per_accepted_usd:
     tier: 1
     description: "Reviewer cost per accepted document"
-    applicable_agents: [CLASSIFIERS]
+    applicable_agents: [sorter_reviewer]
     aggregation: none
     units: "usd"
     source: "reviewer.score_review_lane"

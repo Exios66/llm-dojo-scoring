@@ -432,7 +432,7 @@
               "repo": "MAIL"
             }
           ],
-          "defined_in": "analysis.diagnostics",
+          "defined_in": "scoring.field_scoring",
           "private": false
         },
         "parse_date": {
@@ -443,7 +443,7 @@
               "repo": "MAIL"
             }
           ],
-          "defined_in": "analysis.diagnostics",
+          "defined_in": "scoring.field_scoring",
           "private": false
         },
         "parse_duration_days": {
@@ -465,7 +465,7 @@
               "repo": "MAIL"
             }
           ],
-          "defined_in": "analysis.diagnostics",
+          "defined_in": "scoring.field_scoring",
           "private": false
         }
       },
@@ -614,7 +614,7 @@
               "repo": "SBX"
             }
           ],
-          "defined_in": "analysis.serving",
+          "defined_in": "analysis.cost",
           "private": false
         },
         "normalize_serving_record": {
@@ -652,7 +652,7 @@
               "repo": "SBX"
             }
           ],
-          "defined_in": "analysis.serving",
+          "defined_in": "analysis.cost",
           "private": false
         },
         "score_serving_run": {
@@ -1444,7 +1444,7 @@
               "repo": "SBX"
             }
           ],
-          "defined_in": "prompts",
+          "defined_in": "prompts.lineage",
           "private": false
         },
         "default_prompt_version": {
@@ -1455,7 +1455,7 @@
               "repo": "SBX"
             }
           ],
-          "defined_in": "prompts",
+          "defined_in": "prompts.lineage",
           "private": false
         },
         "get_prompt": {
@@ -1522,7 +1522,7 @@
               "repo": "SBX"
             }
           ],
-          "defined_in": "prompts",
+          "defined_in": "prompts.lineage",
           "private": false
         },
         "latest_prompt_version": {
@@ -1533,7 +1533,7 @@
               "repo": "SBX"
             }
           ],
-          "defined_in": "prompts",
+          "defined_in": "prompts.lineage",
           "private": false
         },
         "list_prompt_versions": {
@@ -1549,7 +1549,7 @@
               "repo": "SBX"
             }
           ],
-          "defined_in": "prompts",
+          "defined_in": "prompts.lineage",
           "private": false
         },
         "list_prompts": {
@@ -1576,7 +1576,7 @@
               "repo": "SBX"
             }
           ],
-          "defined_in": "prompts",
+          "defined_in": "prompts.lineage",
           "private": false
         }
       },

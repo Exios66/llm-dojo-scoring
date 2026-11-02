@@ -13,6 +13,7 @@ value. Empty or one-class populations return ``None``.
 from __future__ import annotations
 
 import math
+import numbers
 import random
 from statistics import NormalDist
 from collections.abc import Iterable, Sequence
@@ -41,8 +42,9 @@ _MAX_REQUIRED_SAMPLES = 1_000_000
 
 def _validate_count(value: int, name: str, *, upper: int | None = None) -> int:
     """Require a non-negative integer, optionally bounded by *upper*."""
-    if isinstance(value, bool) or not isinstance(value, int):
+    if isinstance(value, bool) or not isinstance(value, numbers.Integral):
         raise TypeError(f"{name} must be an integer")
+    value = int(value)  # NumPy / pandas integral counts
     if value < 0 or (upper is not None and value > upper):
         raise ValueError(f"{name} must be between 0 and {upper if upper is not None else 'infinity'}")
     return value
@@ -352,7 +354,9 @@ def cutoff_for_precision(
         accepted = [label for score, label in pairs if score >= cutoff]
         if accepted and sum(accepted) / len(accepted) >= precision:
             return {
-                "cutoff": round(cutoff, 6),
+                # Unrounded: rounding could admit a lower-scoring row that
+                # the reported precision excluded.
+                "cutoff": cutoff,
                 "precision": round(sum(accepted) / len(accepted), 6),
                 "accept_rate": round(len(accepted) / len(pairs), 6) if pairs else None,
                 "recall": round(sum(accepted) / total_positive, 6) if total_positive else None,

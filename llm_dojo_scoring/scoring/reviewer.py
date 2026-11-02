@@ -18,6 +18,7 @@ and cutoff application.
 
 from __future__ import annotations
 
+import math
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping, Sequence
@@ -249,15 +250,7 @@ class ReviewRecord:
             human_doc_subclass=_label(row.get("human_doc_subclass")),
             prompt_tokens=row.get("prompt_tokens", usage.get("prompt_tokens")),
             completion_tokens=row.get("completion_tokens", usage.get("completion_tokens")),
-            cost_usd=(
-                float(row["cost_usd"])
-                if isinstance(row.get("cost_usd"), (int, float)) and not isinstance(row.get("cost_usd"), bool)
-                else (
-                    float(row["cost"])
-                    if isinstance(row.get("cost"), (int, float)) and not isinstance(row.get("cost"), bool)
-                    else None
-                )
-            ),
+            cost_usd=_cost(row.get("cost_usd"), row.get("cost")),
             question_set=_label(
                 row.get("question_set")
                 or row.get("questions")
@@ -316,6 +309,15 @@ def _first_present(*values: Any) -> Any:
     for value in values:
         if value is not None:
             return value
+    return None
+
+
+def _cost(*candidates: Any) -> float | None:
+    """First finite numeric cost; NaN / inf are unpriced, never totals."""
+    for value in candidates:
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            number = float(value)
+            return number if math.isfinite(number) else None
     return None
 
 
@@ -786,16 +788,22 @@ def _operating_points(
                     "review_rate": round(1.0 - len(accepted) / len(rows), 6),
                 }
             )
+        # One descending pass: accumulate accepted / wrong counts and keep
+        # the lowest inclusive cutoff whose exact bound clears ``risk``.
         risk_cutoff = None
-        for cutoff in unique:
-            accepted = [correct for value, correct in rows if value >= cutoff]
-            if not accepted:
+        ordered = sorted(rows, key=lambda row: row[0], reverse=True)
+        n_accepted = n_wrong = 0
+        position = 0
+        for cutoff in sorted(unique, reverse=True):
+            while position < len(ordered) and ordered[position][0] >= cutoff:
+                n_accepted += 1
+                n_wrong += 0 if ordered[position][1] else 1
+                position += 1
+            if not n_accepted:
                 continue
-            wrong = sum(1 for correct in accepted if not correct)
-            upper = clopper_pearson_upper(wrong, len(accepted), confidence=confidence)
+            upper = clopper_pearson_upper(n_wrong, n_accepted, confidence=confidence)
             if upper is not None and upper <= risk:
                 risk_cutoff = cutoff
-                break
         out[name] = {
             "n": len(rows),
             "target_accuracy": target_accuracy,
