@@ -37,6 +37,9 @@ from .cost import resolve_cost_basis
 from ..metrics.scorecard_honesty import (
     COST_BASIS_VALUES,
     canonical_error_class,
+    _is_maud_only_doc,
+    _live_fields,
+    _numeric_field_names,
     _row_field_scores,
     headline_scope,
     normalize_serving_kind_token,
@@ -167,43 +170,61 @@ def _doc(value: GridDocument | Mapping[str, Any]) -> GridDocument:
 
 
 def _doc_scored_fields(value: Mapping[str, Any]) -> tuple[str, ...] | None:
-    """Scored field names from ``scored_fields`` or ``field_scores`` keys, if any."""
+    """Scored field names from ``scored_fields`` or ``field_scores``, if any.
+
+    ``scored_fields`` may be a list, tuple, set or frozenset (returned sorted);
+    a bare string is one field name. Otherwise the names are the
+    ``field_scores`` keys whose score is a real number (not ``None``, not a
+    bool). ``None`` means the document reported no field data.
+    """
     explicit = value.get("scored_fields")
-    if isinstance(explicit, (list, tuple)):
+    if isinstance(explicit, str):
+        return (explicit,) if explicit else ()
+    if isinstance(explicit, (list, tuple, set, frozenset)):
         return tuple(sorted(str(f) for f in explicit))
     fields = _row_field_scores(value)
-    return tuple(sorted(str(f) for f in fields)) if fields is not None else None
+    return tuple(sorted(_numeric_field_names(fields))) if fields is not None else None
 
 
 def _resolve_doc_class(specialist: str, docs: Sequence[GridDocument]) -> str | None:
-    """Native class for a grid row: explicit ``doc_class``, else the specialist name."""
-    from ..scoring.suites import DEFAULT_FIELD_TYPES, SPECIALIST_DOC_TYPES
+    """Native class for a grid row, or ``None`` when it cannot be resolved.
 
-    explicit = sorted({d.doc_class for d in docs if d.doc_class})
-    if len(explicit) == 1:
+    One explicit ``doc_class`` (stripped, lower-cased) wins; conflicting
+    explicit values resolve to ``None``. Otherwise the specialist name is used
+    when it is a class or a ``SPECIALIST_DOC_TYPES`` name.
+    """
+    explicit = sorted({d.doc_class.strip().lower() for d in docs if d.doc_class and d.doc_class.strip()})
+    if len(explicit) > 1:
+        return None
+    if explicit:
         return explicit[0]
-    if specialist in DEFAULT_FIELD_TYPES:
-        return specialist
-    return SPECIALIST_DOC_TYPES.get(specialist)
+    return _live_fields(specialist)[0]
 
 
 def _row_scope(specialist: str, scored_docs: Sequence[GridDocument]) -> dict[str, Any]:
-    """Headline-scope keys for one row; all ``None`` when no field data was given."""
+    """Headline-scope keys for one row; empty when no scored document has field data.
+
+    A row with field data always makes a claim: when it cannot be a real scope
+    (class unresolved, or some scored documents lack field data) the scope is
+    ``"unknown"`` with a label saying why. Scope is classified per document, so
+    MAUD-only documents beside full-field ones read as ``"mixed"``.
+    """
     reported = [d for d in scored_docs if d.scored_fields is not None]
-    if not reported or len(reported) != len(scored_docs):
-        # No field data, or some scored documents did not report theirs: the
-        # headline mean includes documents of unknown scope, so make no claim.
-        return {
-            "headline_scope": None,
-            "headline_label": None,
-            "scored_fields": None,
-            "unscored_fields": None,
-        }
+    if not reported:
+        return {}
+    doc_class = _resolve_doc_class(specialist, scored_docs)
+    live = set(_live_fields(doc_class)[1])
     counts: dict[str, int] = {}
     for doc in reported:
-        for field in doc.scored_fields or ():
+        for field in set(doc.scored_fields or ()):
             counts[field] = counts.get(field, 0) + 1
-    scope = headline_scope(_resolve_doc_class(specialist, scored_docs), counts)
+    scope = headline_scope(
+        doc_class,
+        counts,
+        n_docs=len(scored_docs),
+        n_docs_with_fields=len(reported),
+        maud_only_docs=sum(1 for d in reported if _is_maud_only_doc(d.scored_fields or (), live)),
+    )
     return {key: scope[key] for key in ("headline_scope", "headline_label", "scored_fields", "unscored_fields")}
 
 
@@ -341,13 +362,16 @@ def specialist_grid_rows(
     ``ok`` counts explicit ``True`` values, independently of errors; it is
     ``None`` when both that count and the error count are zero.
 
-    When documents report their scored fields (``field_scores`` or
-    ``scored_fields``), each row also carries ``headline_scope`` /
+    When scored documents report their scored fields (``field_scores`` or
+    ``scored_fields``), the row also carries ``headline_scope`` /
     ``headline_label`` / ``scored_fields`` / ``unscored_fields`` from
     :func:`~llm_dojo_scoring.metrics.scorecard_honesty.headline_scope`, so a
-    merger row built from MAUD answers alone (``"maud_only"``) or a class
-    scored on a subset of its fields (``"partial"``) is never read as a
-    full-field headline (#95).
+    merger row built from MAUD answers alone (``"maud_only"``), partly from
+    them (``"mixed"``) or a class scored on a subset of its fields
+    (``"partial"``) is never read as a full-field headline (#95). Where no
+    claim can be made (class unresolved, or some scored documents lack field
+    data) the scope is ``"unknown"``. These keys are present **only** when
+    field data was given; a row without any has exactly the pre-#95 shape.
 
     Raise ``ValueError`` for mixed nonempty metric IDs within a group or an
     invalid experiment serving kind, and ``TypeError`` for unsupported
@@ -618,26 +642,50 @@ def _fmt_score(row: Mapping[str, Any]) -> str:
 
 
 #: Score-cell markers for headlines that do not cover the class's field map (#95).
-_SCOPE_MARKS = {"maud_only": " †", "partial": " ‡"}
+#: ``mixed`` shares ``†`` with ``maud_only`` (its footnote gives the k-of-n split);
+#: ``unknown`` is ``?``: field data exists but no scope claim can be made.
+_SCOPE_MARKS = {"maud_only": " †", "mixed": " †", "partial": " ‡", "unknown": " ?"}
 
 
 def _scope_footnotes(rows: Sequence[Mapping[str, Any]]) -> list[str]:
-    """One footnote per flagged (specialist, scope) naming what its score covers."""
-    notes: dict[tuple[str, str], str] = {}
+    """One footnote per flagged (specialist, scope, label) naming what it covers.
+
+    Experiments whose flagged rows share a label share a note. When one
+    specialist ends up with more than one distinct note, each names its
+    experiment(s) in parentheses after the specialist.
+    """
+    notes: dict[tuple[str, str, str], dict[str, Any]] = {}
     for row in rows:
         scope = row.get("headline_scope")
-        key = (str(row["specialist"]), str(scope))
-        if scope in _SCOPE_MARKS and key not in notes:
-            notes[key] = (
-                f"{_SCOPE_MARKS[scope].strip()} **{row['specialist']}**: {row['headline_label']}"
-                + (
-                    f"; unscored: {', '.join(row['unscored_fields'])}"
-                    if scope == "partial" and row.get("unscored_fields")
-                    else ""
-                )
-                + ". Not comparable with full-field headlines."
-            )
-    return list(notes.values())
+        if scope not in _SCOPE_MARKS:
+            continue
+        label = str(row.get("headline_label"))
+        entry = notes.setdefault(
+            (str(row["specialist"]), str(scope), label),
+            {"scope": scope, "row": row, "experiments": []},
+        )
+        exp = str(row.get("experiment") or "")
+        if exp and exp not in entry["experiments"]:
+            entry["experiments"].append(exp)
+    per_specialist: dict[str, int] = {}
+    for specialist, _, _ in notes:
+        per_specialist[specialist] = per_specialist.get(specialist, 0) + 1
+    out: list[str] = []
+    for (specialist, scope, label), entry in notes.items():
+        row = entry["row"]
+        who = f"**{specialist}**"
+        if per_specialist[specialist] > 1 and entry["experiments"]:
+            who += f" ({', '.join(entry['experiments'])})"
+        text = f"{_SCOPE_MARKS[scope].strip()} {who}: {label}"
+        if scope == "partial" and row.get("unscored_fields"):
+            text += f"; unscored: {', '.join(row['unscored_fields'])}"
+        text += (
+            ". Scope unknown; do not compare with full-field headlines."
+            if scope == "unknown"
+            else ". Not comparable with full-field headlines."
+        )
+        out.append(text)
+    return out
 
 
 def _fmt_ok(row: Mapping[str, Any]) -> str:

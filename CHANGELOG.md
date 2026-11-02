@@ -43,12 +43,15 @@ Format based on Keep a Changelog; versioning is SemVer.
   teach labels the scorer marks wrong. Exported from the package root.
 
 - `metrics.scorecard_honesty.headline_scope` (#95): says which live fields a
-  class headline covers (`maud_only` / `partial` / `full`).
-  `aggregate_quality_honest(..., doc_class=)` and `specialist_grid_rows` carry
-  `headline_scope`, `headline_label`, `scored_fields`, `unscored_fields`; the
-  grid report marks a MAUD-only merger score (`†`) and a partial-field score
-  (`‡`) with a footnote, so neither reads as a comparable full-field headline.
-  Additive: existing keys and the default aggregate shape are unchanged.
+  class headline covers (`maud_only` / `mixed` / `partial` / `full` /
+  `unknown`), classified per document so MAUD-only documents beside full-field
+  ones read as `mixed`, never `full`. `aggregate_quality_honest(..., doc_class=)`
+  and `specialist_grid_rows` carry `headline_scope`, `headline_label`,
+  `scored_fields`, `unscored_fields`; the grid keys appear only on rows with
+  field data, so rows without it are unchanged. The report marks MAUD-only and
+  mixed scores (`†`), partial scores (`‡`) and unknown scores (`?`) with
+  per-experiment footnotes. A field counts as scored only for a real-number
+  score. Additive: existing keys and the default aggregate shape are unchanged.
 
 - Correspondence GT audit (#94): `schemas.correspondence_gt_audit` and
   `scripts/audit_correspondence_gt.py` flag templated `subject_matter` and
