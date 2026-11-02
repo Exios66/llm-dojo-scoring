@@ -42,6 +42,14 @@ Format based on Keep a Changelog; versioning is SemVer.
   `cms_source_table`) from the scored vocabulary, so a consumer can no longer
   teach labels the scorer marks wrong. Exported from the package root.
 
+- `metrics.scorecard_honesty.headline_scope` (#95): says which live fields a
+  class headline covers (`maud_only` / `partial` / `full`).
+  `aggregate_quality_honest(..., doc_class=)` and `specialist_grid_rows` carry
+  `headline_scope`, `headline_label`, `scored_fields`, `unscored_fields`; the
+  grid report marks a MAUD-only merger score (`†`) and a partial-field score
+  (`‡`) with a footnote, so neither reads as a comparable full-field headline.
+  Additive: existing keys and the default aggregate shape are unchanged.
+
 - `metrics.score_changelog`: machine ledger of releases that moved a score,
   used by `compare_serving` to explain a release mismatch.
 

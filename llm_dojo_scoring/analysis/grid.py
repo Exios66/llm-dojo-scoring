@@ -37,6 +37,7 @@ from .cost import resolve_cost_basis
 from ..metrics.scorecard_honesty import (
     COST_BASIS_VALUES,
     canonical_error_class,
+    headline_scope,
     normalize_serving_kind_token,
     summarize_run_completion,
 )
@@ -75,6 +76,12 @@ class GridDocument:
     #: ``"unscorable"`` when the document has no extractable ground truth
     #: (#16): it counts toward ``n`` / errors / cost but never toward quality.
     status: str | None = None
+    #: Native document class, when the specialist name does not already say it.
+    doc_class: str | None = None
+    #: Fields that carried ground truth and were scored for this document
+    #: (from ``field_scores`` keys). ``None`` when the producer did not say;
+    #: used to flag partial / MAUD-only headlines (#95).
+    scored_fields: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -153,7 +160,50 @@ def _doc(value: GridDocument | Mapping[str, Any]) -> GridDocument:
         error=value.get("error"),
         error_class=value.get("error_class"),
         status=_doc_status(value),
+        doc_class=str(value["doc_class"]) if value.get("doc_class") else None,
+        scored_fields=_doc_scored_fields(value),
     )
+
+
+def _doc_scored_fields(value: Mapping[str, Any]) -> tuple[str, ...] | None:
+    """Scored field names from ``scored_fields`` or ``field_scores`` keys, if any."""
+    explicit = value.get("scored_fields")
+    if isinstance(explicit, (list, tuple)):
+        return tuple(sorted(str(f) for f in explicit))
+    for holder in (value, value.get("scores"), value.get("extraction")):
+        if isinstance(holder, Mapping) and isinstance(holder.get("field_scores"), Mapping):
+            return tuple(sorted(str(f) for f in holder["field_scores"]))
+    return None
+
+
+def _resolve_doc_class(specialist: str, docs: Sequence[GridDocument]) -> str | None:
+    """Native class for a grid row: explicit ``doc_class``, else the specialist name."""
+    from ..scoring.suites import DEFAULT_FIELD_TYPES, SPECIALIST_DOC_TYPES
+
+    explicit = sorted({d.doc_class for d in docs if d.doc_class})
+    if len(explicit) == 1:
+        return explicit[0]
+    if specialist in DEFAULT_FIELD_TYPES:
+        return specialist
+    return SPECIALIST_DOC_TYPES.get(specialist)
+
+
+def _row_scope(specialist: str, scored_docs: Sequence[GridDocument]) -> dict[str, Any]:
+    """Headline-scope keys for one row; all ``None`` when no field data was given."""
+    reported = [d for d in scored_docs if d.scored_fields is not None]
+    if not reported:
+        return {
+            "headline_scope": None,
+            "headline_label": None,
+            "scored_fields": None,
+            "unscored_fields": None,
+        }
+    counts: dict[str, int] = {}
+    for doc in reported:
+        for field in doc.scored_fields or ():
+            counts[field] = counts.get(field, 0) + 1
+    scope = headline_scope(_resolve_doc_class(specialist, scored_docs), counts)
+    return {key: scope[key] for key in ("headline_scope", "headline_label", "scored_fields", "unscored_fields")}
 
 
 def _doc_status(value: Mapping[str, Any]) -> str | None:
@@ -290,6 +340,14 @@ def specialist_grid_rows(
     ``ok`` counts explicit ``True`` values, independently of errors; it is
     ``None`` when both that count and the error count are zero.
 
+    When documents report their scored fields (``field_scores`` or
+    ``scored_fields``), each row also carries ``headline_scope`` /
+    ``headline_label`` / ``scored_fields`` / ``unscored_fields`` from
+    :func:`~llm_dojo_scoring.metrics.scorecard_honesty.headline_scope`, so a
+    merger row built from MAUD answers alone (``"maud_only"``) or a class
+    scored on a subset of its fields (``"partial"``) is never read as a
+    full-field headline (#95).
+
     Raise ``ValueError`` for mixed nonempty metric IDs within a group or an
     invalid experiment serving kind, and ``TypeError`` for unsupported
     record types. Numeric conversion errors not handled by :func:`_num`
@@ -344,6 +402,7 @@ def specialist_grid_rows(
             "serving_kind": exp.serving_kind if exp else None,
             "gpus": exp.gpus if exp else None,
             "gpu_type": exp.gpu_type if exp else "",
+            **_row_scope(specialist, [d for d in scorable if d.score is not None]),
         }
         rows.append(row)
     order = {name: i for i, name in enumerate(exp_order)}
@@ -554,7 +613,29 @@ def _fmt_score(row: Mapping[str, Any]) -> str:
     text = f"{float(score):.3f}"
     if row.get("coverage") is not None:
         text += f" ({float(row['coverage']) * 100:.0f}%)"
-    return text
+    return text + _SCOPE_MARKS.get(str(row.get("headline_scope")), "")
+
+
+#: Score-cell markers for headlines that do not cover the class's field map (#95).
+_SCOPE_MARKS = {"maud_only": " †", "partial": " ‡"}
+
+
+def _scope_footnotes(rows: Sequence[Mapping[str, Any]]) -> list[str]:
+    """One footnote per flagged specialist naming what its score actually covers."""
+    notes: dict[str, str] = {}
+    for row in rows:
+        scope = row.get("headline_scope")
+        if scope in _SCOPE_MARKS and row["specialist"] not in notes:
+            notes[str(row["specialist"])] = (
+                f"{_SCOPE_MARKS[scope].strip()} **{row['specialist']}**: {row['headline_label']}"
+                + (
+                    f"; unscored: {', '.join(row['unscored_fields'])}"
+                    if scope == "partial" and row.get("unscored_fields")
+                    else ""
+                )
+                + ". Not comparable with full-field headlines."
+            )
+    return list(notes.values())
 
 
 def _fmt_ok(row: Mapping[str, Any]) -> str:
@@ -711,6 +792,10 @@ def build_grid_report(
         for row in rows:
             lines.append("| " + " | ".join(row) + " |")
         lines.append("")
+        footnotes = _scope_footnotes(card["specialists"])
+        if footnotes:
+            lines.extend(f"- {note}" for note in footnotes)
+            lines.append("")
 
     if card["cost"]:
         lines.append("## Cost")
