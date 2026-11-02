@@ -1227,7 +1227,9 @@ def embed_texts(texts: list[str]) -> Optional[list[list[float]]]:
         return None
 
 
-_CMS_FACILITY_RE = re.compile(r"\bfacility\s+provider\s*(?:id|number|no)?[\s:#.-]*([a-z0-9]+)")
+_CMS_FACILITY_RE = re.compile(
+    r"\bfacility\s+provider\s*(?:\b(?:id|identifier|number|no)\b)?[\s:#.-]*([a-z0-9]*\d[a-z0-9]*)"
+)
 _CMS_NPI_RE = re.compile(r"(?<![a-z0-9])(\d{10})(?![a-z0-9])")
 _CMS_NDC_RE = re.compile(r"(?<![a-z0-9])(\d{9,11})(?![a-z0-9])")
 
@@ -1409,8 +1411,12 @@ def score_extraction(
     doc_text: str | None = None,
     *,
     audit_predicted: dict | None = None,
+    cms_aware: bool = True,
 ) -> ExtractionScoreResult:
     """Score one extraction deterministically.
+
+    ``cms_aware=False`` disables the CMS-row rules (#93) — for callers whose
+    ``expected`` is not ground truth (the auditor compares two model outputs).
 
     - Only expected fields with a non-null/non-empty value count toward the
       overall score (null expectations are not requirements). Stringified
@@ -1429,6 +1435,7 @@ def score_extraction(
       annotation keys are excluded. ``audit_predicted``, when supplied,
       preserves predictions omitted from GT scoring for this audit.
     """
+    had_prediction = bool(predicted)
     predicted = predicted or {}
     expected = expected or {}
     partial_gt_fields = get_partial_gt_fields()
@@ -1446,7 +1453,7 @@ def score_extraction(
     # CMS rows (expected carries a valid ``cms_source_table``) get the CMS-aware
     # fields: documented-absent adjuster / denial_reasons and identifier-aware
     # supporting_documents. Non-CMS rows keep the generic behaviour.
-    cms_table = expected_cms_source_table(doc_class, expected)
+    cms_table = expected_cms_source_table(doc_class, expected) if cms_aware else None
 
     for key, exp_value in expected.items():
         if key in NEVER_SCORED_FIELDS:
@@ -1458,14 +1465,25 @@ def score_extraction(
             if cms_table is not None and key in CMS_DOCUMENTED_ABSENT_FIELDS:
                 # Documented-absent on a CMS row: saying nothing is correct,
                 # a stated value is a false positive. Never skipped.
-                absent_pred = parse_json_container(predicted.get(key))
-                field_scores[key] = 1.0 if is_empty_value(absent_pred) else 0.0
+                # No parsed prediction earns nothing (a null row must not
+                # collect free credit for staying silent).
+                if had_prediction:
+                    absent_pred = parse_json_container(predicted.get(key))
+                    if isinstance(absent_pred, (list, tuple)):
+                        absent_pred = [i for i in absent_pred if not is_empty_value(i)]
+                    field_scores[key] = 1.0 if is_empty_value(absent_pred) else 0.0
             continue
         field_type = (field_types.get(key)
                       or (CMS_ROW_FIELD_TYPES["cms_source_table"] if key == "cms_source_table"
                           else _heuristic_field_type(key, exp_value)))
         if cms_table is not None and key in CMS_ROW_FIELD_TYPES:
             field_type = CMS_ROW_FIELD_TYPES[key]
+        if (doc_class == "insurance_claim" and key == "claim_type"
+                and str(parse_json_container(predicted.get(key)) or "").strip().lower() in CMS_CLAIM_TYPES):
+            # A CMS table token is never a product line (#93): exact label
+            # scoring, so it earns no fuzzy credit even when the row was not
+            # detected as CMS (no expected_subclass passed).
+            field_type = "label"
         # Judge escalation uses the configured type's band, not the
         # containment override applied for scoring below.
         original_field_type = field_type

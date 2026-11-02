@@ -1419,7 +1419,9 @@ class ScoringSuite:
             keys = set(expected) | set(predicted)
             ftypes = {k: "free_text" for k in keys if k != "confidence"}
         result = score_extraction(
-            self.doc_type or "audit", ftypes, predicted, expected, doc_text=doc_text
+            self.doc_type or "audit", ftypes, predicted, expected, doc_text=doc_text,
+            # The reference is a specialist output, not GT: no CMS-row rules.
+            cms_aware=False,
         )
         overall = result.overall_score
         disagreement = None if overall is None else round(1.0 - overall, 4)
