@@ -270,6 +270,10 @@ from .schemas.corporate_record_schema import (
     subclass_schema as corporate_record_subclass_schema,
 )
 from .schemas.schema_contract import contract_empty_payload, contract_violations
+from .schemas.scored_enums import (  # noqa: E402
+    SCORED_ENUM_FIELDS, enum_hint_violations, scored_enum_hint, scored_enum_schema,
+    scored_enum_schemas, scored_vocabulary,
+)
 from .pipeline.mailroom import (
     EXTRACT_CLASS_ALIASES,
     LIVE_DOC_TYPES,
@@ -414,6 +418,8 @@ __all__ = [
     "corporate_record_json_schema", "render_corporate_record_block",
     "corporate_record_field_types", "corporate_record_subclass_schema",
     "contract_empty_payload", "contract_violations",
+    "SCORED_ENUM_FIELDS", "enum_hint_violations", "scored_enum_hint", "scored_enum_schema",
+    "scored_enum_schemas", "scored_vocabulary",
     "parse_gt_fields", "scoring_gt_fields", "normalize_field_values",
     "parse_json_container", "is_empty_value", "gt_presence_map",
     "presence_expectations_from_cuad_labels", "derive_presence_from_gt",
