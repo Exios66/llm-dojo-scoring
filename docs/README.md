@@ -8,6 +8,7 @@ The docs are grouped by purpose. The package layout itself is described in
 | Doc | Read it for |
 |:---|:---|
 | [`guides/SCORING.md`](guides/SCORING.md) | How every score is computed: field types, entity lists, classification, factuality audit, task keys |
+| [`guides/COMPARABILITY.md`](guides/COMPARABILITY.md) | Scorer-release guards, the release ledger, and `dojo-rescore` |
 | [`guides/MIGRATION.md`](guides/MIGRATION.md) | Moving a pipeline project onto the Dojo; the v0.26.0 subpackage layout |
 | [`guides/PROMPTS.md`](guides/PROMPTS.md) | The importable prompt catalog and frozen eval-environment lineage |
 | [`guides/GRID_REPORTS.md`](guides/GRID_REPORTS.md) | Specialist grid reports for local → Modal GPU studies |
@@ -32,6 +33,7 @@ The docs are grouped by purpose. The package layout itself is described in
 | [`contracts/METRIC_IDS.md`](contracts/METRIC_IDS.md) | Metric identity by doc class: which scores may be compared |
 | [`contracts/SCORECARD_HONESTY.md`](contracts/SCORECARD_HONESTY.md) | Fail-closed GT, format vs extraction, completion and cost, captured knobs |
 | [`contracts/SANDBOX_SCORING.md`](contracts/SANDBOX_SCORING.md) | Sandbox MAUD/CUAD rubrics and the v0.26.0 contract truth corrections |
+| [`contracts/REVIEWER_SCORING.md`](contracts/REVIEWER_SCORING.md) | Decision/LLM reviewer records, risk bounds, calibration, routing, and cost |
 | [`contracts/ARCHIVE_SCORING.md`](contracts/ARCHIVE_SCORING.md) | The archivist scoring block and audit row |
 
 ## History: proposals and status records

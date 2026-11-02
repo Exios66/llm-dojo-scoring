@@ -163,6 +163,16 @@ HONEST GAP: compliance_filing has zero rows in Lucius-Morningstar/mailroom-datas
 
 HONEST GAP: TTFT is None unless a first-token timestamp or explicit ttft_seconds is recorded — never inferred from e2e/n_tokens. GPU utilization, KV-cache occupancy, and GPU memory are local-only; API-key providers (OpenRouter, …) cannot supply them. Local Ollama tags without an OpenRouter price table leave estimated_cost_usd None (do not fabricate electricity).
 
+## Reviewer lane
+
+The reviewer lane is scored by `score_review_lane` (see
+[`REVIEWER_SCORING.md`](../contracts/REVIEWER_SCORING.md)). It reports class
+and subclass accuracy, wrong auto-accepts with an exact 95% upper bound,
+required sample size, confidence calibration, routing/cause counts, the
+model's verdict confusion, and reviewer cost. A class with fewer than 299
+clean accepts cannot claim the 1% risk bar at 95% confidence; the scorecard
+reports the supported bound instead.
+
 ## Local vs API serving
 
 Importable comparison for any consumer that has paired local and API-key runs

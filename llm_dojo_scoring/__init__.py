@@ -22,7 +22,7 @@ from . import config, prompts  # noqa: E402
 from .schemas import corpus, equivalences  # noqa: E402
 from .scoring import asr, claims_consistency, classification, content_scoring, extraction_metrics, field_scoring, suites, tasks, trace_knobs  # noqa: E402
 from .pipeline import archive, intake, mailroom  # noqa: E402
-from .metrics import bundles, doc_bundles, emitter, profiles, pruning, registry  # noqa: E402
+from .metrics import bundles, doc_bundles, emitter, profiles, pruning, registry, score_changelog  # noqa: E402
 from .analysis import bootstrap, cost, diagnostics, error_analysis, experiment, export, failure_modes, grid, interpret, io, report, serving, visualize  # noqa: E402
 from .integrations import langfuse_sync, phoenix_sync  # noqa: E402
 
@@ -120,6 +120,33 @@ from .scoring.tasks import (
     score_task,
     task_kind,
 )
+from .scoring.reviewer import (
+    CONTINUE_VERDICTS,
+    DECISION_VERDICTS,
+    HUMAN_VERDICTS,
+    ReviewRecord,
+    review_record_from_run_item,
+    score_review_lane,
+)
+from .scoring.rescore import (
+    RescoreError,
+    diff_scorecards,
+    rescore_file,
+    rescore_record,
+    rescore_records,
+)
+from .analysis.calibration import (
+    auroc,
+    brier_score,
+    clopper_pearson_upper,
+    cross_fit_cutoffs,
+    cutoff_at_target,
+    cutoff_for_precision,
+    expected_calibration_error,
+    reliability_bins,
+    required_samples,
+    spearman,
+)
 from .scoring.asr import (
     character_error_rate,
     score_transcription,
@@ -195,6 +222,11 @@ from .metrics.pruning import (
     headline_metrics,
     prune_metrics,
     prune_records,
+)
+from .metrics.score_changelog import (
+    SCORE_CHANGELOG,
+    score_changes_between,
+    score_changes_for_metric,
 )
 from .schemas.corpus import (
     CORPUS_DOC_TYPES,
@@ -334,6 +366,13 @@ __all__ = [
     "get_jaccard", "legalbench_score", "maud_docclass_score", "maud_extraction_score",
     "maud_question_score",
     "multiclass_score", "normalize_task_answer", "score_task", "task_kind",
+    "CONTINUE_VERDICTS", "DECISION_VERDICTS", "HUMAN_VERDICTS",
+    "ReviewRecord", "review_record_from_run_item", "score_review_lane",
+    "RescoreError", "diff_scorecards", "rescore_file", "rescore_record", "rescore_records",
+    "auroc", "brier_score", "clopper_pearson_upper", "cross_fit_cutoffs",
+    "cutoff_at_target", "cutoff_for_precision", "expected_calibration_error",
+    "reliability_bins", "required_samples", "spearman",
+    "SCORE_CHANGELOG", "score_changes_between", "score_changes_for_metric",
     "BUILTIN_BUNDLES", "Bundle", "bundle_metric_names", "get_bundle",
     "validate_bundle",
     "Emitter", "get_emitter", "LangfuseSink", "LocalManifestSink",

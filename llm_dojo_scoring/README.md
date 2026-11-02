@@ -41,6 +41,8 @@ llm_dojo_scoring/
 | | `asr` | Word and character error rates for transcription/OCR |
 | | `agent_rubrics` | Dependency-free isolation-eval rubrics |
 | | `tasks` | `score_task`: task-aware scoring across the document hierarchy |
+| | `reviewer` | Reviewer-lane scorecard: class/subclass, risk bound, calibration, routing, verdicts, cost |
+| | `rescore` | Re-score stored predictions under the current scorer and report score moves |
 | | `suites` | Dedicated per-agent scoring suites: the API consumers call |
 | | `trace_knobs` | Confidence and reasoning captured as experimental knobs |
 | **`pipeline/`** | `mailroom` | The live llm-mailroom pipeline contract |
@@ -55,7 +57,9 @@ llm_dojo_scoring/
 | | `profiles` | One declarative scoring identity per agent |
 | | `emitter` | The one routing layer for scores (JSONL manifest, Langfuse sink) |
 | | `scorecard_honesty` | Fail-closed GT, metric identity, provenance and completion checks |
+| | `score_changelog` | Machine ledger of releases that moved a score |
 | **`analysis/`** | `bootstrap`, `diagnostics`, `error_analysis`, `failure_modes` | Statistics and diagnostics over runs |
+| | `calibration` | Exact risk bounds, sample size, ECE/Brier, AUROC, cutoffs |
 | | `interpret`, `report`, `visualize` | Verdicts, Markdown report, plots |
 | | `export`, `io`, `experiment` | Workbook/codebook export, artifact loaders, experiment-log records |
 | | `grid`, `serving`, `cost` | Specialist grid reports, local-vs-API serving, token cost |

@@ -102,6 +102,19 @@ _METRIC_ID_BY_NAME: dict[str, str] = {
     "content_topic_f1_macro": "pipeline.enron.topic_f1_macro",
     "sentiment_accuracy": "pipeline.enron.sentiment_accuracy",
     "sentiment_f1_macro": "pipeline.enron.sentiment_f1_macro",
+    # Reviewer lane (issue #97 follow-on): one identity per measure, not per model.
+    "reviewer_class_accuracy": "review.lane.class_accuracy",
+    "reviewer_class_macro_accuracy": "review.lane.macro_accuracy",
+    "reviewer_accepted_accuracy": "review.lane.accepted_accuracy",
+    "reviewer_wrong_accept_rate": "review.lane.wrong_accept_rate",
+    "reviewer_wrong_accept_upper_95": "review.lane.wrong_accept_upper_95",
+    "reviewer_routed_to_human_review_rate": "review.lane.human_review_rate",
+    "reviewer_accept_rule_violations": "review.lane.accept_rule_violations",
+    "reviewer_subclass_accuracy": "review.lane.subclass_accuracy",
+    "reviewer_verdict_accuracy": "review.lane.verdict_accuracy",
+    "reviewer_confidence_ece": "review.lane.confidence_ece",
+    "reviewer_confidence_brier": "review.lane.confidence_brier",
+    "reviewer_cost_per_accepted_usd": "review.lane.cost_per_accepted_usd",
 }
 
 # Doc class / suite → allowed metric_ids for comparisons (documented in docs/contracts/METRIC_IDS.md).

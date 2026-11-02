@@ -244,6 +244,7 @@ class PackageIndex:
     """Static facts about this package used while interpreting consumer ASTs."""
 
     def __init__(self) -> None:
+        """Load the package, its legacy aliases, and every module path once."""
         import llm_dojo_scoring as dojo
         from llm_dojo_scoring._layout import LEGACY_MODULES
 

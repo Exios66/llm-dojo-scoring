@@ -1301,6 +1301,7 @@
             "metric": "extraction_f1"
           }
         },
+        "scorer_version_unverified": true,
         "table": [
           {
             "api": 0.2,
