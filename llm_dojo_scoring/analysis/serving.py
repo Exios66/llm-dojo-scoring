@@ -1238,6 +1238,13 @@ def emit_serving_scorecard(
         side_basis = (card.get("cost") or {}).get(side, {}).get("cost_basis")
         if side_basis:
             side_prov.setdefault("cost_basis", side_basis)
+        # Keep the leg's recorded release rather than re-stamping it as the
+        # installed one. An unparseable or missing stamp is not inherited: it
+        # keeps the strict-export fallback, and compare_serving already flags
+        # it as scorer_version_unverified on the comparison.
+        leg_version = (comparison.get(side) or {}).get("scorer_version")
+        if leg_version and _is_release(leg_version):
+            side_prov.setdefault("scorer_version", leg_version)
         for name, row in card["dashboard"].items():
             value = row.get(side)
             if not isinstance(value, (int, float)) or isinstance(value, bool):

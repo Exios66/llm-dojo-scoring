@@ -63,6 +63,10 @@ Format based on Keep a Changelog; versioning is SemVer.
   `audit_consumer_surface.py` reads git checkouts at HEAD, prunes skipped
   trees, records submodule aliases, and exits 2 (no write, no false drift) when
   pinned checkouts are unavailable.
+  `emit_serving_scorecard` keeps each leg's recorded `scorer_version` on the
+  emitted records instead of re-stamping it as the installed release; the
+  golden freezer's idempotence-failure message now says the previous baseline
+  is restored.
 - CUAD `parties` truth: defined-term annotations (`NMS CORP. ("Seller")`) are
   stripped before containment against the `Parties` spans (`party_core`). Found by
   the sandbox's extraction-gate vetting: 34% of correct party lists scored right.
