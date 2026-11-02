@@ -36,6 +36,12 @@ Format based on Keep a Changelog; versioning is SemVer.
   Serving records are refused because timings are not reproducible. A record
   without both ground truth and a prediction is skipped and named.
 
+- `schemas.scored_enums` (#96): `scored_vocabulary`, `scored_enum_schema(s)`,
+  `scored_enum_hint`, and `enum_hint_violations` generate consumer grammar hints
+  for every scored enum (`intent` per class, insurance `claim_type` and
+  `cms_source_table`) from the scored vocabulary, so a consumer can no longer
+  teach labels the scorer marks wrong. Exported from the package root.
+
 - `metrics.score_changelog`: machine ledger of releases that moved a score,
   used by `compare_serving` to explain a release mismatch.
 

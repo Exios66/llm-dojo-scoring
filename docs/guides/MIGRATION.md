@@ -47,6 +47,11 @@ from llm_dojo_scoring import rescore_file, score_changes_between
 
 `get_suite("sorter_reviewer").score(expected, predicted)` is unchanged.
 
+Scored-enum hints (#96): replace hand-maintained `intent` / `claim_type`
+lists in prompts and grammars with `scored_enum_hint` / `scored_enum_schemas`,
+or keep them vendored and assert `enum_hint_violations(doc_type, {...}) == []`
+in CI. See [`EXTRACTION_SCHEMAS.md`](../schemas/EXTRACTION_SCHEMAS.md#scored-enum-hints-96).
+
 ## 1. Install the package
 
 ```bash

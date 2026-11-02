@@ -373,6 +373,36 @@ consistency is degenerate on GT-shaped predictions.
    `contracts_specialist_v32` body is gone. Do not mix the
    `docclass` lineage into a comparison table without matching `prompt_id`.
 
+## Scored-enum hints (#96)
+
+Consumers must not hand-maintain the enum values they teach a specialist.
+SAND-042 found a correspondence hint teaching `demand_payment`,
+`schedule_meeting`, … — labels the scorer marks wrong — and the insurance and
+corporate-record hints had the same defect. The dojo generates the hints from
+the scored vocabulary instead (`llm_dojo_scoring.schemas.scored_enums`):
+
+| Class | Field | Source of the vocabulary |
+|---|---|---|
+| `corporate_record`, `correspondence`, `insurance_claim` | `intent` | `INTENT_LABELS` |
+| `insurance_claim` | `claim_type` | `INSURANCE_CLAIM_TYPES` (CMS tokens score as `health`) |
+| `insurance_claim` | `cms_source_table` | `CMS_SOURCE_TABLES` |
+
+```python
+from llm_dojo_scoring import (
+    enum_hint_violations, scored_enum_hint, scored_enum_schemas,
+)
+
+scored_enum_schemas("insurance_claim")   # {field: {"enum": [..., None], "description": ...}}
+scored_enum_hint("correspondence", "intent")  # prompt line, every token verbatim
+assert enum_hint_violations("correspondence", {"intent": MY_INTENTS}) == []
+```
+
+`enum_hint_violations` reports taught values that are not scored tokens,
+scored tokens a consumer never teaches, and vendored enums the dojo does not
+score. Alias spellings count as violations: `normalize_intent` folds them for
+stored answers, but a hint teaches canonical tokens only. A contract test
+fails if a `label`-typed field in `DEFAULT_FIELD_TYPES` has no hint.
+
 ## Import surface
 
 ```python
