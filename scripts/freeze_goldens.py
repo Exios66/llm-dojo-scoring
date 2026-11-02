@@ -369,7 +369,7 @@ def main(argv: list[str] | None = None) -> int:
         if recollected != regenerated:
             _restore()
             print(
-                "error: golden generation is not idempotent; baseline left in place",
+                "error: golden generation is not idempotent; previous baseline restored",
                 file=sys.stderr,
             )
             return 1
