@@ -19,9 +19,14 @@ python scripts/release.py check
 uv run --extra dev pytest tests/test_consumer_compat.py -q
 ```
 
-`release.py check` errors when `pyproject` is behind the newest tag, or when the version,
-`CHANGELOG.md`, README release pins and `tests/test_consumer_compat.py` disagree. In a
-shallow clone fetch tags first: `git fetch --unshallow --tags`.
+`release.py check` exits non-zero only on **errors**: `pyproject` and `__init__` versions
+disagree, `pyproject` is behind the newest tag, README release pins or
+`tests/test_consumer_compat.py` disagree with `pyproject`, or `CHANGELOG.md` sections are
+non-semver, duplicated or out of order. A tag with no `CHANGELOG.md` section, a stamped
+section with no local tag, and lightweight or oddly worded tags are only **warnings**
+(`WARN` lines, exit 0). A green check therefore does not prove every tag and changelog entry
+match: read the `WARN` lines and report them. In a shallow clone fetch tags first:
+`git fetch --unshallow --tags`.
 
 ## 2. Dojo: plan the release (dry run)
 
@@ -38,9 +43,17 @@ delete tags or amend release commits.
 1. **llm-mailroom** — `PYTHONPATH=src python src/scripts/bump_dojo_scoring.py --check`,
    then `--apply --tag vX.Y.Z` (its `/dojo-bump` skill). Verify the suite against the
    exact pinned revision, not a local editable install.
-2. **local-mailroom-sandbox** — update `_VENDOR_PINS` in `src/mailroom_sandbox/cli.py`
-   (tag plus commit SHA), then `sandbox fetch-deps` (its `/vendor-sync` skill). Its
-   vendor drift tests compare against sibling checkouts, so refresh those too.
+2. **local-mailroom-sandbox** — its `/vendor-sync` skill. Set `ref` and `sha` for
+   `llm-dojo-scoring` in `_VENDOR_PINS` (`src/mailroom_sandbox/cli.py`) to the tag and its
+   peeled commit. Then refresh `vendor/llm-dojo-scoring`:
+   - in the monorepo, import the merged Dojo revision into `../../packages/llm-dojo-scoring`
+     first (its `HEAD` must equal the pinned SHA), then
+     `python scripts/sync_vendor.py llm-dojo-scoring`;
+   - standalone, `sandbox fetch-deps` (SHA-checked, but it refreshes **both** pins, so
+     confirm only `vendor/llm-dojo-scoring` changed).
+   Update `vendor/README.md` and `vendor/llm-dojo-scoring/VENDOR.md`. Its drift test
+   compares against the sibling `../llm-dojo-scoring` at the pinned commit, so fetch that
+   commit there too.
 
 ## 4. Report
 
