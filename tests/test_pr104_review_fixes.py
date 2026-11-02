@@ -95,7 +95,7 @@ def test_risk_cutoff_matches_brute_force():
         accepted = [ok for c, ok in pairs if c >= cutoff]
         upper = clopper_pearson_upper(sum(not ok for ok in accepted), len(accepted))
         if upper is not None and upper <= 0.05:
-            expected = round(cutoff, 6)
+            expected = cutoff
             break
     assert out["contract"]["risk_cutoff"] == expected
 
@@ -180,3 +180,85 @@ def test_audit_defined_in_names_the_defining_module():
     )
     serving = data["modules"]["analysis.serving"]["attrs"]
     assert serving["estimate_cost"]["defined_in"] == "analysis.cost"
+
+
+# --- second review round ---------------------------------------------------
+
+
+def test_non_finite_primary_cost_falls_back_to_finite_alternative():
+    """A NaN ``cost_usd`` must not hide a finite ``cost``."""
+    from llm_dojo_scoring.scoring.reviewer import _cost
+
+    assert _cost(float("nan"), 0.02) == 0.02
+    assert _cost(float("inf"), None) is None
+
+
+def test_risk_cutoff_is_exact():
+    """The returned cutoff is the value the bound was checked at, unrounded."""
+    rows = [
+        ReviewRecord.from_mapping(_row(doc_id=f"d{i}", reviewer_confidence=0.8000004))
+        for i in range(80)
+    ] + [
+        ReviewRecord.from_mapping(
+            _row(doc_id="bad", reviewer_confidence=0.8000001, expected_doc_type="insurance_claim")
+        )
+    ]
+    out = _operating_points(rows, target_accuracy=0.95, risk=0.05, confidence=0.95)
+    assert out["contract"]["risk_cutoff"] == 0.8000004
+
+
+@pytest.mark.parametrize("task", ["transcription", "wer", "cer"])
+def test_rescore_transcription_aliases_take_raw_path_with_headline(task):
+    """``wer`` / ``cer`` resolve to transcription and score word accuracy."""
+    out = rescore_record({"task": task, "expected": "hello world", "predicted": "hello world"})
+    assert out["payload"]["task"] == "transcription"
+    assert out["score"] == 1.0
+
+
+def test_rescore_transcription_decodes_serialized_batches():
+    """A stored JSON array is still scored as a batch of documents."""
+    out = rescore_record(
+        {
+            "task": "transcription",
+            "expected": json.dumps(["a b", "c d"]),
+            "predicted": ("a b", "c x"),
+        }
+    )
+    assert out["payload"]["n"] == 2
+    assert out["score"] == 0.75
+
+
+def test_rescore_maud_clause_alias_takes_raw_path():
+    """``maud_clause`` resolves to maud_extraction and is not forced to an array."""
+    out = rescore_record({"task": "maud_clause", "expected": {}, "predicted": {}})
+    assert out["task"] == "maud_clause"
+    assert "maud_question_accuracy" in out["payload"]
+
+
+def test_audit_star_import_binds_dispatch_aliases():
+    """``from ... import *`` then ``get_suite("sorter")`` pins the literal."""
+    surface = _collect(
+        "from llm_dojo_scoring.scoring.suites import *\n"
+        "get_suite('sorter')\n"
+    )
+    assert "sorter" in surface.dispatch_literals["get_suite"]
+
+
+def test_freeze_goldens_stages_each_write_uniquely(tmp_path, monkeypatch):
+    """Each write gets its own staging file; no shared ``.tmp`` path remains."""
+    module = load_script("freeze_goldens")
+    target = tmp_path / "scores.json"
+    seen = []
+    real_replace = module.os.replace
+
+    def spy(src, dst):
+        """Record each staging path, then replace for real."""
+        seen.append(src)
+        real_replace(src, dst)
+
+    monkeypatch.setattr(module.os, "replace", spy)
+    module._atomic_write(target, "one")
+    module._atomic_write(target, "two")
+    assert target.read_text(encoding="utf-8") == "two"
+    assert len(set(map(str, seen))) == 2
+    assert list(tmp_path.iterdir()) == [target]

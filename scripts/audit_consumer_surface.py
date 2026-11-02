@@ -390,14 +390,18 @@ class Surface:
                 module = node.module or ""
                 if module == PACKAGE:
                     for alias in node.names:
-                        if alias.name in DISPATCH_FUNCS:
+                        if alias.name == "*":
+                            _bind_star_dispatch(function_aliases, PACKAGE)
+                        elif alias.name in DISPATCH_FUNCS:
                             function_aliases[alias.asname or alias.name] = alias.name
                         if alias.name in self.index.module_names:
                             module_aliases.add(alias.asname or alias.name)
                 elif module.startswith(PACKAGE + "."):
                     canonical, _ = self.index.resolve(module[len(PACKAGE) + 1 :])
                     for alias in node.names:
-                        if alias.name in DISPATCH_FUNCS:
+                        if alias.name == "*":
+                            _bind_star_dispatch(function_aliases, f"{PACKAGE}.{canonical}")
+                        elif alias.name in DISPATCH_FUNCS:
                             function_aliases[alias.asname or alias.name] = alias.name
                         elif f"{canonical}.{alias.name}" in self.index.module_paths:
                             # ``from llm_dojo_scoring.scoring import suites``
@@ -472,6 +476,13 @@ class Surface:
             self.dispatch_literals[name][arg.value].add(site)
         else:
             self.dispatch_dynamic[name].add((*site, ast.unparse(arg)))
+
+
+def _bind_star_dispatch(function_aliases: dict[str, str], module_name: str) -> None:
+    """A star import binds the dispatch functions the module exports."""
+    for star in _star_names(module_name):
+        if star in DISPATCH_FUNCS:
+            function_aliases[star] = star
 
 
 def _star_names(module_name: str) -> list[str]:

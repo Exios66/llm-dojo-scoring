@@ -42,6 +42,9 @@ def _headline(payload: Mapping[str, Any] | None) -> float | None:
     for key in (
         "overall_score",
         "exact_match",
+        # transcription (WER/CER) and MAUD extraction headlines
+        "word_accuracy",
+        "maud_question_accuracy",
         "accuracy",
         "overall_extraction_score",
         "f1_macro",
@@ -69,8 +72,28 @@ def _mapping(value: Any, field: str) -> Mapping[str, Any]:
     raise RescoreError(f"{field} must be an object, got {type(value).__name__}")
 
 
-#: Label tasks whose scorers accept mappings or scalar text, not only arrays.
-_RAW_INPUT_TASKS = frozenset({"maud_extraction", "transcription", "intake"})
+#: Scoring kinds whose scorers accept mappings or scalar text, not only arrays.
+#: Matched on the resolved kind, so aliases (``wer``, ``cer``, ``maud_clause``)
+#: take the same path.
+_RAW_INPUT_KINDS = frozenset({"maud_extraction", "transcription", "intake"})
+
+
+def _raw_input(value: Any) -> Any:
+    """Normalise a raw-input side without forcing it into an array.
+
+    Tuples become lists and JSON-array strings are decoded, so a stored batch
+    is still scored as a batch; scalar text and mappings pass through.
+    """
+    if isinstance(value, tuple):
+        return list(value)
+    if isinstance(value, str) and value.lstrip().startswith("["):
+        try:
+            parsed = json.loads(value)
+        except ValueError:
+            return value
+        if isinstance(parsed, list):
+            return parsed
+    return value
 
 
 def _sequence(value: Any, field: str) -> list[Any]:
@@ -147,10 +170,10 @@ def _rescore_classification(record: Mapping[str, Any], given: Mapping[str, Any] 
         raise RescoreError("classification record has no expected labels")
     if predicted is None:
         raise RescoreError("classification record has no predicted labels")
-    if task in _RAW_INPUT_TASKS:
+    if TASK_KINDS.get(task, task) in _RAW_INPUT_KINDS:
         # These scorers take label maps / scalar text themselves; forcing an
         # array would refuse valid stored records.
-        expected_list, predicted_list = expected, predicted
+        expected_list, predicted_list = _raw_input(expected), _raw_input(predicted)
     else:
         expected_list = _sequence(expected, "expected")
         predicted_list = _sequence(predicted, "predicted")

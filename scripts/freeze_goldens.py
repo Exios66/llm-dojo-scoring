@@ -32,6 +32,7 @@ import json
 import math
 import os
 import sys
+import tempfile
 from dataclasses import fields, is_dataclass
 from difflib import unified_diff
 from pathlib import Path
@@ -52,6 +53,23 @@ SCORES_PATH = GOLDEN_DIR / "scores.json"
 SCORER_VERSION_PLACEHOLDER = "<SCORER_VERSION>"
 DEFAULT_AMBIGUOUS_BAND = (0.5, 0.85)
 
+
+
+def _atomic_write(path: Path, text: str) -> None:
+    """Write ``text`` to a unique sibling temp file, then atomically replace ``path``.
+
+    Each call stages its own file, so overlapping ``--write`` runs cannot share
+    a staging path, and a failed write never truncates the committed baseline.
+    """
+    fd, staged_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    staged = Path(staged_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(text)
+        os.replace(staged, path)
+    except BaseException:
+        staged.unlink(missing_ok=True)
+        raise
 
 def canonicalize(value: Any) -> Any:
     """Recursively convert a scoring payload into JSON-safe canonical data.
@@ -338,18 +356,10 @@ def main(argv: list[str] | None = None) -> int:
             if previous is None:
                 SCORES_PATH.unlink(missing_ok=True)
             else:
-                SCORES_PATH.write_text(previous, encoding="utf-8")
+                _atomic_write(SCORES_PATH, previous)
 
         SCORES_PATH.parent.mkdir(parents=True, exist_ok=True)
-        # Write a sibling temp file and atomically replace: a failed or partial
-        # write never truncates the committed baseline.
-        staged = SCORES_PATH.with_name(SCORES_PATH.name + ".tmp")
-        try:
-            staged.write_text(regenerated, encoding="utf-8")
-            os.replace(staged, SCORES_PATH)
-        except BaseException:
-            staged.unlink(missing_ok=True)
-            raise
+        _atomic_write(SCORES_PATH, regenerated)
         try:
             recollected = render_goldens(collect_goldens(load_inputs()))
         except BaseException:
