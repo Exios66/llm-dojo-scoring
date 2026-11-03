@@ -5,6 +5,7 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-11-03
 ### Fixed
 
 - `uv.lock` recorded `llm-dojo-scoring` 0.25.0 after the 0.26.0 cut; relocked so it
