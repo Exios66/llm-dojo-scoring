@@ -1,11 +1,9 @@
 # Migrating pipeline projects (llm-mailroom) to llm-dojo-scoring
 
-> **Release checklist:** every `release_chain` cut must bump the
-> `__version__` **fallback** in `llm_dojo_scoring/__init__.py` to the new
-> release number (the importable value derives from installed metadata via
-> `importlib.metadata`; the hardcoded fallback only serves uninstalled
-> checkouts, so it must track the cut). Sweep the README badge/pins and the
-> `docs/*.md` header stamps in the same commit.
+> **Release checklist:** move the version with `python scripts/release.py cut X.Y.Z --apply`,
+> then run `uv lock`. Do not hand-edit `pyproject.toml`, `llm_dojo_scoring/__init__.py`,
+> the README pins or `tests/test_consumer_compat.py`; `release.py check` fails when they,
+> or `uv.lock`, disagree. See [RELEASES.md](RELEASES.md).
 
 The scoring code that lives in the pipeline projects is now consolidated in
 `llm-dojo-scoring`. Migrating is a drop-in import swap — every public name is
@@ -26,6 +24,75 @@ The flat modules moved into subpackages (`schemas/`, `scoring/`, `pipeline/`, `m
   `llm_dojo_scoring._layout.LEGACY_MODULES[...]`, or match by function name under the `llm_dojo_scoring` prefix.
 - **Docs moved** into `docs/guides`, `docs/schemas`, `docs/contracts` and `docs/history`.
 - New code should import from the subpackage path.
+
+### Legacy flat import paths
+
+Every pre-0.26 flat path and where the module lives now. Both work and resolve to the same
+module object. Prefer the new path in new code. The plan is for the flat paths to start
+warning in 0.27 and to be removed once consumers have moved.
+
+| Flat path (≤ 0.25) | Subpackage path (0.26+) |
+|:---|:---|
+| `llm_dojo_scoring._paired` | `llm_dojo_scoring.scoring._paired` |
+| `llm_dojo_scoring.agent_rubrics` | `llm_dojo_scoring.scoring.agent_rubrics` |
+| `llm_dojo_scoring.archive` | `llm_dojo_scoring.pipeline.archive` |
+| `llm_dojo_scoring.asr` | `llm_dojo_scoring.scoring.asr` |
+| `llm_dojo_scoring.bootstrap` | `llm_dojo_scoring.analysis.bootstrap` |
+| `llm_dojo_scoring.bundles` | `llm_dojo_scoring.metrics.bundles` |
+| `llm_dojo_scoring.claims_consistency` | `llm_dojo_scoring.scoring.claims_consistency` |
+| `llm_dojo_scoring.classification` | `llm_dojo_scoring.scoring.classification` |
+| `llm_dojo_scoring.content_scoring` | `llm_dojo_scoring.scoring.content_scoring` |
+| `llm_dojo_scoring.corporate_record_relabel` | `llm_dojo_scoring.schemas.corporate_record_relabel` |
+| `llm_dojo_scoring.corporate_record_schema` | `llm_dojo_scoring.schemas.corporate_record_schema` |
+| `llm_dojo_scoring.corpus` | `llm_dojo_scoring.schemas.corpus` |
+| `llm_dojo_scoring.cost` | `llm_dojo_scoring.analysis.cost` |
+| `llm_dojo_scoring.cuad_schema` | `llm_dojo_scoring.schemas.cuad_schema` |
+| `llm_dojo_scoring.diagnostics` | `llm_dojo_scoring.analysis.diagnostics` |
+| `llm_dojo_scoring.doc_bundles` | `llm_dojo_scoring.metrics.doc_bundles` |
+| `llm_dojo_scoring.emitter` | `llm_dojo_scoring.metrics.emitter` |
+| `llm_dojo_scoring.equivalences` | `llm_dojo_scoring.schemas.equivalences` |
+| `llm_dojo_scoring.error_analysis` | `llm_dojo_scoring.analysis.error_analysis` |
+| `llm_dojo_scoring.experiment` | `llm_dojo_scoring.analysis.experiment` |
+| `llm_dojo_scoring.export` | `llm_dojo_scoring.analysis.export` |
+| `llm_dojo_scoring.extraction_metrics` | `llm_dojo_scoring.scoring.extraction_metrics` |
+| `llm_dojo_scoring.failure_modes` | `llm_dojo_scoring.analysis.failure_modes` |
+| `llm_dojo_scoring.field_scoring` | `llm_dojo_scoring.scoring.field_scoring` |
+| `llm_dojo_scoring.field_support` | `llm_dojo_scoring.scoring.field_support` |
+| `llm_dojo_scoring.grid` | `llm_dojo_scoring.analysis.grid` |
+| `llm_dojo_scoring.gt_metadata` | `llm_dojo_scoring.schemas.gt_metadata` |
+| `llm_dojo_scoring.intake` | `llm_dojo_scoring.pipeline.intake` |
+| `llm_dojo_scoring.intents` | `llm_dojo_scoring.schemas.intents` |
+| `llm_dojo_scoring.interpret` | `llm_dojo_scoring.analysis.interpret` |
+| `llm_dojo_scoring.io` | `llm_dojo_scoring.analysis.io` |
+| `llm_dojo_scoring.langfuse_sync` | `llm_dojo_scoring.integrations.langfuse_sync` |
+| `llm_dojo_scoring.legalbench_scoring` | `llm_dojo_scoring.scoring.legalbench_scoring` |
+| `llm_dojo_scoring.mailroom` | `llm_dojo_scoring.pipeline.mailroom` |
+| `llm_dojo_scoring.maud` | `llm_dojo_scoring.schemas.maud` |
+| `llm_dojo_scoring.maud_schema` | `llm_dojo_scoring.schemas.maud_schema` |
+| `llm_dojo_scoring.metric_meta` | `llm_dojo_scoring.metrics.metric_meta` |
+| `llm_dojo_scoring.phoenix_sync` | `llm_dojo_scoring.integrations.phoenix_sync` |
+| `llm_dojo_scoring.pilot_labels` | `llm_dojo_scoring.pipeline.pilot_labels` |
+| `llm_dojo_scoring.pilot_summary` | `llm_dojo_scoring.pipeline.pilot_summary` |
+| `llm_dojo_scoring.pipeline_scoring` | `llm_dojo_scoring.pipeline.pipeline_scoring` |
+| `llm_dojo_scoring.pipeline_verdict` | `llm_dojo_scoring.pipeline.pipeline_verdict` |
+| `llm_dojo_scoring.profiles` | `llm_dojo_scoring.metrics.profiles` |
+| `llm_dojo_scoring.pruning` | `llm_dojo_scoring.metrics.pruning` |
+| `llm_dojo_scoring.registry` | `llm_dojo_scoring.metrics.registry` |
+| `llm_dojo_scoring.report` | `llm_dojo_scoring.analysis.report` |
+| `llm_dojo_scoring.sandbox_agent_scoring` | `llm_dojo_scoring.pipeline.sandbox_agent_scoring` |
+| `llm_dojo_scoring.sandbox_composite` | `llm_dojo_scoring.pipeline.sandbox_composite` |
+| `llm_dojo_scoring.sandbox_schema_adherence` | `llm_dojo_scoring.pipeline.sandbox_schema_adherence` |
+| `llm_dojo_scoring.sandbox_scoring` | `llm_dojo_scoring.pipeline.sandbox_scoring` |
+| `llm_dojo_scoring.schema_contract` | `llm_dojo_scoring.schemas.schema_contract` |
+| `llm_dojo_scoring.scorecard_honesty` | `llm_dojo_scoring.metrics.scorecard_honesty` |
+| `llm_dojo_scoring.serving` | `llm_dojo_scoring.analysis.serving` |
+| `llm_dojo_scoring.sorter_guide` | `llm_dojo_scoring.schemas.sorter_guide` |
+| `llm_dojo_scoring.suites` | `llm_dojo_scoring.scoring.suites` |
+| `llm_dojo_scoring.tasks` | `llm_dojo_scoring.scoring.tasks` |
+| `llm_dojo_scoring.trace_knobs` | `llm_dojo_scoring.scoring.trace_knobs` |
+| `llm_dojo_scoring.update_awareness` | `llm_dojo_scoring.integrations.update_awareness` |
+| `llm_dojo_scoring.visualize` | `llm_dojo_scoring.analysis.visualize` |
+
 
 ## 0b. v0.26.0: reviewer scoring and re-score
 

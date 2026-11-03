@@ -5,15 +5,64 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
-### Fixed (review of the sandbox v0.26.0 vendor bump)
+## [0.27.0] - 2026-11-03
+### Fixed
 
-- `calibration.required_samples`: a tiny `risk` no longer divides by zero (`log1p`), and the zero-error shortcut honours the one-million cap (returns `None`).
-- `calibration.cross_fit_cutoffs`: `meets_target` uses the unrounded Wilson lower bound, so a bound just under the target is not rounded over it.
-- `calibration.auroc` / `spearman`: NaN values are dropped instead of being ranked arbitrarily.
-- `ScoringSuite.score` batches pass `doc_class` and per-row field scores to `aggregate_quality_honest`, so batch results carry `headline_scope` and the intent split.
-- Emitter: the `cost_basis` requirement applies to `usd` units in any case (`reviewer_cost_per_accepted_usd` is registered as `usd`).
-- Grid Markdown cells entity-escape `<` and `>`.
-- `rescore_records` skips non-object rows with a reason instead of aborting; `rescore_file` refuses an output path equal to its input.
+- `uv.lock` recorded `llm-dojo-scoring` 0.25.0 after the 0.26.0 cut; relocked so it
+  records 0.26.0.
+
+### Added
+
+- Tiered per-document-type scoring (llm-mailroom unified audit row, spec §3 and §3.1):
+  - `score_document(...)`: one entry point that returns the sandbox's
+    `score_extraction_row` payload (every field score proved equal on 89 recorded sandbox
+    goldens), plus a `scorer` record. Bad predictions (`None`, JSON text, prose, lists)
+    are coerced or field-scored as empty instead of raising. Three deliberate departures
+    from the sandbox, none of which changes a field score:
+    - a `None` prediction is a parse error (`parse_failure_reason: null_payload`,
+      `schema_adherence` 0.0); the sandbox called it adherent;
+    - adherence is checked on the prediction as given, so keys outside the class schema
+      appear in `extra_schema_keys`; the sandbox checked the scoped prediction;
+    - correspondence topic/sentiment (`content_topic_accuracy`, `sentiment_accuracy`, ...)
+      and insurance `determination_consistency` / `amount_exactness` are reported. The
+      suites computed them, but the sandbox payload dropped them. They never feed
+      `overall_extraction_score`.
+  - `scoring/doc_scorers/`: tier 0 `score_common` (Hub scoping, class suite, PRF keys,
+    `unlabeled_fields`), one module per corpus type (`contract` with the CUAD headline,
+    `merger_agreement` with the MAUD headline, `corporate_record` always detailed,
+    `correspondence`, `insurance_claim` deriving `cms_source_table`), the `generic`
+    fallback, and `get_doc_scorer`.
+  - `scoring/extraction_scope.py` and `assess_extraction_payload(..., schema_lookup=)`,
+    moved from the sandbox.
+  - `score_archive_block(..., doc_subclass=)` and five new block keys:
+    `headline_score`, `headline_metric`, `unlabeled_fields`, `entity_list_f1`, `scorer`
+    (`ARCHIVE_SCORING_V027_KEYS`; not required on older rows). Existing keys are unchanged.
+    A non-mapping prediction (JSON text, prose, a list) is coerced or scored as empty;
+    before 0.27.0 it raised.
+  - Review fixes: a JSON object after braced prose is recovered (the greedy match no
+    longer hides it); `score_document` canonicalises the doc type (case, padding,
+    specialist aliases) before scoring; an empty serialized CUAD/MAUD label map (`"{}"`)
+    no longer replaces the field score with null; with a caller's `field_types`,
+    `score_archive_block`'s `entity_list_f1` describes that map.
+  - `tests/fixtures/contract_surface.json` pins these names and signatures for llm-mailroom
+    and the sandbox until they adopt them and `consumer_surface.json` is rescanned.
+- `scripts/release.py check` now fails when `uv.lock` records a different
+  `llm-dojo-scoring` version than `pyproject.toml`, and `publish` refuses a commit
+  whose `uv.lock` is stale. CI installs with `uv sync --frozen`, which never
+  flags this. `cut` now lists `uv lock` as a next step.
+- `docs/guides/PUBLIC_API.md`: the surface other repositories rely on (37 root names,
+  35 modules, the `embed_texts` patch target, the archive-scoring contract), built from
+  the consumer scan. `tests/test_public_api_doc.py` fails when a consumed name is missing.
+- `docs/guides/MIGRATION.md`: a table of every pre-0.26 flat import path and its
+  subpackage path, checked against `_layout.LEGACY_MODULES`.
+
+### Changed
+
+- `import llm_dojo_scoring` no longer imports `matplotlib.pyplot`; `analysis.visualize`
+  loads it the first time a plot is drawn (warm import 0.73s → 0.43s).
+  `visualize.plt` still resolves. No scores change.
+- `tests/test_release_tools.py`: the release-notes test skips, instead of failing, in a
+  shallow clone without the release tags.
 
 ## [0.26.0] - 2026-11-02
 
