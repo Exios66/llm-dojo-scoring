@@ -57,6 +57,23 @@ def test_cut_dry_run_refuses_existing_section(release):
         release.cut_plan("0.25.0", today="2026-11-01", allow_dirty=True, allow_empty=True)
 
 
+def _has_tags(*tags: str) -> bool:
+    """True when every tag resolves locally (shallow cloud clones carry none)."""
+    return all(
+        subprocess.run(
+            ["git", "rev-parse", "-q", "--verify", f"refs/tags/{tag}"],
+            cwd=ROOT,
+            capture_output=True,
+        ).returncode
+        == 0
+        for tag in tags
+    )
+
+
+@pytest.mark.skipif(
+    not _has_tags("v0.24.2", "v0.25.0"),
+    reason="needs release tags; run `git fetch --unshallow --tags`",
+)
 def test_notes_render_contains_changelog_and_commit(release):
     """Offline notes carry the CHANGELOG section and the commit."""
     notes = release.build_notes(
