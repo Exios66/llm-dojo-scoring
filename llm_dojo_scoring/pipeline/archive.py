@@ -45,6 +45,7 @@ __all__ = [
     "ARCHIVE_HASH_VERSION",
     "ARCHIVE_SCORING_KEYS",
     "ARCHIVE_SCORING_POST_V021_KEYS",
+    "ARCHIVE_SCORING_V027_KEYS",
     "ARCHIVE_SCORING_METHOD",
     "ARCHIVE_SCORING_METHOD_CMS",
     "ARCHIVED_REQUIRED_TAIL",
@@ -103,6 +104,11 @@ ARCHIVE_SCORING_KEYS: tuple[str, ...] = (
     "fn",
     "status",
     "reason",
+    "headline_score",
+    "headline_metric",
+    "unlabeled_fields",
+    "entity_list_f1",
+    "scorer",
     "trace",
     "provenance",
 )
@@ -112,6 +118,13 @@ ARCHIVE_SCORING_KEYS: tuple[str, ...] = (
 #: :func:`validate_audit_entry` does not require them.
 ARCHIVE_SCORING_POST_V021_KEYS: frozenset[str] = frozenset(
     {"status", "reason", "provenance"}
+)
+
+#: Scoring keys added in v0.27.0 from ``score_document`` (spec §3): the benchmark
+#: headline, the row's unlabeled fields, entity-list F1 and the scorer record.
+#: Earlier rows cannot gain them, so :func:`validate_audit_entry` does not require them.
+ARCHIVE_SCORING_V027_KEYS: frozenset[str] = frozenset(
+    {"headline_score", "headline_metric", "unlabeled_fields", "entity_list_f1", "scorer"}
 )
 
 #: Live extraction classes that reach the archive (#238).
@@ -324,6 +337,11 @@ def empty_archive_scoring_block() -> dict[str, Any]:
         "fn": None,
         "status": None,
         "reason": None,
+        "headline_score": None,
+        "headline_metric": None,
+        "unlabeled_fields": None,
+        "entity_list_f1": None,
+        "scorer": None,
         "trace": empty_trace_payload(),
         "provenance": stamp_provenance()["provenance"],
     }
@@ -365,6 +383,40 @@ def _filter_to_live_map(
     return out
 
 
+def _document_keys(
+    doc_class: str,
+    predicted: Any,
+    expected: Any,
+    doc_text: str | None,
+    doc_subclass: str | None,
+    expected_subclass: Any,
+) -> dict[str, Any]:
+    """The 0.27.0 block keys from :func:`score_document`; null when there is no ground truth."""
+    from ..scoring.doc_scorers import get_doc_scorer
+    from ..scoring.doc_scorers.dispatch import score_document
+
+    doc = score_document(
+        doc_class,
+        predicted,
+        expected,
+        doc_text=doc_text,
+        doc_subclass=doc_subclass,
+        expected_subclass=str(expected_subclass) if expected_subclass is not None else None,
+    )
+    out: dict[str, Any] = {
+        "headline_score": None,
+        "headline_metric": None,
+        "unlabeled_fields": doc.get("unlabeled_fields"),
+        "entity_list_f1": doc.get("entity_list_f1"),
+        "scorer": doc["scorer"],
+    }
+    # A type module's headline reads its own extras, which sit on the payload.
+    score, metric = get_doc_scorer(doc_class).headline(doc, doc)
+    if metric is not None:
+        out["headline_score"], out["headline_metric"] = score, metric
+    return out
+
+
 def score_archive_block(
     doc_class: str,
     predicted: Mapping[str, Any] | None,
@@ -378,6 +430,7 @@ def score_archive_block(
     doc_text: str | None = None,
     provenance: Mapping[str, Any] | None = None,
     expected_subclass: Any = None,
+    doc_subclass: str | None = None,
 ) -> dict[str, Any]:
     """One scoring block for one document (mailroom-issues #237 / #238).
 
@@ -400,6 +453,12 @@ def score_archive_block(
     the CMS-aware ``adjuster`` / ``denial_reasons`` / ``supporting_documents``
     scoring. The derived field is not part of the live map (``field_map_sha``
     and ``schema_valid`` are unaffected).
+
+    ``doc_subclass`` (0.27.0) wins over ``expected_subclass`` for the tiered
+    :func:`~llm_dojo_scoring.score_document` keys only: ``headline_score`` and
+    ``headline_metric`` (the MAUD/CUAD number when the type sets a headline, else
+    null), ``unlabeled_fields``, ``entity_list_f1`` and ``scorer``. Every key that
+    existed before 0.27.0 keeps its meaning; ``overall_score`` stays the field-map mean.
     """
     ftypes = _live_field_types(doc_class, field_types)
     exp = _filter_to_live_map(expected, ftypes)
@@ -478,6 +537,7 @@ def score_archive_block(
             f"archive provenance metric_id {given['metric_id']!r} contradicts "
             f"method {resolved_method!r} ({metric_id!r})"
         )
+    block.update(_document_keys(doc_class, predicted, expected, doc_text, doc_subclass, expected_subclass))
     block["provenance"] = stamp_provenance(given, metric_id=metric_id)["provenance"]
     block["trace"] = capture_trace_knobs(
         predicted,
@@ -834,7 +894,9 @@ def validate_audit_entry(
         missing = [
             k
             for k in ARCHIVE_SCORING_KEYS
-            if k not in scoring and k not in ARCHIVE_SCORING_POST_V021_KEYS
+            if k not in scoring
+            and k not in ARCHIVE_SCORING_POST_V021_KEYS
+            and k not in ARCHIVE_SCORING_V027_KEYS
         ]
         if missing:
             revisions.append(

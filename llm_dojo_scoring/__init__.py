@@ -87,6 +87,9 @@ from .pipeline.archive import (
     score_archive_block,
     upsert_archive_scoring,
 )
+from .pipeline.sandbox_schema_adherence import assess_extraction_payload
+from .scoring.doc_scorers import get_doc_scorer
+from .scoring.doc_scorers.dispatch import score_document
 from .scoring.extraction_metrics import (
     extraction_binary_metrics,
     mean_entity_list_f1,
@@ -350,6 +353,7 @@ __all__ = [
     "ARCHIVE_HASH_VERSION", "ARCHIVE_SCORING_METHOD",
     "archive_entry_hash", "archivist_sign_off", "format_audit_entry",
     "prepare_archivist_handoff", "score_archive_block", "upsert_archive_scoring",
+    "assess_extraction_payload", "get_doc_scorer", "score_document",
     "bootstrap_ci", "delta_significance", "wilson_ci",
     "accuracy", "binary_metrics", "confusion_matrix", "exact_match",
     "fbeta", "macro_accuracy", "macro_prf", "normalize_label", "per_class_stats",

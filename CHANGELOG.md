@@ -12,6 +12,21 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Added
 
+- Tiered per-document-type scoring (llm-mailroom unified audit row, spec §3 and §3.1):
+  - `score_document(...)`: one entry point that returns the sandbox's
+    `score_extraction_row` payload byte for byte (proved against 89 recorded sandbox
+    goldens), plus a `scorer` record. Bad predictions (JSON text, prose, lists) are
+    coerced or scored as empty instead of raising.
+  - `scoring/doc_scorers/`: tier 0 `score_common` (Hub scoping, class suite, PRF keys,
+    `unlabeled_fields`), one module per corpus type (`contract` with the CUAD headline,
+    `merger_agreement` with the MAUD headline, `corporate_record` always detailed,
+    `correspondence`, `insurance_claim` deriving `cms_source_table`), the `generic`
+    fallback, and `get_doc_scorer`.
+  - `scoring/extraction_scope.py` and `assess_extraction_payload(..., schema_lookup=)`,
+    moved from the sandbox.
+  - `score_archive_block(..., doc_subclass=)` and five new block keys:
+    `headline_score`, `headline_metric`, `unlabeled_fields`, `entity_list_f1`, `scorer`
+    (`ARCHIVE_SCORING_V027_KEYS`; not required on older rows). Existing keys are unchanged.
 - `scripts/release.py check` now fails when `uv.lock` records a different
   `llm-dojo-scoring` version than `pyproject.toml`, and `publish` refuses a commit
   whose `uv.lock` is stale. CI installs with `uv sync --frozen`, which never
