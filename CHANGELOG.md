@@ -39,6 +39,11 @@ Format based on Keep a Changelog; versioning is SemVer.
     (`ARCHIVE_SCORING_V027_KEYS`; not required on older rows). Existing keys are unchanged.
     A non-mapping prediction (JSON text, prose, a list) is coerced or scored as empty;
     before 0.27.0 it raised.
+  - Review fixes: a JSON object after braced prose is recovered (the greedy match no
+    longer hides it); `score_document` canonicalises the doc type (case, padding,
+    specialist aliases) before scoring; an empty serialized CUAD/MAUD label map (`"{}"`)
+    no longer replaces the field score with null; with a caller's `field_types`,
+    `score_archive_block`'s `entity_list_f1` describes that map.
   - `tests/fixtures/contract_surface.json` pins these names and signatures for llm-mailroom
     and the sandbox until they adopt them and `consumer_surface.json` is rescanned.
 - `scripts/release.py check` now fails when `uv.lock` records a different

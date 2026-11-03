@@ -27,7 +27,11 @@ class MergerAgreementScorer(TypeScorer):
     ) -> dict[str, Any]:
         """MAUD answer scores when the row carries ``maud_clause_labels``."""
         labels = raw_expected.get("maud_clause_labels")
-        return dict(score_maud(predicted, labels)) if labels else {}
+        if not labels:
+            return {}
+        scores = dict(score_maud(predicted, labels))
+        # An empty label map (e.g. the string "{}") is no benchmark: keep the field score.
+        return scores if scores.get("maud_accuracy") is not None else {}
 
     def headline(self, common: Mapping[str, Any], extras: Mapping[str, Any]) -> tuple[float | None, str | None]:
         """``maud_accuracy`` whenever MAUD was scored."""

@@ -12,7 +12,7 @@ from typing import Any, Mapping
 
 from ...pipeline.sandbox_schema_adherence import SchemaLookup, assess_extraction_payload, coerce_predicted_payload
 from ..extraction_scope import scope_extraction_pair
-from . import get_doc_scorer
+from . import canonical_doc_type, get_doc_scorer
 from .common import score_common
 
 
@@ -26,6 +26,7 @@ def score_tiers(
     expected_subclass: str | None = None,
 ) -> dict[str, Any]:
     """Tier 0 plus the type's extras and headline for one document (no adherence)."""
+    doc_type = canonical_doc_type(doc_type)
     scorer = get_doc_scorer(doc_type)
     payload = score_common(
         doc_type,
@@ -89,6 +90,7 @@ def score_document(
     correspondence / insurance extras are reported (the sandbox dropped them). Pydantic
     models for adherence come from ``schema_lookup`` (the dojo does not import mailroom).
     """
+    doc_type = canonical_doc_type(doc_type)
     raw_subclass = str(doc_subclass or expected_subclass or "").strip() or None
     if isinstance(predicted, Mapping):
         scored_predicted: Mapping[str, Any] = predicted
