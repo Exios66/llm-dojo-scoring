@@ -12,10 +12,16 @@ from .base import DocScorer, TypeScorer
 from .generic import SCORER as GENERIC
 
 from .contract import SCORER as _CONTRACT
+from .corporate_record import SCORER as _CORPORATE
+from .correspondence import SCORER as _CORRESPONDENCE
+from .insurance_claim import SCORER as _INSURANCE
 from .merger_agreement import SCORER as _MERGER
 
 #: Document type -> its scorer. Type modules are added here as they land.
-DOC_SCORERS: dict[str, DocScorer] = {s.doc_type: s for s in (_CONTRACT, _MERGER)}
+DOC_SCORERS: dict[str, DocScorer] = {
+    s.doc_type: s
+    for s in (_CONTRACT, _CORPORATE, _CORRESPONDENCE, _INSURANCE, _MERGER)
+}
 
 
 def get_doc_scorer(doc_type: str | None) -> DocScorer:

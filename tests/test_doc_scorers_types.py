@@ -78,3 +78,51 @@ def test_benchmark_labels_without_clause_keys_score_zero():
 def test_contract_subclass_normalises_cuad_surface():
     """Tier 2: a folder-style CUAD surface becomes its canonical family."""
     assert DOC_SCORERS["contract"].subclass("License_Agreements") == "license"
+
+
+_FIELD_MAP_TYPES = ("corporate_record", "correspondence", "insurance_claim")
+
+
+@pytest.mark.parametrize("case_id", [k for t in _FIELD_MAP_TYPES for k in _cases_for(t)])
+def test_type_parity_field_map_types(case_id):
+    """Corporate, correspondence and insurance rows match the sandbox exactly."""
+    assert to_jsonable(_run(CASES[case_id])) == _without_adherence(GOLDENS[case_id])
+
+
+@pytest.mark.parametrize("doc_type", _FIELD_MAP_TYPES)
+def test_field_map_modules_registered(doc_type):
+    """Every corpus type with a field map has its own module, with no double-counted extras."""
+    scorer = DOC_SCORERS[doc_type]
+    assert scorer.doc_type == doc_type
+    assert scorer.extras({"a": 1}, {"a": 1}, subclass=None, doc_text=None) == {}
+    assert scorer.headline({"overall_extraction_score": 0.5}, {}) == (None, None)
+
+
+def test_corporate_record_always_detailed():
+    """Corporate records take the detailed, per-record-type suite path."""
+    assert DOC_SCORERS["corporate_record"].detailed is True
+
+
+@pytest.mark.parametrize("doc_type", _FIELD_MAP_TYPES + ("contract", "merger_agreement"))
+def test_unknown_subclass_surface_normalises(doc_type):
+    """Tier 2: an uncatalogued subclass surface becomes the type's catch-all, never raises."""
+    scorer = DOC_SCORERS[doc_type]
+    out = scorer.subclass("Totally Unknown Surface!!")
+    assert out in (*scorer.subclasses, "other")
+    assert scorer.subclass(None) is None  # no subclass known: tier 0 keeps the sandbox rule
+
+
+@pytest.mark.parametrize("surface, table", [("carrier", "carrier"), (" PDE ", "pde"), ("auto", None), (None, None)])
+def test_insurance_derives_cms_source_table(surface, table):
+    """Tier 2: CMS rows derive ``cms_source_table`` from the subclass; others get none."""
+    derived = DOC_SCORERS["insurance_claim"].derived_fields(surface)
+    assert derived == ({"cms_source_table": table} if table else {})
+
+
+def test_cms_row_without_table_scores_derived_table():
+    """A CMS row whose ground truth lacks the table still scores; the table is derived, not missed."""
+    without = CASES["insurance_claim__carrier__partial__no_cms_source_table"]
+    out = _run(without)
+    assert out["scoring_method"] == "suite"
+    assert "cms_source_table" not in (out.get("unlabeled_fields") or [])
+    assert DOC_SCORERS["insurance_claim"].derived_fields(without["doc_subclass"]) == {"cms_source_table": "carrier"}
