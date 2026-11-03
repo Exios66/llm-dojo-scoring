@@ -49,6 +49,7 @@ def to_jsonable(value: Any) -> Any:
 
 
 def _error(exc: BaseException) -> dict[str, str]:
+    """Record an exception as data so parity tests can compare failures too."""
     return {"error": f"{type(exc).__name__}: {exc}"}
 
 
@@ -72,6 +73,7 @@ def _model_facts(doc_type: str, predicted: Any) -> tuple[list[str] | None, bool 
 
 
 def capture(cases: list[dict]) -> dict[str, dict]:
+    """Score every case with the sandbox and return the goldens keyed by case id."""
     from mailroom_sandbox.eval.schema_adherence import assess_extraction_payload
     from mailroom_sandbox.eval.scoring import score_extraction_row
 
@@ -104,6 +106,7 @@ def capture(cases: list[dict]) -> dict[str, dict]:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Capture goldens for ``--inputs`` and write them to ``--out``."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--sandbox", required=True, type=Path)
     parser.add_argument("--inputs", required=True, type=Path)
