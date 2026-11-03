@@ -11,8 +11,11 @@ from ..suites import SPECIALIST_DOC_TYPES
 from .base import DocScorer, TypeScorer
 from .generic import SCORER as GENERIC
 
+from .contract import SCORER as _CONTRACT
+from .merger_agreement import SCORER as _MERGER
+
 #: Document type -> its scorer. Type modules are added here as they land.
-DOC_SCORERS: dict[str, DocScorer] = {}
+DOC_SCORERS: dict[str, DocScorer] = {s.doc_type: s for s in (_CONTRACT, _MERGER)}
 
 
 def get_doc_scorer(doc_type: str | None) -> DocScorer:
