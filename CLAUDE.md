@@ -52,6 +52,12 @@ that name them; the default suite does not need them.
 - Secrets: `.env` is git-ignored; only `.env.example` is tracked. Never print or
   commit Langfuse keys.
 
+## Skills
+
+- `/cross-repo-bump` (`.claude/skills/cross-repo-bump/`) — walk a release or a public-API
+  change through Dojo, then llm-mailroom, then the sandbox vendor snapshot. User-invoked
+  only; every mutating release step still needs your explicit go-ahead.
+
 ## Before you finish
 
 Run the full suite and `ruff check`. If you touched anything importable by the
