@@ -202,6 +202,18 @@ def _parse_object_text(text: str) -> tuple[dict[str, Any] | None, str | None]:
                 return obj, "wrapped_python_repr"
         except (SyntaxError, ValueError, TypeError, MemoryError, RecursionError):
             pass
+    # The greedy match spans the first "{" to the last "}", so braces in the surrounding
+    # prose break it. Fall back to decoding a JSON object at each "{" in turn.
+    decoder = json.JSONDecoder()
+    start = text.find("{")
+    while start != -1:
+        try:
+            obj, _end = decoder.raw_decode(text, start)
+        except json.JSONDecodeError:
+            obj = None
+        if isinstance(obj, dict):
+            return obj, "wrapped_json"
+        start = text.find("{", start + 1)
     return None, None
 
 

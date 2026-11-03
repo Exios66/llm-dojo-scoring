@@ -305,3 +305,47 @@ def test_corpus_eda_names_unchanged(qualname):
 def test_score_document_exported():
     """The dispatcher is public."""
     assert "score_document" in dojo.__all__
+
+
+def test_json_after_braced_prose_is_recovered():
+    """Prose with its own braces before the JSON object still yields the object (CodeAnt A)."""
+    from llm_dojo_scoring.pipeline.sandbox_schema_adherence import coerce_predicted_payload
+
+    payload, meta = coerce_predicted_payload('Note {see below}. Result: {"parties": ["A"]} done')
+    assert payload == {"parties": ["A"]}
+    assert meta["parse_error"] is False
+
+
+@pytest.mark.parametrize("doc_type", ["contract", " Contract ", "CONTRACT", "contracts_specialist"])
+def test_doc_type_spellings_score_alike(doc_type):
+    """Case, padding and specialist aliases resolve to the canonical type before scoring (CodeAnt B)."""
+    expected = {"parties": ["A"], "governing_law": "NY"}
+    predicted = {"parties": ["A"], "governing_law": "NY", "claim_number": "X"}
+    got = score_document(doc_type, predicted, expected)
+    assert got["doc_type"] == "contract"
+    assert got["scoring_method"] == "suite"
+    assert got["scorer"]["module"].endswith(".contract")
+
+
+@pytest.mark.parametrize(
+    "doc_type, labels",
+    [("merger_agreement", {"maud_clause_labels": "{}"}), ("contract", {"cuad_clause_labels": "{}"})],
+)
+def test_empty_benchmark_labels_keep_field_score(doc_type, labels):
+    """An empty serialized label map gives no benchmark, so the field-map score stands (CodeAnt C)."""
+    expected = {"parties": ["A"], **labels}
+    got = score_document(doc_type, {"parties": ["A"]}, expected)
+    assert got["overall_extraction_score"] is not None
+    assert "+" not in got["scoring_method"]
+    assert "suite_overall_extraction_score" not in got
+
+
+def test_archive_block_custom_field_map_entity_f1():
+    """With a caller's field map, ``entity_list_f1`` describes that map, not the default (CodeAnt D)."""
+    ftypes = {"governing_law": "text"}  # no entity-list field in the caller's map
+    exp = {"parties": ["A", "C"], "governing_law": "NY"}
+    pred = {"parties": ["A", "B"], "governing_law": "NY"}
+    block = score_archive_block("contract", pred, exp, field_types=ftypes)
+    assert block["entity_list_f1"] is None
+    default = score_archive_block("contract", pred, exp)
+    assert default["entity_list_f1"] is not None

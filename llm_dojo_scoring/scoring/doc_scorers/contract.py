@@ -27,7 +27,11 @@ class ContractScorer(TypeScorer):
     ) -> dict[str, Any]:
         """CUAD presence scores when the row carries ``cuad_clause_labels``."""
         labels = raw_expected.get("cuad_clause_labels")
-        return dict(score_cuad(predicted, labels)) if labels else {}
+        if not labels:
+            return {}
+        scores = dict(score_cuad(predicted, labels))
+        # An empty label map (e.g. the string "{}") is no benchmark: keep the field score.
+        return scores if scores.get("cuad_presence_f1") is not None else {}
 
     def headline(self, common: Mapping[str, Any], extras: Mapping[str, Any]) -> tuple[float | None, str | None]:
         """``cuad_presence_f1`` whenever CUAD was scored."""

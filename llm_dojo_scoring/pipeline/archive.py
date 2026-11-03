@@ -546,6 +546,9 @@ def score_archive_block(
             f"method {resolved_method!r} ({metric_id!r})"
         )
     block.update(_document_keys(doc_class, predicted, expected, doc_text, doc_subclass, expected_subclass))
+    if field_types:
+        # A caller's own field map: entity-list F1 must describe that map, not the default.
+        block["entity_list_f1"] = prf.get("entity_list_f1") if countable else None
     block["provenance"] = stamp_provenance(given, metric_id=metric_id)["provenance"]
     block["trace"] = capture_trace_knobs(
         predicted,
