@@ -5,6 +5,18 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Fixed
+
+- `uv.lock` recorded `llm-dojo-scoring` 0.25.0 after the 0.26.0 cut; relocked so it
+  records 0.26.0.
+
+### Added
+
+- `scripts/release.py check` now fails when `uv.lock` records a different
+  `llm-dojo-scoring` version than `pyproject.toml`, and `publish` refuses a commit
+  whose `uv.lock` is stale. CI installs with `uv sync --frozen`, which never
+  flags this. `cut` now lists `uv lock` as a next step.
+
 ## [0.26.0] - 2026-11-02
 
 ### Added (five-class extraction schema registry)
