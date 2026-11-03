@@ -8,14 +8,36 @@ the caller (CLI and tests force Agg for headless use).
 
 from __future__ import annotations
 
-from typing import Optional
+from types import ModuleType
+from typing import TYPE_CHECKING, Optional
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
 from . import error_analysis as ea
 from ..config import PER_SUBTYPE
+
+if TYPE_CHECKING:
+    import matplotlib.pyplot as plt
+
+
+def _pyplot() -> ModuleType:
+    """Import ``matplotlib.pyplot`` on first use.
+
+    ``import llm_dojo_scoring`` loads this module, and pyplot is the most expensive
+    import in the package. Consumers that only score never draw, so they should
+    not pay for it.
+    """
+    import matplotlib.pyplot
+
+    return matplotlib.pyplot
+
+
+def __getattr__(name: str):
+    """Keep ``visualize.plt`` working for callers that reached for it."""
+    if name == "plt":
+        return _pyplot()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 _BEST_COLOR = "#1F4E79"
 _OTHER_COLOR = "#5B9BD5"
@@ -45,7 +67,7 @@ def plot_metric_ci(frame: pd.DataFrame, metric: str = ea.DEFAULT_METRIC,
         str(r.get("Experiment Name", f"run {i}"))
         for i, (_, r) in enumerate(df.iterrows())
     ]
-    fig, ax = plt.subplots(figsize=figsize)
+    fig, ax = _pyplot().subplots(figsize=figsize)
     y = np.arange(len(df))
     colors = [df.index[i] == df.index[0] for i in range(len(df))]
     ax.barh(y, df[metric], height=0.6, color=[_BEST_COLOR if c else _OTHER_COLOR for c in colors],
@@ -69,7 +91,7 @@ def plot_prompt_version(frame: pd.DataFrame, metric: str = ea.DEFAULT_METRIC,
     summary = ea.prompt_version_summary(frame, metric)
     if summary.empty:
         raise ValueError("no prompt_version data to plot")
-    fig, ax = plt.subplots(figsize=figsize)
+    fig, ax = _pyplot().subplots(figsize=figsize)
     versions = [str(v) for v in summary["prompt_version"]]
     x = np.arange(len(versions))
     ax.bar(x, summary["mean"], color=_OTHER_COLOR, width=0.6)
@@ -93,7 +115,7 @@ def plot_model_comparison(frame: pd.DataFrame, metric: str = ea.DEFAULT_METRIC,
     summary = ea.model_summary(frame, metric)
     if summary.empty:
         raise ValueError("no model data to plot")
-    fig, ax = plt.subplots(figsize=figsize)
+    fig, ax = _pyplot().subplots(figsize=figsize)
     models = [str(m) for m in summary["model"]]
     x = np.arange(len(models))
     ax.bar(x, summary["mean"], color=_OTHER_COLOR, width=0.6)
@@ -130,7 +152,7 @@ def plot_per_subtype_heatmap(frame: pd.DataFrame,
     matrix = pd.to_numeric(df[cols].stack(), errors="coerce").unstack().values
     if figsize is None:
         figsize = (13, max(4, 0.4 * len(df)))
-    fig, ax = plt.subplots(figsize=figsize)
+    fig, ax = _pyplot().subplots(figsize=figsize)
     im = ax.imshow(matrix, aspect="auto", cmap="RdYlGn", vmin=0, vmax=1)
     labels = [str(r.get("Experiment Name", f"run {i}"))[:44]
               for i, (_, r) in enumerate(df.iterrows())]
@@ -157,7 +179,7 @@ def plot_failure_modes(frame: pd.DataFrame,
     df = frame.copy()
     df = df[cols].apply(pd.to_numeric, errors="coerce").fillna(0)
     df = df.sort_values(list(cols), ascending=False)
-    fig, ax = plt.subplots(figsize=figsize)
+    fig, ax = _pyplot().subplots(figsize=figsize)
     y = np.arange(len(df))
     left = np.zeros(len(df))
     colors = ["#2E7D32", "#C00000", "#ED7D31", "#BFBFBF"]
@@ -185,7 +207,7 @@ def plot_confidence_scatter(frame: pd.DataFrame,
     if "Average Confidence" not in df.columns:
         raise ValueError("no Average Confidence column in frame")
     conf = pd.to_numeric(df["Average Confidence"], errors="coerce")
-    fig, ax = plt.subplots(figsize=figsize)
+    fig, ax = _pyplot().subplots(figsize=figsize)
     ax.scatter(conf, df[metric], s=40, color=_OTHER_COLOR, alpha=0.85)
     ax.plot([0, 1], [0, 1], ls="--", color="#999999", lw=1,
             label="perfect calibration")
@@ -217,7 +239,7 @@ def plot_cost_efficiency(frame: pd.DataFrame, metric: str = ea.DEFAULT_METRIC,
     if not valid.any():
         raise ValueError("no positive cost values to plot")
     df, cost = df[valid], cost[valid]
-    fig, ax = plt.subplots(figsize=figsize)
+    fig, ax = _pyplot().subplots(figsize=figsize)
     ax.scatter(cost, df[metric], s=40, color=_OTHER_COLOR, alpha=0.85)
     for i, (_, row) in enumerate(df.iterrows()):
         label = str(row.get("Experiment Name", ""))[:32]
@@ -279,7 +301,7 @@ def save_plots(plots: dict[str, plt.Figure], outdir: str,
     for key, fig in plots.items():
         path = os.path.join(outdir, f"{prefix}_{key}.png")
         fig.savefig(path, dpi=150, bbox_inches="tight")
-        plt.close(fig)
+        _pyplot().close(fig)
         paths.append(path)
     return paths
 

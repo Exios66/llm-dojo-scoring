@@ -71,7 +71,8 @@ scores needs a CHANGELOG comparability note and a `score_changelog` entry.
 - [ ] **Suite fails off the dev machine.** The CI investigation was interrupted
   before it reported. Known breakers:
   - plain system Python lacks `structlog`, so `import llm_dojo_scoring` fails outside `uv`;
-  - `test_release_tools` fails in shallow clones without tags;
+  - ~~`test_release_tools` fails in shallow clones without tags~~ (fixed: the notes test
+    skips when the release tags are missing);
   - `scripts/audit_consumer_surface.py` pins developer checkout paths and exits 2 when
     they are missing.
 - [ ] **Repo-owned CI entry point.** Build one (e.g. `scripts/ci.py`) that:
