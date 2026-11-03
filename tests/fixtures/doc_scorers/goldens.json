@@ -1,0 +1,6382 @@
+{
+ "cases": {
+  "contract__affiliate__exact__Affiliate_Agreements": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__agency__partial__Agency_Agreements": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 0.5,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.7143,
+    "extraction_f2": 0.6579,
+    "extraction_precision": 0.8333,
+    "extraction_recall": 0.625,
+    "fields": {
+     "ambiguous_fields": [
+      "parties"
+     ],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 0.5,
+       "field_name": "parties",
+       "matched": 1,
+       "partial_gt": true,
+       "precision": 0.5,
+       "recall": 0.5,
+       "unmatched_expected": 1,
+       "unmatched_predicted": 1
+      }
+     },
+     "overall_score": 0.7134,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.7134,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__co_branding__missing__Co_Branding": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.6667,
+    "extraction_f2": 0.5556,
+    "extraction_precision": 1.0,
+    "extraction_recall": 0.5,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.5,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.5,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__collaboration__spurious__Collaboration": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.8889,
+    "extraction_f2": 0.9524,
+    "extraction_precision": 0.8,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__consulting__mixed__Consulting_Agreements": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.8235,
+    "extraction_f2": 0.8537,
+    "extraction_precision": 0.7778,
+    "extraction_recall": 0.875,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.875,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.875,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__development__exact__Development": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__distributor__partial__Distributor": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 0.5,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.7143,
+    "extraction_f2": 0.6579,
+    "extraction_precision": 0.8333,
+    "extraction_recall": 0.625,
+    "fields": {
+     "ambiguous_fields": [
+      "parties"
+     ],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 0.5,
+       "field_name": "parties",
+       "matched": 1,
+       "partial_gt": true,
+       "precision": 0.5,
+       "recall": 0.5,
+       "unmatched_expected": 1,
+       "unmatched_predicted": 1
+      }
+     },
+     "overall_score": 0.7169,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.7169,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__endorsement__missing__Endorsement": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.6667,
+    "extraction_f2": 0.5556,
+    "extraction_precision": 1.0,
+    "extraction_recall": 0.5,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.5,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.5,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__franchise__spurious__Franchise": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.8889,
+    "extraction_f2": 0.9524,
+    "extraction_precision": 0.8,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__hosting__mixed__Hosting": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.8235,
+    "extraction_f2": 0.8537,
+    "extraction_precision": 0.7778,
+    "extraction_recall": 0.875,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.875,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.875,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__ip__exact__IP": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__ip__no_ground_truth": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": null,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.0,
+    "extraction_f2": 0.0,
+    "extraction_precision": 0.0,
+    "extraction_recall": 0.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {},
+     "overall_score": null,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": null,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__joint_venture__missing__Joint_Venture___Filing": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.6667,
+    "extraction_f2": 0.5556,
+    "extraction_precision": 1.0,
+    "extraction_recall": 0.5,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.5,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.5,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__joint_venture__partial__Joint_Venture": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 0.5,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.7143,
+    "extraction_f2": 0.6579,
+    "extraction_precision": 0.8333,
+    "extraction_recall": 0.625,
+    "fields": {
+     "ambiguous_fields": [
+      "parties"
+     ],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 0.5,
+       "field_name": "parties",
+       "matched": 1,
+       "partial_gt": true,
+       "precision": 0.5,
+       "recall": 0.5,
+       "unmatched_expected": 1,
+       "unmatched_predicted": 1
+      }
+     },
+     "overall_score": 0.7292,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.7292,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__license__cuad_labels_none_predicted": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "cuad_effective_from_agreement": 0,
+    "cuad_fn": 3,
+    "cuad_fp": 0,
+    "cuad_out_of_universe": 0,
+    "cuad_presence_f1": 0.4,
+    "cuad_presence_precision": 1.0,
+    "cuad_presence_recall": 0.25,
+    "cuad_present": 4,
+    "cuad_tp": 1,
+    "cuad_universe": 6,
+    "cuad_value_checked": 1,
+    "cuad_value_correct": 1,
+    "doc_type": "contract",
+    "entity_list_f1": null,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.0,
+    "extraction_f2": 0.0,
+    "extraction_precision": 0.0,
+    "extraction_recall": 0.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {},
+     "overall_score": null,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.4,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite+cuad",
+    "suite_overall_extraction_score": null
+   },
+   "typed_valid": true
+  },
+  "contract__license__spurious__License_Agreements": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.8889,
+    "extraction_f2": 0.9524,
+    "extraction_precision": 0.8,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__maintenance__mixed__Maintenance": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.8235,
+    "extraction_f2": 0.8537,
+    "extraction_precision": 0.7778,
+    "extraction_recall": 0.875,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.875,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.875,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__manufacturing__exact__Manufacturing": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__marketing__partial__Marketing": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 0.5,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.7143,
+    "extraction_f2": 0.6579,
+    "extraction_precision": 0.8333,
+    "extraction_recall": 0.625,
+    "fields": {
+     "ambiguous_fields": [
+      "parties"
+     ],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 0.5,
+       "field_name": "parties",
+       "matched": 1,
+       "partial_gt": true,
+       "precision": 0.5,
+       "recall": 0.5,
+       "unmatched_expected": 1,
+       "unmatched_predicted": 1
+      }
+     },
+     "overall_score": 0.7344,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.7344,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__marketing__predicted_json_string": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "error": "ValueError: dictionary update sequence element #0 has length 1; 2 is required"
+   },
+   "typed_valid": true
+  },
+  "contract__non_compete_no_solicit__missing__Non_Compete_Non_Solicit": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.6667,
+    "extraction_f2": 0.5556,
+    "extraction_precision": 1.0,
+    "extraction_recall": 0.5,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.5,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.5,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__outsourcing__spurious__Outsourcing": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.8889,
+    "extraction_f2": 0.9524,
+    "extraction_precision": 0.8,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__promotion__mixed__Promotion": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.8235,
+    "extraction_f2": 0.8537,
+    "extraction_precision": 0.7778,
+    "extraction_recall": 0.875,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.875,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.875,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__reseller__exact__Reseller": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__reseller__parse_error_raw": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": true,
+    "parse_failure_reason": "flagged_parse_error",
+    "prose_wrapper": false,
+    "schema_adherence": 0.0,
+    "schema_valid": false
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": null,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.0,
+    "extraction_f2": 0.0,
+    "extraction_precision": 0.0,
+    "extraction_recall": 0.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {},
+     "overall_score": 0.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.0,
+    "parse_error": true,
+    "parse_failure_reason": "flagged_parse_error",
+    "prose_wrapper": false,
+    "schema_adherence": 0.0,
+    "schema_valid": false,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__service__cuad_labels_good": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "cuad_effective_from_agreement": 0,
+    "cuad_fn": 0,
+    "cuad_fp": 1,
+    "cuad_out_of_universe": 1,
+    "cuad_presence_f1": 0.8889,
+    "cuad_presence_precision": 0.8,
+    "cuad_presence_recall": 1.0,
+    "cuad_present": 4,
+    "cuad_tp": 4,
+    "cuad_universe": 6,
+    "cuad_value_checked": 3,
+    "cuad_value_correct": 3,
+    "doc_type": "contract",
+    "entity_list_f1": null,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.0,
+    "extraction_f2": 0.0,
+    "extraction_precision": 0.0,
+    "extraction_recall": 0.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {},
+     "overall_score": null,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.8889,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite+cuad",
+    "suite_overall_extraction_score": null
+   },
+   "typed_valid": true
+  },
+  "contract__service__partial__Service": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 0.5,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.7143,
+    "extraction_f2": 0.6579,
+    "extraction_precision": 0.8333,
+    "extraction_recall": 0.625,
+    "fields": {
+     "ambiguous_fields": [
+      "parties"
+     ],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 0.5,
+       "field_name": "parties",
+       "matched": 1,
+       "partial_gt": true,
+       "precision": 0.5,
+       "recall": 0.5,
+       "unmatched_expected": 1,
+       "unmatched_predicted": 1
+      }
+     },
+     "overall_score": 0.7125,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.7125,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__service__prose_predicted": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": true,
+    "parse_failure_reason": "unparseable",
+    "prose_wrapper": false,
+    "schema_adherence": 0.0,
+    "schema_valid": false
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "error": "ValueError: dictionary update sequence element #0 has length 1; 2 is required"
+   },
+   "typed_valid": null
+  },
+  "contract__sponsorship__missing__Sponsorship": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.6667,
+    "extraction_f2": 0.5556,
+    "extraction_precision": 1.0,
+    "extraction_recall": 0.5,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.5,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.5,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__strategic_alliance__spurious__Strategic_Alliance": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.8889,
+    "extraction_f2": 0.9524,
+    "extraction_precision": 0.8,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__supply__cuad_labels_as_dict": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "cuad_effective_from_agreement": 0,
+    "cuad_fn": 3,
+    "cuad_fp": 1,
+    "cuad_out_of_universe": 0,
+    "cuad_presence_f1": 0.3333,
+    "cuad_presence_precision": 0.5,
+    "cuad_presence_recall": 0.25,
+    "cuad_present": 4,
+    "cuad_tp": 1,
+    "cuad_universe": 6,
+    "cuad_value_checked": 1,
+    "cuad_value_correct": 0,
+    "doc_type": "contract",
+    "entity_list_f1": null,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.0,
+    "extraction_f2": 0.0,
+    "extraction_precision": 0.0,
+    "extraction_recall": 0.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {},
+     "overall_score": null,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.3333,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite+cuad",
+    "suite_overall_extraction_score": null
+   },
+   "typed_valid": true
+  },
+  "contract__supply__mixed__Supply": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.8235,
+    "extraction_f2": 0.8537,
+    "extraction_precision": 0.7778,
+    "extraction_recall": 0.875,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.875,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.875,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "contract__transportation__exact__Transportation": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "contract_value",
+    "cuad_clauses",
+    "cuad_family",
+    "document_name",
+    "effective_date",
+    "governing_law",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "renewal_terms",
+    "term_length"
+   ],
+   "payload": {
+    "doc_type": "contract",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "contract",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "corporate_record__articles_of_incorporation__partial": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "effective_date",
+    "entity_name",
+    "filing_number",
+    "intent",
+    "jurisdiction",
+    "keywords",
+    "record_type",
+    "signatories",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "corporate_record",
+    "entity_list_f1": 0.6667,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.6667,
+    "extraction_f2": 0.614,
+    "extraction_precision": 0.7778,
+    "extraction_recall": 0.5833,
+    "fields": {
+     "ambiguous_fields": [
+      "incorporators",
+      "signatories"
+     ],
+     "doc_class": "corporate_record",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "incorporators": {
+       "f1": 0.5,
+       "field_name": "incorporators",
+       "matched": 1,
+       "partial_gt": false,
+       "precision": 0.5,
+       "recall": 0.5,
+       "unmatched_expected": 1,
+       "unmatched_predicted": 1
+      },
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "signatories": {
+       "f1": 0.5,
+       "field_name": "signatories",
+       "matched": 1,
+       "partial_gt": false,
+       "precision": 0.5,
+       "recall": 0.5,
+       "unmatched_expected": 1,
+       "unmatched_predicted": 1
+      }
+     },
+     "overall_score": 0.6667,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.6667,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite",
+    "unlabeled_fields": []
+   },
+   "typed_valid": true
+  },
+  "corporate_record__board_resolution__spurious": {
+   "adherence": {
+    "extra_schema_key_count": 1,
+    "extra_schema_keys": [
+     "certifying_officer"
+    ],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "effective_date",
+    "entity_name",
+    "filing_number",
+    "intent",
+    "jurisdiction",
+    "keywords",
+    "record_type",
+    "signatories",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "corporate_record",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 1,
+    "extra_schema_keys": [
+     "certifying_officer"
+    ],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "corporate_record",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "resolutions": {
+       "f1": 1.0,
+       "field_name": "resolutions",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "signatories": {
+       "f1": 1.0,
+       "field_name": "signatories",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite",
+    "unlabeled_fields": [
+     "filing_number"
+    ]
+   },
+   "typed_valid": true
+  },
+  "corporate_record__bylaws__exact": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "effective_date",
+    "entity_name",
+    "filing_number",
+    "intent",
+    "jurisdiction",
+    "keywords",
+    "record_type",
+    "signatories",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "corporate_record",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "corporate_record",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "signatories": {
+       "f1": 1.0,
+       "field_name": "signatories",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite",
+    "unlabeled_fields": [
+     "filing_number"
+    ]
+   },
+   "typed_valid": true
+  },
+  "corporate_record__bylaws__no_ground_truth": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "effective_date",
+    "entity_name",
+    "filing_number",
+    "intent",
+    "jurisdiction",
+    "keywords",
+    "record_type",
+    "signatories",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "corporate_record",
+    "entity_list_f1": null,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.0,
+    "extraction_f2": 0.0,
+    "extraction_precision": 0.0,
+    "extraction_recall": 0.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "corporate_record",
+     "entity_list_audit": {},
+     "entity_list_scores": {},
+     "overall_score": null,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": null,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite",
+    "unlabeled_fields": [
+     "entity_name",
+     "record_type",
+     "effective_date",
+     "signatories",
+     "jurisdiction",
+     "filing_number",
+     "certifying_officer",
+     "last_amended_date"
+    ]
+   },
+   "typed_valid": true
+  },
+  "corporate_record__bylaws__predicted_json_string": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "effective_date",
+    "entity_name",
+    "filing_number",
+    "intent",
+    "jurisdiction",
+    "keywords",
+    "record_type",
+    "signatories",
+    "subject_matter"
+   ],
+   "payload": {
+    "error": "ValueError: dictionary update sequence element #0 has length 1; 2 is required"
+   },
+   "typed_valid": true
+  },
+  "corporate_record__certificate_of_formation__missing": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "effective_date",
+    "entity_name",
+    "filing_number",
+    "intent",
+    "jurisdiction",
+    "keywords",
+    "record_type",
+    "signatories",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "corporate_record",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.625,
+    "extraction_f2": 0.5102,
+    "extraction_precision": 1.0,
+    "extraction_recall": 0.4545,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "corporate_record",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "organizers": {
+       "f1": 1.0,
+       "field_name": "organizers",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "signatories": {
+       "f1": 1.0,
+       "field_name": "signatories",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.4545,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.4545,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite",
+    "unlabeled_fields": []
+   },
+   "typed_valid": true
+  },
+  "corporate_record__charter_amendment__predicted_null": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": true,
+    "parse_failure_reason": "null_payload",
+    "prose_wrapper": false,
+    "schema_adherence": 0.0,
+    "schema_valid": false
+   },
+   "model_fields": [
+    "effective_date",
+    "entity_name",
+    "filing_number",
+    "intent",
+    "jurisdiction",
+    "keywords",
+    "record_type",
+    "signatories",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "corporate_record",
+    "entity_list_f1": null,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.0,
+    "extraction_f2": 0.0,
+    "extraction_precision": 0.0,
+    "extraction_recall": 0.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "corporate_record",
+     "entity_list_audit": {},
+     "entity_list_scores": {},
+     "overall_score": 0.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite",
+    "unlabeled_fields": []
+   },
+   "typed_valid": null
+  },
+  "corporate_record__charter_amendment__spurious": {
+   "adherence": {
+    "extra_schema_key_count": 1,
+    "extra_schema_keys": [
+     "certifying_officer"
+    ],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "effective_date",
+    "entity_name",
+    "filing_number",
+    "intent",
+    "jurisdiction",
+    "keywords",
+    "record_type",
+    "signatories",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "corporate_record",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 1,
+    "extra_schema_keys": [
+     "certifying_officer"
+    ],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "corporate_record",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "amended_provisions": {
+       "f1": 1.0,
+       "field_name": "amended_provisions",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "signatories": {
+       "f1": 1.0,
+       "field_name": "signatories",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite",
+    "unlabeled_fields": []
+   },
+   "typed_valid": true
+  },
+  "corporate_record__indenture__missing": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "effective_date",
+    "entity_name",
+    "filing_number",
+    "intent",
+    "jurisdiction",
+    "keywords",
+    "record_type",
+    "signatories",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "corporate_record",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.6315,
+    "extraction_f2": 0.5172,
+    "extraction_precision": 1.0,
+    "extraction_recall": 0.4615,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "corporate_record",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "guarantors": {
+       "f1": 1.0,
+       "field_name": "guarantors",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "signatories": {
+       "f1": 1.0,
+       "field_name": "signatories",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.4615,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.4615,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite",
+    "unlabeled_fields": [
+     "filing_number"
+    ]
+   },
+   "typed_valid": true
+  },
+  "corporate_record__indenture__parse_error_raw": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": true,
+    "parse_failure_reason": "flagged_parse_error",
+    "prose_wrapper": false,
+    "schema_adherence": 0.0,
+    "schema_valid": false
+   },
+   "model_fields": [
+    "effective_date",
+    "entity_name",
+    "filing_number",
+    "intent",
+    "jurisdiction",
+    "keywords",
+    "record_type",
+    "signatories",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "corporate_record",
+    "entity_list_f1": null,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.0,
+    "extraction_f2": 0.0,
+    "extraction_precision": 0.0,
+    "extraction_recall": 0.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "corporate_record",
+     "entity_list_audit": {},
+     "entity_list_scores": {},
+     "overall_score": 0.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.0,
+    "parse_error": true,
+    "parse_failure_reason": "flagged_parse_error",
+    "prose_wrapper": false,
+    "schema_adherence": 0.0,
+    "schema_valid": false,
+    "scoring_method": "suite",
+    "unlabeled_fields": [
+     "filing_number"
+    ]
+   },
+   "typed_valid": true
+  },
+  "corporate_record__no_subclass__exact": {
+   "adherence": {
+    "extra_schema_key_count": 2,
+    "extra_schema_keys": [
+     "certifying_officer",
+     "last_amended_date"
+    ],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "effective_date",
+    "entity_name",
+    "filing_number",
+    "intent",
+    "jurisdiction",
+    "keywords",
+    "record_type",
+    "signatories",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "corporate_record",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 2,
+    "extra_schema_keys": [
+     "certifying_officer",
+     "last_amended_date"
+    ],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "corporate_record",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "signatories": {
+       "f1": 1.0,
+       "field_name": "signatories",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite",
+    "unlabeled_fields": [
+     "filing_number"
+    ]
+   },
+   "typed_valid": true
+  },
+  "corporate_record__no_subclass__partial_with_text": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "effective_date",
+    "entity_name",
+    "filing_number",
+    "intent",
+    "jurisdiction",
+    "keywords",
+    "record_type",
+    "signatories",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "corporate_record",
+    "entity_list_f1": 0.6667,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.4,
+    "extraction_f2": 0.2941,
+    "extraction_precision": 1.0,
+    "extraction_recall": 0.25,
+    "fields": {
+     "ambiguous_fields": [
+      "signatories"
+     ],
+     "doc_class": "corporate_record",
+     "entity_list_audit": {
+      "entity_name": {
+       "doc_verification": true,
+       "hallucinated": 0,
+       "hallucination_rate": 0.0,
+       "matched_gt": 1,
+       "n_predicted": 1,
+       "true_items": 1,
+       "verified_in_doc": 1,
+       "verified_precision": 1.0
+      },
+      "record_type": {
+       "doc_verification": true,
+       "hallucinated": 0,
+       "hallucination_rate": 0.0,
+       "matched_gt": 1,
+       "n_predicted": 1,
+       "true_items": 1,
+       "verified_in_doc": 1,
+       "verified_precision": 1.0
+      },
+      "signatories": {
+       "doc_verification": true,
+       "hallucinated": 0,
+       "hallucination_rate": 0.0,
+       "matched_gt": 1,
+       "n_predicted": 1,
+       "true_items": 1,
+       "verified_in_doc": 1,
+       "verified_precision": 1.0
+      }
+     },
+     "entity_list_scores": {
+      "signatories": {
+       "f1": 0.6666666666666666,
+       "field_name": "signatories",
+       "matched": 1,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 0.5,
+       "unmatched_expected": 1,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.3333,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.3333,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite",
+    "unlabeled_fields": [
+     "filing_number"
+    ]
+   },
+   "typed_valid": true
+  },
+  "corporate_record__officer_certificate__mixed": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "effective_date",
+    "entity_name",
+    "filing_number",
+    "intent",
+    "jurisdiction",
+    "keywords",
+    "record_type",
+    "signatories",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "corporate_record",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.9091,
+    "extraction_f2": 0.862,
+    "extraction_precision": 1.0,
+    "extraction_recall": 0.8333,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "corporate_record",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "signatories": {
+       "f1": 1.0,
+       "field_name": "signatories",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.8509,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.8509,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite",
+    "unlabeled_fields": [
+     "filing_number"
+    ]
+   },
+   "typed_valid": true
+  },
+  "corporate_record__other__exact": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "effective_date",
+    "entity_name",
+    "filing_number",
+    "intent",
+    "jurisdiction",
+    "keywords",
+    "record_type",
+    "signatories",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "corporate_record",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "corporate_record",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "signatories": {
+       "f1": 1.0,
+       "field_name": "signatories",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite",
+    "unlabeled_fields": []
+   },
+   "typed_valid": true
+  },
+  "corporate_record__other__predicted_list": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": true,
+    "parse_failure_reason": "unsupported_type:list",
+    "prose_wrapper": false,
+    "schema_adherence": 0.0,
+    "schema_valid": false
+   },
+   "model_fields": [
+    "effective_date",
+    "entity_name",
+    "filing_number",
+    "intent",
+    "jurisdiction",
+    "keywords",
+    "record_type",
+    "signatories",
+    "subject_matter"
+   ],
+   "payload": {
+    "error": "ValueError: dictionary update sequence element #0 has length 1; 2 is required"
+   },
+   "typed_valid": null
+  },
+  "corporate_record__powers_of_attorney__mixed": {
+   "adherence": {
+    "extra_schema_key_count": 1,
+    "extra_schema_keys": [
+     "certifying_officer"
+    ],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "effective_date",
+    "entity_name",
+    "filing_number",
+    "intent",
+    "jurisdiction",
+    "keywords",
+    "record_type",
+    "signatories",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "corporate_record",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 1,
+    "extra_schema_keys": [
+     "certifying_officer"
+    ],
+    "extraction_f1": 0.9565,
+    "extraction_f2": 0.9322,
+    "extraction_precision": 1.0,
+    "extraction_recall": 0.9167,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "corporate_record",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "attorneys_in_fact": {
+       "f1": 1.0,
+       "field_name": "attorneys_in_fact",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "signatories": {
+       "f1": 1.0,
+       "field_name": "signatories",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.9167,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.9167,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite",
+    "unlabeled_fields": [
+     "filing_number"
+    ]
+   },
+   "typed_valid": true
+  },
+  "corporate_record__rights_instrument__partial": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "effective_date",
+    "entity_name",
+    "filing_number",
+    "intent",
+    "jurisdiction",
+    "keywords",
+    "record_type",
+    "signatories",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "corporate_record",
+    "entity_list_f1": 0.5,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.8,
+    "extraction_f2": 0.7812,
+    "extraction_precision": 0.8333,
+    "extraction_recall": 0.7692,
+    "fields": {
+     "ambiguous_fields": [
+      "keywords",
+      "signatories"
+     ],
+     "doc_class": "corporate_record",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "keywords": {
+       "f1": 0.5,
+       "field_name": "keywords",
+       "matched": 1,
+       "partial_gt": true,
+       "precision": 0.5,
+       "recall": 0.5,
+       "unmatched_expected": 1,
+       "unmatched_predicted": 1
+      },
+      "signatories": {
+       "f1": 0.5,
+       "field_name": "signatories",
+       "matched": 1,
+       "partial_gt": false,
+       "precision": 0.5,
+       "recall": 0.5,
+       "unmatched_expected": 1,
+       "unmatched_predicted": 1
+      }
+     },
+     "overall_score": 0.8462,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.8462,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite",
+    "unlabeled_fields": [
+     "filing_number"
+    ]
+   },
+   "typed_valid": true
+  },
+  "corporate_record__subsidiary_list__exact": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "effective_date",
+    "entity_name",
+    "filing_number",
+    "intent",
+    "jurisdiction",
+    "keywords",
+    "record_type",
+    "signatories",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "corporate_record",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "corporate_record",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "subsidiaries": {
+       "f1": 1.0,
+       "field_name": "subsidiaries",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "subsidiary_jurisdictions": {
+       "f1": 1.0,
+       "field_name": "subsidiary_jurisdictions",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite",
+    "unlabeled_fields": [
+     "signatories",
+     "jurisdiction",
+     "filing_number"
+    ]
+   },
+   "typed_valid": true
+  },
+  "corporate_record__subsidiary_list__prose_predicted": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": true,
+    "parse_failure_reason": "unparseable",
+    "prose_wrapper": false,
+    "schema_adherence": 0.0,
+    "schema_valid": false
+   },
+   "model_fields": [
+    "effective_date",
+    "entity_name",
+    "filing_number",
+    "intent",
+    "jurisdiction",
+    "keywords",
+    "record_type",
+    "signatories",
+    "subject_matter"
+   ],
+   "payload": {
+    "error": "ValueError: dictionary update sequence element #0 has length 1; 2 is required"
+   },
+   "typed_valid": null
+  },
+  "correspondence__attorney_demand__exact": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "action_items",
+    "additional_recipients",
+    "communication_date",
+    "communication_type",
+    "confidence",
+    "demand_amount",
+    "intent",
+    "keywords",
+    "recipient",
+    "sender",
+    "subject_matter",
+    "urgency"
+   ],
+   "payload": {
+    "doc_type": "correspondence",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "correspondence",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "action_items": {
+       "f1": 1.0,
+       "field_name": "action_items",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "additional_recipients": {
+       "f1": 1.0,
+       "field_name": "additional_recipients",
+       "matched": 1,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 3,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "correspondence__demand__mixed": {
+   "adherence": {
+    "extra_schema_key_count": 2,
+    "extra_schema_keys": [
+     "claim_number",
+     "policy_number"
+    ],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 0.0,
+    "schema_valid": false
+   },
+   "model_fields": [
+    "action_items",
+    "additional_recipients",
+    "communication_date",
+    "communication_type",
+    "confidence",
+    "demand_amount",
+    "intent",
+    "keywords",
+    "recipient",
+    "sender",
+    "subject_matter",
+    "urgency"
+   ],
+   "payload": {
+    "doc_type": "correspondence",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.9,
+    "extraction_f2": 0.8491,
+    "extraction_precision": 1.0,
+    "extraction_recall": 0.8182,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "correspondence",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "action_items": {
+       "f1": 1.0,
+       "field_name": "action_items",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "additional_recipients": {
+       "f1": 1.0,
+       "field_name": "additional_recipients",
+       "matched": 1,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 3,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.8182,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.8182,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 0.0,
+    "schema_valid": false,
+    "scoring_method": "suite"
+   },
+   "typed_valid": false
+  },
+  "correspondence__demand__predicted_null": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": true,
+    "parse_failure_reason": "null_payload",
+    "prose_wrapper": false,
+    "schema_adherence": 0.0,
+    "schema_valid": false
+   },
+   "model_fields": [
+    "action_items",
+    "additional_recipients",
+    "communication_date",
+    "communication_type",
+    "confidence",
+    "demand_amount",
+    "intent",
+    "keywords",
+    "recipient",
+    "sender",
+    "subject_matter",
+    "urgency"
+   ],
+   "payload": {
+    "doc_type": "correspondence",
+    "entity_list_f1": null,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.0,
+    "extraction_f2": 0.0,
+    "extraction_precision": 0.0,
+    "extraction_recall": 0.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "correspondence",
+     "entity_list_audit": {},
+     "entity_list_scores": {},
+     "overall_score": 0.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": null
+  },
+  "correspondence__email__exact": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "action_items",
+    "additional_recipients",
+    "communication_date",
+    "communication_type",
+    "confidence",
+    "demand_amount",
+    "intent",
+    "keywords",
+    "recipient",
+    "sender",
+    "subject_matter",
+    "urgency"
+   ],
+   "payload": {
+    "doc_type": "correspondence",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "correspondence",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "action_items": {
+       "f1": 1.0,
+       "field_name": "action_items",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "additional_recipients": {
+       "f1": 1.0,
+       "field_name": "additional_recipients",
+       "matched": 1,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 3,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "correspondence__email__topic_sentiment_gt_match": {
+   "adherence": {
+    "extra_schema_key_count": 2,
+    "extra_schema_keys": [
+     "content_topic",
+     "sentiment_label"
+    ],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "action_items",
+    "additional_recipients",
+    "communication_date",
+    "communication_type",
+    "confidence",
+    "demand_amount",
+    "intent",
+    "keywords",
+    "recipient",
+    "sender",
+    "subject_matter",
+    "urgency"
+   ],
+   "payload": {
+    "doc_type": "correspondence",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 2,
+    "extra_schema_keys": [
+     "content_topic",
+     "sentiment_label"
+    ],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "correspondence",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "action_items": {
+       "f1": 1.0,
+       "field_name": "action_items",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "additional_recipients": {
+       "f1": 1.0,
+       "field_name": "additional_recipients",
+       "matched": 1,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 3,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "correspondence__letter__missing": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "action_items",
+    "additional_recipients",
+    "communication_date",
+    "communication_type",
+    "confidence",
+    "demand_amount",
+    "intent",
+    "keywords",
+    "recipient",
+    "sender",
+    "subject_matter",
+    "urgency"
+   ],
+   "payload": {
+    "doc_type": "correspondence",
+    "entity_list_f1": null,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.5714,
+    "extraction_f2": 0.4545,
+    "extraction_precision": 1.0,
+    "extraction_recall": 0.4,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "correspondence",
+     "entity_list_audit": {},
+     "entity_list_scores": {},
+     "overall_score": 0.4,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.4,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "correspondence__letter__topic_sentiment_gt_only": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "action_items",
+    "additional_recipients",
+    "communication_date",
+    "communication_type",
+    "confidence",
+    "demand_amount",
+    "intent",
+    "keywords",
+    "recipient",
+    "sender",
+    "subject_matter",
+    "urgency"
+   ],
+   "payload": {
+    "doc_type": "correspondence",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "correspondence",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "action_items": {
+       "f1": 1.0,
+       "field_name": "action_items",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "additional_recipients": {
+       "f1": 1.0,
+       "field_name": "additional_recipients",
+       "matched": 1,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 3,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "correspondence__meeting_request__missing": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "action_items",
+    "additional_recipients",
+    "communication_date",
+    "communication_type",
+    "confidence",
+    "demand_amount",
+    "intent",
+    "keywords",
+    "recipient",
+    "sender",
+    "subject_matter",
+    "urgency"
+   ],
+   "payload": {
+    "doc_type": "correspondence",
+    "entity_list_f1": null,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.5714,
+    "extraction_f2": 0.4545,
+    "extraction_precision": 1.0,
+    "extraction_recall": 0.4,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "correspondence",
+     "entity_list_audit": {},
+     "entity_list_scores": {},
+     "overall_score": 0.4,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.4,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "correspondence__memo__partial": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "action_items",
+    "additional_recipients",
+    "communication_date",
+    "communication_type",
+    "confidence",
+    "demand_amount",
+    "intent",
+    "keywords",
+    "recipient",
+    "sender",
+    "subject_matter",
+    "urgency"
+   ],
+   "payload": {
+    "doc_type": "correspondence",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.8889,
+    "extraction_f2": 0.8333,
+    "extraction_precision": 1.0,
+    "extraction_recall": 0.8,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "correspondence",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "action_items": {
+       "f1": 1.0,
+       "field_name": "action_items",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "additional_recipients": {
+       "f1": 1.0,
+       "field_name": "additional_recipients",
+       "matched": 1,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 3,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.8355,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.8355,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "correspondence__memo__topic_sentiment_gt_mismatch": {
+   "adherence": {
+    "extra_schema_key_count": 2,
+    "extra_schema_keys": [
+     "content_topic",
+     "sentiment_label"
+    ],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "action_items",
+    "additional_recipients",
+    "communication_date",
+    "communication_type",
+    "confidence",
+    "demand_amount",
+    "intent",
+    "keywords",
+    "recipient",
+    "sender",
+    "subject_matter",
+    "urgency"
+   ],
+   "payload": {
+    "doc_type": "correspondence",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 2,
+    "extra_schema_keys": [
+     "content_topic",
+     "sentiment_label"
+    ],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "correspondence",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "action_items": {
+       "f1": 1.0,
+       "field_name": "action_items",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "additional_recipients": {
+       "f1": 1.0,
+       "field_name": "additional_recipients",
+       "matched": 1,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 3,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "correspondence__notice__predicted_json_string": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "action_items",
+    "additional_recipients",
+    "communication_date",
+    "communication_type",
+    "confidence",
+    "demand_amount",
+    "intent",
+    "keywords",
+    "recipient",
+    "sender",
+    "subject_matter",
+    "urgency"
+   ],
+   "payload": {
+    "error": "ValueError: dictionary update sequence element #0 has length 1; 2 is required"
+   },
+   "typed_valid": true
+  },
+  "correspondence__notice__spurious": {
+   "adherence": {
+    "extra_schema_key_count": 2,
+    "extra_schema_keys": [
+     "claim_number",
+     "policy_number"
+    ],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "action_items",
+    "additional_recipients",
+    "communication_date",
+    "communication_type",
+    "confidence",
+    "demand_amount",
+    "intent",
+    "keywords",
+    "recipient",
+    "sender",
+    "subject_matter",
+    "urgency"
+   ],
+   "payload": {
+    "doc_type": "correspondence",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "correspondence",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "action_items": {
+       "f1": 1.0,
+       "field_name": "action_items",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "additional_recipients": {
+       "f1": 1.0,
+       "field_name": "additional_recipients",
+       "matched": 1,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 3,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "correspondence__other__no_ground_truth": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "action_items",
+    "additional_recipients",
+    "communication_date",
+    "communication_type",
+    "confidence",
+    "demand_amount",
+    "intent",
+    "keywords",
+    "recipient",
+    "sender",
+    "subject_matter",
+    "urgency"
+   ],
+   "payload": {
+    "doc_type": "correspondence",
+    "entity_list_f1": null,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.0,
+    "extraction_f2": 0.0,
+    "extraction_precision": 0.0,
+    "extraction_recall": 0.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "correspondence",
+     "entity_list_audit": {},
+     "entity_list_scores": {},
+     "overall_score": null,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": null,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "correspondence__other__spurious": {
+   "adherence": {
+    "extra_schema_key_count": 2,
+    "extra_schema_keys": [
+     "claim_number",
+     "policy_number"
+    ],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "action_items",
+    "additional_recipients",
+    "communication_date",
+    "communication_type",
+    "confidence",
+    "demand_amount",
+    "intent",
+    "keywords",
+    "recipient",
+    "sender",
+    "subject_matter",
+    "urgency"
+   ],
+   "payload": {
+    "doc_type": "correspondence",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "correspondence",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "action_items": {
+       "f1": 1.0,
+       "field_name": "action_items",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "additional_recipients": {
+       "f1": 1.0,
+       "field_name": "additional_recipients",
+       "matched": 1,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 3,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "correspondence__press_release__partial": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "action_items",
+    "additional_recipients",
+    "communication_date",
+    "communication_type",
+    "confidence",
+    "demand_amount",
+    "intent",
+    "keywords",
+    "recipient",
+    "sender",
+    "subject_matter",
+    "urgency"
+   ],
+   "payload": {
+    "doc_type": "correspondence",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.8889,
+    "extraction_f2": 0.8333,
+    "extraction_precision": 1.0,
+    "extraction_recall": 0.8,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "correspondence",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "action_items": {
+       "f1": 1.0,
+       "field_name": "action_items",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "additional_recipients": {
+       "f1": 1.0,
+       "field_name": "additional_recipients",
+       "matched": 1,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 3,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.8598,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.8598,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "insurance_claim__auto__partial": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 0.0,
+    "schema_valid": false
+   },
+   "model_fields": [
+    "adjuster",
+    "claim_checklist",
+    "claim_number",
+    "claim_type",
+    "claimed_amount",
+    "confidence",
+    "coverage_determination",
+    "damages_description",
+    "date_filed",
+    "date_of_loss",
+    "denial_reasons",
+    "insured_party",
+    "insurer",
+    "intent",
+    "keywords",
+    "policy_number",
+    "subject_matter",
+    "supporting_documents"
+   ],
+   "payload": {
+    "doc_type": "insurance_claim",
+    "entity_list_f1": 0.5,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.7619,
+    "extraction_f2": 0.7018,
+    "extraction_precision": 0.8889,
+    "extraction_recall": 0.6667,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "insurance_claim",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "denial_reasons": {
+       "f1": 0.0,
+       "field_name": "denial_reasons",
+       "matched": 0,
+       "partial_gt": false,
+       "precision": 0.0,
+       "recall": 0.0,
+       "unmatched_expected": 1,
+       "unmatched_predicted": 1
+      },
+      "supporting_documents": {
+       "f1": 1.0,
+       "field_name": "supporting_documents",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.6953,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.6953,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 0.0,
+    "schema_valid": false,
+    "scoring_method": "suite"
+   },
+   "typed_valid": false
+  },
+  "insurance_claim__auto__predicted_list": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": true,
+    "parse_failure_reason": "unsupported_type:list",
+    "prose_wrapper": false,
+    "schema_adherence": 0.0,
+    "schema_valid": false
+   },
+   "model_fields": [
+    "adjuster",
+    "claim_checklist",
+    "claim_number",
+    "claim_type",
+    "claimed_amount",
+    "confidence",
+    "coverage_determination",
+    "damages_description",
+    "date_filed",
+    "date_of_loss",
+    "denial_reasons",
+    "insured_party",
+    "insurer",
+    "intent",
+    "keywords",
+    "policy_number",
+    "subject_matter",
+    "supporting_documents"
+   ],
+   "payload": {
+    "error": "ValueError: dictionary update sequence element #0 has length 11; 2 is required"
+   },
+   "typed_valid": null
+  },
+  "insurance_claim__carrier__cms_source_table_in_expected": {
+   "adherence": {
+    "extra_schema_key_count": 1,
+    "extra_schema_keys": [
+     "cms_source_table"
+    ],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "adjuster",
+    "claim_checklist",
+    "claim_number",
+    "claim_type",
+    "claimed_amount",
+    "confidence",
+    "coverage_determination",
+    "damages_description",
+    "date_filed",
+    "date_of_loss",
+    "denial_reasons",
+    "insured_party",
+    "insurer",
+    "intent",
+    "keywords",
+    "policy_number",
+    "subject_matter",
+    "supporting_documents"
+   ],
+   "payload": {
+    "doc_type": "insurance_claim",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "insurance_claim",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "supporting_documents": {
+       "f1": 1.0,
+       "field_name": "supporting_documents",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "insurance_claim__carrier__partial__no_cms_source_table": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 0.0,
+    "schema_valid": false
+   },
+   "model_fields": [
+    "adjuster",
+    "claim_checklist",
+    "claim_number",
+    "claim_type",
+    "claimed_amount",
+    "confidence",
+    "coverage_determination",
+    "damages_description",
+    "date_filed",
+    "date_of_loss",
+    "denial_reasons",
+    "insured_party",
+    "insurer",
+    "intent",
+    "keywords",
+    "policy_number",
+    "subject_matter",
+    "supporting_documents"
+   ],
+   "payload": {
+    "doc_type": "insurance_claim",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.8571,
+    "extraction_f2": 0.7895,
+    "extraction_precision": 1.0,
+    "extraction_recall": 0.75,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "insurance_claim",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "supporting_documents": {
+       "f1": 1.0,
+       "field_name": "supporting_documents",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.7694,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.7694,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 0.0,
+    "schema_valid": false,
+    "scoring_method": "suite"
+   },
+   "typed_valid": false
+  },
+  "insurance_claim__inpatient__missing__no_cms_source_table": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "adjuster",
+    "claim_checklist",
+    "claim_number",
+    "claim_type",
+    "claimed_amount",
+    "confidence",
+    "coverage_determination",
+    "damages_description",
+    "date_filed",
+    "date_of_loss",
+    "denial_reasons",
+    "insured_party",
+    "insurer",
+    "intent",
+    "keywords",
+    "policy_number",
+    "subject_matter",
+    "supporting_documents"
+   ],
+   "payload": {
+    "doc_type": "insurance_claim",
+    "entity_list_f1": null,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.5883,
+    "extraction_f2": 0.4717,
+    "extraction_precision": 1.0,
+    "extraction_recall": 0.4167,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "insurance_claim",
+     "entity_list_audit": {},
+     "entity_list_scores": {},
+     "overall_score": 0.4167,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.4167,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "insurance_claim__outpatient__prose_predicted": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": true,
+    "parse_failure_reason": "unparseable",
+    "prose_wrapper": false,
+    "schema_adherence": 0.0,
+    "schema_valid": false
+   },
+   "model_fields": [
+    "adjuster",
+    "claim_checklist",
+    "claim_number",
+    "claim_type",
+    "claimed_amount",
+    "confidence",
+    "coverage_determination",
+    "damages_description",
+    "date_filed",
+    "date_of_loss",
+    "denial_reasons",
+    "insured_party",
+    "insurer",
+    "intent",
+    "keywords",
+    "policy_number",
+    "subject_matter",
+    "supporting_documents"
+   ],
+   "payload": {
+    "error": "ValueError: dictionary update sequence element #0 has length 1; 2 is required"
+   },
+   "typed_valid": null
+  },
+  "insurance_claim__outpatient__spurious__no_cms_source_table": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "adjuster",
+    "claim_checklist",
+    "claim_number",
+    "claim_type",
+    "claimed_amount",
+    "confidence",
+    "coverage_determination",
+    "damages_description",
+    "date_filed",
+    "date_of_loss",
+    "denial_reasons",
+    "insured_party",
+    "insurer",
+    "intent",
+    "keywords",
+    "policy_number",
+    "subject_matter",
+    "supporting_documents"
+   ],
+   "payload": {
+    "doc_type": "insurance_claim",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.9231,
+    "extraction_f2": 0.9677,
+    "extraction_precision": 0.8571,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "insurance_claim",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "supporting_documents": {
+       "f1": 1.0,
+       "field_name": "supporting_documents",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "insurance_claim__pde__mixed__no_cms_source_table": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "adjuster",
+    "claim_checklist",
+    "claim_number",
+    "claim_type",
+    "claimed_amount",
+    "confidence",
+    "coverage_determination",
+    "damages_description",
+    "date_filed",
+    "date_of_loss",
+    "denial_reasons",
+    "insured_party",
+    "insurer",
+    "intent",
+    "keywords",
+    "policy_number",
+    "subject_matter",
+    "supporting_documents"
+   ],
+   "payload": {
+    "doc_type": "insurance_claim",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.8333,
+    "extraction_f2": 0.8333,
+    "extraction_precision": 0.8333,
+    "extraction_recall": 0.8333,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "insurance_claim",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "supporting_documents": {
+       "f1": 1.0,
+       "field_name": "supporting_documents",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.9118,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.9118,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "insurance_claim__pde__predicted_cms_table_only_pred": {
+   "adherence": {
+    "extra_schema_key_count": 1,
+    "extra_schema_keys": [
+     "cms_source_table"
+    ],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "adjuster",
+    "claim_checklist",
+    "claim_number",
+    "claim_type",
+    "claimed_amount",
+    "confidence",
+    "coverage_determination",
+    "damages_description",
+    "date_filed",
+    "date_of_loss",
+    "denial_reasons",
+    "insured_party",
+    "insurer",
+    "intent",
+    "keywords",
+    "policy_number",
+    "subject_matter",
+    "supporting_documents"
+   ],
+   "payload": {
+    "doc_type": "insurance_claim",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "insurance_claim",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "supporting_documents": {
+       "f1": 1.0,
+       "field_name": "supporting_documents",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "insurance_claim__property__exact": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "adjuster",
+    "claim_checklist",
+    "claim_number",
+    "claim_type",
+    "claimed_amount",
+    "confidence",
+    "coverage_determination",
+    "damages_description",
+    "date_filed",
+    "date_of_loss",
+    "denial_reasons",
+    "insured_party",
+    "insurer",
+    "intent",
+    "keywords",
+    "policy_number",
+    "subject_matter",
+    "supporting_documents"
+   ],
+   "payload": {
+    "doc_type": "insurance_claim",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "insurance_claim",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "denial_reasons": {
+       "f1": 1.0,
+       "field_name": "denial_reasons",
+       "matched": 1,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "supporting_documents": {
+       "f1": 1.0,
+       "field_name": "supporting_documents",
+       "matched": 2,
+       "partial_gt": false,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "insurance_claim__property__no_ground_truth": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "adjuster",
+    "claim_checklist",
+    "claim_number",
+    "claim_type",
+    "claimed_amount",
+    "confidence",
+    "coverage_determination",
+    "damages_description",
+    "date_filed",
+    "date_of_loss",
+    "denial_reasons",
+    "insured_party",
+    "insurer",
+    "intent",
+    "keywords",
+    "policy_number",
+    "subject_matter",
+    "supporting_documents"
+   ],
+   "payload": {
+    "doc_type": "insurance_claim",
+    "entity_list_f1": null,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.0,
+    "extraction_f2": 0.0,
+    "extraction_precision": 0.0,
+    "extraction_recall": 0.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "insurance_claim",
+     "entity_list_audit": {},
+     "entity_list_scores": {},
+     "overall_score": null,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": null,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "merger_agreement__all_cash__exact": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "confidence",
+    "document_name",
+    "effective_date",
+    "effective_time",
+    "governing_law",
+    "intent",
+    "keywords",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "merger_agreement",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "merger_agreement",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "merger_agreement__all_cash__maud_labels_partial": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "confidence",
+    "document_name",
+    "effective_date",
+    "effective_time",
+    "governing_law",
+    "intent",
+    "keywords",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "merger_agreement",
+    "entity_list_f1": null,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.0,
+    "extraction_f2": 0.0,
+    "extraction_precision": 0.0,
+    "extraction_recall": 0.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "merger_agreement",
+     "entity_list_audit": {},
+     "entity_list_scores": {},
+     "overall_score": null,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "maud_accuracy": 0.5,
+    "maud_answered": 2,
+    "maud_clean_accuracy": 1.0,
+    "maud_clean_correct": 1,
+    "maud_clean_questions": 1,
+    "maud_conflicts": 0,
+    "maud_correct": 2,
+    "maud_precision_answered": 1.0,
+    "maud_questions": 4,
+    "overall_extraction_score": 0.5,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite+maud",
+    "suite_overall_extraction_score": null
+   },
+   "typed_valid": true
+  },
+  "merger_agreement__all_cash__no_ground_truth": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "confidence",
+    "document_name",
+    "effective_date",
+    "effective_time",
+    "governing_law",
+    "intent",
+    "keywords",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "merger_agreement",
+    "entity_list_f1": null,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.0,
+    "extraction_f2": 0.0,
+    "extraction_precision": 0.0,
+    "extraction_recall": 0.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "merger_agreement",
+     "entity_list_audit": {},
+     "entity_list_scores": {},
+     "overall_score": null,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": null,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "merger_agreement__all_stock__maud_labels_colon_question": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "confidence",
+    "document_name",
+    "effective_date",
+    "effective_time",
+    "governing_law",
+    "intent",
+    "keywords",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "merger_agreement",
+    "entity_list_f1": null,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.0,
+    "extraction_f2": 0.0,
+    "extraction_precision": 0.0,
+    "extraction_recall": 0.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "merger_agreement",
+     "entity_list_audit": {},
+     "entity_list_scores": {},
+     "overall_score": null,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "maud_accuracy": 0.5,
+    "maud_answered": 3,
+    "maud_clean_accuracy": 1.0,
+    "maud_clean_correct": 1,
+    "maud_clean_questions": 1,
+    "maud_conflicts": 0,
+    "maud_correct": 2,
+    "maud_precision_answered": 0.6666666666666666,
+    "maud_questions": 4,
+    "overall_extraction_score": 0.5,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite+maud",
+    "suite_overall_extraction_score": null
+   },
+   "typed_valid": true
+  },
+  "merger_agreement__all_stock__partial": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "confidence",
+    "document_name",
+    "effective_date",
+    "effective_time",
+    "governing_law",
+    "intent",
+    "keywords",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "merger_agreement",
+    "entity_list_f1": 0.5,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.625,
+    "extraction_f2": 0.5814,
+    "extraction_precision": 0.7143,
+    "extraction_recall": 0.5556,
+    "fields": {
+     "ambiguous_fields": [
+      "keywords",
+      "parties"
+     ],
+     "doc_class": "merger_agreement",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "keywords": {
+       "f1": 0.5,
+       "field_name": "keywords",
+       "matched": 1,
+       "partial_gt": true,
+       "precision": 0.5,
+       "recall": 0.5,
+       "unmatched_expected": 1,
+       "unmatched_predicted": 1
+      },
+      "parties": {
+       "f1": 0.5,
+       "field_name": "parties",
+       "matched": 1,
+       "partial_gt": true,
+       "precision": 0.5,
+       "recall": 0.5,
+       "unmatched_expected": 1,
+       "unmatched_predicted": 1
+      }
+     },
+     "overall_score": 0.6993,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.6993,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "merger_agreement__all_stock__predicted_null": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": true,
+    "parse_failure_reason": "null_payload",
+    "prose_wrapper": false,
+    "schema_adherence": 0.0,
+    "schema_valid": false
+   },
+   "model_fields": [
+    "confidence",
+    "document_name",
+    "effective_date",
+    "effective_time",
+    "governing_law",
+    "intent",
+    "keywords",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "merger_agreement",
+    "entity_list_f1": null,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.0,
+    "extraction_f2": 0.0,
+    "extraction_precision": 0.0,
+    "extraction_recall": 0.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "merger_agreement",
+     "entity_list_audit": {},
+     "entity_list_scores": {},
+     "overall_score": 0.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": null
+  },
+  "merger_agreement__mixed_cash_stock__maud_object_clauses": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 0.0,
+    "schema_valid": false
+   },
+   "model_fields": [
+    "confidence",
+    "document_name",
+    "effective_date",
+    "effective_time",
+    "governing_law",
+    "intent",
+    "keywords",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "merger_agreement",
+    "entity_list_f1": null,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.0,
+    "extraction_f2": 0.0,
+    "extraction_precision": 0.0,
+    "extraction_recall": 0.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "merger_agreement",
+     "entity_list_audit": {},
+     "entity_list_scores": {},
+     "overall_score": null,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "maud_accuracy": 0.25,
+    "maud_answered": 2,
+    "maud_clean_accuracy": 0.0,
+    "maud_clean_correct": 0,
+    "maud_clean_questions": 1,
+    "maud_conflicts": 0,
+    "maud_correct": 1,
+    "maud_precision_answered": 0.5,
+    "maud_questions": 4,
+    "overall_extraction_score": 0.25,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 0.0,
+    "schema_valid": false,
+    "scoring_method": "suite+maud",
+    "suite_overall_extraction_score": null
+   },
+   "typed_valid": false
+  },
+  "merger_agreement__mixed_cash_stock__missing": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "confidence",
+    "document_name",
+    "effective_date",
+    "effective_time",
+    "governing_law",
+    "intent",
+    "keywords",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "merger_agreement",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.7143,
+    "extraction_f2": 0.6098,
+    "extraction_precision": 1.0,
+    "extraction_recall": 0.5556,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "merger_agreement",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.5556,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.5556,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "merger_agreement__mixed_cash_stock_election__spurious": {
+   "adherence": {
+    "extra_schema_key_count": 2,
+    "extra_schema_keys": [
+     "cuad_clauses",
+     "cuad_family"
+    ],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "confidence",
+    "document_name",
+    "effective_date",
+    "effective_time",
+    "governing_law",
+    "intent",
+    "keywords",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "merger_agreement",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "extraction_recall": 1.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "merger_agreement",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 1.0,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 1.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  },
+  "merger_agreement__other__maud_labels_no_clause_keys": {
+   "adherence": {
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "confidence",
+    "document_name",
+    "effective_date",
+    "effective_time",
+    "governing_law",
+    "intent",
+    "keywords",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "merger_agreement",
+    "entity_list_f1": null,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.0,
+    "extraction_f2": 0.0,
+    "extraction_precision": 0.0,
+    "extraction_recall": 0.0,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "merger_agreement",
+     "entity_list_audit": {},
+     "entity_list_scores": {},
+     "overall_score": null,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "maud_accuracy": 0.0,
+    "maud_answered": 0,
+    "maud_clean_accuracy": 0.0,
+    "maud_clean_correct": 0,
+    "maud_clean_questions": 1,
+    "maud_conflicts": 0,
+    "maud_correct": 0,
+    "maud_precision_answered": null,
+    "maud_questions": 4,
+    "overall_extraction_score": 0.0,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite+maud",
+    "suite_overall_extraction_score": null
+   },
+   "typed_valid": true
+  },
+  "merger_agreement__other__mixed": {
+   "adherence": {
+    "extra_schema_key_count": 2,
+    "extra_schema_keys": [
+     "cuad_clauses",
+     "cuad_family"
+    ],
+    "legacy_schema_keys": [],
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true
+   },
+   "model_fields": [
+    "confidence",
+    "document_name",
+    "effective_date",
+    "effective_time",
+    "governing_law",
+    "intent",
+    "keywords",
+    "maud_clauses",
+    "merger_consideration",
+    "parties",
+    "reasoning",
+    "subject_matter"
+   ],
+   "payload": {
+    "doc_type": "merger_agreement",
+    "entity_list_f1": 1.0,
+    "extra_schema_key_count": 0,
+    "extra_schema_keys": [],
+    "extraction_f1": 0.9412,
+    "extraction_f2": 0.9091,
+    "extraction_precision": 1.0,
+    "extraction_recall": 0.8889,
+    "fields": {
+     "ambiguous_fields": [],
+     "doc_class": "merger_agreement",
+     "entity_list_audit": {},
+     "entity_list_scores": {
+      "keywords": {
+       "f1": 1.0,
+       "field_name": "keywords",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      },
+      "parties": {
+       "f1": 1.0,
+       "field_name": "parties",
+       "matched": 2,
+       "partial_gt": true,
+       "precision": 1.0,
+       "recall": 1.0,
+       "unmatched_expected": 0,
+       "unmatched_predicted": 0
+      }
+     },
+     "overall_score": 0.8889,
+     "trace": {
+      "calibration_error": null,
+      "confidence": null,
+      "confidence_gate": "missing",
+      "n_reasoning_entries": null,
+      "reasoning": null
+     }
+    },
+    "legacy_schema_keys": [],
+    "overall_extraction_score": 0.8889,
+    "parse_error": false,
+    "parse_failure_reason": null,
+    "prose_wrapper": false,
+    "schema_adherence": 1.0,
+    "schema_valid": true,
+    "scoring_method": "suite"
+   },
+   "typed_valid": true
+  }
+ },
+ "dojo_version": "0.26.0",
+ "sandbox_commit": "264153a562be4c8339f46eb89d27caf28da9f5ff"
+}

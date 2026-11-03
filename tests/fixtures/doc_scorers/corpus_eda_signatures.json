@@ -1,0 +1,17 @@
+{
+ "llm_dojo_scoring.schemas.gt_metadata:ABSENT_PRESENCE_STATUSES": "frozenset",
+ "llm_dojo_scoring.schemas.gt_metadata:ANNOTATION_KEYS": "frozenset",
+ "llm_dojo_scoring.schemas.gt_metadata:CUAD_PRESENCE_KEY": "str",
+ "llm_dojo_scoring.schemas.gt_metadata:GT_PRESENCE_KEY": "str",
+ "llm_dojo_scoring.schemas.gt_metadata:derive_presence_from_gt": "(fields: 'Mapping[str, Any] | None', *, field: 'str' = 'cuad_clauses') -> 'dict[str, dict[str, Any]] | None'",
+ "llm_dojo_scoring.schemas.gt_metadata:gt_presence_map": "(fields: 'Mapping[str, Any] | None') -> 'dict[str, str]'",
+ "llm_dojo_scoring.schemas.gt_metadata:is_empty_value": "(value: 'Any') -> 'bool'",
+ "llm_dojo_scoring.schemas.gt_metadata:normalize_field_values": "(record: 'Any') -> 'Any'",
+ "llm_dojo_scoring.schemas.gt_metadata:parse_gt_fields": "(raw: 'Any') -> 'dict[str, Any]'",
+ "llm_dojo_scoring.schemas.gt_metadata:parse_json_container": "(value: 'Any') -> 'Any'",
+ "llm_dojo_scoring.schemas.gt_metadata:presence_expectations_from_cuad_labels": "(labels: 'Any', *, field: 'str' = 'cuad_clauses') -> 'dict[str, dict[str, Any]]'",
+ "llm_dojo_scoring.schemas.gt_metadata:scoring_gt_fields": "(fields: 'Mapping[str, Any]', *, field_types: 'Mapping[str, str] | None' = None, extra_keys: 'Sequence[str]' = (), drop_unmapped: 'bool' = True, doc_type: 'str | None' = None, subclass: 'Any' = None) -> 'dict[str, Any]'",
+ "llm_dojo_scoring:corporate_record_field_types": "(subclass: 'Any', gt: 'Mapping[str, Any] | str | None' = None) -> 'dict[str, str]'",
+ "llm_dojo_scoring:corporate_record_json_schema": "(subclass: 'Any' = None) -> 'dict[str, Any]'",
+ "llm_dojo_scoring:corporate_record_subclass_schema": "(subclass: 'Any') -> 'SubclassSchema'"
+}

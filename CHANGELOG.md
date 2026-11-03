@@ -5,6 +5,7 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-11-03
 ### Fixed
 
 - `uv.lock` recorded `llm-dojo-scoring` 0.25.0 after the 0.26.0 cut; relocked so it
@@ -12,6 +13,39 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Added
 
+- Tiered per-document-type scoring (llm-mailroom unified audit row, spec §3 and §3.1):
+  - `score_document(...)`: one entry point that returns the sandbox's
+    `score_extraction_row` payload (every field score proved equal on 89 recorded sandbox
+    goldens), plus a `scorer` record. Bad predictions (`None`, JSON text, prose, lists)
+    are coerced or field-scored as empty instead of raising. Three deliberate departures
+    from the sandbox, none of which changes a field score:
+    - a `None` prediction is a parse error (`parse_failure_reason: null_payload`,
+      `schema_adherence` 0.0); the sandbox called it adherent;
+    - adherence is checked on the prediction as given, so keys outside the class schema
+      appear in `extra_schema_keys`; the sandbox checked the scoped prediction;
+    - correspondence topic/sentiment (`content_topic_accuracy`, `sentiment_accuracy`, ...)
+      and insurance `determination_consistency` / `amount_exactness` are reported. The
+      suites computed them, but the sandbox payload dropped them. They never feed
+      `overall_extraction_score`.
+  - `scoring/doc_scorers/`: tier 0 `score_common` (Hub scoping, class suite, PRF keys,
+    `unlabeled_fields`), one module per corpus type (`contract` with the CUAD headline,
+    `merger_agreement` with the MAUD headline, `corporate_record` always detailed,
+    `correspondence`, `insurance_claim` deriving `cms_source_table`), the `generic`
+    fallback, and `get_doc_scorer`.
+  - `scoring/extraction_scope.py` and `assess_extraction_payload(..., schema_lookup=)`,
+    moved from the sandbox.
+  - `score_archive_block(..., doc_subclass=)` and five new block keys:
+    `headline_score`, `headline_metric`, `unlabeled_fields`, `entity_list_f1`, `scorer`
+    (`ARCHIVE_SCORING_V027_KEYS`; not required on older rows). Existing keys are unchanged.
+    A non-mapping prediction (JSON text, prose, a list) is coerced or scored as empty;
+    before 0.27.0 it raised.
+  - Review fixes: a JSON object after braced prose is recovered (the greedy match no
+    longer hides it); `score_document` canonicalises the doc type (case, padding,
+    specialist aliases) before scoring; an empty serialized CUAD/MAUD label map (`"{}"`)
+    no longer replaces the field score with null; with a caller's `field_types`,
+    `score_archive_block`'s `entity_list_f1` describes that map.
+  - `tests/fixtures/contract_surface.json` pins these names and signatures for llm-mailroom
+    and the sandbox until they adopt them and `consumer_surface.json` is rescanned.
 - `scripts/release.py check` now fails when `uv.lock` records a different
   `llm-dojo-scoring` version than `pyproject.toml`, and `publish` refuses a commit
   whose `uv.lock` is stale. CI installs with `uv sync --frozen`, which never
