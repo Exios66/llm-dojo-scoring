@@ -5,6 +5,16 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Fixed (review of the sandbox v0.26.0 vendor bump)
+
+- `calibration.required_samples`: a tiny `risk` no longer divides by zero (`log1p`), and the zero-error shortcut honours the one-million cap (returns `None`).
+- `calibration.cross_fit_cutoffs`: `meets_target` uses the unrounded Wilson lower bound, so a bound just under the target is not rounded over it.
+- `calibration.auroc` / `spearman`: NaN values are dropped instead of being ranked arbitrarily.
+- `ScoringSuite.score` batches pass `doc_class` and per-row field scores to `aggregate_quality_honest`, so batch results carry `headline_scope` and the intent split.
+- Emitter: the `cost_basis` requirement applies to `usd` units in any case (`reviewer_cost_per_accepted_usd` is registered as `usd`).
+- Grid Markdown cells entity-escape `<` and `>`.
+- `rescore_records` skips non-object rows with a reason instead of aborting; `rescore_file` refuses an output path equal to its input.
+
 ## [0.26.0] - 2026-11-02
 
 ### Added (five-class extraction schema registry)
