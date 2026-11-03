@@ -984,10 +984,10 @@ def publish_plan(
             f"commit {commit[:12]} __version__ "
             f"{init_match['version'] if init_match else '?'} != {version}"
         )
-    try:
-        lock_show = git("show", f"{commit}:uv.lock")
-    except ReleaseError:
-        lock_show = None  # older commits predate uv.lock
+    # Only an absent uv.lock (older commits predate it) skips the check; any
+    # other read failure raises so publishing cannot proceed unchecked.
+    lock_listed = git("ls-tree", "--name-only", commit, "--", "uv.lock").strip()
+    lock_show = git("show", f"{commit}:uv.lock") if lock_listed else None
     lock_at_commit = uv_lock_version(lock_show) if lock_show is not None else None
     if lock_show is not None and lock_at_commit != version:
         hard.append(

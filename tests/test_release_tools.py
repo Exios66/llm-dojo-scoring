@@ -189,3 +189,59 @@ def test_cut_plan_reminds_to_relock(release):
     """The cut plan's next steps tell the releaser to run ``uv lock``."""
     plan = release.cut_plan("99.0.0", today="2026-11-03", allow_dirty=True, allow_empty=True)
     assert any("uv lock" in step for step in plan["next"])
+
+
+def _offline_publish(release, monkeypatch, git_impl):
+    """Run ``publish_plan`` with every network/state lookup stubbed and ``git`` replaced."""
+    state = {"tags": []}
+    monkeypatch.setattr(release, "chain_state", lambda: state)
+    monkeypatch.setattr(release, "check_chain", lambda s: ([], []))
+    monkeypatch.setattr(release, "section_for", lambda v: {"stamp": None})
+    monkeypatch.setattr(release, "_resolve_commit", lambda ref: "a" * 40)
+    monkeypatch.setattr(release, "remote_tag_commit", lambda v: None)
+    monkeypatch.setattr(release, "remote_release", lambda v: None)
+    monkeypatch.setattr(release, "build_notes", lambda *a, **k: {"title": "t", "body": ""})
+    monkeypatch.setattr(release, "git", git_impl)
+    return release.publish_plan(
+        "9.9.9", commit_ref="HEAD", target="main", draft=True,
+        with_assets=False, push=False, title=None, notes_file=None,
+    )
+
+
+def _fake_git(lock: str | None, *, lock_read_fails: bool = False):
+    """A ``git`` stand-in for a commit stamped 9.9.9 with the given uv.lock (``None`` = absent)."""
+    files = {
+        "pyproject.toml": 'version = "9.9.9"\n',
+        "llm_dojo_scoring/__init__.py": '__version__ = "9.9.9"\n',
+    }
+
+    def git(*args):
+        """Serve the stubbed tree for ``ls-tree`` / ``show``."""
+        if args[0] == "ls-tree":
+            return "uv.lock\n" if lock is not None else ""
+        if args[0] == "show":
+            path = args[1].split(":", 1)[1]
+            if path == "uv.lock":
+                if lock_read_fails:
+                    raise load_release().ReleaseError("git show failed: object read error")
+                return lock
+            return files[path]
+        raise AssertionError(args)
+
+    return git
+
+
+def test_publish_skips_lock_check_only_when_uv_lock_absent(release, monkeypatch):
+    """A commit without uv.lock passes; a stale lock at the commit is a hard error."""
+    plan = _offline_publish(release, monkeypatch, _fake_git(None))
+    assert not any("uv.lock" in e for e in plan["errors"])
+    plan = _offline_publish(
+        release, monkeypatch, _fake_git(_LOCK_SAMPLE.format(version="0.0.1"))
+    )
+    assert any("uv.lock records" in e for e in plan["errors"])
+
+
+def test_publish_fails_closed_when_uv_lock_read_fails(release, monkeypatch):
+    """A uv.lock that exists but cannot be read raises instead of skipping the check."""
+    with pytest.raises(Exception, match="object read error"):
+        _offline_publish(release, monkeypatch, _fake_git("x", lock_read_fails=True))
