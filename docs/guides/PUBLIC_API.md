@@ -72,6 +72,21 @@ meant to use to file one scoring block per document. Treat them as stable:
 listed in `ARCHIVE_SCORING_V027_KEYS`). Every earlier key keeps its meaning, and
 `validate_audit_entry` does not require the new keys on older rows.
 
+Reading the new keys (0.27.1):
+
+- `entity_list_f1` is null whenever the block is not countable, and `unlabeled_fields` is
+  null when `reason` is `gt_missing`. A block never carries them for a row it calls
+  unscorable for lack of ground truth.
+- `status` is the field-map verdict and stays unchanged for MAUD and CUAD rows, which have
+  no field-map ground truth. Rows with a non-null `headline_score` are judged by the
+  headline; readers that filter on `status == 'scored'` must also keep rows whose
+  `headline_score` is not null.
+- With `expected_subclass=None`, `doc_subclass` derives the CMS `cms_source_table` for
+  insurance rows, as `score_document` does. When both are given, `expected_subclass` wins
+  for the field-map score.
+- The tiered keys are computed behind a guard: if they fail they are null and every
+  earlier key is unaffected.
+
 ## Document scoring (0.27.0, unified audit row)
 
 Pinned by `tests/fixtures/contract_surface.json` until consumers adopt them. Added for
@@ -85,7 +100,8 @@ Treat as stable:
   `scorer` (`doc_type`, `module`, `subclass`, `tiers_run`) and the type extras
   (correspondence topic/sentiment, insurance claims consistency). Adherence is checked
   on the prediction as given, and `None` is a parse error. It never raises on a bad
-  prediction.
+  prediction or a bad field value: a failing type extras or headline keeps the tier 0
+  score and appends `+extras-failed` to `scoring_method`.
 - `assess_extraction_payload(predicted, doc_type, doc_subclass=None, *, schema_lookup=None)`
   (`pipeline.sandbox_schema_adherence`): parse and schema-adherence facts. Pydantic models
   come from `schema_lookup(doc_type)`, so the dojo never imports mailroom.
