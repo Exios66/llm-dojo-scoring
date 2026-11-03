@@ -113,7 +113,10 @@ def test_archive_block_existing_keys_unchanged(case_id, with_subclass):
     """Every pre-0.27 key keeps its value, with or without ``doc_subclass``."""
     extra = {"doc_subclass": CASES[case_id].get("doc_subclass")} if with_subclass else {}
     got = to_jsonable(_block(case_id, **extra))
-    before = BEFORE[case_id]
+    before = json.loads(json.dumps(BEFORE[case_id]))
+    # ``scorer_version`` stamps the package version, which a release cut moves on purpose.
+    assert got["provenance"].pop("scorer_version") == dojo.__version__
+    before["provenance"].pop("scorer_version")
     assert {k: got[k] for k in before} == before
 
 
