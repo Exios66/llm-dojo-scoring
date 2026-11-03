@@ -23,10 +23,12 @@ FIXTURES = Path(__file__).parent / "fixtures" / "doc_scorers"
 
 
 def _cases() -> list[dict]:
+    """The synthetic input rows."""
     return json.loads((FIXTURES / "inputs.json").read_text())["cases"]
 
 
 def _subclass_values(cases: list[dict], doc_type: str) -> set[str]:
+    """Every subclass key or surface the cases carry for ``doc_type``."""
     out: set[str] = set()
     for c in cases:
         if c["doc_type"] == doc_type:
@@ -35,6 +37,7 @@ def _subclass_values(cases: list[dict], doc_type: str) -> set[str]:
 
 
 def test_inputs_cover_every_type_and_subclass():
+    """Inputs cover every type, subclass key, surface and required edge case."""
     cases = _cases()
     assert len({c["case_id"] for c in cases}) == len(cases)
     for doc_type in CORPUS_DOC_TYPES:
@@ -44,6 +47,7 @@ def test_inputs_cover_every_type_and_subclass():
         assert any(c["doc_type"] == doc_type and c["expected"] is None for c in cases), doc_type
 
     def has(pred) -> bool:
+        """Whether any case satisfies ``pred``."""
         return any(pred(c) for c in cases)
 
     exp = lambda c: c["expected"] or {}  # noqa: E731
@@ -66,6 +70,7 @@ def test_inputs_cover_every_type_and_subclass():
 
 
 def test_goldens_match_inputs():
+    """Every input case has a golden captured on dojo 0.26.0."""
     goldens = json.loads((FIXTURES / "goldens.json").read_text())
     assert goldens["dojo_version"] == "0.26.0"
     assert goldens["sandbox_commit"]
@@ -76,6 +81,7 @@ def test_goldens_match_inputs():
 
 @pytest.mark.parametrize("name", ["capture_sandbox_goldens"])
 def test_capture_script_loads(name):
+    """The capture script loads by path and exposes its entry points."""
     from conftest import load_script
 
     mod = load_script(name)
