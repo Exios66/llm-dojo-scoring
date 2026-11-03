@@ -13,6 +13,7 @@ import pytest
 from conftest import load_script
 
 from llm_dojo_scoring.scoring.doc_scorers import DOC_SCORERS, get_doc_scorer
+from llm_dojo_scoring.scoring.doc_scorers.correspondence import CONTENT_KEYS
 from llm_dojo_scoring.scoring.doc_scorers.dispatch import score_tiers
 
 FIXTURES = Path(__file__).parent / "fixtures" / "doc_scorers"
@@ -83,19 +84,33 @@ def test_contract_subclass_normalises_cuad_surface():
 _FIELD_MAP_TYPES = ("corporate_record", "correspondence", "insurance_claim")
 
 
+#: Extras each field-map type reports beside the sandbox payload (0.27.0).
+_TYPE_EXTRA_KEYS = {
+    "corporate_record": set(),
+    "correspondence": set(CONTENT_KEYS),
+    "insurance_claim": {"determination_consistency", "amount_exactness"},
+}
+
+
 @pytest.mark.parametrize("case_id", [k for t in _FIELD_MAP_TYPES for k in _cases_for(t)])
 def test_type_parity_field_map_types(case_id):
-    """Corporate, correspondence and insurance rows match the sandbox exactly."""
-    assert to_jsonable(_run(CASES[case_id])) == _without_adherence(GOLDENS[case_id])
+    """Corporate, correspondence and insurance rows keep every sandbox key and value.
+
+    The only additions are the type's own extras, which never touch the headline.
+    """
+    got = to_jsonable(_run(CASES[case_id]))
+    golden = _without_adherence(GOLDENS[case_id])
+    assert {k: got[k] for k in golden} == golden
+    assert set(got) - set(golden) <= _TYPE_EXTRA_KEYS[CASES[case_id]["doc_type"]]
 
 
 @pytest.mark.parametrize("doc_type", _FIELD_MAP_TYPES)
 def test_field_map_modules_registered(doc_type):
-    """Every corpus type with a field map has its own module, with no double-counted extras."""
+    """Every corpus type with a field map has its own module; none sets a headline."""
     scorer = DOC_SCORERS[doc_type]
     assert scorer.doc_type == doc_type
-    assert scorer.extras({"a": 1}, {"a": 1}, subclass=None, doc_text=None) == {}
     assert scorer.headline({"overall_extraction_score": 0.5}, {}) == (None, None)
+    assert scorer.extras({}, {}, subclass=None, doc_text=None) == {}
 
 
 def test_corporate_record_always_detailed():

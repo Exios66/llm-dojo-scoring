@@ -78,15 +78,18 @@ def score_document(
     """Score one document's extraction: the sandbox ``score_extraction_row`` payload plus ``scorer``.
 
     Tier 0 (scoping, class suite, PRF keys, ``unlabeled_fields``), the type module's
-    extras and headline (MAUD/CUAD), and ``assess_extraction_payload`` adherence keys.
-    A prediction that is not a mapping (JSON text, prose, a list) is coerced when it
-    holds a JSON object and scored as empty otherwise; it never raises. Pydantic
+    extras and headline (MAUD/CUAD, correspondence topic/sentiment, claims consistency),
+    and ``assess_extraction_payload`` adherence keys on the prediction as given. A
+    prediction that is not a mapping (``None``, JSON text, prose, a list) is coerced when
+    it holds a JSON object and field-scored as empty otherwise; it never raises.
+
+    Departures from the sandbox's ``score_extraction_row`` (0.27.0): a ``None``
+    prediction is a parse error (the sandbox called it adherent); adherence reports
+    keys outside the class schema (the sandbox checked the scoped prediction); and the
+    correspondence / insurance extras are reported (the sandbox dropped them). Pydantic
     models for adherence come from ``schema_lookup`` (the dojo does not import mailroom).
     """
     raw_subclass = str(doc_subclass or expected_subclass or "").strip() or None
-    if predicted is None:
-        # Sandbox parity: a null prediction is an empty extraction, not a parse error.
-        predicted = {}
     if isinstance(predicted, Mapping):
         scored_predicted: Mapping[str, Any] = predicted
     else:
@@ -100,14 +103,9 @@ def score_document(
         doc_subclass=doc_subclass,
         expected_subclass=expected_subclass,
     )
-    if isinstance(predicted, Mapping):
-        # As the sandbox did: adherence sees the scoped prediction plus its parse facts.
-        parse_facts = {k: predicted[k] for k in ("_parse_error", "_raw") if k in predicted}
-        scoped, _ = scope_extraction_pair(doc_type, predicted, expected if isinstance(expected, Mapping) else {})
-        adherence_input: Any = {**scoped, **parse_facts}
-    else:
-        adherence_input = predicted
-    payload.update(assess_extraction_payload(adherence_input, doc_type, raw_subclass, schema_lookup=schema_lookup))
+    # Adherence sees the prediction as the specialist returned it: foreign keys that
+    # scoping drops still count as extra keys, and a null prediction is a parse error.
+    payload.update(assess_extraction_payload(predicted, doc_type, raw_subclass, schema_lookup=schema_lookup))
     scorer = get_doc_scorer(doc_type)
     payload["scorer"] = _scorer_info(scorer, doc_type, raw_subclass)
     return payload

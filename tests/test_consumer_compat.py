@@ -604,3 +604,28 @@ def test_pinned_contract_suite_alias_resolves_to_the_contract_suite():
     assert suite is dojo.suite_for_doc_type("contract") or suite.name == dojo.suite_for_doc_type(
         "contract"
     ).name
+
+
+_CONTRACT_SURFACE_PATH = Path(__file__).resolve().parent / "fixtures" / "contract_surface.json"
+
+
+def test_unified_audit_row_contract_surface():
+    """The 0.27.0 names llm-mailroom (M6/M14/M15) and the sandbox (S1) build against keep their shape.
+
+    ``consumer_surface.json`` is a scan of what consumers import today, so it cannot pin
+    these until they adopt them (then regenerate it with
+    ``scripts/audit_consumer_surface.py --write``). Until then this fixture pins them.
+    """
+    import inspect
+
+    import llm_dojo_scoring
+    from llm_dojo_scoring.pipeline.archive import ARCHIVE_SCORING_V027_KEYS
+    from llm_dojo_scoring.scoring.doc_scorers import DOC_SCORERS
+
+    contract = json.loads(_CONTRACT_SURFACE_PATH.read_text())
+    for qualname, signature in contract["names"].items():
+        name = qualname.split(":")[1]
+        assert name in llm_dojo_scoring.__all__, name
+        assert str(inspect.signature(getattr(llm_dojo_scoring, name))) == signature, name
+    assert sorted(ARCHIVE_SCORING_V027_KEYS) == contract["archive_scoring_v027_keys"]
+    assert sorted(DOC_SCORERS) == contract["doc_scorers"]

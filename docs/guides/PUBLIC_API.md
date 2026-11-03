@@ -74,14 +74,18 @@ listed in `ARCHIVE_SCORING_V027_KEYS`). Every earlier key keeps its meaning, and
 
 ## Document scoring (0.27.0, unified audit row)
 
-Added for llm-mailroom's scoring node family and the sandbox's `score_extraction_row`
+Pinned by `tests/fixtures/contract_surface.json` until consumers adopt them. Added for
+llm-mailroom's scoring node family and the sandbox's `score_extraction_row`
 wrapper (spec: llm-mailroom `docs/superpowers/specs/2026-11-03-unified-audit-row-design.md`).
 Treat as stable:
 
 - `score_document(doc_type, predicted, expected, *, doc_text=None, doc_subclass=None,
   expected_subclass=None, schema_lookup=None) -> dict` (`scoring.doc_scorers.dispatch`):
-  the sandbox's `score_extraction_row` payload, key for key, plus `scorer`
-  (`doc_type`, `module`, `subclass`, `tiers_run`). It never raises on a bad prediction.
+  the sandbox's `score_extraction_row` payload with every field score unchanged, plus
+  `scorer` (`doc_type`, `module`, `subclass`, `tiers_run`) and the type extras
+  (correspondence topic/sentiment, insurance claims consistency). Adherence is checked
+  on the prediction as given, and `None` is a parse error. It never raises on a bad
+  prediction.
 - `assess_extraction_payload(predicted, doc_type, doc_subclass=None, *, schema_lookup=None)`
   (`pipeline.sandbox_schema_adherence`): parse and schema-adherence facts. Pydantic models
   come from `schema_lookup(doc_type)`, so the dojo never imports mailroom.

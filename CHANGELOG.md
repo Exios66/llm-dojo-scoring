@@ -15,9 +15,18 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 - Tiered per-document-type scoring (llm-mailroom unified audit row, spec §3 and §3.1):
   - `score_document(...)`: one entry point that returns the sandbox's
-    `score_extraction_row` payload byte for byte (proved against 89 recorded sandbox
-    goldens), plus a `scorer` record. Bad predictions (JSON text, prose, lists) are
-    coerced or scored as empty instead of raising.
+    `score_extraction_row` payload (every field score proved equal on 89 recorded sandbox
+    goldens), plus a `scorer` record. Bad predictions (`None`, JSON text, prose, lists)
+    are coerced or field-scored as empty instead of raising. Three deliberate departures
+    from the sandbox, none of which changes a field score:
+    - a `None` prediction is a parse error (`parse_failure_reason: null_payload`,
+      `schema_adherence` 0.0); the sandbox called it adherent;
+    - adherence is checked on the prediction as given, so keys outside the class schema
+      appear in `extra_schema_keys`; the sandbox checked the scoped prediction;
+    - correspondence topic/sentiment (`content_topic_accuracy`, `sentiment_accuracy`, ...)
+      and insurance `determination_consistency` / `amount_exactness` are reported. The
+      suites computed them, but the sandbox payload dropped them. They never feed
+      `overall_extraction_score`.
   - `scoring/doc_scorers/`: tier 0 `score_common` (Hub scoping, class suite, PRF keys,
     `unlabeled_fields`), one module per corpus type (`contract` with the CUAD headline,
     `merger_agreement` with the MAUD headline, `corporate_record` always detailed,
@@ -28,6 +37,10 @@ Format based on Keep a Changelog; versioning is SemVer.
   - `score_archive_block(..., doc_subclass=)` and five new block keys:
     `headline_score`, `headline_metric`, `unlabeled_fields`, `entity_list_f1`, `scorer`
     (`ARCHIVE_SCORING_V027_KEYS`; not required on older rows). Existing keys are unchanged.
+    A non-mapping prediction (JSON text, prose, a list) is coerced or scored as empty;
+    before 0.27.0 it raised.
+  - `tests/fixtures/contract_surface.json` pins these names and signatures for llm-mailroom
+    and the sandbox until they adopt them and `consumer_surface.json` is rescanned.
 - `scripts/release.py check` now fails when `uv.lock` records a different
   `llm-dojo-scoring` version than `pyproject.toml`, and `publish` refuses a commit
   whose `uv.lock` is stale. CI installs with `uv sync --frozen`, which never

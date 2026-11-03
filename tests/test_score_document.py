@@ -19,6 +19,9 @@ from test_sandbox_schema_adherence import GoldenSchemaLookup
 
 import llm_dojo_scoring as dojo
 from llm_dojo_scoring import score_document
+from llm_dojo_scoring.scoring.doc_scorers.correspondence import CONTENT_KEYS
+from llm_dojo_scoring.scoring.extraction_scope import scope_extraction_pair
+from llm_dojo_scoring.scoring.suites import suite_for_doc_type
 from llm_dojo_scoring.pipeline.archive import (
     ARCHIVE_SCORING_KEYS,
     ARCHIVE_SCORING_POST_V021_KEYS,
@@ -67,14 +70,111 @@ def _block(case_id: str, **extra) -> dict:
     )
 
 
+#: Deliberate departure from the sandbox (0.27.0): a null prediction is a parse error,
+#: not an adherent empty payload. Field scoring still treats it as empty.
+NULL_PREDICTION_ADHERENCE = {
+    "parse_error": True,
+    "parse_failure_reason": "null_payload",
+    "schema_valid": False,
+    "schema_adherence": 0.0,
+}
+
+
+#: Extras the suites compute for ``suite.score`` callers, which the sandbox dropped and
+#: 0.27.0 reports on the payload (never folded into ``overall_extraction_score``).
+_SUITE_EXTRA_KEYS = {
+    "correspondence": CONTENT_KEYS,
+    "insurance_claim": ("determination_consistency", "amount_exactness"),
+}
+
+
+def _suite_extras(case_id: str) -> dict:
+    """The type extras as the class suite itself computes them (an independent oracle)."""
+    case = CASES[case_id]
+    keys = _SUITE_EXTRA_KEYS.get(case["doc_type"])
+    predicted = case["predicted"] if isinstance(case["predicted"], dict) else {}
+    if not keys or not case["expected"]:
+        return {}
+    pred, exp = scope_extraction_pair(case["doc_type"], predicted, case["expected"])
+    sub = case.get("doc_subclass") or case.get("expected_subclass") or "other"
+    result = suite_for_doc_type(case["doc_type"]).score(
+        exp, pred, doc_text=case.get("doc_text"), detailed=True, doc_subclass=sub
+    )
+    return {k: result[k] for k in keys if k in result}
+
+
+def _expected_payload(case_id: str) -> dict:
+    """The sandbox golden with the documented 0.27.0 departures applied.
+
+    Adherence comes from the D2 goldens, which the sandbox recorded on the prediction as
+    given (so foreign keys count and a null prediction is a parse error); the type extras
+    come from the class suite.
+    """
+    golden = GOLDENS[case_id]
+    payload = dict(golden["payload"])
+    payload.update(golden["adherence"])
+    payload.update(to_jsonable(_suite_extras(case_id)))
+    return payload
+
+
 @pytest.mark.parametrize("case_id", SCORABLE)
 def test_score_document_matches_goldens(case_id):
-    """Every scorable case reproduces the sandbox payload exactly once ``scorer`` is removed."""
+    """Every scorable case reproduces the sandbox payload (plus the documented departures)."""
     got = to_jsonable(_document(case_id))
     scorer = got.pop("scorer")
-    assert got == GOLDENS[case_id]["payload"]
+    assert got == _expected_payload(case_id)
     assert scorer["doc_type"] == CASES[case_id]["doc_type"]
     assert scorer["tiers_run"][0] == "common"
+
+
+@pytest.mark.parametrize("case_id", SCORABLE)
+def test_field_scores_identical_to_sandbox(case_id):
+    """The departures touch adherence and add extras; every sandbox score is unchanged."""
+    got = to_jsonable(_document(case_id))
+    golden = GOLDENS[case_id]
+    adherence = set(golden["adherence"]) | {"extra_schema_key_count", "recovered_from_raw"}
+    for key, value in golden["payload"].items():
+        if key not in adherence:
+            assert got[key] == value, key
+
+
+def test_type_extras_are_reported():
+    """Topic/sentiment and claims consistency reach the payload (the sandbox dropped them)."""
+    topic = _document("correspondence__email__topic_sentiment_gt_match")
+    assert topic["content_topic_accuracy"] == 1.0 and topic["sentiment_accuracy"] == 1.0
+    claim = _document("insurance_claim__auto__partial")
+    assert "determination_consistency" in claim and "amount_exactness" in claim
+
+
+def test_extras_never_change_headline():
+    """Extras sit beside the score; ``overall_extraction_score`` is the sandbox's."""
+    case_id = "correspondence__memo__topic_sentiment_gt_mismatch"
+    got = _document(case_id)
+    assert got["overall_extraction_score"] == GOLDENS[case_id]["payload"]["overall_extraction_score"]
+
+
+def test_adherence_reports_foreign_keys():
+    """A merger prediction carrying CUAD keys reports them as extra schema keys."""
+    got = _document("merger_agreement__other__mixed")
+    assert {"cuad_clauses", "cuad_family"} <= set(got["extra_schema_keys"])
+
+
+NULL_CASES = sorted(k for k in SCORABLE if CASES[k]["predicted"] is None)
+
+
+@pytest.mark.parametrize("case_id", NULL_CASES)
+def test_null_prediction_is_parse_error(case_id):
+    """A ``None`` prediction is not adherent; its field scores match an empty extraction."""
+    got = _document(case_id)
+    for key, value in NULL_PREDICTION_ADHERENCE.items():
+        assert got[key] == value
+    golden = GOLDENS[case_id]["payload"]
+    assert got["overall_extraction_score"] == golden["overall_extraction_score"]
+
+
+def test_null_cases_exist():
+    """The goldens cover null predictions, so the departure is exercised."""
+    assert len(NULL_CASES) >= 3
 
 
 @pytest.mark.parametrize("case_id", BAD_PAYLOAD)
@@ -130,6 +230,30 @@ def test_archive_block_new_keys(case_id):
     if "error" not in golden:
         assert got["entity_list_f1"] == golden.get("entity_list_f1")
         assert got["unlabeled_fields"] == golden.get("unlabeled_fields")
+
+
+@pytest.mark.parametrize("case_id", sorted(k for k, b in BEFORE.items() if "error" in b))
+def test_archive_block_never_raises_on_bad_payload(case_id):
+    """Text, prose and list predictions get a block (coerced, else empty) instead of an exception."""
+    got = _block(case_id, doc_subclass=CASES[case_id].get("doc_subclass"))
+    assert tuple(got) == ARCHIVE_SCORING_KEYS
+    assert got["status"] in ("scored", "unscorable")
+
+
+@pytest.mark.parametrize("predicted", [None, 42, b"\xff", "no json here", ["a"], '{"parties": ["A"]}'])
+def test_archive_block_odd_inputs(predicted):
+    """Arbitrary junk is data, not an exception."""
+    got = score_archive_block("contract", predicted, {"parties": ["A"]})
+    assert tuple(got) == ARCHIVE_SCORING_KEYS
+
+
+def test_archive_block_json_text_is_coerced():
+    """A JSON object in text scores the same as the dict it holds."""
+    expected = {"parties": ["A"]}
+    as_text = score_archive_block("contract", '{"parties": ["A"]}', expected)
+    as_dict = score_archive_block("contract", {"parties": ["A"]}, expected)
+    assert as_text["overall_score"] == as_dict["overall_score"]
+    assert as_text["field_scores"] == as_dict["field_scores"]
 
 
 @pytest.mark.parametrize("case_id", BENCHMARK)

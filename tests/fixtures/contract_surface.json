@@ -1,0 +1,33 @@
+{
+ "archive_scoring_v027_keys": [
+  "entity_list_f1",
+  "headline_metric",
+  "headline_score",
+  "scorer",
+  "unlabeled_fields"
+ ],
+ "consumers": {
+  "llm-mailroom": [
+   "M6",
+   "M14",
+   "M15"
+  ],
+  "local-mailroom-sandbox": [
+   "S1"
+  ]
+ },
+ "doc_scorers": [
+  "contract",
+  "corporate_record",
+  "correspondence",
+  "insurance_claim",
+  "merger_agreement"
+ ],
+ "names": {
+  "llm_dojo_scoring:assess_extraction_payload": "(predicted: 'Any', doc_type: 'str', doc_subclass: 'str | None' = None, *, schema_lookup: 'SchemaLookup | None' = None) -> 'dict[str, Any]'",
+  "llm_dojo_scoring:get_doc_scorer": "(doc_type: 'str | None') -> 'DocScorer'",
+  "llm_dojo_scoring:score_archive_block": "(doc_class: 'str', predicted: 'Mapping[str, Any] | None', expected: 'Mapping[str, Any] | None', *, field_types: 'Mapping[str, str] | None' = None, field_map: 'str' = 'taxonomy.yaml', field_map_sha: 'str | None' = None, taxonomy_bytes: 'bytes | None' = None, method: 'str | None' = None, doc_text: 'str | None' = None, provenance: 'Mapping[str, Any] | None' = None, expected_subclass: 'Any' = None, doc_subclass: 'str | None' = None) -> 'dict[str, Any]'",
+  "llm_dojo_scoring:score_document": "(doc_type: 'str', predicted: 'Any', expected: 'Mapping[str, Any] | None', *, doc_text: 'str | None' = None, doc_subclass: 'str | None' = None, expected_subclass: 'str | None' = None, schema_lookup: 'SchemaLookup | None' = None) -> 'dict[str, Any]'"
+ },
+ "note": "Names and signatures the 0.27.0 unified-audit-row stages (llm-mailroom M6/M14/M15, sandbox S1) are built against. consumer_surface.json is a scan of what consumers import today and cannot list these until they adopt them; regenerate it then (scripts/audit_consumer_surface.py --write)."
+}

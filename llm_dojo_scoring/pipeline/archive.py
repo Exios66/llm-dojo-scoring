@@ -459,7 +459,15 @@ def score_archive_block(
     ``headline_metric`` (the MAUD/CUAD number when the type sets a headline, else
     null), ``unlabeled_fields``, ``entity_list_f1`` and ``scorer``. Every key that
     existed before 0.27.0 keeps its meaning; ``overall_score`` stays the field-map mean.
+    A prediction that is not a mapping (JSON text, prose, a list) is coerced to the JSON
+    object it holds, else scored as empty; before 0.27.0 it raised.
     """
+    if predicted is not None and not isinstance(predicted, Mapping):
+        # Job items and raw LLM text arrive as strings or lists: score the JSON object
+        # they hold, else score an empty extraction. The block never raises on them.
+        from .sandbox_schema_adherence import coerce_predicted_payload
+
+        predicted = coerce_predicted_payload(predicted)[0] or {}
     ftypes = _live_field_types(doc_class, field_types)
     exp = _filter_to_live_map(expected, ftypes)
     pred = _filter_to_live_map(predicted, ftypes)
