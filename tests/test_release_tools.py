@@ -130,3 +130,45 @@ def test_gh_unavailable_pattern_is_narrow():
     assert _GH_UNAVAILABLE.search("gh api failed: To get started with GitHub CLI, please run:  gh auth login")
     assert not _GH_UNAVAILABLE.search("gh pr list failed: unknown flag: --bogus")
     assert not _GH_UNAVAILABLE.search("gh release view failed: release not found")
+
+
+_LOCK_SAMPLE = '''version = 1
+revision = 5
+
+[[package]]
+name = "jellyfish"
+version = "1.2.0"
+
+[[package]]
+name = "llm-dojo-scoring"
+version = "{version}"
+source = {{ editable = "." }}
+'''
+
+
+def test_uv_lock_version_reads_the_root_package_entry(release):
+    """Only this package's ``[[package]]`` entry counts, not a dependency's version."""
+    assert release.uv_lock_version(_LOCK_SAMPLE.format(version="0.26.0")) == "0.26.0"
+    assert release.uv_lock_version("version = 1\n") is None
+
+
+def test_check_flags_stale_uv_lock(release):
+    """A uv.lock still recording the previous version is a chain error (CI's --frozen misses it)."""
+    state = release.chain_state()
+    stale = dict(state, uv_lock_version="0.0.1")
+    errors, _ = release.check_chain(stale)
+    assert any("uv.lock records" in e and "uv lock" in e for e in errors)
+
+
+def test_check_accepts_matching_or_absent_uv_lock(release):
+    """A matching lock, or no lock at all, adds no uv.lock error."""
+    state = release.chain_state()
+    for lock_version in (state["pyproject_version"], None):
+        errors, _ = release.check_chain(dict(state, uv_lock_version=lock_version))
+        assert not any("uv.lock" in e for e in errors)
+
+
+def test_cut_plan_reminds_to_relock(release):
+    """The cut plan's next steps tell the releaser to run ``uv lock``."""
+    plan = release.cut_plan("99.0.0", today="2026-11-03", allow_dirty=True, allow_empty=True)
+    assert any("uv lock" in step for step in plan["next"])
