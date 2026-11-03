@@ -1,22 +1,38 @@
-"""``insurance_claim``: CMS source-table derivation (tier 2).
+"""``insurance_claim``: claims consistency extras (tier 1) and the CMS source table (tier 2).
 
-``score_claims_extras`` and the canonical ``claim_type`` already run inside the
-insurance suite, so this module adds no extras in 0.27.0 (moving them here is
-0.28.0 work). Tier 2 derives ``cms_source_table`` from a CMS row's subclass,
-because the published ground truth never carries the key; the archive block reads
-it from :meth:`InsuranceClaimScorer.derived_fields`.
+``determination_consistency`` and ``amount_exactness`` are computed by the insurance
+suite only for callers of ``suite.score`` itself; tier 0 drops them. This module
+reports them on the document payload; they never feed ``overall_extraction_score``.
+Tier 2 derives ``cms_source_table`` from a CMS row's subclass, because the published
+ground truth never carries the key (:meth:`InsuranceClaimScorer.derived_fields`).
 """
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Mapping
 
 from ...schemas.corpus import DOC_TYPE_SUBCLASSES, cms_source_table
+from ..claims_consistency import score_claims_extras
+from ..extraction_scope import scope_extraction_pair
 from .base import TypeScorer
 
 
 class InsuranceClaimScorer(TypeScorer):
-    """Insurance claims, with the CMS table derived from the subclass."""
+    """Insurance claims: consistency extras and the derived CMS table."""
+
+    def extras(
+        self,
+        predicted: Mapping[str, Any],
+        raw_expected: Mapping[str, Any],
+        *,
+        subclass: str | None,
+        doc_text: str | None,
+    ) -> dict[str, Any]:
+        """Claims consistency on the scoped pair the suite sees; ``{}`` with no ground truth."""
+        _, expected = scope_extraction_pair(self.doc_type, dict(predicted), dict(raw_expected))
+        if not expected:
+            return {}
+        return dict(score_claims_extras(expected, predicted))
 
     def derived_fields(self, raw_subclass: Any) -> dict[str, str]:
         """``{"cms_source_table": table}`` for CMS rows, else ``{}``."""
