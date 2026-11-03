@@ -48,6 +48,7 @@ PYPROJECT = REPO_ROOT / "pyproject.toml"
 INIT_PY = REPO_ROOT / "llm_dojo_scoring" / "__init__.py"
 README = REPO_ROOT / "README.md"
 COMPAT_TEST = REPO_ROOT / "tests" / "test_consumer_compat.py"
+UV_LOCK = REPO_ROOT / "uv.lock"
 TEMPLATE = REPO_ROOT / ".github" / "RELEASE_TEMPLATE.md"
 DEFAULT_ASSET_DIR = REPO_ROOT / "dist" / "release"
 
@@ -61,6 +62,12 @@ SECTION_RE = re.compile(r"^## \[(?P<name>[^\]]+)\](?P<stamp> - \d{4}-\d{2}-\d{2}
 VERSION_RE = re.compile(r"^(?P<maj>\d+)\.(?P<min>\d+)\.(?P<pat>\d+)(?:-[0-9A-Za-z.-]+)?$")
 PYPROJECT_VERSION_RE = re.compile(r'^version\s*=\s*"(?P<version>[^"]+)"\s*$', re.MULTILINE)
 INIT_VERSION_RE = re.compile(r'^__version__\s*=\s*"(?P<version>[^"]+)"\s*$', re.MULTILINE)
+# The root package's own ``[[package]]`` entry in uv.lock. CI installs with
+# ``uv sync --frozen``, which never notices a stale root version, so check it here.
+UV_LOCK_VERSION_RE = re.compile(
+    rf'^\[\[package\]\]\nname = "{re.escape(PACKAGE_NAME)}"\nversion = "(?P<version>[^"]+)"\n',
+    re.MULTILINE,
+)
 COMPAT_VERSION_RE = re.compile(
     r'(assert dojo\.__version__\s*==\s*")(?P<version>\d+\.\d+\.\d+)(")'
 )
@@ -169,6 +176,16 @@ def init_version() -> str:
     return match["version"]
 
 
+def uv_lock_version(text: str | None = None) -> str | None:
+    """Return the version uv.lock records for this package, or ``None`` if absent."""
+    if text is None:
+        if not UV_LOCK.exists():
+            return None
+        text = UV_LOCK.read_text(encoding="utf-8")
+    match = UV_LOCK_VERSION_RE.search(text)
+    return match["version"] if match else None
+
+
 def list_version_tags() -> list[dict]:
     """List local version tags, newest first, with type, object and subject."""
     out = git(
@@ -254,6 +271,7 @@ def chain_state() -> dict:
         "dirty": dirty,
         "pyproject_version": pyproject_version(),
         "init_version": init_version(),
+        "uv_lock_version": uv_lock_version(),
         "tags": tags,
         "newest_tag": tags[0]["tag"] if tags else None,
         "newest_tag_version": tags[0]["version"] if tags else None,
@@ -336,6 +354,13 @@ def check_chain(state: dict) -> tuple[list[str], list[str]]:
         errors.append(
             f"test_consumer_compat pins {match['version']} != pyproject "
             f"{state['pyproject_version']}"
+        )
+
+    lock_version = state.get("uv_lock_version")
+    if lock_version is not None and lock_version != state["pyproject_version"]:
+        errors.append(
+            f"uv.lock records {PACKAGE_NAME} {lock_version} != pyproject "
+            f"{state['pyproject_version']} — run `uv lock` and commit uv.lock"
         )
 
     return errors, warnings
@@ -461,6 +486,7 @@ def cut_plan(version: str, *, today: str, allow_dirty: bool, allow_empty: bool) 
         "warnings": warnings,
         "next": [
             "re-run with --apply to write",
+            "run `uv lock` so uv.lock records the new version (check fails until you do)",
             "commit the stamped files on a release PR",
             "after merge: python scripts/release.py publish VERSION --commit <merge-sha> --apply --push",
         ],
@@ -937,7 +963,9 @@ def publish_plan(
     hard = [
         e
         for e in errors
-        if "README release pins" not in e and "test_consumer_compat" not in e
+        if "README release pins" not in e
+        and "test_consumer_compat" not in e
+        and "uv.lock records" not in e
     ]
     # When publishing an older stamped version from a newer worktree, pyproject
     # may already be ahead — that is expected. Require only that the target
@@ -955,6 +983,16 @@ def publish_plan(
         hard.append(
             f"commit {commit[:12]} __version__ "
             f"{init_match['version'] if init_match else '?'} != {version}"
+        )
+    # Only an absent uv.lock (older commits predate it) skips the check; any
+    # other read failure raises so publishing cannot proceed unchecked.
+    lock_listed = git("ls-tree", "--name-only", commit, "--", "uv.lock").strip()
+    lock_show = git("show", f"{commit}:uv.lock") if lock_listed else None
+    lock_at_commit = uv_lock_version(lock_show) if lock_show is not None else None
+    if lock_show is not None and lock_at_commit != version:
+        hard.append(
+            f"commit {commit[:12]} uv.lock records {PACKAGE_NAME} "
+            f"{lock_at_commit or '?'} != {version} — run `uv lock` before publishing"
         )
 
     if existing and not existing.get("isDraft"):

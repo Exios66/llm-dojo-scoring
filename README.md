@@ -383,6 +383,7 @@ dojo-sync    [--task TRACE_NAME] [--session NAME] [--max-items N]
 
 Start at [`docs/README.md`](docs/README.md). The docs are grouped into guides, schemas, contracts and history.
 
+- **Supported public API** (what consumers may rely on): [`docs/guides/PUBLIC_API.md`](docs/guides/PUBLIC_API.md)
 - **Migrating a pipeline project**, including the v0.26.0 subpackage layout: [`docs/guides/MIGRATION.md`](docs/guides/MIGRATION.md)
 - **Scoring tables**: [`docs/guides/SCORING.md`](docs/guides/SCORING.md)
 - **Prompt catalog and eval-environment lineage** (`list_prompt_versions`, `prompt_chain`, `diff_prompt_versions`): [`docs/guides/PROMPTS.md`](docs/guides/PROMPTS.md)
