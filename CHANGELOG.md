@@ -16,6 +16,19 @@ Format based on Keep a Changelog; versioning is SemVer.
   `llm-dojo-scoring` version than `pyproject.toml`, and `publish` refuses a commit
   whose `uv.lock` is stale. CI installs with `uv sync --frozen`, which never
   flags this. `cut` now lists `uv lock` as a next step.
+- `docs/guides/PUBLIC_API.md`: the surface other repositories rely on (37 root names,
+  35 modules, the `embed_texts` patch target, the archive-scoring contract), built from
+  the consumer scan. `tests/test_public_api_doc.py` fails when a consumed name is missing.
+- `docs/guides/MIGRATION.md`: a table of every pre-0.26 flat import path and its
+  subpackage path, checked against `_layout.LEGACY_MODULES`.
+
+### Changed
+
+- `import llm_dojo_scoring` no longer imports `matplotlib.pyplot`; `analysis.visualize`
+  loads it the first time a plot is drawn (warm import 0.73s → 0.43s).
+  `visualize.plt` still resolves. No scores change.
+- `tests/test_release_tools.py`: the release-notes test skips, instead of failing, in a
+  shallow clone without the release tags.
 
 ## [0.26.0] - 2026-11-02
 
