@@ -228,8 +228,10 @@ def test_archive_block_new_keys(case_id):
     assert got["scorer"]["doc_type"] == CASES[case_id]["doc_type"]
     golden = GOLDENS[case_id]["payload"]
     if "error" not in golden:
-        assert got["entity_list_f1"] == golden.get("entity_list_f1")
-        assert got["unlabeled_fields"] == golden.get("unlabeled_fields")
+        # 0.27.1: the keys follow the block's own verdict (no entity F1 when nothing is
+        # countable, no unlabeled-field list when there is no ground truth at all).
+        assert got["entity_list_f1"] == (golden.get("entity_list_f1") if got["extraction_f1"] is not None else None)
+        assert got["unlabeled_fields"] == (None if got["reason"] == "gt_missing" else golden.get("unlabeled_fields"))
 
 
 @pytest.mark.parametrize("case_id", sorted(k for k, b in BEFORE.items() if "error" in b))

@@ -5,6 +5,33 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.27.1] - 2026-11-03
+### Fixed
+
+- `score_document` and `score_archive_block` no longer raise on a bad field value inside a
+  dict prediction or ground truth (CUAD `cuad_clauses: True` or `5`, a NaN or `True`
+  CUAD label span, a list or `{}` correspondence `content_topic` / `sentiment_label`).
+  Type extras and the headline are guarded like the tier 0 suite: a failure logs a
+  warning, keeps the tier 0 score and appends `+extras-failed` to `scoring_method`. The
+  new block keys are computed behind a guard too, so a failure leaves them null and never
+  touches the keys that existed before 0.27.0.
+- `score_archive_block` derives the CMS `cms_source_table` from `doc_subclass` when
+  `expected_subclass` is `None`, through `InsuranceClaimScorer.derived_fields`. The
+  field-map score now agrees with the tiered keys and with `score_document`.
+- `entity_list_f1` is null on a block that is not countable, and `unlabeled_fields` is
+  null when the ground truth is missing (`reason: gt_missing`).
+- `status` stays unchanged for MAUD and CUAD rows. Documented: rows with a non-null
+  `headline_score` are judged by the headline, so readers that filter on
+  `status == 'scored'` must also keep rows whose `headline_score` is not null.
+
+### Comparability
+
+- `score_archive_block` field-map scores change only for CMS insurance rows called with
+  `doc_subclass` and no `expected_subclass` (the CMS table is now scored, as it already
+  was with `expected_subclass`). Every other call returns the same field-map keys as 0.27.0.
+  `entity_list_f1` and `unlabeled_fields` can turn null on rows the block already marks
+  unscorable.
+
 ## [0.27.0] - 2026-11-03
 ### Fixed
 
