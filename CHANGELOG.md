@@ -5,6 +5,7 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.27.1] - 2026-11-03
 ### Fixed
 
 - `score_document` and `score_archive_block` no longer raise on a bad field value inside a
