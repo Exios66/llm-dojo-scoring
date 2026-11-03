@@ -387,6 +387,7 @@ Start at [`docs/README.md`](docs/README.md). The docs are grouped into guides, s
 - **Scoring tables**: [`docs/guides/SCORING.md`](docs/guides/SCORING.md)
 - **Prompt catalog and eval-environment lineage** (`list_prompt_versions`, `prompt_chain`, `diff_prompt_versions`): [`docs/guides/PROMPTS.md`](docs/guides/PROMPTS.md)
 - **Releases**: [`docs/guides/RELEASES.md`](docs/guides/RELEASES.md)
+- **Adding, swapping or retiring a document type** (Dojo → llm-mailroom → sandbox checklist): [`docs/guides/ADDING_A_DOCUMENT_TYPE.md`](docs/guides/ADDING_A_DOCUMENT_TYPE.md)
 
 <a id="releases--monorepo-sync"></a>
 
