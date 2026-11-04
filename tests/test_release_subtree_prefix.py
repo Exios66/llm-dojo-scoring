@@ -97,6 +97,23 @@ def test_build_assets_builds_from_the_package_dir(hub, release_in, monkeypatch):
     assert (out_dir / "pkg-1.2.3.tar.gz").read_text() == "artifact"
 
 
+def test_build_assets_removes_the_worktree_when_the_prefix_lookup_fails(hub, release_in, monkeypatch):
+    """A failing prefix lookup still runs the cleanup that unregisters the worktree."""
+    release = release_in(hub / PREFIX)
+
+    def broken_prefix():
+        """Fail the way a git error would."""
+        raise release.ReleaseError("rev-parse failed")
+
+    monkeypatch.setattr(release, "package_prefix", broken_prefix)
+    commit = _git(hub, "rev-parse", "HEAD").strip()
+    with pytest.raises(release.ReleaseError, match="rev-parse failed"):
+        release._build_assets_at_commit("1.2.3", out_dir=hub / PREFIX / "dist" / "release", commit=commit)
+    worktrees = [line for line in _git(hub, "worktree", "list", "--porcelain").splitlines()
+                 if line.startswith("worktree ")]
+    assert len(worktrees) == 1, worktrees
+
+
 def test_consumer_audit_reads_a_package_under_a_prefix(hub):
     """The consumer-surface audit reads a git tree whose root is a hub package."""
     audit = load_script("audit_consumer_surface")

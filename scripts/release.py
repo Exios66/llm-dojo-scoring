@@ -861,10 +861,10 @@ def _build_assets_at_commit(version: str, *, out_dir: Path, commit: str) -> dict
     with tempfile.TemporaryDirectory(prefix="dojo-release-") as tmp:
         work = Path(tmp) / "src"
         run(["git", "worktree", "add", "--detach", str(work), commit])
-        # The worktree is the whole repository; build from this package's own
-        # directory inside it (the hub prefix, or the root when standalone).
-        package = work / package_prefix()
         try:
+            # The worktree is the whole repository; build from this package's own
+            # directory inside it (the hub prefix, or the root when standalone).
+            package = work / package_prefix()
             # Ensure the detached tree still declares the release version.
             text = (package / "pyproject.toml").read_text(encoding="utf-8")
             match = PYPROJECT_VERSION_RE.search(text)
