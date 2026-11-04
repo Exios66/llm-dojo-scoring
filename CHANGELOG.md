@@ -4,6 +4,16 @@ All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
+### Fixed
+
+- The release and audit scripts work when Dojo sits under a prefix, as it does in the
+  Digital-Mailroom hub (`packages/llm-dojo-scoring/`). `release.py publish` read
+  `pyproject.toml`, `__init__.py` and `uv.lock` at the release commit with root-relative
+  `git show` paths, so under the hub it failed before checking anything
+  (`test_cli_publish_dry_run_json`). Its asset build also read the hub's `pyproject.toml`
+  and built from the hub root. `audit_consumer_surface.py` had the same `git show` bug for
+  consumer checkouts under a prefix. Scripts only: the library and its public API are
+  unchanged.
 
 ## [0.27.2] - 2026-11-04
 ### Fixed

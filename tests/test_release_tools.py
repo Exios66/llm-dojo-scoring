@@ -216,11 +216,13 @@ def _fake_git(lock: str | None, *, lock_read_fails: bool = False):
     }
 
     def git(*args):
-        """Serve the stubbed tree for ``ls-tree`` / ``show``."""
+        """Serve the stubbed tree for ``rev-parse`` / ``ls-tree`` / ``show``."""
+        if args[0] == "rev-parse":
+            return "\n"  # standalone: the package is the repository root
         if args[0] == "ls-tree":
             return "uv.lock\n" if lock is not None else ""
         if args[0] == "show":
-            path = args[1].split(":", 1)[1]
+            path = args[1].split(":", 1)[1].removeprefix("./")  # cwd-relative, as git reads it
             if path == "uv.lock":
                 if lock_read_fails:
                     raise load_release().ReleaseError("git show failed: object read error")
