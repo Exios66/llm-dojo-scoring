@@ -90,7 +90,8 @@ _FALLBACK_SCHEMA_KEYS: dict[str, frozenset[str]] = {
     ),
 }
 
-_JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
+
+_JSON_OBJECT_START = re.compile(r'\{\s*["}]')
 
 _MODEL_CLASSES = ("correspondence", "contract", "insurance_claim", "corporate_record", "merger_agreement")
 
@@ -135,7 +136,10 @@ def coerce_predicted_payload(predicted: Any) -> tuple[dict[str, Any] | None, dic
         meta["parse_error"] = True
         meta["parse_failure_reason"] = "null_payload"
         return None, meta
-    if isinstance(predicted, dict):
+    if isinstance(predicted, Mapping):
+        # Any mapping (MappingProxyType, UserDict, ...) is a dict payload; score_document
+        # accepts them, so adherence must too.
+        predicted = dict(predicted)
         if predicted.get("_parse_error"):
             meta["parse_error"] = True
             meta["parse_failure_reason"] = "flagged_parse_error"
@@ -166,7 +170,7 @@ def coerce_predicted_payload(predicted: Any) -> tuple[dict[str, Any] | None, dic
         return None, meta
     parsed, how = _parse_object_text(text)
     if parsed is not None:
-        if how == "wrapped_json":
+        if how in ("wrapped_json", "wrapped_python_repr"):
             meta["prose_wrapper"] = True
         return parsed, meta
     meta["parse_error"] = True
@@ -176,11 +180,13 @@ def coerce_predicted_payload(predicted: Any) -> tuple[dict[str, Any] | None, dic
 
 def _parse_object_text(text: str) -> tuple[dict[str, Any] | None, str | None]:
     """Parse JSON, a Python repr, or either wrapped in prose; say which it was."""
+    # RecursionError: deeply nested input ("[[[[...") exhausts the decoder's stack;
+    # that is unparseable text, not a crash (score_document never raises).
     try:
         obj = json.loads(text)
         if isinstance(obj, dict):
             return obj, "json"
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, RecursionError):
         pass
     try:
         obj = ast.literal_eval(text)
@@ -188,32 +194,39 @@ def _parse_object_text(text: str) -> tuple[dict[str, Any] | None, str | None]:
             return obj, "python_repr"
     except (SyntaxError, ValueError, TypeError, MemoryError, RecursionError):
         pass
-    match = _JSON_OBJECT_RE.search(text)
-    if match and (text[: match.start()].strip() or text[match.end():].strip()):
+    # First "{" to last "}" (what the greedy r"\{.*\}" matched), found without the regex:
+    # on text with many "{" and no "}" the regex rescans from every "{" (quadratic).
+    lo, hi = text.find("{"), text.rfind("}")
+    span = text[lo : hi + 1] if lo != -1 and hi > lo else None
+    if span is not None and (text[:lo].strip() or text[hi + 1 :].strip()):
         try:
-            obj = json.loads(match.group(0))
+            obj = json.loads(span)
             if isinstance(obj, dict):
                 return obj, "wrapped_json"
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, RecursionError):
             pass
         try:
-            obj = ast.literal_eval(match.group(0))
+            obj = ast.literal_eval(span)
             if isinstance(obj, dict):
                 return obj, "wrapped_python_repr"
         except (SyntaxError, ValueError, TypeError, MemoryError, RecursionError):
             pass
-    # The greedy match spans the first "{" to the last "}", so braces in the surrounding
-    # prose break it. Fall back to decoding a JSON object at each "{" in turn.
+    # The greedy span runs from the first "{" to the last "}", so braces in the surrounding
+    # prose break it. Fall back to decoding a JSON object at each candidate "{" in turn.
+    # Only `{"` / `{}` can open a JSON object; skipping other braces keeps this linear
+    # (each failed raw_decode builds a JSONDecodeError that scans up to its position).
     decoder = json.JSONDecoder()
-    start = text.find("{")
-    while start != -1:
+    for candidate in _JSON_OBJECT_START.finditer(text):
         try:
-            obj, _end = decoder.raw_decode(text, start)
+            obj, _end = decoder.raw_decode(text, candidate.start())
         except json.JSONDecodeError:
-            obj = None
+            continue
+        except RecursionError:
+            # Nesting too deep to decode; every later "{" in the same run is deeper
+            # still, so retrying each one only repeats the work (quadratic).
+            return None, None
         if isinstance(obj, dict):
             return obj, "wrapped_json"
-        start = text.find("{", start + 1)
     return None, None
 
 
