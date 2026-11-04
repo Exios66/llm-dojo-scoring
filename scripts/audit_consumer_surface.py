@@ -182,7 +182,11 @@ def _read_filesystem_tree(root: Path) -> dict[str, str]:
 
 
 def _read_git_tree(root: Path, ref: str) -> dict[str, str]:
-    """Read every ``.py`` blob at ``ref`` without consulting the working tree."""
+    """Return Python source at ``ref``, keyed by paths relative to ``root``.
+
+    Files under skipped directories are excluded; working-tree changes are ignored.
+    Raise ``RuntimeError`` if the checkout or ref is invalid or a git read fails.
+    """
     if not _is_git_checkout(root):
         raise RuntimeError("not a git checkout")
     verify = _run_git(root, "rev-parse", "--verify", f"{ref}^{{commit}}", check=False)

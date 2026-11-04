@@ -118,6 +118,7 @@ def package_prefix() -> str:
     Dojo is also imported into the Digital-Mailroom hub as
     ``packages/llm-dojo-scoring/``. There the git root is the hub, so
     ``<commit>:<path>`` and fresh worktrees must account for the prefix.
+    A nonempty prefix ends in ``/``. Git failures raise ``ReleaseError``.
     """
     return git("rev-parse", "--show-prefix").strip()
 
@@ -127,6 +128,7 @@ def show_at_commit(commit: str, rel: str) -> str:
 
     ``./`` makes git resolve ``rel`` from the package root (``run``'s working
     directory), not the repository root, so this works standalone and in the hub.
+    A failed git read raises ``ReleaseError``.
     """
     return git("show", f"{commit}:./{rel}")
 
@@ -848,7 +850,13 @@ def build_assets(version: str, *, out_dir: Path, commit: str) -> dict:
 
 
 def _build_assets_at_commit(version: str, *, out_dir: Path, commit: str) -> dict:
-    """Build release artifacts from a detached commit via temporary worktree."""
+    """Build release artifacts from a detached commit via temporary worktree.
+
+    Replace files in ``out_dir`` with the build output, checksums, and manifest;
+    return their metadata and upload paths. ``out_dir`` must be under ``REPO_ROOT``.
+    Raise ``ReleaseError`` if the commit's package version differs from ``version``
+    or a checked git or build command fails. Filesystem errors also propagate.
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="dojo-release-") as tmp:
         work = Path(tmp) / "src"
@@ -970,7 +978,12 @@ def publish_plan(
     title: str | None,
     notes_file: Path | None,
 ) -> dict:
-    """Plan a publish (tag, push, release, assets) and collect the refusals that block it."""
+    """Plan a publish (tag, push, release, assets) and collect the refusals that block it.
+
+    Version mismatches in the target commit are returned as errors in the plan.
+    An absent ``uv.lock`` skips its version check; failed reads of these commit
+    files raise ``ReleaseError`` rather than becoming plan errors.
+    """
     version = normalize_version(version)
     state = chain_state()
     errors, warnings = check_chain(state)
