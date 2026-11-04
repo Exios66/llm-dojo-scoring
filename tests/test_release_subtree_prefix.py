@@ -122,3 +122,61 @@ def test_consumer_audit_reads_a_package_under_a_prefix(hub):
         "llm_dojo_scoring/__init__.py": '__version__ = "1.2.3"\n',
         "llm_dojo_scoring/core.py": "VALUE = 1\n",
     }
+
+
+@pytest.fixture
+def hub_with_standalone_history(tmp_path):
+    """A hub whose first commit has the standalone layout and whose second moves it under the prefix."""
+    root = tmp_path / "hub"
+    root.mkdir()
+    (root / "llm_dojo_scoring").mkdir()
+    (root / "pyproject.toml").write_text('version = "1.0.0"\n')
+    (root / "llm_dojo_scoring" / "__init__.py").write_text('__version__ = "1.0.0"\n')
+    (root / "uv.lock").write_text("old lock\n")
+    _git(root, "init", "-q", "-b", "main")
+    _git(root, "add", "-A")
+    _git(root, "commit", "-q", "-m", "standalone")
+    old = _git(root, "rev-parse", "HEAD").strip()
+    package = root / PREFIX
+    package.parent.mkdir(parents=True)
+    _git(root, "mv", "llm_dojo_scoring", f"{PREFIX}/")
+    _git(root, "mv", "uv.lock", f"{PREFIX}/uv.lock")
+    (package / "pyproject.toml").write_text('version = "1.2.3"\n')
+    (root / "pyproject.toml").write_text('version = "9.9.9"\n')
+    _git(root, "add", "-A")
+    _git(root, "commit", "-q", "-m", "hub import")
+    return root, old
+
+
+def test_show_at_commit_reads_a_commit_that_predates_the_hub_import(hub_with_standalone_history, release_in):
+    """From the hub package dir, an older standalone-layout commit is read from its own root."""
+    root, old = hub_with_standalone_history
+    release = release_in(root / PREFIX)
+    assert release.package_prefix_at(old) == ""
+    assert release.package_prefix_at("HEAD") == f"{PREFIX}/"
+    assert release.show_at_commit(old, "pyproject.toml") == 'version = "1.0.0"\n'
+    assert release.show_at_commit(old, "uv.lock") == "old lock\n"
+    assert release.show_at_commit("HEAD", "pyproject.toml") == 'version = "1.2.3"\n'
+
+
+def test_build_assets_builds_a_pre_import_commit_from_its_root(hub_with_standalone_history, release_in, monkeypatch):
+    """Building an older standalone-layout commit from the hub uses that commit's root."""
+    root, old = hub_with_standalone_history
+    release = release_in(root / PREFIX)
+    builds: list[Path] = []
+    real_run = release.run
+
+    def fake_run(cmd, *, check=True, cwd=None, env=None):
+        """Record build commands instead of running a real build."""
+        if "build" in cmd:
+            builds.append(Path(cwd))
+            out = Path(cmd[cmd.index("--out-dir" if "--out-dir" in cmd else "--outdir") + 1])
+            (out / "pkg-1.0.0.tar.gz").write_text("artifact")
+            return subprocess.CompletedProcess(cmd, 0, "", "")
+        return real_run(cmd, check=check, cwd=cwd, env=env)
+
+    monkeypatch.setattr(release, "run", fake_run)
+    out_dir = root / PREFIX / "dist" / "release"
+    release._build_assets_at_commit("1.0.0", out_dir=out_dir, commit=old)
+    assert len(builds) == 1 and builds[0].name == "src"
+    assert (out_dir / "pkg-1.0.0.tar.gz").read_text() == "artifact"

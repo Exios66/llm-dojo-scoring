@@ -123,14 +123,34 @@ def package_prefix() -> str:
     return git("rev-parse", "--show-prefix").strip()
 
 
+def tree_has(commit: str, path: str) -> bool:
+    """Return whether ``commit``'s tree holds ``path`` (repository-root relative)."""
+    return bool(git("ls-tree", "--full-tree", "--name-only", commit, "--", path).strip())
+
+
+def package_prefix_at(commit: str) -> str:
+    """Return the package's prefix inside ``commit``'s tree (``""`` at the root).
+
+    The current checkout's prefix is the default. A commit that predates the hub
+    import keeps the package at the repository root, so when the package marker
+    is missing under the prefix but present at the root, the root is the package.
+    Git failures from the prefix lookup raise ``ReleaseError``.
+    """
+    prefix = package_prefix()
+    marker = "llm_dojo_scoring/__init__.py"
+    if prefix and not tree_has(commit, prefix + marker) and tree_has(commit, marker):
+        return ""
+    return prefix
+
+
 def show_at_commit(commit: str, rel: str) -> str:
     """Return a package file's contents at ``commit``.
 
-    ``./`` makes git resolve ``rel`` from the package root (``run``'s working
-    directory), not the repository root, so this works standalone and in the hub.
-    A failed git read raises ``ReleaseError``.
+    ``rel`` is resolved from the package's directory in ``commit``'s own tree
+    (see ``package_prefix_at``), so this works standalone, in the hub, and for
+    hub commits that predate the import. A failed git read raises ``ReleaseError``.
     """
-    return git("show", f"{commit}:./{rel}")
+    return git("show", f"{commit}:{package_prefix_at(commit)}{rel}")
 
 
 def gh_json(*args: str) -> object:
@@ -862,9 +882,10 @@ def _build_assets_at_commit(version: str, *, out_dir: Path, commit: str) -> dict
         work = Path(tmp) / "src"
         run(["git", "worktree", "add", "--detach", str(work), commit])
         try:
-            # The worktree is the whole repository; build from this package's own
-            # directory inside it (the hub prefix, or the root when standalone).
-            package = work / package_prefix()
+            # The worktree is the whole repository; build from the package's own
+            # directory in that commit (the hub prefix, or the root when standalone
+            # or when the commit predates the hub import).
+            package = work / package_prefix_at(commit)
             # Ensure the detached tree still declares the release version.
             text = (package / "pyproject.toml").read_text(encoding="utf-8")
             match = PYPROJECT_VERSION_RE.search(text)
@@ -1022,7 +1043,7 @@ def publish_plan(
         )
     # Only an absent uv.lock (older commits predate it) skips the check; any
     # other read failure raises so publishing cannot proceed unchecked.
-    lock_listed = git("ls-tree", "--name-only", commit, "--", "uv.lock").strip()
+    lock_listed = tree_has(commit, f"{package_prefix_at(commit)}uv.lock")
     lock_show = show_at_commit(commit, "uv.lock") if lock_listed else None
     lock_at_commit = uv_lock_version(lock_show) if lock_show is not None else None
     if lock_show is not None and lock_at_commit != version:

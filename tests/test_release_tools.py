@@ -216,7 +216,9 @@ def _fake_git(lock: str | None, *, lock_read_fails: bool = False):
     }
 
     def git(*args):
-        """Serve the stubbed tree for ``ls-tree`` / ``show``."""
+        """Serve the stubbed tree for ``rev-parse`` / ``ls-tree`` / ``show``."""
+        if args[0] == "rev-parse":
+            return "\n"  # standalone: the package is the repository root
         if args[0] == "ls-tree":
             return "uv.lock\n" if lock is not None else ""
         if args[0] == "show":
