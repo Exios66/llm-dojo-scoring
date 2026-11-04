@@ -199,7 +199,9 @@ def _read_git_tree(root: Path, ref: str) -> dict[str, str]:
         rel = Path(raw)
         if rel.suffix != ".py" or _skip(rel):
             continue
-        blob = _run_git(root, "show", f"{ref}:{rel.as_posix()}")
+        # ``ls-tree`` lists paths relative to ``root``; ``./`` makes ``show``
+        # resolve them the same way when ``root`` is a hub ``packages/<name>/``.
+        blob = _run_git(root, "show", f"{ref}:./{rel.as_posix()}")
         files[rel.as_posix()] = blob.stdout
     return files
 

@@ -112,6 +112,25 @@ def git(*args: str) -> str:
     return run(["git", *args]).stdout
 
 
+def package_prefix() -> str:
+    """Return this package's path inside its git repository (``""`` at the root).
+
+    Dojo is also imported into the Digital-Mailroom hub as
+    ``packages/llm-dojo-scoring/``. There the git root is the hub, so
+    ``<commit>:<path>`` and fresh worktrees must account for the prefix.
+    """
+    return git("rev-parse", "--show-prefix").strip()
+
+
+def show_at_commit(commit: str, rel: str) -> str:
+    """Return a package file's contents at ``commit``.
+
+    ``./`` makes git resolve ``rel`` from the package root (``run``'s working
+    directory), not the repository root, so this works standalone and in the hub.
+    """
+    return git("show", f"{commit}:./{rel}")
+
+
 def gh_json(*args: str) -> object:
     """Run a gh command and decode its JSON stdout (``None`` when empty)."""
     proc = run(["gh", *args], check=False)
@@ -834,21 +853,24 @@ def _build_assets_at_commit(version: str, *, out_dir: Path, commit: str) -> dict
     with tempfile.TemporaryDirectory(prefix="dojo-release-") as tmp:
         work = Path(tmp) / "src"
         run(["git", "worktree", "add", "--detach", str(work), commit])
+        # The worktree is the whole repository; build from this package's own
+        # directory inside it (the hub prefix, or the root when standalone).
+        package = work / package_prefix()
         try:
             # Ensure the detached tree still declares the release version.
-            text = (work / "pyproject.toml").read_text(encoding="utf-8")
+            text = (package / "pyproject.toml").read_text(encoding="utf-8")
             match = PYPROJECT_VERSION_RE.search(text)
             if not match or match["version"] != version:
                 raise ReleaseError(
                     f"commit {commit[:12]} pyproject version "
                     f"{match['version'] if match else '?'} != {version}"
                 )
-            nested_out = work / "dist" / "release"
+            nested_out = package / "dist" / "release"
             nested_out.mkdir(parents=True, exist_ok=True)
             if shutil.which("uv"):
-                run(["uv", "build", "--out-dir", str(nested_out)], cwd=work)
+                run(["uv", "build", "--out-dir", str(nested_out)], cwd=package)
             else:
-                run([sys.executable, "-m", "build", "--outdir", str(nested_out)], cwd=work)
+                run([sys.executable, "-m", "build", "--outdir", str(nested_out)], cwd=package)
             for stale in out_dir.glob("*"):
                 if stale.is_file():
                     stale.unlink()
@@ -971,14 +993,14 @@ def publish_plan(
     # When publishing an older stamped version from a newer worktree, pyproject
     # may already be ahead — that is expected. Require only that the target
     # commit declares the release version.
-    show = git("show", f"{commit}:pyproject.toml")
+    show = show_at_commit(commit, "pyproject.toml")
     match = PYPROJECT_VERSION_RE.search(show)
     if not match or match["version"] != version:
         hard.append(
             f"commit {commit[:12]} pyproject version "
             f"{match['version'] if match else '?'} != {version}"
         )
-    init_show = git("show", f"{commit}:llm_dojo_scoring/__init__.py")
+    init_show = show_at_commit(commit, "llm_dojo_scoring/__init__.py")
     init_match = INIT_VERSION_RE.search(init_show)
     if not init_match or init_match["version"] != version:
         hard.append(
@@ -988,7 +1010,7 @@ def publish_plan(
     # Only an absent uv.lock (older commits predate it) skips the check; any
     # other read failure raises so publishing cannot proceed unchecked.
     lock_listed = git("ls-tree", "--name-only", commit, "--", "uv.lock").strip()
-    lock_show = git("show", f"{commit}:uv.lock") if lock_listed else None
+    lock_show = show_at_commit(commit, "uv.lock") if lock_listed else None
     lock_at_commit = uv_lock_version(lock_show) if lock_show is not None else None
     if lock_show is not None and lock_at_commit != version:
         hard.append(
