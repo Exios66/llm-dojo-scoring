@@ -15,6 +15,22 @@ Format based on Keep a Changelog; versioning is SemVer.
   consumer checkouts under a prefix. Scripts only: the library and its public API are
   unchanged.
 
+### Fixed
+
+Review findings on the 0.27.2 vendor bump (llm-mailroom#164):
+
+- Prose-wrapped JSON with many failing candidate objects parses in linear time.
+  Each candidate `{"` is now decoded from its own slice, ending at its matching `}`,
+  and one brace-matching pass per region finds those ends. A `JSONDecodeError`
+  (which counts lines up to its position) therefore covers one object, not the whole
+  text, and a `{` that never closes is skipped without a decode. 200 never-closing
+  500-deep chains (500 KB) took about 8 s and now take about 0.07 s. The private
+  `_balanced_object_end` helper is replaced by `_object_ends`.
+- `rescore_record` picks an already-current record's headline by the same task
+  routing a fresh rescore uses. `review_lane` / `decision_reviewer` records report the
+  reviewer headline (they got the extraction one), and classification records keep
+  their own headline even when the payload carries a `headline_score`.
+
 ## [0.27.2] - 2026-11-04
 ### Fixed
 

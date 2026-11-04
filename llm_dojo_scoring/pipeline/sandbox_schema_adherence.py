@@ -213,37 +213,53 @@ def _parse_object_text(text: str) -> tuple[dict[str, Any] | None, str | None]:
             pass
     # The greedy span runs from the first "{" to the last "}", so braces in the surrounding
     # prose break it. Fall back to decoding a JSON object at each candidate "{" in turn.
-    # Only `{"` / `{}` can open a JSON object; skipping other braces keeps this linear
-    # (each failed raw_decode builds a JSONDecodeError that scans up to its position).
+    # Only `{"` / `{}` can open a JSON object. Each candidate is decoded from its own
+    # slice, ending at its matching "}", so a failed decode builds its JSONDecodeError
+    # (which counts lines up to the failure) over that object only, not the whole text.
+    # A candidate whose "{" never closes cannot decode and is skipped without trying.
     decoder = json.JSONDecoder()
+    ends: dict[int, int] = {}
+    region_end = -1
     candidate = _JSON_OBJECT_START.search(text)
     while candidate is not None:
-        resume = candidate.start() + 1
-        try:
-            obj, _end = decoder.raw_decode(text, candidate.start())
-        except json.JSONDecodeError:
-            obj = None
-        except RecursionError:
-            # Nesting too deep to decode. Every "{" inside this object is deeper still,
-            # so skip past its closing brace (found by one linear scan) and keep looking
-            # for a sibling object; retrying the inner braces would be quadratic.
-            resume = _balanced_object_end(text, candidate.start())
-            if resume < 0:
-                return None, None  # never closes: every later "{" is inside it
-            obj = None
+        start = candidate.start()
+        if start >= region_end:
+            ends, region_end = _object_ends(text, start)
+        end = ends.get(start)
+        resume = start + 1
+        obj = None
+        if end is None:
+            # Not a "{" of the scanned region (it sits inside one of its strings):
+            # decode from here as a fresh object.
+            try:
+                obj, _end = decoder.raw_decode(text, start)
+            except (json.JSONDecodeError, RecursionError):
+                obj = None
+        elif end > 0:
+            try:
+                obj, _end = decoder.raw_decode(text[start:end])
+            except json.JSONDecodeError:
+                obj = None
+            except RecursionError:
+                # Too deep to decode; every "{" inside it is deeper still.
+                resume = end
         if isinstance(obj, dict):
             return obj, "wrapped_json"
         candidate = _JSON_OBJECT_START.search(text, resume)
     return None, None
 
 
-def _balanced_object_end(text: str, start: int) -> int:
-    """Index just past the "}" that closes the "{" at ``start``, or -1 if it never closes.
+def _object_ends(text: str, start: int) -> tuple[dict[int, int], int]:
+    """Match the braces of the object opening at ``start`` in one pass.
 
-    Counts braces outside JSON strings (with backslash escapes); used only to skip an
-    object too deeply nested to decode, so one pass over it keeps the scan linear.
+    Returns ``(ends, region_end)``. ``ends`` maps each "{" in the region (outside JSON
+    strings, with backslash escapes) to the index just past its closing "}", or -1 when
+    it never closes. ``region_end`` is the index just past the object's own "}", or
+    ``len(text)`` when it never closes. Every "{" is scanned once per region, which
+    keeps the candidate search linear.
     """
-    depth = 0
+    ends: dict[int, int] = {}
+    stack: list[int] = []
     in_string = escaped = False
     for index in range(start, len(text)):
         char = text[index]
@@ -257,12 +273,14 @@ def _balanced_object_end(text: str, start: int) -> int:
         elif char == '"':
             in_string = True
         elif char == "{":
-            depth += 1
-        elif char == "}":
-            depth -= 1
-            if depth == 0:
-                return index + 1
-    return -1
+            stack.append(index)
+        elif char == "}" and stack:
+            ends[stack.pop()] = index + 1
+            if not stack:
+                return ends, index + 1
+    for open_index in stack:
+        ends[open_index] = -1
+    return ends, len(text)
 
 
 def _typed_valid(
