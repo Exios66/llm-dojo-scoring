@@ -341,7 +341,7 @@ def check_chain(state: dict) -> tuple[list[str], list[str]]:
             )
 
     readme = README.read_text(encoding="utf-8")
-    pins = set(re.findall(r"(?:release-|releases/tag/|\.git@)v(\d+\.\d+\.\d+)", readme))
+    pins = set(re.findall(r"(?:release-|releases/tag/|\.git@|\[Release )v(\d+\.\d+\.\d+)", readme))
     if pins and pins != {state["pyproject_version"]}:
         errors.append(
             f"README release pins {sorted(pins)} do not match pyproject "
@@ -425,6 +425,7 @@ def _bump_readme_pins(old: str, new: str) -> int:
     text = README.read_text(encoding="utf-8")
     replacements = (
         (f"release-v{old}", f"release-v{new}"),
+        (f"[Release v{old}]", f"[Release v{new}]"),  # the badge's alt text
         (f"releases/tag/v{old}", f"releases/tag/v{new}"),
         (f".git@v{old}", f".git@v{new}"),
     )

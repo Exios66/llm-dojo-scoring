@@ -294,3 +294,63 @@ def test_rescore_file_without_dataset_reports_moves_for_item_id_rows(tmp_path: P
     assert result["moves"]["n"] == 1
     assert result["moves"]["old_mean"] == 0.25
     assert result["moves"]["delta"] == 0.75
+
+
+def test_rescore_extraction_score_is_the_headline_when_the_type_has_one():
+    """0.27.2: CUAD/MAUD rows are judged by headline_score, and rescore says so."""
+    cases = json.loads(
+        (Path(__file__).parent / "fixtures" / "doc_scorers" / "inputs.json").read_text(encoding="utf-8")
+    )["cases"]
+    seen = 0
+    for case in cases:
+        if case["doc_type"] not in ("contract", "merger_agreement"):
+            continue
+        if not isinstance(case.get("predicted"), dict) or not isinstance(case.get("expected"), dict):
+            continue
+        out = rescore_record(
+            {
+                "doc_id": case["case_id"],
+                "task": "extraction",
+                "doc_class": case["doc_type"],
+                "expected": case["expected"],
+                "predicted": case["predicted"],
+                "expected_subclass": case.get("expected_subclass"),
+            }
+        )
+        headline = out["payload"].get("headline_score")
+        if headline is None:
+            assert out["score"] == out["payload"].get("overall_score")
+            continue
+        seen += 1
+        assert out["score"] == headline, case["case_id"]
+    assert seen, "no contract/merger golden produced a headline"
+
+
+def test_already_current_rescore_keeps_the_headline_score():
+    """Re-running a current CUAD/MAUD output reports the same headline score, not a move."""
+    cases = json.loads(
+        (Path(__file__).parent / "fixtures" / "doc_scorers" / "inputs.json").read_text(encoding="utf-8")
+    )["cases"]
+    checked = 0
+    for case in cases:
+        if case["doc_type"] not in ("contract", "merger_agreement"):
+            continue
+        if not isinstance(case.get("predicted"), dict) or not isinstance(case.get("expected"), dict):
+            continue
+        first = rescore_record(
+            {
+                "doc_id": case["case_id"],
+                "task": "extraction",
+                "doc_class": case["doc_type"],
+                "expected": case["expected"],
+                "predicted": case["predicted"],
+                "expected_subclass": case.get("expected_subclass"),
+            }
+        )
+        if first["payload"].get("headline_score") is None:
+            continue
+        again = rescore_record(first)
+        assert again["already_current"] is True
+        assert again["score"] == first["score"] == first["payload"]["headline_score"], case["case_id"]
+        checked += 1
+    assert checked

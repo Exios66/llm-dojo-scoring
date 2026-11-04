@@ -245,3 +245,26 @@ def test_publish_fails_closed_when_uv_lock_read_fails(release, monkeypatch):
     """A uv.lock that exists but cannot be read raises instead of skipping the check."""
     with pytest.raises(Exception, match="object read error"):
         _offline_publish(release, monkeypatch, _fake_git("x", lock_read_fails=True))
+
+
+def test_readme_pin_bump_moves_the_badge_alt_text(release, tmp_path, monkeypatch):
+    """0.27.2: the release badge's ``[Release vX]`` alt text moves with the badge and link."""
+    readme = tmp_path / "README.md"
+    readme.write_text(
+        "[![Release v0.27.1](https://img.shields.io/badge/release-v0.27.1-6C63FF)]"
+        "(https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.27.1)\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(release, "README", readme)
+    assert release._bump_readme_pins("0.27.1", "0.27.2") == 3
+    text = readme.read_text(encoding="utf-8")
+    assert "0.27.1" not in text and text.count("0.27.2") == 3
+
+
+def test_check_reports_a_stale_badge_alt_text(release):
+    """``check`` counts the badge alt text as a README pin, so a stale one is an error."""
+    import re
+
+    text = "[![Release v0.27.0](https://img.shields.io/badge/release-v0.27.2-6C63FF)]"
+    pins = set(re.findall(r"(?:release-|releases/tag/|\.git@|\[Release )v(\d+\.\d+\.\d+)", text))
+    assert pins == {"0.27.0", "0.27.2"}

@@ -5,6 +5,41 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.27.2] - 2026-11-04
+### Fixed
+
+Review findings on the 0.27.1 sandbox snapshot (local-mailroom-sandbox#245):
+
+- `score_document` no longer raises on deeply nested prediction text. The JSON
+  parsing behind `coerce_predicted_payload` catches `RecursionError` the way its
+  `ast.literal_eval` fallback already did, and the text is reported as unparseable.
+- Brace-heavy prediction text parses in linear time. The greedy `\{.*\}` span is
+  found with `find`/`rfind` instead of a regex that rescanned from every `{`, the
+  per-brace fallback only tries positions that can open a JSON object (`{"` or `{}`),
+  and it stops at the first `RecursionError`. `"{" * 200000` took about 16 s; it now
+  takes about 10 ms. An object too deeply nested to decode is skipped in one pass to its
+  closing brace, so a later sibling object in the same text is still found.
+- `coerce_predicted_payload` accepts any `Mapping` (`MappingProxyType`, `UserDict`),
+  as `score_document` already did. Such a prediction is no longer reported as
+  `parse_error: True` / `schema_adherence: 0.0` while its fields score normally.
+- A Python-repr object wrapped in prose sets `prose_wrapper`, like a wrapped JSON object.
+- `rescore` reports `headline_score` as the extraction `score` when the type has a
+  headline (CUAD contract and MAUD merger rows), matching 0.27.1's rule that those
+  rows are judged by the headline. It reported `overall_score`, or null when that was
+  unset, for all 7 such goldens. Re-running an already-current output reports the same
+  headline instead of showing a score move.
+- `scripts/release.py cut` moves the README release badge's `[Release vX]` alt text with
+  the badge and link, and `check` counts it as a pin. It had stayed at v0.27.0.
+
+### Comparability
+
+- `rescore` output: the top-level `score` of contract and merger rows with a non-null
+  `headline_score` is now the headline, so a rescore diff against a pre-0.27.2 rescore
+  shows a change for those rows. The stored `payload` is unchanged.
+- Adherence keys change only for non-dict `Mapping` predictions (now adherent like the
+  equivalent dict) and Python-repr objects wrapped in prose (`prose_wrapper` now true).
+  No field-map, tier 0 or headline score changes.
+
 ## [0.27.1] - 2026-11-03
 ### Fixed
 
