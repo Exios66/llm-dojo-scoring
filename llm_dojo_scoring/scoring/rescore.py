@@ -314,8 +314,12 @@ def rescore_record(
             score = _reviewer_headline(stored_payload)
         elif route == "extraction":
             score = _extraction_headline(stored_payload)
-        else:
+        elif route == "classification":
             score = _headline(stored_payload)
+        else:
+            # Taskless or ``"unknown"`` (this shortcut's own output): keep main's
+            # ``headline_score``-first behaviour.
+            score = _extraction_headline(stored_payload)
         return {
             "doc_id": record.get("doc_id", record.get("id", record.get("item_id"))),
             "task": task or "unknown",

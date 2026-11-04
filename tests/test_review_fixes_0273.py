@@ -59,3 +59,10 @@ def test_already_current_classification_ignores_an_extraction_headline():
     """Only extraction rows are judged by ``headline_score``; classification keeps its own."""
     out = rescore_record(_current("docclass", {"accuracy": 0.5, "headline_score": 0.9}))
     assert out["already_current"] is True and out["score"] == 0.5
+
+
+def test_already_current_unrouted_record_keeps_the_headline_score():
+    """Taskless and ``unknown`` rows (the shortcut's own output) still read ``headline_score`` first."""
+    for task in ("", "unknown"):
+        out = rescore_record(_current(task, {"headline_score": 0.9, "overall_score": 0.4}))
+        assert out["already_current"] is True and out["score"] == 0.9
