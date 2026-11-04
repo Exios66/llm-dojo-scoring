@@ -315,7 +315,8 @@ def rescore_record(
             "score": (
                 _reviewer_headline(stored_payload)
                 if task == "reviewer"
-                else _headline(stored_payload)
+                # same headline as a fresh extraction rescore (headline_score first)
+                else _extraction_headline(stored_payload)
             ),
             "payload": _finite(dict(stored_payload)),
             "provenance": dict(stored_prov),

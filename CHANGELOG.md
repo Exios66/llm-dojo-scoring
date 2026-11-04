@@ -17,7 +17,8 @@ Review findings on the 0.27.1 sandbox snapshot (local-mailroom-sandbox#245):
   found with `find`/`rfind` instead of a regex that rescanned from every `{`, the
   per-brace fallback only tries positions that can open a JSON object (`{"` or `{}`),
   and it stops at the first `RecursionError`. `"{" * 200000` took about 16 s; it now
-  takes about 10 ms.
+  takes about 10 ms. An object too deeply nested to decode is skipped in one pass to its
+  closing brace, so a later sibling object in the same text is still found.
 - `coerce_predicted_payload` accepts any `Mapping` (`MappingProxyType`, `UserDict`),
   as `score_document` already did. Such a prediction is no longer reported as
   `parse_error: True` / `schema_adherence: 0.0` while its fields score normally.
@@ -25,7 +26,10 @@ Review findings on the 0.27.1 sandbox snapshot (local-mailroom-sandbox#245):
 - `rescore` reports `headline_score` as the extraction `score` when the type has a
   headline (CUAD contract and MAUD merger rows), matching 0.27.1's rule that those
   rows are judged by the headline. It reported `overall_score`, or null when that was
-  unset, for all 7 such goldens.
+  unset, for all 7 such goldens. Re-running an already-current output reports the same
+  headline instead of showing a score move.
+- `scripts/release.py cut` moves the README release badge's `[Release vX]` alt text with
+  the badge and link, and `check` counts it as a pin. It had stayed at v0.27.0.
 
 ### Comparability
 

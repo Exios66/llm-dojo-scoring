@@ -147,3 +147,29 @@ def test_many_open_braces_parse_in_linear_time():
     for text in ("{" * 200_000, "note: " + '{"a": ' * 200_000, "x {" * 100_000):
         assert coerce_predicted_payload(text)[0] is None
     assert time.perf_counter() - started < 5.0
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # 50k levels: past the C decoder's recursion limit (it decodes ~5k fine)
+        'see ' + '{"a": ' * 50_000 + "1" + "}" * 50_000 + ' then {"sender": "Acme"} done',
+        'see ' + '{"s": "}{", "a": ' * 50_000 + "1" + "}" * 50_000 + ' and {"sender": "Acme"}',
+    ],
+)
+def test_sibling_object_after_a_too_deep_object_is_found(text):
+    """A RecursionError skips only the deep object; a later sibling object still parses."""
+    payload, meta = coerce_predicted_payload(text)
+    assert payload == {"sender": "Acme"}
+    assert meta["prose_wrapper"] is True and meta["parse_error"] is False
+
+
+def test_sibling_scan_stays_linear():
+    """Many deep-then-closed objects in a row are each skipped in one pass."""
+    import time
+
+    deep = '{"a": ' * 30_000 + "1" + "}" * 30_000
+    text = "x " + " ".join([deep] * 20) + ' {"sender": "Acme"}'
+    started = time.perf_counter()
+    assert coerce_predicted_payload(text)[0] == {"sender": "Acme"}
+    assert time.perf_counter() - started < 5.0

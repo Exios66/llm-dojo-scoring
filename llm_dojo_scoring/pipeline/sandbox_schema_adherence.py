@@ -216,18 +216,53 @@ def _parse_object_text(text: str) -> tuple[dict[str, Any] | None, str | None]:
     # Only `{"` / `{}` can open a JSON object; skipping other braces keeps this linear
     # (each failed raw_decode builds a JSONDecodeError that scans up to its position).
     decoder = json.JSONDecoder()
-    for candidate in _JSON_OBJECT_START.finditer(text):
+    candidate = _JSON_OBJECT_START.search(text)
+    while candidate is not None:
+        resume = candidate.start() + 1
         try:
             obj, _end = decoder.raw_decode(text, candidate.start())
         except json.JSONDecodeError:
-            continue
+            obj = None
         except RecursionError:
-            # Nesting too deep to decode; every later "{" in the same run is deeper
-            # still, so retrying each one only repeats the work (quadratic).
-            return None, None
+            # Nesting too deep to decode. Every "{" inside this object is deeper still,
+            # so skip past its closing brace (found by one linear scan) and keep looking
+            # for a sibling object; retrying the inner braces would be quadratic.
+            resume = _balanced_object_end(text, candidate.start())
+            if resume < 0:
+                return None, None  # never closes: every later "{" is inside it
+            obj = None
         if isinstance(obj, dict):
             return obj, "wrapped_json"
+        candidate = _JSON_OBJECT_START.search(text, resume)
     return None, None
+
+
+def _balanced_object_end(text: str, start: int) -> int:
+    """Index just past the "}" that closes the "{" at ``start``, or -1 if it never closes.
+
+    Counts braces outside JSON strings (with backslash escapes); used only to skip an
+    object too deeply nested to decode, so one pass over it keeps the scan linear.
+    """
+    depth = 0
+    in_string = escaped = False
+    for index in range(start, len(text)):
+        char = text[index]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+        elif char == '"':
+            in_string = True
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return index + 1
+    return -1
 
 
 def _typed_valid(
