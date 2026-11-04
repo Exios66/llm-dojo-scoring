@@ -5,6 +5,7 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+## [0.27.2] - 2026-11-04
 ### Fixed
 
 Review findings on the 0.27.1 sandbox snapshot (local-mailroom-sandbox#245):
