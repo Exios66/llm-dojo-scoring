@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import json
 import math
+import os
+import tempfile
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
@@ -373,6 +375,11 @@ def rescore_records(
     results: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
     for index, record in enumerate(records):
+        if not isinstance(record, Mapping):
+            skipped.append(
+                {"index": index, "doc_id": None, "reason": f"record is {type(record).__name__}, not an object"}
+            )
+            continue
         try:
             results.append(_finite(rescore_record(record, provenance=provenance, force_rescore=force_rescore)))
         except ValueError as exc:  # RescoreError, or a scorer refusing a malformed row
@@ -465,6 +472,16 @@ def rescore_file(
     ``pred``, ``score``). ``dataset_path`` supplies GT by id. When a record
     already carries ``expected``/``predicted``, no dataset join is needed.
     """
+    source = Path(items_path)
+    target = Path(out_path or source.with_suffix(".rescored.jsonl"))
+    # Same path, or another name for the same file (a hard link): opening the
+    # output for writing would truncate the source either way.
+    if target.resolve() == source.resolve() or (
+        target.exists() and source.exists() and target.samefile(source)
+    ):
+        # The output omits raw predictions/truth: overwriting the source would
+        # make the run impossible to re-score again.
+        raise RescoreError(f"--out must differ from --items ({target})")
     items = _read_jsonl(Path(items_path))
     records = _join_dataset(items, Path(dataset_path)) if dataset_path else items
     for record in records:
@@ -474,11 +491,19 @@ def rescore_file(
             record["doc_class"] = doc_class
     # Joined GT may differ from what the stored payload was scored against.
     result = rescore_records(records, provenance=provenance, force_rescore=bool(dataset_path))
-    target = Path(out_path or Path(items_path).with_suffix(".rescored.jsonl"))
     target.parent.mkdir(parents=True, exist_ok=True)
-    with target.open("w", encoding="utf-8") as handle:
-        for record in result["records"]:
-            handle.write(json.dumps(_finite(record), sort_keys=True, default=str, allow_nan=False) + "\n")
+    # Write a sibling temp file and rename it over the target: a rename replaces the
+    # directory entry, never the file behind it, so even a hard link to the items
+    # created after the check above cannot be truncated.
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{target.name}.", dir=target.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            for record in result["records"]:
+                handle.write(json.dumps(_finite(record), sort_keys=True, default=str, allow_nan=False) + "\n")
+        os.replace(tmp_name, target)
+    except BaseException:
+        Path(tmp_name).unlink(missing_ok=True)
+        raise
     result["output"] = str(target)
     result["moves"] = diff_scorecards([record for record in records], result["records"])
     return result
