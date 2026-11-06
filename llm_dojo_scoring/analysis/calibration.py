@@ -99,8 +99,11 @@ def required_samples(
         # 1 - (1 - risk) ** n <= 1 - confidence
         # log1p keeps a tiny risk from rounding ``1 - risk`` to 1.0 (a zero
         # denominator); the cap applies here as it does to the search below.
-        n = math.ceil(math.log(1.0 - confidence) / math.log1p(-risk))
-        return max(1, n) if n <= _MAX_REQUIRED_SAMPLES else None
+        exact = math.log(1.0 - confidence) / math.log1p(-risk)
+        # Compare before ``ceil``: a risk near the float minimum overflows to inf.
+        if not math.isfinite(exact) or exact > _MAX_REQUIRED_SAMPLES:
+            return None
+        return max(1, math.ceil(exact))
     low, high = max(errors, 1), _MAX_REQUIRED_SAMPLES
     if errors > high:
         # More errors than the search cap allows trials: no sample clears it.
@@ -320,10 +323,12 @@ def auroc(scores: Sequence[float], labels: Sequence[bool]) -> float | None:
     if len(scores) != len(labels):
         raise ValueError("scores and labels must have the same length")
     pairs = [
-        (float(score), bool(label))
+        (score, bool(label))
         for score, label in zip(scores, labels)
-        if isinstance(score, (int, float))
+        # numbers.Real admits numpy scalars (float32, int64); bools are labels, not scores.
+        if isinstance(score, numbers.Real)
         and not isinstance(score, bool)
+        and type(score).__name__ != "bool_"
         and not math.isnan(score)  # NaN has no order, so it cannot be ranked
     ]
     positives = [score for score, label in pairs if label]
@@ -341,8 +346,9 @@ def spearman(xs: Sequence[float], ys: Sequence[float]) -> float | None:
     if len(xs) != len(ys):
         raise ValueError("xs and ys must have the same length")
     # NaN has no order: drop any pair carrying one before ranking.
+    # Rank the values as given: float() would merge distinct integers above 2**53.
     kept = [
-        (float(x), float(y))
+        (x, y)
         for x, y in zip(xs, ys)
         if not (math.isnan(float(x)) or math.isnan(float(y)))
     ]
