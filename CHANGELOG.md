@@ -15,7 +15,10 @@ Format based on Keep a Changelog; versioning is SemVer.
   `publish` itself reads the release the same way. A consumer step waits while the
   release is missing, a draft or unreadable; a consumer pinned at a newer release is
   done, not told to downgrade; and a commit pin with no local version tags says to
-  fetch tags rather than calling the commit untagged.
+  fetch tags rather than calling the commit untagged. Only gh's "release not found"
+  counts as unpublished. A pin read from a sibling checkout is marked unverified and
+  cannot complete the chain; a commit pin that matches no tag, or two, is checked
+  before any bump; and a failed pin lookup after a publish keeps the publish result.
   `release.py status --consumers` prints the same chain. Scripts only.
 
 

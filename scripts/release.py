@@ -977,7 +977,10 @@ def release_probe(version: str) -> dict[str, Any] | None:
     if proc.returncode == 0:
         return json.loads(proc.stdout)
     err = (proc.stderr or proc.stdout).strip()
-    return None if "not found" in err.lower() else {"unknown": err.splitlines()[0] if err else "gh failed"}
+    # gh says exactly "release not found"; "command not found" or a repo 404 is not that.
+    if "release not found" in err.lower():
+        return None
+    return {"unknown": err.splitlines()[0] if err else "gh failed"}
 
 
 def remote_release(version: str) -> dict | None:
@@ -1296,8 +1299,26 @@ def _consumer_text(name: str, repo: str, path: str, *, remote: bool) -> tuple[st
             return proc.stdout, f"{repo} default branch"
     sibling = REPO_ROOT.parent / name / path
     if sibling.is_file():
-        return sibling.read_text(encoding="utf-8"), f"sibling checkout ../{name}"
+        try:
+            return sibling.read_text(encoding="utf-8"), f"sibling checkout ../{name}"
+        except (OSError, UnicodeDecodeError):
+            return None, None
     return None, None
+
+
+def _pin_version(ref: str, tags: list[dict[str, Any]]) -> tuple[str | None, bool]:
+    """The version a commit pin resolves to, and whether the short ref is ambiguous.
+
+    Several tags on one commit resolve to the newest; a short ref matching two
+    different tagged commits resolves to nothing and is ambiguous.
+    """
+    hits = [t for t in tags if t["commit"].startswith(ref.lower())]
+    if len({t["commit"] for t in hits}) > 1:
+        return None, True
+    versions = [t["version"] for t in hits]
+    if not versions:
+        return None, False
+    return max(versions, key=lambda v: parse_semver(v) or (0, 0, 0)), False
 
 
 def consumer_pins(tags: list[dict[str, Any]], *, remote: bool = True) -> list[dict[str, Any]]:
@@ -1306,7 +1327,6 @@ def consumer_pins(tags: list[dict[str, Any]], *, remote: bool = True) -> list[di
     A commit pin resolves through the local version tags (a pin at an untagged
     commit has ``version`` ``None``); an unreadable pin has ``ref`` ``None``.
     """
-    by_commit = {t["commit"]: t["version"] for t in tags}
     no_tags = not tags
     out: list[dict[str, Any]] = []
     for name, repo, path in CONSUMERS:
@@ -1314,12 +1334,16 @@ def consumer_pins(tags: list[dict[str, Any]], *, remote: bool = True) -> list[di
         match = _PIN_RE.search(text or "")
         ref = match.group(1) if match else None
         version: str | None = None
+        ambiguous = False
         if ref and ref.startswith("v"):
             version = ref[1:]
         elif ref:
-            version = next((v for c, v in by_commit.items() if c.startswith(ref.lower())), None)
+            version, ambiguous = _pin_version(ref, tags)
         out.append({"consumer": name, "repo": repo, "path": path, "source": source, "ref": ref,
-                    "version": version, "unresolved": bool(ref and version is None and no_tags)})
+                    "version": version, "unresolved": bool(ref and version is None and no_tags),
+                    "ambiguous": ambiguous,
+                    # A sibling checkout may hold an unmerged pin: it is not the consumer's state.
+                    "unverified": bool(source and source.startswith("sibling checkout"))})
     return out
 
 
@@ -1330,6 +1354,8 @@ def _describe_pin(pin: dict[str, Any]) -> str:
         return "unreadable"
     short = ref if ref.startswith("v") else ref[:12]
     if pin.get("version") is None:
+        if pin.get("ambiguous"):
+            return f"commit {short} (ambiguous: matches more than one tagged commit)"
         if pin.get("unresolved"):
             return f"commit {short} (no local version tags: run `git fetch --tags`)"
         return f"untagged commit {short}"
@@ -1359,6 +1385,7 @@ def chain_next_steps(
     published = release is not None and "unknown" not in release and not release.get("isDraft")
     blocked_by: str | None = None if published else f"the GitHub release {tag} is published"
     behind = False
+    unverified = False
     target = parse_semver(version)
     for pin in pins:
         name = pin["consumer"]
@@ -1366,10 +1393,23 @@ def chain_next_steps(
         pinned = parse_semver(pin["version"]) if pin.get("version") else None
         if pinned is not None and target is not None and pinned >= target:
             ahead = "" if pinned == target else f" (ahead of {tag})"
-            steps.append(f"{name}: done, pins v{pin['version']}{ahead} ({where})")
+            if pin.get("unverified"):
+                unverified = True
+                steps.append(f"{name}: pins v{pin['version']}{ahead} ({where}, unverified: "
+                             f"confirm it is merged on {pin['repo']})")
+            else:
+                steps.append(f"{name}: done, pins v{pin['version']}{ahead} ({where})")
             continue
         behind = True
         now = _describe_pin(pin)
+        if pin.get("unverified"):
+            where += ", unverified"
+        if pin.get("ref") and pin.get("version") is None:
+            # An untagged, ambiguous or unresolved commit may be newer than the tag.
+            steps.append(f"{name}: pins {now} ({where}); run `git fetch --tags` and "
+                         f"`status --consumers` before bumping it to {tag}")
+            blocked_by = blocked_by or f"{name}'s pin is checked"
+            continue
         if name == "llm-mailroom":
             action = (f"PYTHONPATH=src python src/scripts/bump_dojo_scoring.py --apply --tag {tag}"
                       " (its /dojo-bump skill), then its suite against the pinned revision")
@@ -1382,13 +1422,23 @@ def chain_next_steps(
             steps.append(f"{name}: pins {now} ({where}); next: {action}")
         blocked_by = blocked_by or f"{name} merges"
     if pins and not behind:
-        steps.append(f"chain complete: every consumer pins {tag} or later")
+        if unverified:
+            steps.append("chain looks complete from local checkouts: confirm each pin on GitHub")
+        else:
+            steps.append(f"chain complete: every consumer pins {tag} or later")
     return steps
 
 
 def publish_next_steps(version: str, tag: str, release: dict[str, Any] | None) -> list[str]:
     """What follows a publish, read from the consumers' current pins."""
-    return chain_next_steps(version, tag, release, consumer_pins(list_version_tags()))
+    try:
+        pins = consumer_pins(list_version_tags())
+    except Exception as exc:  # noqa: BLE001 - the release already exists; never lose that result
+        steps = chain_next_steps(version, tag, release, [])
+        steps.append(f"could not read the consumer pins ({type(exc).__name__}: {str(exc)[:120]}): "
+                     "run `python scripts/release.py status --consumers`")
+        return steps
+    return chain_next_steps(version, tag, release, pins)
 
 
 def edit_release(

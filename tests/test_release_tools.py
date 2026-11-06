@@ -400,3 +400,74 @@ def test_commit_pin_with_no_local_tags_is_unresolved_not_untagged(tmp_path, monk
     mailroom, _ = release.consumer_pins([], remote=False)
     assert mailroom["version"] is None
     assert release._describe_pin(mailroom) == "commit cab9768 (no local version tags: run `git fetch --tags`)"
+
+
+@pytest.mark.parametrize(
+    ("stderr", "missing"),
+    [("release not found", True), ("bash: gh: command not found", False), ("HTTP 404: Not Found (repo)", False)],
+)
+def test_release_probe_treats_only_a_missing_release_as_none(monkeypatch, stderr, missing):
+    """Only gh's "release not found" means unpublished; any other failure is unknown."""
+    import subprocess
+
+    release = load_release()
+    monkeypatch.setattr(release, "run", lambda cmd, check=True, **kw: subprocess.CompletedProcess(cmd, 1, "", stderr))
+    probe = release.release_probe("0.28.0")
+    assert (probe is None) is missing, probe
+
+
+def test_sibling_pin_is_unverified_and_never_completes_the_chain(tmp_path, monkeypatch):
+    """A pin read from a sibling checkout may be unmerged: it cannot close the chain."""
+    release = load_release()
+    monkeypatch.setattr(release, "REPO_ROOT", tmp_path / "llm-dojo-scoring")
+    for name, path in (("llm-mailroom", "pyproject.toml"), ("local-mailroom-sandbox", "requirements/dojo-release.txt")):
+        (tmp_path / name / path).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / name / path).write_text("llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.28.0\n")
+    pins = release.consumer_pins([], remote=False)
+    assert all(p["unverified"] for p in pins)
+    steps = release.chain_next_steps("0.28.0", "v0.28.0", {"url": "u"}, pins)
+    assert "chain complete" not in " ".join(steps), steps
+    assert "unverified" in steps[1] and "unverified" in steps[2]
+
+
+def test_ambiguous_short_commit_pin_is_not_resolved(tmp_path, monkeypatch):
+    """A short pin matching two tagged commits resolves to no version, and says so."""
+    release = load_release()
+    monkeypatch.setattr(release, "REPO_ROOT", tmp_path / "llm-dojo-scoring")
+    (tmp_path / "llm-mailroom").mkdir()
+    (tmp_path / "llm-mailroom" / "pyproject.toml").write_text(
+        '"llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@abc1234"\n')
+    tags = [{"version": "0.28.0", "commit": "abc1234" + "1" * 33}, {"version": "0.27.0", "commit": "abc1234" + "2" * 33}]
+    mailroom, _ = release.consumer_pins(tags, remote=False)
+    assert mailroom["version"] is None
+    assert "ambiguous" in release._describe_pin(mailroom)
+
+
+def test_commit_shared_by_two_tags_resolves_to_the_newest():
+    """Two version tags on one commit: the pin is the newer version, not the older."""
+    release = load_release()
+    tags = [{"version": "0.28.0", "commit": "f" * 40}, {"version": "0.27.9", "commit": "f" * 40}]
+    assert release._pin_version("fffffff", tags) == ("0.28.0", False)
+
+
+def test_unresolved_commit_pin_is_not_told_to_bump():
+    """A commit pin with no matching local tag may be newer: check it, do not prescribe a bump."""
+    release = load_release()
+    steps = release.chain_next_steps("0.28.0", "v0.28.0", {"url": "u"}, _pins(("deadbeefcafe", None), ("deadbeefcafe", None)))
+    assert "bump_dojo_scoring.py" not in steps[1] and "git fetch --tags" in steps[1], steps
+    assert "chain complete" not in " ".join(steps)
+
+
+def test_publish_keeps_its_result_when_consumer_lookup_fails(monkeypatch):
+    """A crash while reading consumer pins after a release is created still returns the publish result."""
+    release = load_release()
+
+    def boom(*a, **k):
+        """Fail the way an undecodable sibling pin file does."""
+        raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")
+
+    monkeypatch.setattr(release, "list_version_tags", lambda: [])
+    monkeypatch.setattr(release, "consumer_pins", boom)
+    steps = release.publish_next_steps("0.28.0", "v0.28.0", {"url": "u"})
+    assert steps[0] == "verify u"
+    assert any("could not read the consumer pins" in s for s in steps), steps
