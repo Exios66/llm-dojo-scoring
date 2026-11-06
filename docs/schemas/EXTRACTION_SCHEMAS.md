@@ -51,7 +51,7 @@ get_prompt("contracts_specialist", family="production_prompts").text
 | `date` | Canonical ISO date; containment + partial-credit fallbacks |
 | `money` | Parse to float, ±$0.01; unparseable prose → fuzzy string |
 | `name` | Jaro–Winkler + token-set; containment first |
-| `label` | Controlled vocabulary: canonicalized via `normalize_intent`, then exact match — no partial credit, no embedding rescue |
+| `label` | Closed vocabulary (`SCORED_ENUM_FIELDS`): aliases folded by `canonical_label` (`normalize_intent` for `intent`), then exact match — no partial credit, no embedding rescue. 0.28.0 retyped `cuad_family`, `merger_consideration`, merger `intent`, `communication_type`, `urgency`, `claim_type` and `coverage_determination` from `name` |
 | `free_text` | SQuAD-style token F1 |
 | `entity_list` | Hungarian bipartite match, then set P/R/F1 |
 | `entity_list:name` | List items scored as `name` |
@@ -75,7 +75,7 @@ emit `confidence`.
 
 ---
 
-## 1. `contract` — `ContractExtraction` (11 fields)
+## 1. `contract` — `ContractExtraction` v2 (17 fields)
 
 CUAD commercial contracts only. Category, family, question and JSON-Schema
 catalog: [`CUAD_SCHEMA.md`](CUAD_SCHEMA.md) (`llm_dojo_scoring.schemas.cuad_schema`).
@@ -84,19 +84,30 @@ is situational context for `cuad_family`; verify against operative text.
 Do **not** emit `intent` / `subject_matter` / `keywords` /
 `effective_time`.
 
+v2 (0.28.0, mailroom-dataset v10 plan A1) adds the entity fields from
+`party_roles` to `territory` and drops the v1 parse-compat `merger_consideration` /
+`maud_clauses` from the live map: a prediction may still carry them (they are not
+extra keys) but they are never scored, so the contract headline can reach `full`.
+
 | Field | Type | Empty | Notes |
 |---|---|---|---|
 | `document_name` | `name` | `null` | Title as stated; never from filename |
 | `parties` | `entity_list:name` | `[]` | Full legal name + parenthetical alias when given |
+| `party_roles` | `entity_list:free_text` | `[]` | `'<party>: <role>'`; role in `CONTRACT_PARTY_ROLES` (licensor, licensee, supplier, customer, …, other) |
+| `signatories` | `entity_list:name` | `[]` | Persons who sign, as printed |
+| `agreement_date` | `date` | `null` | "Dated as of" or signature date, ISO (CUAD Agreement Date) |
 | `effective_date` | `date` | `null` | ISO `YYYY-MM-DD`; defined Effective Date beats signature date |
+| `expiration_date` | `date` | `null` | End of the initial term when stated as a date (CUAD Expiration Date) |
 | `term_length` | `free_text` | `null` | Duration of **the agreement**, not a sub-period |
-| `governing_law` | `name` | `null` | Governing-law sentence only; no forum/venue |
-| `contract_value` | `money` | `null` | Currency phrase as written (`"$2,000,000"`); do not compute |
 | `renewal_terms` | `free_text` | `null` | Renewal / evergreen / rollover language |
-| `cuad_family` | `name` | `null` | Exactly one of 25 CUAD keys, or `other` |
-| `merger_consideration` | `name` | `null` | **Always `null` on CUAD rows** (parse-compat) |
+| `termination_notice_period` | `free_text` | `null` | Notice to terminate or stop a renewal (CUAD Notice Period To Terminate Renewal) |
+| `governing_law` | `name` | `null` | Governing-law sentence only; no forum/venue |
+| `dispute_forum` | `name` | `null` | Courts or arbitral seat, separate from governing law |
+| `contract_value` | `money` | `null` | Currency phrase as written (`"$2,000,000"`); do not compute |
+| `payment_terms` | `free_text` | `null` | How and when consideration is paid |
+| `territory` | `free_text` | `null` | Stated territory (promoted from the family hints) |
+| `cuad_family` | `label` | `null` | Exactly one of 25 CUAD keys, or `other` |
 | `cuad_clauses` | `entity_list:free_text` | `[]` | `'<Atticus category>: <verbatim span>'` — present only |
-| `maud_clauses` | `entity_list:free_text` | `[]` | **Always `[]` on CUAD rows** (parse-compat) |
 
 **Subclass (sorter):** 25 CUAD families —
 `affiliate`, `agency`, `collaboration`, `co_branding`, `consulting`,
@@ -136,21 +147,34 @@ to sandbox `contracts_specialist_v33_simplified`).
 
 ---
 
-## 2. `merger_agreement` — `MergerAgreementExtraction` (10 fields)
+## 2. `merger_agreement` — `MergerAgreementExtraction` v2 (21 fields)
 
 Agreement and Plan of Merger (including amended/restated). **Not** the
-CUAD extractor: never emit `cuad_family` or `cuad_clauses`.
+CUAD extractor: never emit `cuad_family` or `cuad_clauses`. v2 (0.28.0,
+mailroom-dataset v10 plan A2) adds the deal entities from `acquirer` to
+`legal_counsel` and closes `merger_consideration` and `intent`.
 
 | Field | Type | Empty | Notes |
 |---|---|---|---|
 | `document_name` | `name` | `null` | Title as stated |
 | `parties` | `entity_list:name` | `[]` | Parent, Merger Sub, Target, other named entities |
+| `acquirer` | `name` | `null` | The Parent, as printed |
+| `target` | `name` | `null` | The Company, as printed |
+| `merger_sub` | `entity_list:name` | `[]` | Merger subsidiary or subsidiaries |
+| `signatories` | `entity_list:name` | `[]` | Persons signing for each party |
 | `effective_date` | `date` | `null` | Calendar date only; **null when only an Effective Time exists** |
 | `effective_time` | `free_text` | `null` | Clock / TZ / defined-term Effective Time |
 | `governing_law` | `name` | `null` | Governing-law sentence; no forum/venue |
-| `merger_consideration` | `name` | `null` | One token: `all_cash` · `all_stock` · `mixed_cash_stock` · `mixed_cash_stock_election` · `other` |
+| `per_share_cash_amount` | `money` | `null` | Cash per Target share (promoted from the hint) |
+| `exchange_ratio` | `free_text` | `null` | Parent shares per Target share (promoted from the hint) |
+| `target_termination_fee` | `money` | `null` | Fee payable by the Target |
+| `parent_termination_fee` | `money` | `null` | Reverse termination fee |
+| `outside_date` | `date` | `null` | End / Outside Date; ISO, or as printed when relative |
+| `financial_advisors` | `entity_list:name` | `[]` | From the brokers and fairness sections |
+| `legal_counsel` | `entity_list:name` | `[]` | From the notice "with a copy to" lines |
+| `merger_consideration` | `label` | `null` | One token: `all_cash` · `all_stock` · `mixed_cash_stock` · `mixed_cash_stock_election` · `other` |
 | `maud_clauses` | `entity_list:free_text` | `[]` | `'<Question>: <Hub valid_class>'`; omit unanswered; never `"not specified"` |
-| `intent` | `name` | `null` | Short label (`effect_merger`, `amend_merger`, `plan_of_merger`, …) |
+| `intent` | `label` | `null` | `effect_merger` · `amend_merger` · `other` (`MERGER_INTENTS`; `plan_of_merger` folds to `effect_merger`) |
 | `subject_matter` | `free_text` | `null` | One grounded sentence |
 | `keywords` | `entity_list:name` | `[]` | ≤8 phrases copied from the text |
 
@@ -246,11 +270,11 @@ go in `demand_amount`, never insurance `claimed_amount`.
 | `sender` | `name` | `null` | Name / title / entity as written; press = issuer or media contact |
 | `recipient` | `name` | `null` | Named addressee; press/wire with none → `null` |
 | `additional_recipients` | `entity_list` | `[]` | CC / copied parties |
-| `communication_type` | `name` | `null` | **8 tokens only** (see below). Unregistered form → `null`, **not** `other` (v0.19.1 re-freeze) |
+| `communication_type` | `label` | `null` | 8 form tokens or `other` (see below); exact match since 0.28.0, so `demand` never matches `attorney_demand` |
 | `communication_date` | `date` | `null` | Date **sent** (ISO); not a deadline, meeting, or invoice date |
 | `demand_amount` | `money` | `null` | Exact dollars demanded; most non-demand mail is `null` |
 | `action_items` | `entity_list` | `[]` | ≤3 concrete actions with deadlines if stated |
-| `urgency` | `name` | never `null` | `routine` · `time-sensitive` · `urgent` · `critical`. Unspecified → `routine` |
+| `urgency` | `label` | never `null` | `routine` · `time-sensitive` · `urgent` · `critical`. Unspecified → `routine` |
 | `intent` | `label` | `null` | `payment_demand` · `notice` · `analysis` · `request` · `update` · `meeting_invite` · `press_communication` · `other`. Canonicalized via `normalize_intent`; exact match. |
 | `subject_matter` | `free_text` | `null` | One grounded sentence |
 | `keywords` | `entity_list:name` | `[]` | ≤8 phrases from the text |
@@ -292,13 +316,13 @@ fields the text states.
 | `policy_number` | `id` | `null` | Exact printed policy number |
 | `insurer` | `name` | `null` | Carrier as written |
 | `insured_party` | `name` | `null` | Named insured / claimant |
-| `claim_type` | `name` | `null` | Extract enum **orthogonal** to subclass (see below) |
+| `claim_type` | `label` | `null` | Extract enum **orthogonal** to subclass (see below) |
 | `date_of_loss` | `date` | `null` | Loss/event date (ISO) |
 | `date_filed` | `date` | `null` | Filing date; not date of loss |
 | `claimed_amount` | `money` | `null` | Amount as stated (CMS rows: the paid amount; `0.0` is a stated zero); do not compute |
 | `adjuster` | `name` | `null` | Named adjuster only; CMS/GNOTHEIA/INSURBIAS often `null` (valid) |
 | `damages_description` | `free_text` | `null` | Loss/damages as described |
-| `coverage_determination` | `name` | `null` | As written: `approved` · `denied` · `partial` · `pending`. Never infer from tone |
+| `coverage_determination` | `label` | `null` | `approved` · `denied` · `partial` · `pending` (`COVERAGE_DETERMINATIONS`); stated outcome words fold (`partially approved` → `partial`). Never infer from tone |
 | `denial_reasons` | `entity_list:free_text` | `[]` | Stated grounds; `[]` when approved / pending / unstated |
 | `supporting_documents` | `entity_list` | `[]` | Referenced docs; CMS provider/NPI lines belong here |
 | `intent` | `label` | `null` | `claim_filing` · `coverage_determination` · `loss_report` · `claim_data_record` · `other`. Canonicalized via `normalize_intent`; exact match. |
@@ -399,9 +423,17 @@ the scored vocabulary instead (`llm_dojo_scoring.schemas.scored_enums`):
 
 | Class | Field | Source of the vocabulary |
 |---|---|---|
-| `corporate_record`, `correspondence`, `insurance_claim` | `intent` | `INTENT_LABELS` |
+| `corporate_record`, `correspondence`, `insurance_claim`, `merger_agreement` | `intent` | `INTENT_LABELS` (`MERGER_INTENTS` since 0.28.0) |
+| `contract` | `cuad_family` | `DOC_TYPE_SUBCLASSES["contract"]` (0.28.0) |
+| `merger_agreement` | `merger_consideration` | `MAUD_CONSIDERATION_TYPES` (0.28.0) |
+| `correspondence` | `communication_type` | `DOC_TYPE_SUBCLASSES["correspondence"]` (0.28.0) |
+| `correspondence` | `urgency` | `URGENCY_LEVELS` (0.28.0) |
 | `insurance_claim` | `claim_type` | `INSURANCE_PRODUCT_LINES` (product lines only; CMS tables are `cms_source_table`) |
 | `insurance_claim` | `cms_source_table` | `CMS_SOURCE_TABLES` |
+| `insurance_claim` | `coverage_determination` | `COVERAGE_DETERMINATIONS` (0.28.0) |
+
+Every `label` field of the five live classes has an entry, and the scorer folds a
+value with `canonical_label(doc_type, field, value)` before the exact match.
 
 ```python
 from llm_dojo_scoring import (

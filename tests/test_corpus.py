@@ -15,6 +15,7 @@ from llm_dojo_scoring.schemas.corpus import (
     CORPUS_DOC_TYPES,
     CORPUS_EXTRACTION_FIELDS,
     CORPUS_SUBCLASS_SURFACES,
+    RAW_CORPUS_SUBCLASS_SURFACES,
     CUAD_CLAUSE_CATEGORIES,
     DOC_TYPE_SUBCLASSES,
     INSURANCE_CLAIM_TYPES,
@@ -89,7 +90,7 @@ def test_correspondence_and_corporate_record_subclasses():
     assert normalize_corpus_subclass("corporate_record", "rights_instrument") == "rights_instrument"
     # v9 GT re-pin: the observed corporate_record surfaces carry the full
     # 10-token vocabulary (5 v8-era tokens + 5 record types the v9 corpus added).
-    assert tuple(CORPUS_SUBCLASS_SURFACES["corporate_record"]) == (
+    assert tuple(RAW_CORPUS_SUBCLASS_SURFACES["corporate_record"]) == (
         "articles_of_incorporation", "board_resolution", "bylaws",
         "charter_amendment", "indenture", "officer_certificate", "other",
         "powers_of_attorney", "rights_instrument", "subsidiary_list",
@@ -173,8 +174,10 @@ def test_contract_suite_has_cuad_clause_surface_and_document_name():
     """Expose contract document names, clause surfaces, and category-presence metrics."""
     suite = get_suite("contract")
     assert "document_name" in suite.field_types
-    assert "cuad_family" in suite.field_types
-    assert "maud_clauses" in suite.field_types
+    assert suite.field_types["cuad_family"] == "label"
+    # ContractExtraction v2 (0.28.0): the v1 merger keys are parse-compat, not scored.
+    assert "maud_clauses" not in suite.field_types
+    assert "merger_consideration" not in suite.field_types
     assert "extraction_category_presence" in suite.metric_names()
     assert "Parties" in CUAD_CLAUSE_CATEGORIES
     assert "Type of Consideration" in MAUD_QUESTION_KEYS
@@ -223,3 +226,15 @@ def test_suite_schema_export():
     assert schema["in_corpus"] is True
     assert schema["subclasses"] == list(DOC_TYPE_SUBCLASSES["insurance_claim"])
     assert "claim_number" in schema["extraction_fields"]
+
+
+def test_v10_canonical_subclass_keys_are_surfaces():
+    """v10 configs carry the canonical key as ``subclass``; it normalises to itself."""
+    for doc_type, keys in DOC_TYPE_SUBCLASSES.items():
+        if doc_type not in RAW_CORPUS_SUBCLASS_SURFACES:
+            continue
+        surfaces = CORPUS_SUBCLASS_SURFACES[doc_type]
+        assert set(keys) <= set(surfaces), doc_type
+        assert surfaces[: len(RAW_CORPUS_SUBCLASS_SURFACES[doc_type])] == RAW_CORPUS_SUBCLASS_SURFACES[doc_type]
+        for key in keys:
+            assert normalize_corpus_subclass(doc_type, key) == key, (doc_type, key)

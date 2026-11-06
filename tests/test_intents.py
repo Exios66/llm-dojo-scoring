@@ -15,7 +15,8 @@ def test_vocabularies_match_mailroom_bee7f46():
         "claim_filing", "coverage_determination", "loss_report",
         "claim_data_record", "other",
     )
-    assert "merger_agreement" not in INTENT_LABELS
+    # 0.28.0 (mailroom-dataset v10 ``merger_intent``): merger intent is a closed label.
+    assert INTENT_LABELS["merger_agreement"] == ("effect_merger", "amend_merger", "other")
     assert "contract" not in INTENT_LABELS
 
 
@@ -26,6 +27,8 @@ def test_aliases_resolve_in_class_only():
     assert normalize_intent("corporate_record", "request_information") == ""
     assert normalize_intent("correspondence", "threaten litigation") == ""
     assert normalize_intent("merger_agreement", "notice") == ""
+    assert normalize_intent("merger_agreement", "plan_of_merger") == "effect_merger"
+    assert normalize_intent("correspondence", "plan_of_merger") == ""
 
 
 LABEL = {"intent": "label", "sender": "name"}

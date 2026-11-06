@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import llm_dojo_scoring as dojo
-from llm_dojo_scoring.schemas.corpus import CORPUS_SUBCLASS_SURFACES, DOC_TYPE_SUBCLASSES
+from llm_dojo_scoring.schemas.corpus import DOC_TYPE_SUBCLASSES, RAW_CORPUS_SUBCLASS_SURFACES
 from llm_dojo_scoring.schemas.sorter_guide import (
     CORRESPONDENCE_SUBCLASS_PRECEDENCE,
     SORTER_SUBCLASS_GUIDE,
@@ -25,9 +25,10 @@ def test_every_emittable_key_has_a_meaning():
 
 
 def test_every_ground_truth_label_is_emittable():
-    """Every ground truth label is emittable."""
+    """Every ground truth label is emittable (the observed v9 surfaces; the v10 canonical
+    keys add only scoring-only tokens such as certificate_of_formation)."""
     for kind in ("corporate_record", "correspondence", "insurance_claim", "merger_agreement"):
-        assert set(CORPUS_SUBCLASS_SURFACES[kind]) <= set(sorter_subclass_keys(kind)), kind
+        assert set(RAW_CORPUS_SUBCLASS_SURFACES[kind]) <= set(sorter_subclass_keys(kind)), kind
 
 
 def test_certificate_of_formation_is_scoring_only():
