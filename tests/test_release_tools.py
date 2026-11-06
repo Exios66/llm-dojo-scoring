@@ -304,7 +304,7 @@ def test_next_steps_advance_as_consumers_bump():
     assert mid[1].startswith("llm-mailroom: done, pins v0.28.0")
     assert mid[2].startswith("local-mailroom-sandbox: pins v0.27.2 @ 1cd4aba76d82 (test); next: /vendor-sync to v0.28.0")
     done = release.chain_next_steps("0.28.0", "v0.28.0", {"url": "u"}, _pins(new, new))
-    assert done[-1] == "chain complete: every consumer pins v0.28.0"
+    assert done[-1] == "chain complete: every consumer pins v0.28.0 or later"
 
 
 def test_next_steps_report_a_missing_release_and_unreadable_pins():
@@ -339,3 +339,64 @@ def test_unreadable_release_is_not_reported_as_unpublished():
     steps = release.chain_next_steps("0.28.0", "v0.28.0", {"unknown": "HTTP 403"}, _pins(old, (None, None)))
     assert steps[0].startswith("could not read GitHub release v0.28.0 (HTTP 403)")
     assert "could not read Exios66/local-mailroom-sandbox:requirements/dojo-release.txt" in steps[2]
+
+
+def test_publish_reports_an_unreadable_release_as_unknown(tmp_path, monkeypatch):
+    """publish's own next steps use release_probe: a 403 after create is not "not found"."""
+    import subprocess
+
+    release = load_release()
+    monkeypatch.setattr(release, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(release, "DEFAULT_ASSET_DIR", tmp_path / "dist")
+    monkeypatch.setattr(release, "list_version_tags", lambda: [])
+    monkeypatch.setattr(release, "previous_tag", lambda v, t: None)
+    monkeypatch.setattr(release, "section_for", lambda v: {"body": "b"})
+    monkeypatch.setattr(release, "prs_in_range", lambda *a, **k: [])
+    monkeypatch.setattr(release, "commits_in_range", lambda *a, **k: [])
+    monkeypatch.setattr(release, "render_notes", lambda *a, **k: {"title": "t", "body": "b"})
+    monkeypatch.setattr(release, "consumer_pins", lambda tags, **k: [])
+
+    def fake_run(cmd, check=True, **kw):
+        """Every command succeeds except ``gh release view`` (blocked, HTTP 403)."""
+        if cmd[:3] == ["gh", "release", "view"]:
+            return subprocess.CompletedProcess(cmd, 1, "", "HTTP 403: Forbidden")
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(release, "run", fake_run)
+    plan = {"errors": [], "version": "0.28.0", "tag": "v0.28.0", "commit": "c" * 40,
+            "local_tag": True, "remote_tag_commit": "c" * 40, "with_assets": False,
+            "notes_title": "Release v0.28.0", "existing_release": None, "draft": False, "target": "c" * 40}
+    out = release.publish_apply(plan, push=False)
+    assert out["next"][0].startswith("could not read GitHub release v0.28.0"), out["next"]
+
+
+@pytest.mark.parametrize("state", [None, {"isDraft": True, "url": "u"}, {"unknown": "HTTP 403"}])
+def test_consumers_wait_for_a_published_release(state):
+    """No consumer is told to bump to a tag whose release is missing, a draft or unreadable."""
+    release = load_release()
+    old = ("1cd4aba76d82eea20c6e8dfcc0d760881bf84924", "0.27.2")
+    steps = release.chain_next_steps("0.28.0", "v0.28.0", state, _pins(old, old))
+    assert "next:" not in " ".join(steps[1:]), steps
+    assert steps[1].startswith("llm-mailroom: pins v0.27.2 @ 1cd4aba76d82 (test); after the GitHub release v0.28.0 is published:")
+
+
+def test_consumer_pinned_ahead_is_not_told_to_downgrade():
+    """A consumer already on a newer release is done, not told to pin an older tag."""
+    release = load_release()
+    ahead = ("v0.29.0", "0.29.0")
+    steps = release.chain_next_steps("0.28.0", "v0.28.0", {"url": "u"}, _pins(ahead, ahead))
+    assert steps[1].startswith("llm-mailroom: done, pins v0.29.0 (ahead of v0.28.0)"), steps
+    assert steps[-1] == "chain complete: every consumer pins v0.28.0 or later"
+    assert "--tag v0.28.0" not in " ".join(steps)
+
+
+def test_commit_pin_with_no_local_tags_is_unresolved_not_untagged(tmp_path, monkeypatch):
+    """Without local version tags a commit pin cannot be called untagged."""
+    release = load_release()
+    monkeypatch.setattr(release, "REPO_ROOT", tmp_path / "llm-dojo-scoring")
+    (tmp_path / "llm-mailroom").mkdir()
+    (tmp_path / "llm-mailroom" / "pyproject.toml").write_text(
+        '"llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@cab9768"\n')
+    mailroom, _ = release.consumer_pins([], remote=False)
+    assert mailroom["version"] is None
+    assert release._describe_pin(mailroom) == "commit cab9768 (no local version tags: run `git fetch --tags`)"

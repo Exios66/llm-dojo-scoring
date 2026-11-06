@@ -1257,7 +1257,7 @@ def publish_apply(plan: dict, *, push: bool) -> dict:
         run(cmd)
         results.append({"op": "gh_release_create", "tag": tag, "ok": True})
 
-    release = remote_release(version)
+    release = release_probe(version)
     return {
         "action": "publish",
         "version": version,
@@ -1307,6 +1307,7 @@ def consumer_pins(tags: list[dict[str, Any]], *, remote: bool = True) -> list[di
     commit has ``version`` ``None``); an unreadable pin has ``ref`` ``None``.
     """
     by_commit = {t["commit"]: t["version"] for t in tags}
+    no_tags = not tags
     out: list[dict[str, Any]] = []
     for name, repo, path in CONSUMERS:
         text, source = _consumer_text(name, repo, path, remote=remote)
@@ -1317,7 +1318,8 @@ def consumer_pins(tags: list[dict[str, Any]], *, remote: bool = True) -> list[di
             version = ref[1:]
         elif ref:
             version = next((v for c, v in by_commit.items() if c.startswith(ref.lower())), None)
-        out.append({"consumer": name, "repo": repo, "path": path, "source": source, "ref": ref, "version": version})
+        out.append({"consumer": name, "repo": repo, "path": path, "source": source, "ref": ref,
+                    "version": version, "unresolved": bool(ref and version is None and no_tags)})
     return out
 
 
@@ -1328,6 +1330,8 @@ def _describe_pin(pin: dict[str, Any]) -> str:
         return "unreadable"
     short = ref if ref.startswith("v") else ref[:12]
     if pin.get("version") is None:
+        if pin.get("unresolved"):
+            return f"commit {short} (no local version tags: run `git fetch --tags`)"
         return f"untagged commit {short}"
     return f"v{pin['version']}" + ("" if ref.startswith("v") else f" @ {short}")
 
@@ -1350,13 +1354,21 @@ def chain_next_steps(
         steps.append(f"GitHub release {tag} is still a draft: publish it ({release.get('url')})")
     else:
         steps.append(f"verify {release.get('url') or tag}")
-    blocked_by: str | None = None
+    # A consumer bump to a tag whose release is missing, a draft or unreadable
+    # waits for the release itself.
+    published = release is not None and "unknown" not in release and not release.get("isDraft")
+    blocked_by: str | None = None if published else f"the GitHub release {tag} is published"
+    behind = False
+    target = parse_semver(version)
     for pin in pins:
         name = pin["consumer"]
         where = pin.get("source") or f"could not read {pin['repo']}:{pin['path']} or ../{name}"
-        if pin.get("version") == version:
-            steps.append(f"{name}: done, pins {tag} ({where})")
+        pinned = parse_semver(pin["version"]) if pin.get("version") else None
+        if pinned is not None and target is not None and pinned >= target:
+            ahead = "" if pinned == target else f" (ahead of {tag})"
+            steps.append(f"{name}: done, pins v{pin['version']}{ahead} ({where})")
             continue
+        behind = True
         now = _describe_pin(pin)
         if name == "llm-mailroom":
             action = (f"PYTHONPATH=src python src/scripts/bump_dojo_scoring.py --apply --tag {tag}"
@@ -1365,12 +1377,12 @@ def chain_next_steps(
             action = (f"/vendor-sync to {tag}: {pin['path']} and _VENDOR_PINS (ref + peeled sha),"
                       " then refresh vendor/llm-dojo-scoring")
         if blocked_by:
-            steps.append(f"{name}: pins {now} ({where}); after {blocked_by} merges: {action}")
+            steps.append(f"{name}: pins {now} ({where}); after {blocked_by}: {action}")
         else:
             steps.append(f"{name}: pins {now} ({where}); next: {action}")
-        blocked_by = blocked_by or name
-    if pins and blocked_by is None:
-        steps.append(f"chain complete: every consumer pins {tag}")
+        blocked_by = blocked_by or f"{name} merges"
+    if pins and not behind:
+        steps.append(f"chain complete: every consumer pins {tag} or later")
     return steps
 
 
