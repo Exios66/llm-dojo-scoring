@@ -59,3 +59,25 @@ def test_generic_defaults():
 def test_registered_types_are_corpus_types():
     """Only corpus types get modules in 0.27.0; the rest are ``generic``."""
     assert set(DOC_SCORERS) <= set(CORPUS_DOC_TYPES)
+
+
+def test_score_document_scores_a_mapping_proxy_like_a_dict():
+    """0.27.2: a non-dict Mapping gets the same scores and adherence as the dict."""
+    import types
+
+    from llm_dojo_scoring import score_document
+
+    pred = {"sender": "Acme", "recipient": "Bob"}
+    as_dict = score_document("correspondence", pred, dict(pred))
+    as_proxy = score_document("correspondence", types.MappingProxyType(pred), dict(pred))
+    for key in ("overall_extraction_score", "parse_error", "schema_valid", "schema_adherence"):
+        assert as_proxy[key] == as_dict[key], key
+    assert as_proxy["parse_error"] is False
+
+
+def test_score_document_never_raises_on_deeply_nested_text():
+    """0.27.2: deeply nested text is a parse error, never a RecursionError."""
+    from llm_dojo_scoring import score_document
+
+    out = score_document("correspondence", "[" * 200_000, {"sender": "Acme"})
+    assert out["parse_error"] is True
