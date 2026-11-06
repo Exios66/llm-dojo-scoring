@@ -1521,8 +1521,10 @@ def score_extraction(
         if pred_value is not None:
             pred_value = parse_json_container(pred_value)
         if field_type == "label" and doc_class:
-            # Closed labels (0.28.0): fold aliases onto the scored token first,
-            # then exact match; an unfoldable value is kept and scores as wrong.
+            # Closed labels (0.28.0): fold aliases onto the scored token first, then
+            # exact match. An unfoldable value is kept as written: published v9 gold
+            # still carries off-vocabulary labels (urgency "low", intent "inform"),
+            # and a prediction that repeats the gold verbatim matches it.
             exp_value = canonical_label(doc_class, key, exp_value) or exp_value
             if pred_value is not None:
                 pred_value = canonical_label(doc_class, key, pred_value) or pred_value

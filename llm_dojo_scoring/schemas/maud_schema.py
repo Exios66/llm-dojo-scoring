@@ -1116,6 +1116,10 @@ def maud_json_schema(
             props[f.name] = {"enum": [*MERGER_INTENTS, None]}
         elif f.type.startswith("entity_list"):
             props[f.name] = {"type": "array", "items": {"type": "string"}}
+        elif f.name == "outside_date":
+            # ISO when the agreement states a date, else as printed ("nine months after
+            # the date hereof"), so no date pattern here.
+            props[f.name] = {"type": ["string", "null"]}
         else:
             props[f.name] = _scalar_schema(f.type)
     if include_trace:

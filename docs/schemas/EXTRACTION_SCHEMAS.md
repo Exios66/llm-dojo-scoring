@@ -279,11 +279,13 @@ go in `demand_amount`, never insurance `claimed_amount`.
 | `subject_matter` | `free_text` | `null` | One grounded sentence |
 | `keywords` | `entity_list:name` | `[]` | ≤8 phrases from the text |
 
-**`communication_type` vocabulary (8):** `email`, `letter`, `memo`,
+**`communication_type` vocabulary (8 + `other`):** `email`, `letter`, `memo`,
 `notice`, `demand`, `attorney_demand`, `press_release`,
-`meeting_request`. Sorter subclass catalog adds an `other` bucket; the
-extractor must emit `null` there. v8 `voicemail` is **not** in v9 GT and
-normalizes to `other` for classification only.
+`meeting_request`, and `other` for a form outside the eight. Since 0.28.0
+(mailroom-dataset v10) the gold is the row's subclass, `other` included, so
+`other` is a scored token: emit it for an unregistered form, and `null` only
+when the text gives no form at all. v8 `voicemail` is **not** in v9 GT and
+normalizes to `other`.
 
 **Content extras (scored, not schema keys).** Enron GT on all 1,000
 rows: `content_topic` (11) —

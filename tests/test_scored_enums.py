@@ -231,7 +231,8 @@ def test_v10_vocabularies_match_the_dataset_registry():
         "all_cash", "all_stock", "mixed_cash_stock", "mixed_cash_stock_election", "other")
     assert scored_vocabulary("insurance_claim", "coverage_determination") == (
         "approved", "denied", "partial", "pending")
-    assert len(scored_vocabulary("contract", "cuad_family")) == 25
+    assert len(scored_vocabulary("contract", "cuad_family")) == 26  # 25 families + other
+    assert scored_vocabulary("contract", "cuad_family")[-1] == "other"
 
 
 @pytest.mark.parametrize(

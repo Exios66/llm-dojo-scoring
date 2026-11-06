@@ -97,6 +97,12 @@ _FALLBACK_SCHEMA_KEYS: dict[str, frozenset[str]] = {
 }
 
 
+#: v1 contract keys v2 accepts but never scores (``cuad_schema.CONTRACT_PARSE_COMPAT_FIELDS``).
+_PARSE_COMPAT_KEYS: dict[str, frozenset[str]] = {
+    "contract": frozenset({"merger_consideration", "maud_clauses"}),
+}
+
+
 _JSON_OBJECT_START = re.compile(r'\{\s*["}]')
 
 _MODEL_CLASSES = ("correspondence", "contract", "insurance_claim", "corporate_record", "merger_agreement")
@@ -120,7 +126,9 @@ def schema_keys_for(
         try:
             model = schema_lookup(resolved)
             if model is not None:
-                return frozenset(model.model_fields) - {"confidence", "reasoning"}
+                keys = frozenset(model.model_fields) - {"confidence", "reasoning"}
+                # Parse-compat keys stay accepted whatever the producer's model lists.
+                return keys | _PARSE_COMPAT_KEYS.get(resolved, frozenset())
         except Exception:
             pass
     if resolved in _FALLBACK_SCHEMA_KEYS:
