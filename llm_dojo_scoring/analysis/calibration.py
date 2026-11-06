@@ -299,6 +299,11 @@ def reliability_bins(pairs: Iterable[Pair], *, bins: int = 10) -> list[dict[str,
     return out
 
 
+def _is_nan(value: Any) -> bool:
+    """NaN test that never converts: ``math.isnan(10**400)`` overflows."""
+    return value != value
+
+
 def _rank(values: Sequence[float]) -> list[float]:
     """Average ranks with ties sharing the midpoint."""
     order = sorted(range(len(values)), key=lambda index: values[index])
@@ -329,7 +334,7 @@ def auroc(scores: Sequence[float], labels: Sequence[bool]) -> float | None:
         if isinstance(score, numbers.Real)
         and not isinstance(score, bool)
         and type(score).__name__ != "bool_"
-        and not math.isnan(score)  # NaN has no order, so it cannot be ranked
+        and not _is_nan(score)  # NaN has no order, so it cannot be ranked
     ]
     positives = [score for score, label in pairs if label]
     negatives = [score for score, label in pairs if not label]
@@ -350,7 +355,7 @@ def spearman(xs: Sequence[float], ys: Sequence[float]) -> float | None:
     kept = [
         (x, y)
         for x, y in zip(xs, ys)
-        if not (math.isnan(float(x)) or math.isnan(float(y)))
+        if not (_is_nan(x) or _is_nan(y))
     ]
     if len(kept) < 3:
         return None
