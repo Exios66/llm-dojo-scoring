@@ -59,6 +59,18 @@ def _headline(payload: Mapping[str, Any] | None) -> float | None:
     return None
 
 
+def _extraction_headline(block: Mapping[str, Any]) -> float | None:
+    """An archive block's headline: ``headline_score`` when the type has one, else the field map.
+
+    Contract (CUAD) and merger (MAUD) rows are judged by ``headline_score``
+    (0.27.1); every other row keeps ``overall_score``.
+    """
+    value = block.get("headline_score")
+    if _is_number(value):
+        return float(value)
+    return _headline(block)
+
+
 def _is_number(value: Any) -> bool:
     """A finite int/float that is not a bool (stored NaN / Infinity never counts)."""
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
@@ -174,7 +186,7 @@ def _rescore_extraction(record: Mapping[str, Any], given: Mapping[str, Any] | No
         "doc_id": record.get("doc_id", record.get("id", record.get("item_id"))),
         "task": "extraction",
         "doc_class": str(doc_class),
-        "score": _headline(block),
+        "score": _extraction_headline(block),
         "payload": block,
         "provenance": block.get("provenance") or _provenance(given),
         "rescored_from": {
@@ -295,35 +307,55 @@ def rescore_record(
         and isinstance(stored_prov, Mapping)
         and str(stored_prov.get("scorer_version")) == SCORER_VERSION
     ):
-        # Re-running the output is a no-op, not a missing-evidence error.
+        # Re-running the output is a no-op, not a missing-evidence error. The headline
+        # comes from the same routing a fresh rescore would take.
+        route = _route(record, task)
+        if route == "reviewer":
+            score = _reviewer_headline(stored_payload)
+        elif route == "extraction":
+            score = _extraction_headline(stored_payload)
+        elif route == "classification":
+            score = _headline(stored_payload)
+        else:
+            # Taskless or ``"unknown"`` (this shortcut's own output): keep main's
+            # ``headline_score``-first behaviour.
+            score = _extraction_headline(stored_payload)
         return {
             "doc_id": record.get("doc_id", record.get("id", record.get("item_id"))),
             "task": task or "unknown",
             "doc_class": record.get("doc_class"),
-            "score": (
-                _reviewer_headline(stored_payload)
-                if task == "reviewer"
-                else _headline(stored_payload)
-            ),
+            "score": score,
             "payload": _finite(dict(stored_payload)),
             "provenance": dict(stored_prov),
             "rescored_from": record.get("rescored_from") or {},
             "already_current": True,
         }
-    if task in _EXTRACTION_TASKS or (
-        not task
-        and record.get("doc_class")
-        and isinstance(record.get("expected", record.get("expected_fields")), (Mapping, str))
-    ):
+    route = _route(record, task)
+    if route == "extraction":
         return _rescore_extraction(record, provenance)
-    if task in ("reviewer", "review_lane", "decision_reviewer"):
+    if route == "reviewer":
         return _rescore_reviewer(record, provenance)
-    if task in TASK_KINDS:
+    if route == "classification":
         return _rescore_classification({**record, "task": task}, provenance)
     raise RescoreError(
         f"unknown or missing task {task!r}; expected extraction, reviewer, or one of "
         f"{sorted(TASK_KINDS)}"
     )
+
+
+def _route(record: Mapping[str, Any], task: str) -> str | None:
+    """Which scorer a record goes to: extraction, reviewer, classification, or None."""
+    if task in _EXTRACTION_TASKS or (
+        not task
+        and record.get("doc_class")
+        and isinstance(record.get("expected", record.get("expected_fields")), (Mapping, str))
+    ):
+        return "extraction"
+    if task in ("reviewer", "review_lane", "decision_reviewer"):
+        return "reviewer"
+    if task in TASK_KINDS:
+        return "classification"
+    return None
 
 
 def rescore_records(

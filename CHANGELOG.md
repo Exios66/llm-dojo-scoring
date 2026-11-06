@@ -4,6 +4,153 @@ All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
+### Fixed
+
+- The release and audit scripts work when Dojo sits under a prefix, as it does in the
+  Digital-Mailroom hub (`packages/llm-dojo-scoring/`). `release.py publish` read
+  `pyproject.toml`, `__init__.py` and `uv.lock` at the release commit with root-relative
+  `git show` paths, so under the hub it failed before checking anything
+  (`test_cli_publish_dry_run_json`). Its asset build also read the hub's `pyproject.toml`
+  and built from the hub root. `audit_consumer_surface.py` had the same `git show` bug for
+  consumer checkouts under a prefix. Scripts only: the library and its public API are
+  unchanged.
+
+### Fixed
+
+Review findings on the 0.27.2 vendor bump (llm-mailroom#164):
+
+- Prose-wrapped JSON with many failing candidate objects parses in linear time.
+  Each candidate `{"` is now decoded from its own slice, ending at its matching `}`,
+  and one brace-matching pass per region finds those ends. A `JSONDecodeError`
+  (which counts lines up to its position) therefore covers one object, not the whole
+  text, and a `{` that never closes is skipped without a decode. 200 never-closing
+  500-deep chains (500 KB) took about 8 s and now take about 0.07 s. The private
+  `_balanced_object_end` helper is replaced by `_object_ends`.
+- `rescore_record` picks an already-current record's headline by the same task
+  routing a fresh rescore uses. `review_lane` / `decision_reviewer` records report the
+  reviewer headline (they got the extraction one), and classification records keep
+  their own headline even when the payload carries a `headline_score`.
+
+## [0.27.2] - 2026-11-04
+### Fixed
+
+Review findings on the 0.27.1 sandbox snapshot (local-mailroom-sandbox#245):
+
+- `score_document` no longer raises on deeply nested prediction text. The JSON
+  parsing behind `coerce_predicted_payload` catches `RecursionError` the way its
+  `ast.literal_eval` fallback already did, and the text is reported as unparseable.
+- Brace-heavy prediction text parses in linear time. The greedy `\{.*\}` span is
+  found with `find`/`rfind` instead of a regex that rescanned from every `{`, the
+  per-brace fallback only tries positions that can open a JSON object (`{"` or `{}`),
+  and it stops at the first `RecursionError`. `"{" * 200000` took about 16 s; it now
+  takes about 10 ms. An object too deeply nested to decode is skipped in one pass to its
+  closing brace, so a later sibling object in the same text is still found.
+- `coerce_predicted_payload` accepts any `Mapping` (`MappingProxyType`, `UserDict`),
+  as `score_document` already did. Such a prediction is no longer reported as
+  `parse_error: True` / `schema_adherence: 0.0` while its fields score normally.
+- A Python-repr object wrapped in prose sets `prose_wrapper`, like a wrapped JSON object.
+- `rescore` reports `headline_score` as the extraction `score` when the type has a
+  headline (CUAD contract and MAUD merger rows), matching 0.27.1's rule that those
+  rows are judged by the headline. It reported `overall_score`, or null when that was
+  unset, for all 7 such goldens. Re-running an already-current output reports the same
+  headline instead of showing a score move.
+- `scripts/release.py cut` moves the README release badge's `[Release vX]` alt text with
+  the badge and link, and `check` counts it as a pin. It had stayed at v0.27.0.
+
+### Comparability
+
+- `rescore` output: the top-level `score` of contract and merger rows with a non-null
+  `headline_score` is now the headline, so a rescore diff against a pre-0.27.2 rescore
+  shows a change for those rows. The stored `payload` is unchanged.
+- Adherence keys change only for non-dict `Mapping` predictions (now adherent like the
+  equivalent dict) and Python-repr objects wrapped in prose (`prose_wrapper` now true).
+  No field-map, tier 0 or headline score changes.
+
+## [0.27.1] - 2026-11-03
+### Fixed
+
+- `score_document` and `score_archive_block` no longer raise on a bad field value inside a
+  dict prediction or ground truth (CUAD `cuad_clauses: True` or `5`, a NaN or `True`
+  CUAD label span, a list or `{}` correspondence `content_topic` / `sentiment_label`).
+  Type extras and the headline are guarded like the tier 0 suite: a failure logs a
+  warning, keeps the tier 0 score and appends `+extras-failed` to `scoring_method`. The
+  new block keys are computed behind a guard too, so a failure leaves them null and never
+  touches the keys that existed before 0.27.0.
+- `score_archive_block` derives the CMS `cms_source_table` from `doc_subclass` when
+  `expected_subclass` is `None`, through `InsuranceClaimScorer.derived_fields`. The
+  field-map score now agrees with the tiered keys and with `score_document`.
+- `entity_list_f1` is null on a block that is not countable, and `unlabeled_fields` is
+  null when the ground truth is missing (`reason: gt_missing`).
+- `status` stays unchanged for MAUD and CUAD rows. Documented: rows with a non-null
+  `headline_score` are judged by the headline, so readers that filter on
+  `status == 'scored'` must also keep rows whose `headline_score` is not null.
+
+### Comparability
+
+- `score_archive_block` field-map scores change only for CMS insurance rows called with
+  `doc_subclass` and no `expected_subclass` (the CMS table is now scored, as it already
+  was with `expected_subclass`). Every other call returns the same field-map keys as 0.27.0.
+  `entity_list_f1` and `unlabeled_fields` can turn null on rows the block already marks
+  unscorable.
+
+## [0.27.0] - 2026-11-03
+### Fixed
+
+- `uv.lock` recorded `llm-dojo-scoring` 0.25.0 after the 0.26.0 cut; relocked so it
+  records 0.26.0.
+
+### Added
+
+- Tiered per-document-type scoring (llm-mailroom unified audit row, spec §3 and §3.1):
+  - `score_document(...)`: one entry point that returns the sandbox's
+    `score_extraction_row` payload (every field score proved equal on 89 recorded sandbox
+    goldens), plus a `scorer` record. Bad predictions (`None`, JSON text, prose, lists)
+    are coerced or field-scored as empty instead of raising. Three deliberate departures
+    from the sandbox, none of which changes a field score:
+    - a `None` prediction is a parse error (`parse_failure_reason: null_payload`,
+      `schema_adherence` 0.0); the sandbox called it adherent;
+    - adherence is checked on the prediction as given, so keys outside the class schema
+      appear in `extra_schema_keys`; the sandbox checked the scoped prediction;
+    - correspondence topic/sentiment (`content_topic_accuracy`, `sentiment_accuracy`, ...)
+      and insurance `determination_consistency` / `amount_exactness` are reported. The
+      suites computed them, but the sandbox payload dropped them. They never feed
+      `overall_extraction_score`.
+  - `scoring/doc_scorers/`: tier 0 `score_common` (Hub scoping, class suite, PRF keys,
+    `unlabeled_fields`), one module per corpus type (`contract` with the CUAD headline,
+    `merger_agreement` with the MAUD headline, `corporate_record` always detailed,
+    `correspondence`, `insurance_claim` deriving `cms_source_table`), the `generic`
+    fallback, and `get_doc_scorer`.
+  - `scoring/extraction_scope.py` and `assess_extraction_payload(..., schema_lookup=)`,
+    moved from the sandbox.
+  - `score_archive_block(..., doc_subclass=)` and five new block keys:
+    `headline_score`, `headline_metric`, `unlabeled_fields`, `entity_list_f1`, `scorer`
+    (`ARCHIVE_SCORING_V027_KEYS`; not required on older rows). Existing keys are unchanged.
+    A non-mapping prediction (JSON text, prose, a list) is coerced or scored as empty;
+    before 0.27.0 it raised.
+  - Review fixes: a JSON object after braced prose is recovered (the greedy match no
+    longer hides it); `score_document` canonicalises the doc type (case, padding,
+    specialist aliases) before scoring; an empty serialized CUAD/MAUD label map (`"{}"`)
+    no longer replaces the field score with null; with a caller's `field_types`,
+    `score_archive_block`'s `entity_list_f1` describes that map.
+  - `tests/fixtures/contract_surface.json` pins these names and signatures for llm-mailroom
+    and the sandbox until they adopt them and `consumer_surface.json` is rescanned.
+- `scripts/release.py check` now fails when `uv.lock` records a different
+  `llm-dojo-scoring` version than `pyproject.toml`, and `publish` refuses a commit
+  whose `uv.lock` is stale. CI installs with `uv sync --frozen`, which never
+  flags this. `cut` now lists `uv lock` as a next step.
+- `docs/guides/PUBLIC_API.md`: the surface other repositories rely on (37 root names,
+  35 modules, the `embed_texts` patch target, the archive-scoring contract), built from
+  the consumer scan. `tests/test_public_api_doc.py` fails when a consumed name is missing.
+- `docs/guides/MIGRATION.md`: a table of every pre-0.26 flat import path and its
+  subpackage path, checked against `_layout.LEGACY_MODULES`.
+
+### Changed
+
+- `import llm_dojo_scoring` no longer imports `matplotlib.pyplot`; `analysis.visualize`
+  loads it the first time a plot is drawn (warm import 0.73s → 0.43s).
+  `visualize.plt` still resolves. No scores change.
+- `tests/test_release_tools.py`: the release-notes test skips, instead of failing, in a
+  shallow clone without the release tags.
 
 ## [0.26.0] - 2026-11-02
 
