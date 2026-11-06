@@ -153,6 +153,7 @@ def test_rescore_file_replaces_the_output_without_touching_a_linked_inode(tmp_pa
     real = rescore.rescore_records
 
     def link_then_score(*args, **kwargs):
+        """Create the hard link between the identity check and the write."""
         os.link(items, out)  # the race: the target becomes the items after the check
         return real(*args, **kwargs)
 
