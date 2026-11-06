@@ -4,6 +4,8 @@ All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
+
+## [0.28.0] - 2026-11-06
 ### Changed
 
 mailroom-dataset v10 alignment (plan G1 in `Exios66/Mailroom-Corpus-EDA`
