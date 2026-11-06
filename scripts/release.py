@@ -41,6 +41,7 @@ import sys
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CHANGELOG = REPO_ROOT / "CHANGELOG.md"
@@ -959,6 +960,29 @@ def _build_assets_at_commit(version: str, *, out_dir: Path, commit: str) -> dict
 # ---------------------------------------------------------------------------
 
 
+def release_probe(version: str) -> dict[str, Any] | None:
+    """The GitHub release of ``version``; ``{"unknown": reason}`` when it cannot be read.
+
+    ``None`` only when GitHub answers that the release does not exist, so a missing
+    ``gh``, no auth or a blocked API is never reported as an unpublished release.
+    """
+    try:
+        proc = run(
+            ["gh", "release", "view", tag_for(version), "--repo", REPO, "--json",
+             "name,tagName,isDraft,url,targetCommitish"],
+            check=False,
+        )
+    except ReleaseError as exc:
+        return {"unknown": str(exc)}
+    if proc.returncode == 0:
+        return json.loads(proc.stdout)
+    err = (proc.stderr or proc.stdout).strip()
+    # gh says exactly "release not found"; "command not found" or a repo 404 is not that.
+    if "release not found" in err.lower():
+        return None
+    return {"unknown": err.splitlines()[0] if err else "gh failed"}
+
+
 def remote_release(version: str) -> dict | None:
     """Return the published GitHub release of a version, or ``None``."""
     tag = tag_for(version)
@@ -1236,7 +1260,7 @@ def publish_apply(plan: dict, *, push: bool) -> dict:
         run(cmd)
         results.append({"op": "gh_release_create", "tag": tag, "ok": True})
 
-    release = remote_release(version)
+    release = release_probe(version)
     return {
         "action": "publish",
         "version": version,
@@ -1246,13 +1270,175 @@ def publish_apply(plan: dict, *, push: bool) -> dict:
         "assets": assets,
         "release": release,
         "notes_file": str(notes_path.relative_to(REPO_ROOT)),
-        "next": [
-            f"verify {release.get('url') if release else tag}",
-            "comment on #92 that v0.25.0 is published" if version == "0.25.0" else "notify consumers",
-            "open/continue the v0.26.0 issue sweep PR",
-        ],
+        "next": publish_next_steps(version, tag, release),
         "exit_code": 0,
     }
+
+
+#: Repositories that pin this package: (name, GitHub repo, file holding the pin), in the
+#: ``/cross-repo-bump`` order. Both pin ``llm-dojo-scoring @ git+…llm-dojo-scoring.git@<ref>``.
+CONSUMERS: tuple[tuple[str, str, str], ...] = (
+    ("llm-mailroom", "Exios66/llm-mailroom", "pyproject.toml"),
+    ("local-mailroom-sandbox", "Exios66/local-mailroom-sandbox", "requirements/dojo-release.txt"),
+)
+_PIN_RE = re.compile(r"llm-dojo-scoring(?:\.git)?@(v\d+\.\d+\.\d+|[0-9a-fA-F]{7,40})\b")
+
+
+def _consumer_text(name: str, repo: str, path: str, *, remote: bool) -> tuple[str | None, str | None]:
+    """The pin file's text and where it came from (GitHub default branch, else a sibling checkout)."""
+    if remote:
+        proc = None
+        try:
+            proc = run(
+                ["gh", "api", f"repos/{repo}/contents/{path}", "-H", "Accept: application/vnd.github.raw"],
+                check=False,
+            )
+        except ReleaseError:
+            proc = None  # no gh: fall back to a sibling checkout
+        if proc is not None and proc.returncode == 0 and proc.stdout.strip():
+            return proc.stdout, f"{repo} default branch"
+    sibling = REPO_ROOT.parent / name / path
+    if sibling.is_file():
+        try:
+            return sibling.read_text(encoding="utf-8"), f"sibling checkout ../{name}"
+        except (OSError, UnicodeDecodeError):
+            return None, None
+    return None, None
+
+
+def _pin_version(ref: str, tags: list[dict[str, Any]]) -> tuple[str | None, bool]:
+    """The version a commit pin resolves to, and whether the short ref is ambiguous.
+
+    Several tags on one commit resolve to the newest; a short ref matching two
+    different tagged commits resolves to nothing and is ambiguous.
+    """
+    hits = [t for t in tags if t["commit"].startswith(ref.lower())]
+    if len({t["commit"] for t in hits}) > 1:
+        return None, True
+    versions = [t["version"] for t in hits]
+    if not versions:
+        return None, False
+    return max(versions, key=lambda v: parse_semver(v) or (0, 0, 0)), False
+
+
+def consumer_pins(tags: list[dict[str, Any]], *, remote: bool = True) -> list[dict[str, Any]]:
+    """Where each consumer's Dojo pin stands: ``ref``, the ``version`` it resolves to, ``source``.
+
+    A commit pin resolves through the local version tags (a pin at an untagged
+    commit has ``version`` ``None``); an unreadable pin has ``ref`` ``None``.
+    """
+    no_tags = not tags
+    out: list[dict[str, Any]] = []
+    for name, repo, path in CONSUMERS:
+        text, source = _consumer_text(name, repo, path, remote=remote)
+        match = _PIN_RE.search(text or "")
+        ref = match.group(1) if match else None
+        version: str | None = None
+        ambiguous = False
+        if ref and ref.startswith("v"):
+            version = ref[1:]
+        elif ref:
+            version, ambiguous = _pin_version(ref, tags)
+        out.append({"consumer": name, "repo": repo, "path": path, "source": source, "ref": ref,
+                    "version": version, "unresolved": bool(ref and version is None and no_tags),
+                    "ambiguous": ambiguous,
+                    # A sibling checkout may hold an unmerged pin: it is not the consumer's state.
+                    "unverified": bool(source and source.startswith("sibling checkout"))})
+    return out
+
+
+def _describe_pin(pin: dict[str, Any]) -> str:
+    """``v0.27.2 @ 1cd4aba76d82`` / ``untagged commit 1cd4aba76d82`` / ``unreadable``."""
+    ref = pin.get("ref")
+    if not ref:
+        return "unreadable"
+    short = ref if ref.startswith("v") else ref[:12]
+    if pin.get("version") is None:
+        if pin.get("ambiguous"):
+            return f"commit {short} (ambiguous: matches more than one tagged commit)"
+        if pin.get("unresolved"):
+            return f"commit {short} (no local version tags: run `git fetch --tags`)"
+        return f"untagged commit {short}"
+    return f"v{pin['version']}" + ("" if ref.startswith("v") else f" @ {short}")
+
+
+def chain_next_steps(
+    version: str, tag: str, release: dict[str, Any] | None, pins: list[dict[str, Any]]
+) -> list[str]:
+    """The remaining steps of the release chain for ``version``, from its actual state.
+
+    Each consumer step says what it pins now and is due only once the step before
+    it is done: the sandbox waits for llm-mailroom (it vendors both). When every
+    consumer pins ``version`` the chain is complete.
+    """
+    steps: list[str] = []
+    if release is not None and "unknown" in release:
+        steps.append(f"could not read GitHub release {tag} ({release['unknown'][:120]}): check {REPO_URL}/releases/tag/{tag}")
+    elif release is None:
+        steps.append(f"GitHub release {tag} not found: rerun `publish {version} --commit <sha> --apply --push`")
+    elif release.get("isDraft"):
+        steps.append(f"GitHub release {tag} is still a draft: publish it ({release.get('url')})")
+    else:
+        steps.append(f"verify {release.get('url') or tag}")
+    # A consumer bump to a tag whose release is missing, a draft or unreadable
+    # waits for the release itself.
+    published = release is not None and "unknown" not in release and not release.get("isDraft")
+    blocked_by: str | None = None if published else f"the GitHub release {tag} is published"
+    behind = False
+    unverified = False
+    target = parse_semver(version)
+    for pin in pins:
+        name = pin["consumer"]
+        where = pin.get("source") or f"could not read {pin['repo']}:{pin['path']} or ../{name}"
+        pinned = parse_semver(pin["version"]) if pin.get("version") else None
+        if pinned is not None and target is not None and pinned >= target:
+            ahead = "" if pinned == target else f" (ahead of {tag})"
+            if pin.get("unverified"):
+                unverified = True
+                steps.append(f"{name}: pins v{pin['version']}{ahead} ({where}, unverified: "
+                             f"confirm it is merged on {pin['repo']})")
+            else:
+                steps.append(f"{name}: done, pins v{pin['version']}{ahead} ({where})")
+            continue
+        behind = True
+        now = _describe_pin(pin)
+        if pin.get("unverified"):
+            where += ", unverified"
+        if pin.get("ref") and pin.get("version") is None:
+            # An untagged, ambiguous or unresolved commit may be newer than the tag.
+            steps.append(f"{name}: pins {now} ({where}); run `git fetch --tags` and "
+                         f"`status --consumers` before bumping it to {tag}")
+            blocked_by = blocked_by or f"{name}'s pin is checked"
+            continue
+        if name == "llm-mailroom":
+            action = (f"PYTHONPATH=src python src/scripts/bump_dojo_scoring.py --apply --tag {tag}"
+                      " (its /dojo-bump skill), then its suite against the pinned revision")
+        else:
+            action = (f"/vendor-sync to {tag}: {pin['path']} and _VENDOR_PINS (ref + peeled sha),"
+                      " then refresh vendor/llm-dojo-scoring")
+        if blocked_by:
+            steps.append(f"{name}: pins {now} ({where}); after {blocked_by}: {action}")
+        else:
+            steps.append(f"{name}: pins {now} ({where}); next: {action}")
+        blocked_by = blocked_by or f"{name} merges"
+    if pins and not behind:
+        if unverified:
+            steps.append("chain looks complete from local checkouts: confirm each pin on GitHub")
+        else:
+            steps.append(f"chain complete: every consumer pins {tag} or later")
+    return steps
+
+
+def publish_next_steps(version: str, tag: str, release: dict[str, Any] | None) -> list[str]:
+    """What follows a publish, read from the consumers' current pins."""
+    try:
+        pins = consumer_pins(list_version_tags())
+    except Exception as exc:  # noqa: BLE001 - the release already exists; never lose that result
+        steps = chain_next_steps(version, tag, release, [])
+        steps.append(f"could not read the consumer pins ({type(exc).__name__}: {str(exc)[:120]}): "
+                     "run `python scripts/release.py status --consumers`")
+        return steps
+    return chain_next_steps(version, tag, release, pins)
 
 
 def edit_release(
@@ -1334,6 +1520,14 @@ def cmd_status(args: argparse.Namespace) -> int:
         "unreleased            : "
         + ("empty" if state["unreleased_empty"] else "content pending release")
     )
+    if getattr(args, "consumers", False) and state["newest_tag_version"]:
+        version = state["newest_tag_version"]
+        pins = consumer_pins(state["tags"])
+        payload["consumers"] = pins
+        payload["next"] = chain_next_steps(version, tag_for(version), release_probe(version), pins)
+        lines.append(f"consumer pins         : (against {tag_for(version)})")
+        for pin in pins:
+            lines.append(f"    {pin['consumer']:<24} {_describe_pin(pin):<28} {pin.get('source') or ''}")
     return emit(payload, as_json=args.json, human_lines=lines)
 
 
@@ -1546,6 +1740,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_status = sub.add_parser("status", help="chain snapshot")
     p_status.add_argument("--json", action="store_true")
+    p_status.add_argument(
+        "--consumers", action="store_true",
+        help="also read each consumer's Dojo pin (GitHub, else a sibling checkout) and print the next steps",
+    )
     p_status.set_defaults(func=cmd_status)
 
     p_check = sub.add_parser("check", help="verify changelog/tag/version identity")

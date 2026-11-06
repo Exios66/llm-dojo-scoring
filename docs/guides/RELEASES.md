@@ -18,6 +18,7 @@ stays honest and every release ships wheel + checksum + manifest assets (#92 B).
 
 ```bash
 python scripts/release.py status --json
+python scripts/release.py status --consumers   # + each consumer's Dojo pin and the next steps
 python scripts/release.py check --json
 
 # Prepare a new version from [Unreleased] (writes only with --apply)
