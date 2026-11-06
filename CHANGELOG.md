@@ -4,6 +4,94 @@ All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
+### Fixed
+
+- The release and audit scripts work when Dojo sits under a prefix, as it does in the
+  Digital-Mailroom hub (`packages/llm-dojo-scoring/`). `release.py publish` read
+  `pyproject.toml`, `__init__.py` and `uv.lock` at the release commit with root-relative
+  `git show` paths, so under the hub it failed before checking anything
+  (`test_cli_publish_dry_run_json`). Its asset build also read the hub's `pyproject.toml`
+  and built from the hub root. `audit_consumer_surface.py` had the same `git show` bug for
+  consumer checkouts under a prefix. Scripts only: the library and its public API are
+  unchanged.
+
+### Fixed
+
+Review findings on the 0.27.2 vendor bump (llm-mailroom#164):
+
+- Prose-wrapped JSON with many failing candidate objects parses in linear time.
+  Each candidate `{"` is now decoded from its own slice, ending at its matching `}`,
+  and one brace-matching pass per region finds those ends. A `JSONDecodeError`
+  (which counts lines up to its position) therefore covers one object, not the whole
+  text, and a `{` that never closes is skipped without a decode. 200 never-closing
+  500-deep chains (500 KB) took about 8 s and now take about 0.07 s. The private
+  `_balanced_object_end` helper is replaced by `_object_ends`.
+- `rescore_record` picks an already-current record's headline by the same task
+  routing a fresh rescore uses. `review_lane` / `decision_reviewer` records report the
+  reviewer headline (they got the extraction one), and classification records keep
+  their own headline even when the payload carries a `headline_score`.
+
+## [0.27.2] - 2026-11-04
+### Fixed
+
+Review findings on the 0.27.1 sandbox snapshot (local-mailroom-sandbox#245):
+
+- `score_document` no longer raises on deeply nested prediction text. The JSON
+  parsing behind `coerce_predicted_payload` catches `RecursionError` the way its
+  `ast.literal_eval` fallback already did, and the text is reported as unparseable.
+- Brace-heavy prediction text parses in linear time. The greedy `\{.*\}` span is
+  found with `find`/`rfind` instead of a regex that rescanned from every `{`, the
+  per-brace fallback only tries positions that can open a JSON object (`{"` or `{}`),
+  and it stops at the first `RecursionError`. `"{" * 200000` took about 16 s; it now
+  takes about 10 ms. An object too deeply nested to decode is skipped in one pass to its
+  closing brace, so a later sibling object in the same text is still found.
+- `coerce_predicted_payload` accepts any `Mapping` (`MappingProxyType`, `UserDict`),
+  as `score_document` already did. Such a prediction is no longer reported as
+  `parse_error: True` / `schema_adherence: 0.0` while its fields score normally.
+- A Python-repr object wrapped in prose sets `prose_wrapper`, like a wrapped JSON object.
+- `rescore` reports `headline_score` as the extraction `score` when the type has a
+  headline (CUAD contract and MAUD merger rows), matching 0.27.1's rule that those
+  rows are judged by the headline. It reported `overall_score`, or null when that was
+  unset, for all 7 such goldens. Re-running an already-current output reports the same
+  headline instead of showing a score move.
+- `scripts/release.py cut` moves the README release badge's `[Release vX]` alt text with
+  the badge and link, and `check` counts it as a pin. It had stayed at v0.27.0.
+
+### Comparability
+
+- `rescore` output: the top-level `score` of contract and merger rows with a non-null
+  `headline_score` is now the headline, so a rescore diff against a pre-0.27.2 rescore
+  shows a change for those rows. The stored `payload` is unchanged.
+- Adherence keys change only for non-dict `Mapping` predictions (now adherent like the
+  equivalent dict) and Python-repr objects wrapped in prose (`prose_wrapper` now true).
+  No field-map, tier 0 or headline score changes.
+
+## [0.27.1] - 2026-11-03
+### Fixed
+
+- `score_document` and `score_archive_block` no longer raise on a bad field value inside a
+  dict prediction or ground truth (CUAD `cuad_clauses: True` or `5`, a NaN or `True`
+  CUAD label span, a list or `{}` correspondence `content_topic` / `sentiment_label`).
+  Type extras and the headline are guarded like the tier 0 suite: a failure logs a
+  warning, keeps the tier 0 score and appends `+extras-failed` to `scoring_method`. The
+  new block keys are computed behind a guard too, so a failure leaves them null and never
+  touches the keys that existed before 0.27.0.
+- `score_archive_block` derives the CMS `cms_source_table` from `doc_subclass` when
+  `expected_subclass` is `None`, through `InsuranceClaimScorer.derived_fields`. The
+  field-map score now agrees with the tiered keys and with `score_document`.
+- `entity_list_f1` is null on a block that is not countable, and `unlabeled_fields` is
+  null when the ground truth is missing (`reason: gt_missing`).
+- `status` stays unchanged for MAUD and CUAD rows. Documented: rows with a non-null
+  `headline_score` are judged by the headline, so readers that filter on
+  `status == 'scored'` must also keep rows whose `headline_score` is not null.
+
+### Comparability
+
+- `score_archive_block` field-map scores change only for CMS insurance rows called with
+  `doc_subclass` and no `expected_subclass` (the CMS table is now scored, as it already
+  was with `expected_subclass`). Every other call returns the same field-map keys as 0.27.0.
+  `entity_list_f1` and `unlabeled_fields` can turn null on rows the block already marks
+  unscorable.
 
 ## [0.27.0] - 2026-11-03
 ### Fixed
