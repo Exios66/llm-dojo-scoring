@@ -39,13 +39,15 @@ and `<Schema>` is its Pydantic model (e.g. `InsuranceClaimExtraction`).
 
 ## 1. Dojo: registries (`llm_dojo_scoring/`)
 
-Every list below is checked by a drift test. Add `<type>` to all of them in one commit.
+Every list below is checked by a drift test. Add `<type>` to all of them in one commit,
+except the rows marked **live only**, which a scored-later type (Option B) skips until it
+goes live.
 
 | Where | What to add |
 |---|---|
-| `config.py` | `DOC_CLASS_KEYS`; also `LIVE_DOC_CLASS_KEYS` if live |
-| `pipeline/mailroom.py` | `LIVE_DOC_TYPES` and `LIVE_SPECIALISTS` (live), or `RETIRED_*` |
-| `schemas/extraction_schemas.py` | `MAILROOM_DOC_TYPES` (must equal `LIVE_DOC_TYPES`) |
+| `config.py` | `DOC_CLASS_KEYS`; also `LIVE_DOC_CLASS_KEYS` (**live only**) |
+| `pipeline/mailroom.py` | `LIVE_DOC_TYPES` and `LIVE_SPECIALISTS` (**live only**), or `RETIRED_*` |
+| `schemas/extraction_schemas.py` | `MAILROOM_DOC_TYPES` (**live only**; must equal `LIVE_DOC_TYPES`) |
 | `schemas/corpus.py` | `DOC_TYPE_SUBCLASSES[<type>]`, `CORPUS_SUBCLASS_SURFACES[<type>]`, and the per-type tables lower in the file that every class has an entry in |
 | `scoring/suites.py` | `SPECIALIST_DOC_TYPES[<agent>] = <type>` (this drives `DOC_TYPE_ALIASES`); `DEFAULT_FIELD_TYPES[<type>]` (the field map); `_AGENT_EXTRAS[<agent>]` for class extras; `_HONEST_GAPS[<agent>]` for any known gap |
 | `metrics/profiles.py` | a `DEFAULT_PROFILES` entry: `_p("<agent>", "<Title> Extraction", ("extract",), "extraction", doc_bundle="<type>")`. `DEFAULT_SUITES` is built from this, so `get_suite("<type>")` works once it exists |
@@ -126,17 +128,26 @@ Keep the scorer so historical traces still score. Remove the class from the live
 
 - [ ] Dojo: move it from `LIVE_DOC_CLASS_KEYS` / `LIVE_DOC_TYPES` / `LIVE_SPECIALISTS` to the
       matching `RETIRED_*` lists, and drop it from `MAILROOM_DOC_TYPES`. Add an
-      `_HONEST_GAPS` note saying when and why (see `court_opinions_specialist`). Rebuild
-      `extraction_status.json`.
-- [ ] llm-mailroom: remove the `taxonomy.yaml` class (the sorter then emits `unknown`, which
-      routes to human review) and the graph dispatch entry. Keep the agent module only if
-      historical replays need it.
+      `_HONEST_GAPS` note saying when and why (see `court_opinions_specialist`). Remove it
+      from `FIVE` in `scripts/build_extraction_status.py`, then rebuild
+      `extraction_status.json`, so the status file and `MAILROOM_DOC_TYPES` still agree.
+- [ ] llm-mailroom: remove the `taxonomy.yaml` class and the graph dispatch entry, so the
+      sorter's label set no longer offers it and those documents fall to `unknown` and human
+      review. Check that nothing still routes the old label (a sorter prompt or cached
+      prediction that emits it must be rejected, not dispatched). Keep the agent module only
+      if historical replays need it.
+- [ ] llm-mailroom: remove the class from `LIVE_DOC_TYPES` in `src/tests/test_dojo_parity.py`
+      (it indexes the taxonomy by that tuple) and from `HUB_CLASSES` in
+      `src/pipeline/hf_corpora.py`, so a pilot over historical rows does not score the
+      sorter's correct `unknown` as a class error; adjust the checks that count classes.
 - [ ] Sandbox: re-vendor, and remove the class from the eval maps and `components.yaml`.
 
 ## Done when
 
 - [ ] `registry_violations() == []` in Dojo, `test_dojo_parity.py` passes in llm-mailroom,
       and `test_vendor_drift.py` passes in the sandbox.
-- [ ] `get_suite("<type>")`, `extraction_schema("<type>", <each subtype>)` and the specialist
-      all resolve from the same key.
+- [ ] Live type: `get_suite("<type>")`, `extraction_schema("<type>", <each subtype>)` and the
+      specialist all resolve from the same key.
+- [ ] Scored-later type: `get_suite("<type>")` resolves and scores; the schema registry and
+      the specialist are checked when the type goes live (Option A).
 - [ ] Every honest gap for the class names mailroom-dataset row counts, not guesses.
