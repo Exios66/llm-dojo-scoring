@@ -12,6 +12,10 @@ Format based on Keep a Changelog; versioning is SemVer.
   `pyproject.toml`, local-mailroom-sandbox `requirements/dojo-release.txt`) pins now,
   read from GitHub or a sibling checkout. Each step is done, due, or waiting on the one
   before it, and a lookup that fails says it could not check instead of "not found".
+  `publish` itself reads the release the same way. A consumer step waits while the
+  release is missing, a draft or unreadable; a consumer pinned at a newer release is
+  done, not told to downgrade; and a commit pin with no local version tags says to
+  fetch tags rather than calling the commit untagged.
   `release.py status --consumers` prints the same chain. Scripts only.
 
 
