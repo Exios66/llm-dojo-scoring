@@ -139,3 +139,34 @@ def test_rescore_file_refuses_a_hard_link_to_the_items(tmp_path):
     with pytest.raises(RescoreError, match="must differ"):
         rescore_file(items, out_path=link)
     assert items.read_text() == "{}\n"
+
+
+def test_rescore_file_replaces_the_output_without_touching_a_linked_inode(tmp_path, monkeypatch):
+    """The output is renamed into place, so a hard link made after the check survives."""
+    import os
+
+    from llm_dojo_scoring.scoring import rescore
+
+    items = tmp_path / "items.jsonl"
+    items.write_text("{}\n")
+    out = tmp_path / "out.jsonl"
+    real = rescore.rescore_records
+
+    def link_then_score(*args, **kwargs):
+        """Create the hard link between the identity check and the write."""
+        os.link(items, out)  # the race: the target becomes the items after the check
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(rescore, "rescore_records", link_then_score)
+    rescore.rescore_file(items, out_path=out)
+    assert items.read_text() == "{}\n"
+    assert not out.samefile(items)
+
+
+def test_rank_correlations_take_integers_beyond_float_range():
+    """Huge integers neither overflow the NaN check nor merge when ranked."""
+    from llm_dojo_scoring.analysis.calibration import auroc, spearman
+
+    huge = 10**400
+    assert spearman([huge, huge + 1, huge + 2], [1, 2, 3]) == 1.0
+    assert auroc([huge + 1, huge], [True, False]) == 1.0

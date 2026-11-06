@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import json
 import math
+import os
+import tempfile
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
@@ -490,9 +492,18 @@ def rescore_file(
     # Joined GT may differ from what the stored payload was scored against.
     result = rescore_records(records, provenance=provenance, force_rescore=bool(dataset_path))
     target.parent.mkdir(parents=True, exist_ok=True)
-    with target.open("w", encoding="utf-8") as handle:
-        for record in result["records"]:
-            handle.write(json.dumps(_finite(record), sort_keys=True, default=str, allow_nan=False) + "\n")
+    # Write a sibling temp file and rename it over the target: a rename replaces the
+    # directory entry, never the file behind it, so even a hard link to the items
+    # created after the check above cannot be truncated.
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{target.name}.", dir=target.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            for record in result["records"]:
+                handle.write(json.dumps(_finite(record), sort_keys=True, default=str, allow_nan=False) + "\n")
+        os.replace(tmp_name, target)
+    except BaseException:
+        Path(tmp_name).unlink(missing_ok=True)
+        raise
     result["output"] = str(target)
     result["moves"] = diff_scorecards([record for record in records], result["records"])
     return result
