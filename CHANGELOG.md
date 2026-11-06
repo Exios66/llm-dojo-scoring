@@ -64,6 +64,24 @@ Part A and the labeling `fields.yaml`):
 
 ### Fixed
 
+Review findings on the sandbox v0.26.0 vendor bump (local-mailroom-sandbox#238, #114):
+
+- `calibration.required_samples` no longer divides by zero for a tiny `risk`
+  (`log1p`), applies its one-million cap on the zero-error path, and returns `None`
+  instead of overflowing for `risk` near the float minimum.
+- `calibration.cross_fit_cutoffs` checks `meets_target` against the unrounded Wilson
+  bound.
+- `auroc` and `spearman` drop NaN instead of ranking it; `auroc` accepts numpy
+  scalars, and `spearman` ranks integers above 2**53 without merging them.
+- Batch `ScoringSuite.score` passes `doc_class` and field scores to
+  `aggregate_quality_honest`, so batch quality carries `headline_scope` and the intent
+  split.
+- The emitter's `cost_basis` check ignores case (`usd`); grid Markdown escapes `<`/`>`.
+- `rescore_records` skips non-object rows with a reason; `rescore_file` refuses an
+  `--out` that is the items file, by path or by hard link.
+
+### Fixed
+
 - The release and audit scripts work when Dojo sits under a prefix, as it does in the
   Digital-Mailroom hub (`packages/llm-dojo-scoring/`). `release.py publish` read
   `pyproject.toml`, `__init__.py` and `uv.lock` at the release commit with root-relative
