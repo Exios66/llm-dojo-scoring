@@ -17,11 +17,13 @@ from llm_dojo_scoring.config import CONTRACT_SUBTYPE_KEYS
 from llm_dojo_scoring.schemas.corpus import (
     CORPUS_EXTRACTION_FIELDS,
     CORPUS_SUBCLASS_SURFACES,
+    RAW_CORPUS_SUBCLASS_SURFACES,
     CUAD_CLAUSE_CATEGORIES,
     DOC_TYPE_SUBCLASSES,
 )
 from llm_dojo_scoring.schemas.cuad_schema import (
     CONTRACT_EXTRACTION_FIELDS,
+    CONTRACT_PARSE_COMPAT_FIELDS,
     CONTRACT_FIELD_TYPES,
     CUAD_ANSWER_FORMATS,
     CUAD_CATEGORIES,
@@ -101,25 +103,31 @@ def _validate(value, schema, path="$") -> list[str]:
 
 
 def _gt_shaped(**overrides) -> dict:
-    """A GT-shaped ContractExtraction payload (11 scored keys + trace)."""
+    """A GT-shaped ContractExtraction v2 payload (17 scored keys + trace)."""
     out = {
         "reasoning": {"summary": "s", "entries": [
             {"field": "Governing Law", "evidence": "laws of the State of New York", "section_ref": "12.1"}]},
         "document_name": "License Agreement",
         "parties": ['Acme Technologies, Inc. ("Acme")', 'Beta LLC ("Beta")'],
+        "party_roles": ["Acme Technologies, Inc.: licensor", "Beta LLC: licensee"],
+        "signatories": ["Jane Roe", "John Doe"],
+        "agreement_date": "2019-02-15",
         "effective_date": "2019-03-01",
+        "expiration_date": "2021-03-01",
         "term_length": "two (2) years",
-        "governing_law": "governed by the laws of the State of New York",
-        "contract_value": "$2,000,000",
         "renewal_terms": None,
+        "termination_notice_period": "ninety (90) days prior written notice",
+        "governing_law": "governed by the laws of the State of New York",
+        "dispute_forum": "the state and federal courts located in New York County",
+        "contract_value": "$2,000,000",
+        "payment_terms": "payable quarterly within 30 days of invoice",
+        "territory": "North America",
         "cuad_family": "license",
-        "merger_consideration": None,
         "cuad_clauses": [
             "License Grant: hereby grants a non-exclusive license",
             "Rofr/Rofo/Rofn: right of first refusal",
             "Unlimited/All-You-Can-Eat-License: enterprise-wide unlimited use",
         ],
-        "maud_clauses": [],
         "confidence": 0.62,
     }
     out.update(overrides)
@@ -170,11 +178,11 @@ def test_span_categories_and_field_mapping():
     assert mapping == {
         "Document Name": "document_name",
         "Parties": "parties",
-        "Agreement Date": "effective_date",
+        "Agreement Date": "agreement_date",
         "Effective Date": "effective_date",
-        "Expiration Date": "term_length",
+        "Expiration Date": "expiration_date",
         "Renewal Term": "renewal_terms",
-        "Notice Period To Terminate Renewal": "renewal_terms",
+        "Notice Period To Terminate Renewal": "termination_notice_period",
         "Governing Law": "governing_law",
     }
 
@@ -240,7 +248,9 @@ def test_families_match_corpus_subclass_catalog():
     assert CUAD_FAMILY_KEYS[-1] == "other"
     surfaces = [s for f in CUAD_FAMILIES for s in f.surfaces]
     assert len(surfaces) == len(set(surfaces))
-    assert set(surfaces) == set(CORPUS_SUBCLASS_SURFACES["contract"])
+    assert set(surfaces) == set(RAW_CORPUS_SUBCLASS_SURFACES["contract"])
+    # v10 canonical keys are surfaces too (they normalise to themselves).
+    assert set(CORPUS_SUBCLASS_SURFACES["contract"]) == set(surfaces) | set(DOC_TYPE_SUBCLASSES["contract"])
     for fam in CUAD_FAMILIES:
         for surface in fam.surfaces:
             assert normalize_subtype(surface) == fam.key
@@ -283,7 +293,9 @@ def test_family_hints_do_not_touch_scored_field_map():
     for fam in CUAD_FAMILIES:
         for hint in fam.family_fields:
             assert hint.informs is None or hint.informs in DEFAULT_FIELD_TYPES["contract"]
-            assert hint.name not in DEFAULT_FIELD_TYPES["contract"]
+            # A hint shares a scored field's name only when v2 promoted it (territory),
+            # and then it informs that field.
+            assert hint.name not in DEFAULT_FIELD_TYPES["contract"] or hint.informs == hint.name
     names = {h.name for h in cuad_family("license").family_fields}
     assert {"royalty_rate", "territory", "licensed_product"} <= names
 
@@ -307,7 +319,9 @@ def test_cuad_family_lookup_normalizes_surfaces_and_unknowns():
 def test_field_descriptor_matches_default_field_types_and_fixture():
     """Align contract field descriptors with defaults, corpus order, and taxonomy fixtures."""
     assert CONTRACT_FIELD_TYPES == DEFAULT_FIELD_TYPES["contract"]
-    assert len(CONTRACT_EXTRACTION_FIELDS) == 11
+    assert len(CONTRACT_EXTRACTION_FIELDS) == 17
+    assert {f.name for f in CONTRACT_PARSE_COMPAT_FIELDS} == {"merger_consideration", "maud_clauses"}
+    assert not {f.name for f in CONTRACT_PARSE_COMPAT_FIELDS} & set(CONTRACT_FIELD_TYPES)
     assert tuple(f.name for f in CONTRACT_EXTRACTION_FIELDS) == CORPUS_EXTRACTION_FIELDS["contract"]
     fixture = json.loads(_FIXTURE.read_text(encoding="utf-8"))
     assert CONTRACT_FIELD_TYPES == fixture["doc_classes"]["contract"]["field_types"]
@@ -419,6 +433,8 @@ def test_json_schema_accepts_gt_shaped_examples():
     empty = _gt_shaped(
         document_name=None, parties=[], effective_date=None, term_length=None,
         governing_law=None, contract_value=None, cuad_family=None, cuad_clauses=[],
+        party_roles=[], signatories=[], agreement_date=None, expiration_date=None,
+        termination_notice_period=None, dispute_forum=None, payment_terms=None, territory=None,
     )
     for example in (_gt_shaped(), empty, _gt_shaped(cuad_family="other", contract_value="$0")):
         assert _validate(example, schema) == []
@@ -484,3 +500,10 @@ def test_cuad_family_unknown_normalized_subtype_falls_back_to_other(monkeypatch)
 
     monkeypatch.setattr(cs, "normalize_subtype", lambda _name: "custom")
     assert cs.cuad_family("custom contract").key == "other"
+
+
+def test_json_schema_rejects_v1_parse_compat_keys():
+    """Guided decoding never emits the v1 merger keys; parsing still accepts them."""
+    schema = cuad_json_schema()
+    assert not {f.name for f in CONTRACT_PARSE_COMPAT_FIELDS} & set(schema["properties"])
+    assert _validate(_gt_shaped(merger_consideration=None), schema) != []

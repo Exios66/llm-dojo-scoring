@@ -137,6 +137,17 @@ def _doc_fields() -> dict[str, Any]:
         "effective_date": "2024-01-02",
         "effective_time": "The Effective Time",
         "governing_law": "State of Delaware",
+        "acquirer": "Acme Parent Inc.",
+        "target": "Target Corp.",
+        "merger_sub": ["Acme Merger Sub Inc."],
+        "signatories": ["Jane Roe", "John Doe"],
+        "per_share_cash_amount": "$45.00",
+        "exchange_ratio": None,
+        "target_termination_fee": "$120,000,000",
+        "parent_termination_fee": None,
+        "outside_date": "2024-09-30",
+        "financial_advisors": ["Goldman Sachs & Co. LLC"],
+        "legal_counsel": ["Wachtell, Lipton, Rosen & Katz"],
         "merger_consideration": "all_cash",
         "intent": "effect_merger",
         "subject_matter": "Parent acquires Target for cash by merger.",
@@ -301,7 +312,9 @@ def test_entity_hints_are_documentation_only():
         for hint in sub.entity_hints:
             assert hint.scored is False
             hint_names.add(hint.name)
-    assert hint_names.isdisjoint(live)
+    # v2 (0.28.0) promoted these two hints to scored fields; the rest stay prompt aids.
+    promoted = {"per_share_cash_amount", "exchange_ratio"}
+    assert hint_names & set(live) == promoted
     assert dict(get_suite("merger_agreement").field_types) == live  # untouched
 
 
@@ -319,7 +332,7 @@ def test_extraction_schema_has_parity_with_scored_field_map():
     assert MergerAgreementExtraction.field_types == DEFAULT_FIELD_TYPES["merger_agreement"]
     assert tuple(f.name for f in MergerAgreementExtraction.fields) == CORPUS_EXTRACTION_FIELDS["merger_agreement"]
     assert dict(get_suite("merger_agreement").field_types) == MergerAgreementExtraction.field_types
-    assert len(MergerAgreementExtraction.fields) == 10
+    assert len(MergerAgreementExtraction.fields) == 21
     for f in MergerAgreementExtraction.fields:
         assert f.description
         assert f.empty == ([] if f.type.startswith("entity_list") else None)
@@ -651,3 +664,12 @@ def test_schema_agrees_with_jsonschema_library_when_installed():
     bad = _object_prediction(labels)
     bad["maud_answers"]["No-Shop"] = "nope"
     assert not jsonschema.Draft202012Validator(maud_json_schema("object")).is_valid(bad)
+
+
+def test_v2_label_fields_are_closed_in_the_schema():
+    """``merger_consideration`` and ``intent`` are closed labels in the guided schema."""
+    props = maud_json_schema("object")["properties"]
+    assert props["merger_consideration"]["enum"][:-1] == list(MAUD_CONSIDERATION_TYPES)
+    assert props["intent"]["enum"] == ["effect_merger", "amend_merger", "other", None]
+    types = MergerAgreementExtraction.field_types
+    assert types["merger_consideration"] == types["intent"] == "label"

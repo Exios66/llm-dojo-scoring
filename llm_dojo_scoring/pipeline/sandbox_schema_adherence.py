@@ -59,11 +59,15 @@ _FALLBACK_SCHEMA_KEYS: dict[str, frozenset[str]] = {
             "intent", "subject_matter", "keywords",
         }
     ),
+    # ContractExtraction v2 (0.28.0) plus the v1 parse-compat keys, which are
+    # accepted (never extra) but not scored.
     "contract": frozenset(
         {
-            "document_name", "parties", "effective_date", "term_length", "governing_law",
-            "contract_value", "renewal_terms", "cuad_family", "merger_consideration",
-            "cuad_clauses", "maud_clauses",
+            "document_name", "parties", "party_roles", "signatories", "agreement_date",
+            "effective_date", "expiration_date", "term_length", "renewal_terms",
+            "termination_notice_period", "governing_law", "dispute_forum", "contract_value",
+            "payment_terms", "territory", "cuad_family", "cuad_clauses",
+            "merger_consideration", "maud_clauses",
         }
     ),
     "insurance_claim": frozenset(
@@ -83,11 +87,19 @@ _FALLBACK_SCHEMA_KEYS: dict[str, frozenset[str]] = {
     ),
     "merger_agreement": frozenset(
         {
-            "document_name", "parties", "effective_date", "effective_time",
-            "governing_law", "merger_consideration", "maud_clauses", "intent",
-            "subject_matter", "keywords",
+            "document_name", "parties", "acquirer", "target", "merger_sub", "signatories",
+            "effective_date", "effective_time", "governing_law", "per_share_cash_amount",
+            "exchange_ratio", "target_termination_fee", "parent_termination_fee",
+            "outside_date", "financial_advisors", "legal_counsel", "merger_consideration",
+            "maud_clauses", "intent", "subject_matter", "keywords",
         }
     ),
+}
+
+
+#: v1 contract keys v2 accepts but never scores (``cuad_schema.CONTRACT_PARSE_COMPAT_FIELDS``).
+_PARSE_COMPAT_KEYS: dict[str, frozenset[str]] = {
+    "contract": frozenset({"merger_consideration", "maud_clauses"}),
 }
 
 
@@ -114,7 +126,9 @@ def schema_keys_for(
         try:
             model = schema_lookup(resolved)
             if model is not None:
-                return frozenset(model.model_fields) - {"confidence", "reasoning"}
+                keys = frozenset(model.model_fields) - {"confidence", "reasoning"}
+                # Parse-compat keys stay accepted whatever the producer's model lists.
+                return keys | _PARSE_COMPAT_KEYS.get(resolved, frozenset())
         except Exception:
             pass
     if resolved in _FALLBACK_SCHEMA_KEYS:

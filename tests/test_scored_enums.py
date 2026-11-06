@@ -8,6 +8,7 @@ import pytest
 
 import llm_dojo_scoring as dojo
 from llm_dojo_scoring.schemas.intents import INTENT_LABELS
+from llm_dojo_scoring.schemas.scored_enums import canonical_label
 from llm_dojo_scoring.schemas.scored_enums import (
     SCORED_ENUM_FIELDS,
     enum_hint_violations,
@@ -83,9 +84,12 @@ def test_hint_names_every_token_verbatim(doc_type, field):
 
 def test_scored_enum_schemas_cover_each_class():
     """Per-class schemas list every enum field; a class without enums is empty."""
-    assert set(scored_enum_schemas("insurance_claim")) == {"intent", "claim_type", "cms_source_table"}
-    assert set(scored_enum_schemas("correspondence")) == {"intent"}
-    assert scored_enum_schemas("contract") == {}
+    assert set(scored_enum_schemas("insurance_claim")) == {
+        "intent", "claim_type", "cms_source_table", "coverage_determination"}
+    assert set(scored_enum_schemas("correspondence")) == {"intent", "communication_type", "urgency"}
+    assert set(scored_enum_schemas("contract")) == {"cuad_family"}
+    assert set(scored_enum_schemas("merger_agreement")) == {"intent", "merger_consideration"}
+    assert scored_enum_schemas("due_diligence") == {}
 
 
 def test_matching_vendored_hints_have_no_violations():
@@ -106,7 +110,8 @@ def test_alias_spellings_are_not_accepted_as_a_vocabulary():
     """Scorer alias folding is a safety net, not a licence to teach aliases."""
     vendored = list(scored_vocabulary("correspondence", "intent"))
     vendored[vendored.index("meeting_invite")] = "schedule_meeting"
-    problems = enum_hint_violations("correspondence", {"intent": vendored})
+    hints = {f: list(v) for f, (v, _) in SCORED_ENUM_FIELDS["correspondence"].items()}
+    problems = enum_hint_violations("correspondence", {**hints, "intent": vendored})
     assert problems and "schedule_meeting" in problems[0]
 
 
@@ -121,9 +126,11 @@ def test_unknown_vendored_field_is_reported():
 def test_unknown_class_or_field_raises_with_the_known_names():
     """Lookups fail loudly instead of returning an empty vocabulary."""
     with pytest.raises(KeyError, match="no scored enum fields"):
+        scored_vocabulary("due_diligence", "intent")
+    with pytest.raises(KeyError, match="not a scored enum"):
         scored_vocabulary("contract", "intent")
     with pytest.raises(KeyError, match="not a scored enum"):
-        scored_vocabulary("correspondence", "urgency")
+        scored_vocabulary("correspondence", "sender")
 
 
 def test_helpers_are_exported_from_the_package_root():
@@ -181,7 +188,8 @@ def test_scored_enum_fields_inner_mapping_is_read_only():
     with pytest.raises(TypeError):
         SCORED_ENUM_FIELDS["insurance_claim"]["claim_type"] = ((), "x")  # type: ignore[index]
     assert scored_vocabulary("correspondence", "intent") == before
-    assert enum_hint_violations("correspondence", {"intent": list(before)}) == []
+    hints = {f: list(v) for f, (v, _) in SCORED_ENUM_FIELDS["correspondence"].items()}
+    assert enum_hint_violations("correspondence", hints) == []
 
 
 def test_non_iterable_vendored_value_is_reported_not_raised():
@@ -201,3 +209,51 @@ def test_uppercase_spelling_is_reported_as_unscored():
     problems = enum_hint_violations("insurance_claim", {"claim_type": vendored})
     assert "insurance_claim.claim_type: teaches unscored values ['AUTO']" in problems
     assert "insurance_claim.claim_type: never teaches scored values ['auto']" in problems
+
+
+def test_every_label_field_in_the_live_maps_is_a_scored_enum():
+    """0.28.0: each ``label`` field of the five live classes has a closed vocabulary."""
+    from llm_dojo_scoring.scoring.suites import DEFAULT_FIELD_TYPES
+
+    for doc_type in ("contract", "merger_agreement", "correspondence", "insurance_claim", "corporate_record"):
+        labels = {f for f, t in DEFAULT_FIELD_TYPES[doc_type].items() if t == "label"}
+        assert labels <= set(SCORED_ENUM_FIELDS.get(doc_type, {})), doc_type
+
+
+def test_v10_vocabularies_match_the_dataset_registry():
+    """The v10 ``fields.yaml`` vocabularies (Mailroom-Corpus-EDA labeling playbook)."""
+    assert set(scored_vocabulary("correspondence", "communication_type")) == {
+        "email", "letter", "memo", "notice", "demand", "attorney_demand", "press_release",
+        "meeting_request", "other"}
+    assert scored_vocabulary("correspondence", "urgency") == ("routine", "time-sensitive", "urgent", "critical")
+    assert scored_vocabulary("merger_agreement", "intent") == ("effect_merger", "amend_merger", "other")
+    assert scored_vocabulary("merger_agreement", "merger_consideration") == (
+        "all_cash", "all_stock", "mixed_cash_stock", "mixed_cash_stock_election", "other")
+    assert scored_vocabulary("insurance_claim", "coverage_determination") == (
+        "approved", "denied", "partial", "pending")
+    assert len(scored_vocabulary("contract", "cuad_family")) == 26  # 25 families + other
+    assert scored_vocabulary("contract", "cuad_family")[-1] == "other"
+
+
+@pytest.mark.parametrize(
+    ("doc_type", "field", "raw", "token"),
+    [
+        ("contract", "cuad_family", "License_Agreements", "license"),
+        ("contract", "cuad_family", "Joint Venture _ Filing", "joint_venture"),
+        ("contract", "cuad_family", "employment contract", ""),
+        ("merger_agreement", "merger_consideration", "Mixed Cash/Stock: Election", "mixed_cash_stock_election"),
+        ("merger_agreement", "intent", "plan_of_merger", "effect_merger"),
+        ("merger_agreement", "intent", "Amendment No. 1 to Agreement and Plan of Merger", "amend_merger"),
+        ("correspondence", "communication_type", "Attorney Demand", "attorney_demand"),
+        ("correspondence", "communication_type", "demand", "demand"),
+        ("correspondence", "urgency", "Time Sensitive", "time-sensitive"),
+        ("correspondence", "urgency", "high", ""),
+        ("insurance_claim", "coverage_determination", "Partially approved", "partial"),
+        ("insurance_claim", "coverage_determination", "approved (amended)", ""),
+        ("insurance_claim", "claim_type", "pde", ""),
+        ("insurance_claim", "claim_type", "Workers Comp", "workers_comp"),
+    ],
+)
+def test_canonical_label_folds_aliases_and_nothing_else(doc_type, field, raw, token):
+    """Aliases fold onto the scored token; anything else stays unfolded (and scores 0)."""
+    assert canonical_label(doc_type, field, raw) == token
