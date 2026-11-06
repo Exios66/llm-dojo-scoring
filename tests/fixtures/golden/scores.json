@@ -204,7 +204,15 @@
         "schema": {
           "doc_type": "contract",
           "pending_fields": [
-            "contract_value"
+            "party_roles",
+            "signatories",
+            "agreement_date",
+            "expiration_date",
+            "termination_notice_period",
+            "dispute_forum",
+            "contract_value",
+            "payment_terms",
+            "territory"
           ],
           "schema_id": "contract@v9.2.1",
           "scorable_fields": [
@@ -216,20 +224,20 @@
           "unlabelled_fields": [
             "document_name",
             "term_length",
-            "governing_law",
             "renewal_terms",
+            "governing_law",
             "cuad_clauses"
           ]
         },
-        "schema_adherence": 0.2727,
+        "schema_adherence": 0.1765,
         "schema_promotion_gate": {
           "doc_class": "contract",
           "passes": false,
           "reason": "schema_valid_below_threshold",
-          "schema_valid": 0.2727,
+          "schema_valid": 0.1765,
           "threshold": 0.9
         },
-        "schema_valid": 0.2727
+        "schema_valid": 0.1765
       }
     },
     "corporate_records_auditor": {
@@ -1735,9 +1743,20 @@
           "pending_fields": [
             "document_name",
             "parties",
+            "acquirer",
+            "target",
+            "merger_sub",
+            "signatories",
             "effective_date",
             "effective_time",
-            "governing_law"
+            "governing_law",
+            "per_share_cash_amount",
+            "exchange_ratio",
+            "target_termination_fee",
+            "parent_termination_fee",
+            "outside_date",
+            "financial_advisors",
+            "legal_counsel"
           ],
           "schema_id": "merger_agreement@v9.2.1",
           "scorable_fields": [
@@ -1748,15 +1767,15 @@
             "maud_clauses"
           ]
         },
-        "schema_adherence": 0.2,
+        "schema_adherence": 0.0952,
         "schema_promotion_gate": {
           "doc_class": "merger_agreement",
           "passes": false,
           "reason": "schema_valid_below_threshold",
-          "schema_valid": 0.2,
+          "schema_valid": 0.0952,
           "threshold": 0.9
         },
-        "schema_valid": 0.2
+        "schema_valid": 0.0952
       }
     },
     "pdf_transcriber": {

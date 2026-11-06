@@ -48,7 +48,7 @@ class _UniqueKeySafeLoader(yaml.SafeLoader):
         return mapping
 
 
-def build_fixture(taxonomy_path: Path) -> dict:
+def build_fixture(taxonomy_path: Path, authority: str = AUTHORITY) -> dict:
     """Read taxonomy YAML and build a field-map fixture with source content hashes."""
     data = Path(taxonomy_path).read_bytes()
     taxonomy = yaml.load(data, Loader=_UniqueKeySafeLoader)
@@ -57,7 +57,7 @@ def build_fixture(taxonomy_path: Path) -> dict:
     classes = taxonomy["doc_classes"]
     return {
         "_comment": COMMENT,
-        "authority": AUTHORITY,
+        "authority": authority,
         "authority_blob_sha1": hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest(),
         "authority_sha256": hashlib.sha256(data).hexdigest(),
         "captured_at": datetime.date.today().isoformat(),
@@ -84,8 +84,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--taxonomy", required=True, type=Path)
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
     ap.add_argument("--check", action="store_true", help="exit 1 on any drift except captured_at")
+    ap.add_argument(
+        "--authority", default=AUTHORITY,
+        help="where the taxonomy comes from (default: mailroom main); name a pending revision honestly",
+    )
     args = ap.parse_args(argv)
-    fixture = build_fixture(args.taxonomy)
+    fixture = build_fixture(args.taxonomy, args.authority)
     if args.check:
         current = json.loads(args.out.read_text(encoding="utf-8"))
         current.pop("captured_at", None)
