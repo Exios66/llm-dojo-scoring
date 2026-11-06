@@ -4,6 +4,16 @@ All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
+### Fixed
+
+- `release.py publish` no longer ends with hard-coded, stale steps ("open/continue the
+  v0.26.0 issue sweep PR"). The next steps come from the chain's actual state: whether
+  the GitHub release is readable, and which tag each consumer (llm-mailroom
+  `pyproject.toml`, local-mailroom-sandbox `requirements/dojo-release.txt`) pins now,
+  read from GitHub or a sibling checkout. Each step is done, due, or waiting on the one
+  before it, and a lookup that fails says it could not check instead of "not found".
+  `release.py status --consumers` prints the same chain. Scripts only.
+
 
 ## [0.28.0] - 2026-11-06
 ### Changed

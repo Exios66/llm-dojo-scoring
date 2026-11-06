@@ -270,3 +270,72 @@ def test_check_reports_a_stale_badge_alt_text(release):
     text = "[![Release v0.27.0](https://img.shields.io/badge/release-v0.27.2-6C63FF)]"
     pins = set(re.findall(r"(?:release-|releases/tag/|\.git@|\[Release )v(\d+\.\d+\.\d+)", text))
     assert pins == {"0.27.0", "0.27.2"}
+
+
+def _pins(mailroom, sandbox):
+    """Consumer pin records as ``consumer_pins`` returns them."""
+    return [
+        {"consumer": "llm-mailroom", "repo": "Exios66/llm-mailroom", "path": "pyproject.toml",
+         "source": "test" if mailroom[0] else None, "ref": mailroom[0], "version": mailroom[1]},
+        {"consumer": "local-mailroom-sandbox", "repo": "Exios66/local-mailroom-sandbox",
+         "path": "requirements/dojo-release.txt", "source": "test" if sandbox[0] else None, "ref": sandbox[0], "version": sandbox[1]},
+    ]
+
+
+def test_next_steps_follow_the_actual_pins():
+    """Right after a publish both consumers are behind; only llm-mailroom is due."""
+    release = load_release()
+    old = ("1cd4aba76d82eea20c6e8dfcc0d760881bf84924", "0.27.2")
+    steps = release.chain_next_steps("0.28.0", "v0.28.0", {"url": "https://x/v0.28.0"}, _pins(old, old))
+    assert steps[0] == "verify https://x/v0.28.0"
+    assert steps[1].startswith("llm-mailroom: pins v0.27.2 @ 1cd4aba76d82 (test); next:")
+    assert "bump_dojo_scoring.py --apply --tag v0.28.0" in steps[1]
+    assert steps[2].startswith("local-mailroom-sandbox: pins v0.27.2 @ 1cd4aba76d82 (test); after llm-mailroom merges:")
+    assert "chain complete" not in " ".join(steps)
+    assert not any(stale in " ".join(steps) for stale in ("0.26.0", "0.25.0", "#92", "issue sweep"))
+
+
+def test_next_steps_advance_as_consumers_bump():
+    """Once llm-mailroom pins the release, the sandbox is due; then the chain is complete."""
+    release = load_release()
+    new = ("cab976807854129d1cfea4897dbff5b6e337a62b", "0.28.0")
+    old = ("1cd4aba76d82eea20c6e8dfcc0d760881bf84924", "0.27.2")
+    mid = release.chain_next_steps("0.28.0", "v0.28.0", {"url": "u"}, _pins(new, old))
+    assert mid[1].startswith("llm-mailroom: done, pins v0.28.0")
+    assert mid[2].startswith("local-mailroom-sandbox: pins v0.27.2 @ 1cd4aba76d82 (test); next: /vendor-sync to v0.28.0")
+    done = release.chain_next_steps("0.28.0", "v0.28.0", {"url": "u"}, _pins(new, new))
+    assert done[-1] == "chain complete: every consumer pins v0.28.0"
+
+
+def test_next_steps_report_a_missing_release_and_unreadable_pins():
+    """No GitHub release and no readable pin are said plainly, not guessed."""
+    release = load_release()
+    steps = release.chain_next_steps("0.28.0", "v0.28.0", None, _pins((None, None), (None, None)))
+    assert steps[0].startswith("GitHub release v0.28.0 not found")
+    assert "pins unreadable" in steps[1]
+
+
+def test_consumer_pins_resolve_commits_through_tags(tmp_path, monkeypatch):
+    """A commit pin maps to its tag; an untagged commit stays untagged (sibling checkout, offline)."""
+    release = load_release()
+    monkeypatch.setattr(release, "REPO_ROOT", tmp_path / "llm-dojo-scoring")
+    (tmp_path / "llm-mailroom").mkdir()
+    (tmp_path / "llm-mailroom" / "pyproject.toml").write_text(
+        '"llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@cab9768"\n')
+    (tmp_path / "local-mailroom-sandbox" / "requirements").mkdir(parents=True)
+    (tmp_path / "local-mailroom-sandbox" / "requirements" / "dojo-release.txt").write_text(
+        "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@deadbeefcafe\n")
+    tags = [{"tag": "v0.28.0", "version": "0.28.0", "commit": "cab976807854129d1cfea4897dbff5b6e337a62b"}]
+    mailroom, sandbox = release.consumer_pins(tags, remote=False)
+    assert (mailroom["ref"], mailroom["version"]) == ("cab9768", "0.28.0")
+    assert mailroom["source"] == "sibling checkout ../llm-mailroom"
+    assert sandbox["version"] is None and release._describe_pin(sandbox) == "untagged commit deadbeefcafe"
+
+
+def test_unreadable_release_is_not_reported_as_unpublished():
+    """A blocked or unauthenticated ``gh`` says it could not check, never "not found"."""
+    release = load_release()
+    old = ("1cd4aba", "0.27.2")
+    steps = release.chain_next_steps("0.28.0", "v0.28.0", {"unknown": "HTTP 403"}, _pins(old, (None, None)))
+    assert steps[0].startswith("could not read GitHub release v0.28.0 (HTTP 403)")
+    assert "could not read Exios66/local-mailroom-sandbox:requirements/dojo-release.txt" in steps[2]
