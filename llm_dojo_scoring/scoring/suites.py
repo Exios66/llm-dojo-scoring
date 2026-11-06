@@ -1383,9 +1383,15 @@ class ScoringSuite:
                 [
                     row
                     if isinstance(row, dict)
-                    else {"overall_score": getattr(row, "overall_score", None)}
+                    else {
+                        "overall_score": getattr(row, "overall_score", None),
+                        # field scores let the aggregate add headline scope
+                        # and the intent split for this class
+                        "field_scores": getattr(row, "field_scores", None),
+                    }
                     for row in extraction
-                ]
+                ],
+                doc_class=doc_class,
             )
             batch_quality["n_missing_predictions"] = n_missing_predictions
         if not extras and is_batch:
