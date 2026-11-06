@@ -194,3 +194,47 @@ def test_corporate_not_applicable_is_never_a_scoring_event():
     exp, pred, dropped = align_unlabeled("bylaws", gt, expected, predicted)
     assert "jurisdiction" not in exp and "jurisdiction" not in pred
     assert "jurisdiction" not in dropped
+
+
+def test_pandas_missing_cells_are_absent():
+    """``pandas.NA`` / ``NaT`` cells are missing values, never GT values."""
+    import pandas as pd
+
+    gt = gt_from_v10_row({**V10_CONTRACT, "term_length": pd.NA, "agreement_date": pd.NaT})
+    assert "term_length" not in gt and "agreement_date" not in gt
+
+
+def test_coverage_report_lists_requested_fields_with_no_codes():
+    """A field no row codes still appears (all missing) when it is requested."""
+    report = coverage_report([{"presence": {"a": "populated"}}], fields=["a", "b"])
+    assert report["b"]["missing"] == 1 and report["b"]["coverage"] == 0.0
+
+
+def test_merger_outside_date_schema_admits_a_relative_date():
+    """``outside_date`` is ISO when stated as a date, else as printed."""
+    from llm_dojo_scoring.schemas.maud_schema import maud_json_schema
+
+    prop = maud_json_schema("object")["properties"]["outside_date"]
+    assert prop == {"type": ["string", "null"]}
+    assert "pattern" in maud_json_schema("object")["properties"]["effective_date"]
+
+
+def test_contract_parse_compat_keys_survive_a_producer_schema_lookup():
+    """A v2 producer model without the v1 keys still does not flag them as extra."""
+    from llm_dojo_scoring.pipeline.sandbox_schema_adherence import schema_keys_for
+
+    class _Model:
+        """A stand-in producer model that lists only v2 keys."""
+
+        model_fields = {"document_name": None, "cuad_family": None}
+
+    keys = schema_keys_for("contract", schema_lookup=lambda _name: _Model)
+    assert {"merger_consideration", "maud_clauses"} <= keys
+
+
+def test_cuad_family_other_is_a_scored_token():
+    """``other`` is a CUAD family (the guided schema allows it), so hints teach it."""
+    from llm_dojo_scoring.schemas.cuad_schema import CUAD_FAMILY_KEYS
+    from llm_dojo_scoring.schemas.scored_enums import scored_vocabulary
+
+    assert scored_vocabulary("contract", "cuad_family") == CUAD_FAMILY_KEYS

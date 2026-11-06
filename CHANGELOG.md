@@ -30,7 +30,13 @@ Part A and the labeling `fields.yaml`):
   `approved (amended)` matched `approved`. New vocabularies: `MERGER_INTENTS`
   (`effect_merger`, `amend_merger`, `other`; `plan_of_merger` folds to `effect_merger`),
   `URGENCY_LEVELS`, `COVERAGE_DETERMINATIONS`; every label field is in
-  `SCORED_ENUM_FIELDS`.
+  `SCORED_ENUM_FIELDS` (`cuad_family` includes `other`). A value that folds onto no
+  token is compared as written, because published v9 gold still carries
+  off-vocabulary labels (urgency `low`, intent `inform`). The merger `outside_date`
+  guided schema admits a relative date as printed; a producer `schema_lookup` model
+  never turns the contract parse-compat keys into extra keys; `gt_from_v10_row` treats
+  `pandas.NA` / `NaT` as missing; `coverage_report(fields=...)` lists fields no row
+  codes.
 - **Corporate `not_applicable`** has one meaning: outside the row's schema, never a
   scoring event. `unlabeled_fields` no longer treats it as expected-empty and
   `align_unlabeled` drops a `not_applicable` core field from both sides, as
@@ -80,7 +86,9 @@ Review findings on the sandbox v0.26.0 vendor bump (local-mailroom-sandbox#238, 
   split.
 - The emitter's `cost_basis` check ignores case (`usd`); grid Markdown escapes `<`/`>`.
 - `rescore_records` skips non-object rows with a reason; `rescore_file` refuses an
-  `--out` that is the items file, by path or by hard link.
+  `--out` that is the items file, by path or by hard link, and writes through a
+  temp file renamed into place, so a link created after the check cannot truncate
+  the items. `auroc` / `spearman` take integers beyond float range.
 
 ### Fixed
 

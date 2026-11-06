@@ -924,7 +924,7 @@
    }
   }
  },
- "dojo_version": "0.27.2",
+ "dojo_version": "0.28.0",
  "payload": {
   "contract__agency__partial__Agency_Agreements": {
    "fields": {

@@ -84,6 +84,8 @@ def _plain(value: Any) -> Any:
     """Plain Python for one cell: array-likes become lists, structs dicts, NaN ``None``."""
     if value is None or isinstance(value, (str, bool, int)):
         return value
+    if type(value).__name__ in ("NAType", "NaTType"):  # pandas.NA / pandas.NaT
+        return None
     if isinstance(value, float):
         return None if math.isnan(value) else value
     if isinstance(value, Mapping):
@@ -205,8 +207,14 @@ def maud_labels_from_long(rows: Iterable[Mapping[str, Any]]) -> dict[str, dict[s
     return {doc: _maud_map(answers) for doc, answers in grouped.items()}
 
 
-def coverage_report(rows: Iterable[Mapping[str, Any]]) -> dict[str, dict[str, Any]]:
+def coverage_report(
+    rows: Iterable[Mapping[str, Any]], *, fields: Iterable[str] = ()
+) -> dict[str, dict[str, Any]]:
     """Per-field presence counts over typed ``gt_<class>`` rows.
+
+    ``fields`` (for example ``DEFAULT_FIELD_TYPES[doc_type]``) are always reported,
+    so a field no row carries a code for shows up as all ``missing`` instead of being
+    left out of the report.
 
     Returns ``{field: {n_rows, populated, schema_documented_absence,
     not_applicable, pending_annotation, missing, applicable, coverage}}``, fields in
@@ -216,7 +224,7 @@ def coverage_report(rows: Iterable[Mapping[str, Any]]) -> dict[str, dict[str, An
     nothing applies. The v10 publish gate (coverage residue 0) is ``coverage == 1.0``
     on every field.
     """
-    counts: dict[str, Counter[str]] = {}
+    counts: dict[str, Counter[str]] = {str(f): Counter() for f in fields}
     n_rows = 0
     for row in rows:
         n_rows += 1

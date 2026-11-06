@@ -83,7 +83,7 @@ _scored_enum_fields["insurance_claim"].update(
 )
 # The 0.28.0 ``label`` retypes (mailroom-dataset v10, plan A1-A3).
 _scored_enum_fields.setdefault("contract", {})["cuad_family"] = (
-    DOC_TYPE_SUBCLASSES["contract"],
+    (*DOC_TYPE_SUBCLASSES["contract"], "other"),  # cuad_schema.CUAD_FAMILY_KEYS
     "CUAD family of THIS contract: one of the 25 family keys, or other.",
 )
 _scored_enum_fields["merger_agreement"]["merger_consideration"] = (
