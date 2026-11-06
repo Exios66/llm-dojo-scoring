@@ -29,8 +29,11 @@ and `<Schema>` is its Pydantic model (e.g. `InsuranceClaimExtraction`).
       the Pydantic model and the taxonomy must match it exactly.
 - [ ] **Live or scored-later**:
       - A: rows already in mailroom-dataset → live class (all steps).
-      - B: rows still pending → register scoring and schema only (steps 1–3), leave it out of
-        `LIVE_*` and the taxonomy, and record an `_HONEST_GAPS` note.
+      - B: rows still pending → register scoring only (steps 1 and 3), leave it out of
+        `LIVE_*`, `MAILROOM_DOC_TYPES` and the taxonomy, and record an `_HONEST_GAPS` note.
+        The per-subtype schema registry (step 2) covers live classes only:
+        `extraction_schema()` accepts `MAILROOM_DOC_TYPES`, which must equal
+        `LIVE_DOC_TYPES`, so a scored-later type gets its registry entry when it goes live.
 - [ ] **Swap instead of add?** If a type is replacing another, do this checklist for the new
       one and the **Retire** section for the old one in the same release.
 
@@ -54,10 +57,14 @@ Every list below is checked by a drift test. Add `<type>` to all of them in one 
 
 ## 2. Dojo: extraction schema per subtype
 
-- [ ] Run `python scripts/build_extraction_status.py`. It reads the mailroom-dataset
-      `ground_truth` parquet and freezes per-subtype field status into
-      `schemas/data/extraction_status.json`, with the Hub revision recorded. Do not
-      hand-edit the JSON.
+- [ ] Add `<type>` to the `FIVE` tuple in `scripts/build_extraction_status.py`; the
+      script only reads and writes the classes listed there.
+- [ ] Run it against the pinned Hub revision (pyarrow is not a Dojo dependency):
+      `uv run --extra dev --with pyarrow python scripts/build_extraction_status.py
+      --parquet-dir <path>/ground_truth --revision <tag> --commit <sha>`. It reads the
+      mailroom-dataset `ground_truth` parquet and freezes per-subtype field status into
+      `schemas/data/extraction_status.json`, with the revision recorded. Do not
+      hand-edit the JSON; `--check` reports drift.
 - [ ] Subtype-only fields and salient guidance go in `_build()` in
       `schemas/extraction_schemas.py` (see the CMS `cms_source_table` and the corporate-record
       subclass entities for examples).
@@ -73,7 +80,9 @@ Every list below is checked by a drift test. Add `<type>` to all of them in one 
       non-null `quality_mean`.
 - [ ] `uv run --extra dev pytest tests -q` and `uvx ruff check …` pass.
 - [ ] This is a public-API change. Use `/cross-repo-bump` and
-      `python scripts/release.py cut X.Y.0` (a minor version, because a class is new).
+      `python scripts/release.py cut X.Y.0` (a minor version, because a class is new). `cut`
+      is a dry run that prints the plan; review it, then rerun with `--apply` to stamp the
+      changelog and move the version pins.
 
 ## 4. llm-mailroom: the specialist (`src/`)
 
