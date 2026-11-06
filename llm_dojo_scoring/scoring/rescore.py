@@ -470,8 +470,13 @@ def rescore_file(
     ``pred``, ``score``). ``dataset_path`` supplies GT by id. When a record
     already carries ``expected``/``predicted``, no dataset join is needed.
     """
-    target = Path(out_path or Path(items_path).with_suffix(".rescored.jsonl"))
-    if target.resolve() == Path(items_path).resolve():
+    source = Path(items_path)
+    target = Path(out_path or source.with_suffix(".rescored.jsonl"))
+    # Same path, or another name for the same file (a hard link): opening the
+    # output for writing would truncate the source either way.
+    if target.resolve() == source.resolve() or (
+        target.exists() and source.exists() and target.samefile(source)
+    ):
         # The output omits raw predictions/truth: overwriting the source would
         # make the run impossible to re-score again.
         raise RescoreError(f"--out must differ from --items ({target})")
