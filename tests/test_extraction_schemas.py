@@ -86,7 +86,7 @@ def test_contract_truth_comes_from_cuad_labels_per_family():
     assert lic.fields["parties"].status == "derived"
     assert lic.fields["parties"].source == "cuad_clause_labels"
     assert lic.fields["cuad_family"].source == "subtype"
-    assert lic.fields["maud_clauses"].status == "not_applicable"
+    assert "maud_clauses" not in lic.fields  # v2: parse-compat, not in the contract map
     assert lic.salient  # salient CUAD categories for the family
     assert extraction_schema("contract", "consulting").fields["parties"].status == "pending_annotation"
 

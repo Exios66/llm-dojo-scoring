@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 
 import pytest
-from conftest import load_script
+from conftest import doc_scorer_goldens, load_script
 
 from llm_dojo_scoring.scoring.doc_scorers import DOC_SCORERS, get_doc_scorer
 from llm_dojo_scoring.scoring.doc_scorers.correspondence import CONTENT_KEYS
@@ -18,7 +18,7 @@ from llm_dojo_scoring.scoring.doc_scorers.dispatch import score_tiers
 
 FIXTURES = Path(__file__).parent / "fixtures" / "doc_scorers"
 CASES = {c["case_id"]: c for c in json.loads((FIXTURES / "inputs.json").read_text())["cases"]}
-GOLDENS = json.loads((FIXTURES / "goldens.json").read_text())["cases"]
+GOLDENS = doc_scorer_goldens()  # captured goldens + recorded release departures
 to_jsonable = load_script("capture_sandbox_goldens").to_jsonable
 
 

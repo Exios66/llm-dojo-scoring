@@ -11,14 +11,14 @@ import json
 from pathlib import Path
 
 import pytest
-from conftest import load_script
+from conftest import doc_scorer_goldens, load_script
 
 from llm_dojo_scoring.scoring.doc_scorers.common import score_common
 from llm_dojo_scoring.scoring.extraction_scope import scope_extraction_pair
 
 FIXTURES = Path(__file__).parent / "fixtures" / "doc_scorers"
 CASES = {c["case_id"]: c for c in json.loads((FIXTURES / "inputs.json").read_text())["cases"]}
-GOLDENS = json.loads((FIXTURES / "goldens.json").read_text())["cases"]
+GOLDENS = doc_scorer_goldens()  # captured goldens + recorded release departures
 to_jsonable = load_script("capture_sandbox_goldens").to_jsonable
 
 _BENCHMARK_PREFIXES = ("maud_", "cuad_")

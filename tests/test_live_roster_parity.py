@@ -1,8 +1,11 @@
 """Live roster, field-map authority, and per-document specialist score surfaces.
 
-Authority: ``Exios66/llm-mailroom@main`` ``src/config/taxonomy.yaml`` (git blob
-``911ca16469045dc6dd16aed81671f6e8d8769223``), pinned in
-``tests/fixtures/taxonomy_field_types.json``. These tests fail loudly when the
+Authority: llm-mailroom ``src/config/taxonomy.yaml`` as the v10 plan's G2 step will
+leave it (main ``65523a2`` with the Dojo 0.28.0 ``field_types``; git blob
+``44e0ab59b6b705aed4c1939b5e85ed8499e38d0a``), pinned in
+``tests/fixtures/taxonomy_field_types.json``. The Dojo owns the field maps and moves
+first; llm-mailroom mirrors them when it pins 0.28.0, and that taxonomy must hash to
+this blob. These tests fail loudly when the
 dojo drifts from the live mailroom taxonomy or when a retired specialist
 (compliance filing) creeps back into the live roster. Merger agreement is its
 own class/specialist — never a contract alias.
@@ -40,7 +43,7 @@ from llm_dojo_scoring.scoring.suites import DEFAULT_FIELD_TYPES, get_suite
 
 _FIXTURE_PATH = Path(__file__).parent / "fixtures" / "taxonomy_field_types.json"
 _FIXTURE = json.loads(_FIXTURE_PATH.read_text())
-_AUTHORITY_BLOB_SHA1 = "911ca16469045dc6dd16aed81671f6e8d8769223"
+_AUTHORITY_BLOB_SHA1 = "44e0ab59b6b705aed4c1939b5e85ed8499e38d0a"
 _LIVE = tuple(_FIXTURE["live_doc_types"])
 _SPECIALIST_FOR = {
     key: meta["specialist"] for key, meta in _FIXTURE["doc_classes"].items()

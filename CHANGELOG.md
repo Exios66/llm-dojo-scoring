@@ -4,6 +4,64 @@ All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
+### Changed
+
+mailroom-dataset v10 alignment (plan G1 in `Exios66/Mailroom-Corpus-EDA`
+`docs/plans/v10-consumer-patches.md`; schemas from `v10-structure-and-label-completion.md`
+Part A and the labeling `fields.yaml`):
+
+- **ContractExtraction v2** (17 fields). New: `party_roles`, `signatories`,
+  `agreement_date`, `expiration_date`, `termination_notice_period`, `dispute_forum`,
+  `payment_terms`, `territory`. The v1 `merger_consideration` / `maud_clauses` leave the
+  live map (`CONTRACT_PARSE_COMPAT_FIELDS`): a prediction may still carry them and they
+  are not extra keys, but they are never scored, so the contract headline can reach
+  `full`. The CUAD categories Agreement Date, Expiration Date and Notice Period To
+  Terminate Renewal now inform the new fields, and the family `territory` hints inform
+  the scored `territory`. `cuad_json_schema` emits the 17 v2 keys.
+- **MergerAgreementExtraction v2** (21 fields). New: `acquirer`, `target`, `merger_sub`,
+  `signatories`, `per_share_cash_amount`, `exchange_ratio`, `target_termination_fee`,
+  `parent_termination_fee`, `outside_date`, `financial_advisors`, `legal_counsel`.
+- **Closed labels.** `cuad_family`, `merger_consideration`, merger `intent`,
+  `communication_type`, `urgency`, `claim_type` and `coverage_determination` are `label`
+  fields: aliases fold onto the scored token (`canonical_label`), then exact match. The
+  old `name` scoring gave containment credit, so `demand` matched `attorney_demand` and
+  `approved (amended)` matched `approved`. New vocabularies: `MERGER_INTENTS`
+  (`effect_merger`, `amend_merger`, `other`; `plan_of_merger` folds to `effect_merger`),
+  `URGENCY_LEVELS`, `COVERAGE_DETERMINATIONS`; every label field is in
+  `SCORED_ENUM_FIELDS`.
+- **Corporate `not_applicable`** has one meaning: outside the row's schema, never a
+  scoring event. `unlabeled_fields` no longer treats it as expected-empty and
+  `align_unlabeled` drops a `not_applicable` core field from both sides, as
+  `scored_field_types` already did.
+- `CORPUS_SUBCLASS_SURFACES` includes the canonical subclass keys (the v10 `subclass`
+  column); `RAW_CORPUS_SUBCLASS_SURFACES` keeps the v9 surfaces.
+- `tests/fixtures/taxonomy_field_types.json` is generated from the llm-mailroom taxonomy
+  the G2 step will commit (main `65523a2` with these field types, blob `44e0ab59`).
+  `gen_taxonomy_fixture.py` gains `--authority`.
+
+### Added
+
+- `llm_dojo_scoring.schemas.v10_rows`: `gt_from_v10_row` maps a typed `gt_<class>` row
+  onto the legacy `gt_fields` shape (a v10 row scores like its legacy row),
+  `cuad_labels_from_long` / `maud_labels_from_long` pivot the long configs, and
+  `coverage_report` (root: `v10_coverage_report`) counts presence codes per field.
+  `evidence` and `provenance` are annotation keys.
+- `scripts/record_doc_scorer_departures.py` and `tests/fixtures/doc_scorers/departures.json`:
+  deliberate score changes recorded over the frozen sandbox goldens, bounded by
+  `tests/test_doc_scorer_departures.py`.
+
+### Comparability
+
+- `field_map_sha` changes for contract, merger, correspondence and insurance blocks;
+  corporate blocks are unchanged.
+- Wrong closed labels score 0 where they had partial or containment credit; contract
+  rows no longer count spurious `merger_consideration` / `maud_clauses` as false
+  positives; the format-layer `schema_valid` share and the block `schema_valid` follow
+  the larger v2 maps (a v1 merger prediction is no longer `schema_valid`).
+- Published tags before v10 carry no GT for the v2 entity fields, so a v9 contract or
+  merger headline is `partial`. `schemas/data/extraction_status.json` stays frozen from
+  v9.2.1 until the v10 stage exists; the new fields read as unlabeled there.
+
 ### Fixed
 
 - The release and audit scripts work when Dojo sits under a prefix, as it does in the

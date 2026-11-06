@@ -147,8 +147,11 @@ def test_intake_clerk_profile_and_suite():
 def test_contract_suite_scores_hub_inventory_fields():
     """Give a complete matching contract inventory full extraction credit."""
     suite = get_suite("contracts_specialist")
-    for field in ("cuad_family", "merger_consideration", "cuad_clauses", "maud_clauses"):
+    for field in ("cuad_family", "cuad_clauses"):
         assert field in suite.field_types
+    # ContractExtraction v2 (0.28.0): parse-compat merger keys are not scored.
+    for field in ("merger_consideration", "maud_clauses"):
+        assert field not in suite.field_types
     expected = {
         "document_name": "MSA",
         "parties": ["Acme"],

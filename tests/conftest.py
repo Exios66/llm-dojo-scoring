@@ -36,6 +36,39 @@ def load_script(name: str):
     spec.loader.exec_module(module)
     return module
 
+_DOC_SCORER_FIXTURES = _REPO_ROOT / "tests" / "fixtures" / "doc_scorers"
+
+
+def doc_scorer_departures() -> dict:
+    """The recorded deliberate departures (``scripts/record_doc_scorer_departures.py``)."""
+    import json
+
+    return json.loads((_DOC_SCORER_FIXTURES / "departures.json").read_text())
+
+
+def doc_scorer_goldens() -> dict:
+    """The sandbox goldens with the recorded release departures applied to ``payload``."""
+    import json
+
+    goldens = json.loads((_DOC_SCORER_FIXTURES / "goldens.json").read_text())["cases"]
+    for case_id, moved in doc_scorer_departures()["payload"].items():
+        goldens[case_id]["payload"].update(moved)
+    return goldens
+
+
+def archive_block_before(variant: str = "plain") -> dict:
+    """The pre-0.27 archive blocks with the recorded departures of one ``variant``.
+
+    ``variant`` is ``"plain"`` or ``"with_subclass"`` (``doc_subclass`` passed).
+    """
+    import json
+
+    before = json.loads((_DOC_SCORER_FIXTURES / "archive_block_before.json").read_text())["cases"]
+    for case_id, variants in doc_scorer_departures()["archive_block"].items():
+        before[case_id].update(variants.get(variant, {}))
+    return before
+
+
 METRIC = "Subtype Accuracy"
 
 

@@ -12,21 +12,27 @@
 Generated from `DEFAULT_FIELD_TYPES` (`tests/test_v022_repairs.py` keeps these
 tables in lockstep with the code).
 
-### `contract` (11 fields)
+### `contract` (17 fields)
 
 | Field | Type |
 | --- | --- |
 | `document_name` | `name` |
 | `parties` | `entity_list:name` |
+| `party_roles` | `entity_list:free_text` |
+| `signatories` | `entity_list:name` |
+| `agreement_date` | `date` |
 | `effective_date` | `date` |
+| `expiration_date` | `date` |
 | `term_length` | `free_text` |
-| `governing_law` | `name` |
-| `contract_value` | `money` |
 | `renewal_terms` | `free_text` |
-| `cuad_family` | `name` |
-| `merger_consideration` | `name` |
+| `termination_notice_period` | `free_text` |
+| `governing_law` | `name` |
+| `dispute_forum` | `name` |
+| `contract_value` | `money` |
+| `payment_terms` | `free_text` |
+| `territory` | `free_text` |
+| `cuad_family` | `label` |
 | `cuad_clauses` | `entity_list:free_text` |
-| `maud_clauses` | `entity_list:free_text` |
 
 ### `corporate_record` (9 fields)
 
@@ -61,11 +67,11 @@ tables in lockstep with the code).
 | `sender` | `name` |
 | `recipient` | `name` |
 | `additional_recipients` | `entity_list` |
-| `communication_type` | `name` |
+| `communication_type` | `label` |
 | `communication_date` | `date` |
 | `demand_amount` | `money` |
 | `action_items` | `entity_list` |
-| `urgency` | `name` |
+| `urgency` | `label` |
 | `intent` | `label` |
 | `subject_matter` | `free_text` |
 | `keywords` | `entity_list:name` |
@@ -107,13 +113,13 @@ tables in lockstep with the code).
 | `policy_number` | `id` |
 | `insurer` | `name` |
 | `insured_party` | `name` |
-| `claim_type` | `name` |
+| `claim_type` | `label` |
 | `date_of_loss` | `date` |
 | `date_filed` | `date` |
 | `claimed_amount` | `money` |
 | `adjuster` | `name` |
 | `damages_description` | `free_text` |
-| `coverage_determination` | `name` |
+| `coverage_determination` | `label` |
 | `denial_reasons` | `entity_list:free_text` |
 | `supporting_documents` | `entity_list` |
 | `intent` | `label` |
@@ -121,18 +127,29 @@ tables in lockstep with the code).
 | `keywords` | `entity_list:name` |
 | `claim_checklist` | `entity_list:free_text` |
 
-### `merger_agreement` (10 fields)
+### `merger_agreement` (21 fields)
 
 | Field | Type |
 | --- | --- |
 | `document_name` | `name` |
 | `parties` | `entity_list:name` |
+| `acquirer` | `name` |
+| `target` | `name` |
+| `merger_sub` | `entity_list:name` |
+| `signatories` | `entity_list:name` |
 | `effective_date` | `date` |
 | `effective_time` | `free_text` |
 | `governing_law` | `name` |
-| `merger_consideration` | `name` |
+| `per_share_cash_amount` | `money` |
+| `exchange_ratio` | `free_text` |
+| `target_termination_fee` | `money` |
+| `parent_termination_fee` | `money` |
+| `outside_date` | `date` |
+| `financial_advisors` | `entity_list:name` |
+| `legal_counsel` | `entity_list:name` |
+| `merger_consideration` | `label` |
 | `maud_clauses` | `entity_list:free_text` |
-| `intent` | `name` |
+| `intent` | `label` |
 | `subject_matter` | `free_text` |
 | `keywords` | `entity_list:name` |
 

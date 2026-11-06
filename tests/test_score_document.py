@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 
 import pytest
-from conftest import load_script
+from conftest import archive_block_before, doc_scorer_goldens, load_script
 from test_sandbox_schema_adherence import GoldenSchemaLookup
 
 import llm_dojo_scoring as dojo
@@ -32,8 +32,9 @@ from llm_dojo_scoring.pipeline.archive import (
 
 FIXTURES = Path(__file__).parent / "fixtures" / "doc_scorers"
 CASES = {c["case_id"]: c for c in json.loads((FIXTURES / "inputs.json").read_text())["cases"]}
-GOLDENS = json.loads((FIXTURES / "goldens.json").read_text())["cases"]
-BEFORE = json.loads((FIXTURES / "archive_block_before.json").read_text())["cases"]
+GOLDENS = doc_scorer_goldens()  # captured goldens + recorded release departures
+BEFORE = archive_block_before("plain")
+BEFORE_WITH_SUBCLASS = archive_block_before("with_subclass")
 SIGNATURES = json.loads((FIXTURES / "corpus_eda_signatures.json").read_text())
 to_jsonable = load_script("capture_sandbox_goldens").to_jsonable
 
@@ -129,7 +130,8 @@ def test_score_document_matches_goldens(case_id):
 
 @pytest.mark.parametrize("case_id", SCORABLE)
 def test_field_scores_identical_to_sandbox(case_id):
-    """The departures touch adherence and add extras; every sandbox score is unchanged."""
+    """The departures touch adherence and add extras; every other score is the sandbox's,
+    except the deliberate release changes recorded in ``departures.json``."""
     got = to_jsonable(_document(case_id))
     golden = GOLDENS[case_id]
     adherence = set(golden["adherence"]) | {"extra_schema_key_count", "recovered_from_raw"}
@@ -213,7 +215,7 @@ def test_archive_block_existing_keys_unchanged(case_id, with_subclass):
     """Every pre-0.27 key keeps its value, with or without ``doc_subclass``."""
     extra = {"doc_subclass": CASES[case_id].get("doc_subclass")} if with_subclass else {}
     got = to_jsonable(_block(case_id, **extra))
-    before = json.loads(json.dumps(BEFORE[case_id]))
+    before = json.loads(json.dumps((BEFORE_WITH_SUBCLASS if with_subclass else BEFORE)[case_id]))
     # ``scorer_version`` stamps the package version, which a release cut moves on purpose.
     assert got["provenance"].pop("scorer_version") == dojo.__version__
     before["provenance"].pop("scorer_version")
