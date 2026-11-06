@@ -48,6 +48,7 @@ PYPROJECT = REPO_ROOT / "pyproject.toml"
 INIT_PY = REPO_ROOT / "llm_dojo_scoring" / "__init__.py"
 README = REPO_ROOT / "README.md"
 COMPAT_TEST = REPO_ROOT / "tests" / "test_consumer_compat.py"
+UV_LOCK = REPO_ROOT / "uv.lock"
 TEMPLATE = REPO_ROOT / ".github" / "RELEASE_TEMPLATE.md"
 DEFAULT_ASSET_DIR = REPO_ROOT / "dist" / "release"
 
@@ -61,6 +62,12 @@ SECTION_RE = re.compile(r"^## \[(?P<name>[^\]]+)\](?P<stamp> - \d{4}-\d{2}-\d{2}
 VERSION_RE = re.compile(r"^(?P<maj>\d+)\.(?P<min>\d+)\.(?P<pat>\d+)(?:-[0-9A-Za-z.-]+)?$")
 PYPROJECT_VERSION_RE = re.compile(r'^version\s*=\s*"(?P<version>[^"]+)"\s*$', re.MULTILINE)
 INIT_VERSION_RE = re.compile(r'^__version__\s*=\s*"(?P<version>[^"]+)"\s*$', re.MULTILINE)
+# The root package's own ``[[package]]`` entry in uv.lock. CI installs with
+# ``uv sync --frozen``, which never notices a stale root version, so check it here.
+UV_LOCK_VERSION_RE = re.compile(
+    rf'^\[\[package\]\]\nname = "{re.escape(PACKAGE_NAME)}"\nversion = "(?P<version>[^"]+)"\n',
+    re.MULTILINE,
+)
 COMPAT_VERSION_RE = re.compile(
     r'(assert dojo\.__version__\s*==\s*")(?P<version>\d+\.\d+\.\d+)(")'
 )
@@ -103,6 +110,47 @@ def run(
 def git(*args: str) -> str:
     """Return the stdout of a git command."""
     return run(["git", *args]).stdout
+
+
+def package_prefix() -> str:
+    """Return this package's path inside its git repository (``""`` at the root).
+
+    Dojo is also imported into the Digital-Mailroom hub as
+    ``packages/llm-dojo-scoring/``. There the git root is the hub, so
+    ``<commit>:<path>`` and fresh worktrees must account for the prefix.
+    A nonempty prefix ends in ``/``. Git failures raise ``ReleaseError``.
+    """
+    return git("rev-parse", "--show-prefix").strip()
+
+
+def tree_has(commit: str, path: str) -> bool:
+    """Return whether ``commit``'s tree holds ``path`` (repository-root relative)."""
+    return bool(git("ls-tree", "--full-tree", "--name-only", commit, "--", path).strip())
+
+
+def package_prefix_at(commit: str) -> str:
+    """Return the package's prefix inside ``commit``'s tree (``""`` at the root).
+
+    The current checkout's prefix is the default. A commit that predates the hub
+    import keeps the package at the repository root, so when the package marker
+    is missing under the prefix but present at the root, the root is the package.
+    Git failures from the prefix lookup raise ``ReleaseError``.
+    """
+    prefix = package_prefix()
+    marker = "llm_dojo_scoring/__init__.py"
+    if prefix and not tree_has(commit, prefix + marker) and tree_has(commit, marker):
+        return ""
+    return prefix
+
+
+def show_at_commit(commit: str, rel: str) -> str:
+    """Return a package file's contents at ``commit``.
+
+    ``rel`` is resolved from the package's directory in ``commit``'s own tree
+    (see ``package_prefix_at``), so this works standalone, in the hub, and for
+    hub commits that predate the import. A failed git read raises ``ReleaseError``.
+    """
+    return git("show", f"{commit}:{package_prefix_at(commit)}{rel}")
 
 
 def gh_json(*args: str) -> object:
@@ -167,6 +215,16 @@ def init_version() -> str:
     if not match:
         raise ReleaseError("no __version__ in llm_dojo_scoring/__init__.py")
     return match["version"]
+
+
+def uv_lock_version(text: str | None = None) -> str | None:
+    """Return the version uv.lock records for this package, or ``None`` if absent."""
+    if text is None:
+        if not UV_LOCK.exists():
+            return None
+        text = UV_LOCK.read_text(encoding="utf-8")
+    match = UV_LOCK_VERSION_RE.search(text)
+    return match["version"] if match else None
 
 
 def list_version_tags() -> list[dict]:
@@ -254,6 +312,7 @@ def chain_state() -> dict:
         "dirty": dirty,
         "pyproject_version": pyproject_version(),
         "init_version": init_version(),
+        "uv_lock_version": uv_lock_version(),
         "tags": tags,
         "newest_tag": tags[0]["tag"] if tags else None,
         "newest_tag_version": tags[0]["version"] if tags else None,
@@ -323,7 +382,7 @@ def check_chain(state: dict) -> tuple[list[str], list[str]]:
             )
 
     readme = README.read_text(encoding="utf-8")
-    pins = set(re.findall(r"(?:release-|releases/tag/|\.git@)v(\d+\.\d+\.\d+)", readme))
+    pins = set(re.findall(r"(?:release-|releases/tag/|\.git@|\[Release )v(\d+\.\d+\.\d+)", readme))
     if pins and pins != {state["pyproject_version"]}:
         errors.append(
             f"README release pins {sorted(pins)} do not match pyproject "
@@ -336,6 +395,13 @@ def check_chain(state: dict) -> tuple[list[str], list[str]]:
         errors.append(
             f"test_consumer_compat pins {match['version']} != pyproject "
             f"{state['pyproject_version']}"
+        )
+
+    lock_version = state.get("uv_lock_version")
+    if lock_version is not None and lock_version != state["pyproject_version"]:
+        errors.append(
+            f"uv.lock records {PACKAGE_NAME} {lock_version} != pyproject "
+            f"{state['pyproject_version']} — run `uv lock` and commit uv.lock"
         )
 
     return errors, warnings
@@ -400,6 +466,7 @@ def _bump_readme_pins(old: str, new: str) -> int:
     text = README.read_text(encoding="utf-8")
     replacements = (
         (f"release-v{old}", f"release-v{new}"),
+        (f"[Release v{old}]", f"[Release v{new}]"),  # the badge's alt text
         (f"releases/tag/v{old}", f"releases/tag/v{new}"),
         (f".git@v{old}", f".git@v{new}"),
     )
@@ -461,6 +528,7 @@ def cut_plan(version: str, *, today: str, allow_dirty: bool, allow_empty: bool) 
         "warnings": warnings,
         "next": [
             "re-run with --apply to write",
+            "run `uv lock` so uv.lock records the new version (check fails until you do)",
             "commit the stamped files on a release PR",
             "after merge: python scripts/release.py publish VERSION --commit <merge-sha> --apply --push",
         ],
@@ -802,26 +870,36 @@ def build_assets(version: str, *, out_dir: Path, commit: str) -> dict:
 
 
 def _build_assets_at_commit(version: str, *, out_dir: Path, commit: str) -> dict:
-    """Build release artifacts from a detached commit via temporary worktree."""
+    """Build release artifacts from a detached commit via temporary worktree.
+
+    Replace files in ``out_dir`` with the build output, checksums, and manifest;
+    return their metadata and upload paths. ``out_dir`` must be under ``REPO_ROOT``.
+    Raise ``ReleaseError`` if the commit's package version differs from ``version``
+    or a checked git or build command fails. Filesystem errors also propagate.
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="dojo-release-") as tmp:
         work = Path(tmp) / "src"
         run(["git", "worktree", "add", "--detach", str(work), commit])
         try:
+            # The worktree is the whole repository; build from the package's own
+            # directory in that commit (the hub prefix, or the root when standalone
+            # or when the commit predates the hub import).
+            package = work / package_prefix_at(commit)
             # Ensure the detached tree still declares the release version.
-            text = (work / "pyproject.toml").read_text(encoding="utf-8")
+            text = (package / "pyproject.toml").read_text(encoding="utf-8")
             match = PYPROJECT_VERSION_RE.search(text)
             if not match or match["version"] != version:
                 raise ReleaseError(
                     f"commit {commit[:12]} pyproject version "
                     f"{match['version'] if match else '?'} != {version}"
                 )
-            nested_out = work / "dist" / "release"
+            nested_out = package / "dist" / "release"
             nested_out.mkdir(parents=True, exist_ok=True)
             if shutil.which("uv"):
-                run(["uv", "build", "--out-dir", str(nested_out)], cwd=work)
+                run(["uv", "build", "--out-dir", str(nested_out)], cwd=package)
             else:
-                run([sys.executable, "-m", "build", "--outdir", str(nested_out)], cwd=work)
+                run([sys.executable, "-m", "build", "--outdir", str(nested_out)], cwd=package)
             for stale in out_dir.glob("*"):
                 if stale.is_file():
                     stale.unlink()
@@ -921,7 +999,12 @@ def publish_plan(
     title: str | None,
     notes_file: Path | None,
 ) -> dict:
-    """Plan a publish (tag, push, release, assets) and collect the refusals that block it."""
+    """Plan a publish (tag, push, release, assets) and collect the refusals that block it.
+
+    Version mismatches in the target commit are returned as errors in the plan.
+    An absent ``uv.lock`` skips its version check; failed reads of these commit
+    files raise ``ReleaseError`` rather than becoming plan errors.
+    """
     version = normalize_version(version)
     state = chain_state()
     errors, warnings = check_chain(state)
@@ -937,24 +1020,36 @@ def publish_plan(
     hard = [
         e
         for e in errors
-        if "README release pins" not in e and "test_consumer_compat" not in e
+        if "README release pins" not in e
+        and "test_consumer_compat" not in e
+        and "uv.lock records" not in e
     ]
     # When publishing an older stamped version from a newer worktree, pyproject
     # may already be ahead — that is expected. Require only that the target
     # commit declares the release version.
-    show = git("show", f"{commit}:pyproject.toml")
+    show = show_at_commit(commit, "pyproject.toml")
     match = PYPROJECT_VERSION_RE.search(show)
     if not match or match["version"] != version:
         hard.append(
             f"commit {commit[:12]} pyproject version "
             f"{match['version'] if match else '?'} != {version}"
         )
-    init_show = git("show", f"{commit}:llm_dojo_scoring/__init__.py")
+    init_show = show_at_commit(commit, "llm_dojo_scoring/__init__.py")
     init_match = INIT_VERSION_RE.search(init_show)
     if not init_match or init_match["version"] != version:
         hard.append(
             f"commit {commit[:12]} __version__ "
             f"{init_match['version'] if init_match else '?'} != {version}"
+        )
+    # Only an absent uv.lock (older commits predate it) skips the check; any
+    # other read failure raises so publishing cannot proceed unchecked.
+    lock_listed = tree_has(commit, f"{package_prefix_at(commit)}uv.lock")
+    lock_show = show_at_commit(commit, "uv.lock") if lock_listed else None
+    lock_at_commit = uv_lock_version(lock_show) if lock_show is not None else None
+    if lock_show is not None and lock_at_commit != version:
+        hard.append(
+            f"commit {commit[:12]} uv.lock records {PACKAGE_NAME} "
+            f"{lock_at_commit or '?'} != {version} — run `uv lock` before publishing"
         )
 
     if existing and not existing.get("isDraft"):

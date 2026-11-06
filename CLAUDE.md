@@ -19,8 +19,8 @@ python scripts/release.py check             # read-only: verify the chain is con
 
 In a shallow clone with no tags (typical for cloud sessions),
 `tests/test_release_tools.py::test_notes_render_contains_changelog_and_commit`
-fails — that is environmental, not your change. `git fetch --unshallow --tags`
-fixes it. Everything else should pass (about 2050 tests, under a minute).
+is skipped; `git fetch --unshallow --tags` lets it run. Everything should pass
+(about 2500 tests, under a minute).
 
 Ruff is not in the `dev` extra (keeping `uv.lock` untouched): use `uvx ruff ...` or
 `pip install ruff`. The editing hook uses `ruff` from PATH and is a no-op without it.

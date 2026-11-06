@@ -1,0 +1,3260 @@
+{
+ "cases": [
+  {
+   "case_id": "contract__affiliate__exact__Affiliate_Agreements",
+   "doc_subclass": "affiliate",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$25,000.00",
+    "cuad_family": "Affiliate",
+    "document_name": "Affiliate Agreement",
+    "effective_date": "2015-01-10",
+    "governing_law": "Delaware",
+    "parties": [
+     "Quillfeather Holdings Inc.",
+     "Orrin Vale Systems Ltd."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "1 years"
+   },
+   "expected_subclass": "Affiliate_Agreements",
+   "predicted": {
+    "contract_value": "$25,000.00",
+    "cuad_family": "Affiliate",
+    "document_name": "Affiliate Agreement",
+    "effective_date": "2015-01-10",
+    "governing_law": "Delaware",
+    "parties": [
+     "Quillfeather Holdings Inc.",
+     "Orrin Vale Systems Ltd."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "1 years"
+   }
+  },
+  {
+   "case_id": "contract__agency__partial__Agency_Agreements",
+   "doc_subclass": "agency",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$50,000.00",
+    "cuad_family": "Agency",
+    "document_name": "Agency Agreement",
+    "effective_date": "2016-02-11",
+    "governing_law": "New York",
+    "parties": [
+     "Brackenridge Labs LLC",
+     "Halcyon Reed Partners LP"
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "2 years"
+   },
+   "expected_subclass": "Agency Agreements",
+   "predicted": {
+    "contract_value": "$50,000.00 (amended)",
+    "cuad_family": "something else entirely",
+    "document_name": "Agency Agreement",
+    "effective_date": "2016-02-11",
+    "governing_law": "New York",
+    "parties": [
+     "Brackenridge Labs LLC",
+     "Unrelated Party Ltd."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "something else entirely"
+   }
+  },
+  {
+   "case_id": "contract__co_branding__missing__Co_Branding",
+   "doc_subclass": "co_branding",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$75,000.00",
+    "cuad_family": "Co Branding",
+    "document_name": "Co Branding Agreement",
+    "effective_date": "2017-03-12",
+    "governing_law": "California",
+    "parties": [
+     "Tamarind Freight Co.",
+     "Northmoor Dynamics Corp."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "3 years"
+   },
+   "expected_subclass": "Co_Branding",
+   "predicted": {
+    "contract_value": "$75,000.00",
+    "cuad_family": "Co Branding",
+    "parties": [
+     "Tamarind Freight Co.",
+     "Northmoor Dynamics Corp."
+    ],
+    "term_length": "3 years"
+   }
+  },
+  {
+   "case_id": "contract__collaboration__spurious__Collaboration",
+   "doc_subclass": "collaboration",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$100,000.00",
+    "cuad_family": "Collaboration",
+    "document_name": "Collaboration Agreement",
+    "effective_date": "2018-04-13",
+    "governing_law": "England and Wales",
+    "parties": [
+     "Orrin Vale Systems Ltd.",
+     "Pelham Quay Group"
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "4 years"
+   },
+   "expected_subclass": "Collaboration",
+   "predicted": {
+    "contract_value": "$100,000.00",
+    "cuad_family": "collaboration",
+    "document_name": "Collaboration Agreement",
+    "effective_date": "2018-04-13",
+    "governing_law": "England and Wales",
+    "maud_clauses": [
+     "No-Shop: Yes"
+    ],
+    "merger_consideration": "all_cash",
+    "parties": [
+     "Orrin Vale Systems Ltd.",
+     "Pelham Quay Group"
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "4 years"
+   }
+  },
+  {
+   "case_id": "contract__consulting__mixed__Consulting_Agreements",
+   "doc_subclass": "consulting",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$125,000.00",
+    "cuad_family": "Consulting",
+    "document_name": "Consulting Agreement",
+    "effective_date": "2019-05-14",
+    "governing_law": "Texas",
+    "parties": [
+     "Halcyon Reed Partners LP",
+     "Quillfeather Holdings Inc."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "5 years"
+   },
+   "expected_subclass": "Consulting Agreements",
+   "predicted": {
+    "contract_value": "Wrong $125,000.00",
+    "cuad_family": "Consulting",
+    "effective_date": "Wrong 2019-05-14",
+    "governing_law": "Texas",
+    "maud_clauses": [
+     "No-Shop: Yes"
+    ],
+    "merger_consideration": "all_cash",
+    "parties": [
+     "Halcyon Reed Partners LP",
+     "Quillfeather Holdings Inc."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "5 years"
+   }
+  },
+  {
+   "case_id": "contract__development__exact__Development",
+   "doc_subclass": "development",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$150,000.00",
+    "cuad_family": "Development",
+    "document_name": "Development Agreement",
+    "effective_date": "2020-06-15",
+    "governing_law": "Delaware",
+    "parties": [
+     "Northmoor Dynamics Corp.",
+     "Brackenridge Labs LLC"
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "1 years"
+   },
+   "expected_subclass": "Development",
+   "predicted": {
+    "contract_value": "$150,000.00",
+    "cuad_family": "Development",
+    "document_name": "Development Agreement",
+    "effective_date": "2020-06-15",
+    "governing_law": "Delaware",
+    "parties": [
+     "Northmoor Dynamics Corp.",
+     "Brackenridge Labs LLC"
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "1 years"
+   }
+  },
+  {
+   "case_id": "contract__distributor__partial__Distributor",
+   "doc_subclass": "distributor",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$175,000.00",
+    "cuad_family": "Distributor",
+    "document_name": "Distributor Agreement",
+    "effective_date": "2021-07-16",
+    "governing_law": "New York",
+    "parties": [
+     "Pelham Quay Group",
+     "Tamarind Freight Co."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "2 years"
+   },
+   "expected_subclass": "Distributor",
+   "predicted": {
+    "contract_value": "$175,000.00 (amended)",
+    "cuad_family": "something else entirely",
+    "document_name": "Distributor Agreement",
+    "effective_date": "2021-07-16",
+    "governing_law": "New York",
+    "parties": [
+     "Pelham Quay Group",
+     "Unrelated Party Ltd."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "something else entirely"
+   }
+  },
+  {
+   "case_id": "contract__endorsement__missing__Endorsement",
+   "doc_subclass": "endorsement",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$200,000.00",
+    "cuad_family": "Endorsement",
+    "document_name": "Endorsement Agreement",
+    "effective_date": "2022-08-17",
+    "governing_law": "California",
+    "parties": [
+     "Quillfeather Holdings Inc.",
+     "Orrin Vale Systems Ltd."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "3 years"
+   },
+   "expected_subclass": "Endorsement",
+   "predicted": {
+    "contract_value": "$200,000.00",
+    "cuad_family": "Endorsement",
+    "parties": [
+     "Quillfeather Holdings Inc.",
+     "Orrin Vale Systems Ltd."
+    ],
+    "term_length": "3 years"
+   }
+  },
+  {
+   "case_id": "contract__franchise__spurious__Franchise",
+   "doc_subclass": "franchise",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$225,000.00",
+    "cuad_family": "Franchise",
+    "document_name": "Franchise Agreement",
+    "effective_date": "2023-09-18",
+    "governing_law": "England and Wales",
+    "parties": [
+     "Brackenridge Labs LLC",
+     "Halcyon Reed Partners LP"
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "4 years"
+   },
+   "expected_subclass": "Franchise",
+   "predicted": {
+    "contract_value": "$225,000.00",
+    "cuad_family": "franchise",
+    "document_name": "Franchise Agreement",
+    "effective_date": "2023-09-18",
+    "governing_law": "England and Wales",
+    "maud_clauses": [
+     "No-Shop: Yes"
+    ],
+    "merger_consideration": "all_cash",
+    "parties": [
+     "Brackenridge Labs LLC",
+     "Halcyon Reed Partners LP"
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "4 years"
+   }
+  },
+  {
+   "case_id": "contract__hosting__mixed__Hosting",
+   "doc_subclass": "hosting",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$250,000.00",
+    "cuad_family": "Hosting",
+    "document_name": "Hosting Agreement",
+    "effective_date": "2015-01-10",
+    "governing_law": "Texas",
+    "parties": [
+     "Tamarind Freight Co.",
+     "Northmoor Dynamics Corp."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "5 years"
+   },
+   "expected_subclass": "Hosting",
+   "predicted": {
+    "contract_value": "Wrong $250,000.00",
+    "cuad_family": "Hosting",
+    "effective_date": "Wrong 2015-01-10",
+    "governing_law": "Texas",
+    "maud_clauses": [
+     "No-Shop: Yes"
+    ],
+    "merger_consideration": "all_cash",
+    "parties": [
+     "Tamarind Freight Co.",
+     "Northmoor Dynamics Corp."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "5 years"
+   }
+  },
+  {
+   "case_id": "contract__ip__exact__IP",
+   "doc_subclass": "ip",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$275,000.00",
+    "cuad_family": "Ip",
+    "document_name": "Ip Agreement",
+    "effective_date": "2016-02-11",
+    "governing_law": "Delaware",
+    "parties": [
+     "Orrin Vale Systems Ltd.",
+     "Pelham Quay Group"
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "1 years"
+   },
+   "expected_subclass": "IP",
+   "predicted": {
+    "contract_value": "$275,000.00",
+    "cuad_family": "Ip",
+    "document_name": "Ip Agreement",
+    "effective_date": "2016-02-11",
+    "governing_law": "Delaware",
+    "parties": [
+     "Orrin Vale Systems Ltd.",
+     "Pelham Quay Group"
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "1 years"
+   }
+  },
+  {
+   "case_id": "contract__joint_venture__partial__Joint_Venture",
+   "doc_subclass": "joint_venture",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$300,000.00",
+    "cuad_family": "Joint Venture",
+    "document_name": "Joint Venture Agreement",
+    "effective_date": "2017-03-12",
+    "governing_law": "New York",
+    "parties": [
+     "Halcyon Reed Partners LP",
+     "Quillfeather Holdings Inc."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "2 years"
+   },
+   "expected_subclass": "Joint Venture",
+   "predicted": {
+    "contract_value": "$300,000.00 (amended)",
+    "cuad_family": "something else entirely",
+    "document_name": "Joint Venture Agreement",
+    "effective_date": "2017-03-12",
+    "governing_law": "New York",
+    "parties": [
+     "Halcyon Reed Partners LP",
+     "Unrelated Party Ltd."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "something else entirely"
+   }
+  },
+  {
+   "case_id": "contract__joint_venture__missing__Joint_Venture___Filing",
+   "doc_subclass": "joint_venture",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$325,000.00",
+    "cuad_family": "Joint Venture",
+    "document_name": "Joint Venture Agreement",
+    "effective_date": "2018-04-13",
+    "governing_law": "California",
+    "parties": [
+     "Northmoor Dynamics Corp.",
+     "Brackenridge Labs LLC"
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "3 years"
+   },
+   "expected_subclass": "Joint Venture _ Filing",
+   "predicted": {
+    "contract_value": "$325,000.00",
+    "cuad_family": "Joint Venture",
+    "parties": [
+     "Northmoor Dynamics Corp.",
+     "Brackenridge Labs LLC"
+    ],
+    "term_length": "3 years"
+   }
+  },
+  {
+   "case_id": "contract__license__spurious__License_Agreements",
+   "doc_subclass": "license",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$350,000.00",
+    "cuad_family": "License",
+    "document_name": "License Agreement",
+    "effective_date": "2019-05-14",
+    "governing_law": "England and Wales",
+    "parties": [
+     "Pelham Quay Group",
+     "Tamarind Freight Co."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "4 years"
+   },
+   "expected_subclass": "License_Agreements",
+   "predicted": {
+    "contract_value": "$350,000.00",
+    "cuad_family": "license",
+    "document_name": "License Agreement",
+    "effective_date": "2019-05-14",
+    "governing_law": "England and Wales",
+    "maud_clauses": [
+     "No-Shop: Yes"
+    ],
+    "merger_consideration": "all_cash",
+    "parties": [
+     "Pelham Quay Group",
+     "Tamarind Freight Co."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "4 years"
+   }
+  },
+  {
+   "case_id": "contract__maintenance__mixed__Maintenance",
+   "doc_subclass": "maintenance",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$375,000.00",
+    "cuad_family": "Maintenance",
+    "document_name": "Maintenance Agreement",
+    "effective_date": "2020-06-15",
+    "governing_law": "Texas",
+    "parties": [
+     "Quillfeather Holdings Inc.",
+     "Orrin Vale Systems Ltd."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "5 years"
+   },
+   "expected_subclass": "Maintenance",
+   "predicted": {
+    "contract_value": "Wrong $375,000.00",
+    "cuad_family": "Maintenance",
+    "effective_date": "Wrong 2020-06-15",
+    "governing_law": "Texas",
+    "maud_clauses": [
+     "No-Shop: Yes"
+    ],
+    "merger_consideration": "all_cash",
+    "parties": [
+     "Quillfeather Holdings Inc.",
+     "Orrin Vale Systems Ltd."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "5 years"
+   }
+  },
+  {
+   "case_id": "contract__manufacturing__exact__Manufacturing",
+   "doc_subclass": "manufacturing",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$400,000.00",
+    "cuad_family": "Manufacturing",
+    "document_name": "Manufacturing Agreement",
+    "effective_date": "2021-07-16",
+    "governing_law": "Delaware",
+    "parties": [
+     "Brackenridge Labs LLC",
+     "Halcyon Reed Partners LP"
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "1 years"
+   },
+   "expected_subclass": "Manufacturing",
+   "predicted": {
+    "contract_value": "$400,000.00",
+    "cuad_family": "Manufacturing",
+    "document_name": "Manufacturing Agreement",
+    "effective_date": "2021-07-16",
+    "governing_law": "Delaware",
+    "parties": [
+     "Brackenridge Labs LLC",
+     "Halcyon Reed Partners LP"
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "1 years"
+   }
+  },
+  {
+   "case_id": "contract__marketing__partial__Marketing",
+   "doc_subclass": "marketing",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$425,000.00",
+    "cuad_family": "Marketing",
+    "document_name": "Marketing Agreement",
+    "effective_date": "2022-08-17",
+    "governing_law": "New York",
+    "parties": [
+     "Tamarind Freight Co.",
+     "Northmoor Dynamics Corp."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "2 years"
+   },
+   "expected_subclass": "Marketing",
+   "predicted": {
+    "contract_value": "$425,000.00 (amended)",
+    "cuad_family": "something else entirely",
+    "document_name": "Marketing Agreement",
+    "effective_date": "2022-08-17",
+    "governing_law": "New York",
+    "parties": [
+     "Tamarind Freight Co.",
+     "Unrelated Party Ltd."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "something else entirely"
+   }
+  },
+  {
+   "case_id": "contract__non_compete_no_solicit__missing__Non_Compete_Non_Solicit",
+   "doc_subclass": "non_compete_no_solicit",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$450,000.00",
+    "cuad_family": "Non Compete No Solicit",
+    "document_name": "Non Compete No Solicit Agreement",
+    "effective_date": "2023-09-18",
+    "governing_law": "California",
+    "parties": [
+     "Orrin Vale Systems Ltd.",
+     "Pelham Quay Group"
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "3 years"
+   },
+   "expected_subclass": "Non_Compete_Non_Solicit",
+   "predicted": {
+    "contract_value": "$450,000.00",
+    "cuad_family": "Non Compete No Solicit",
+    "parties": [
+     "Orrin Vale Systems Ltd.",
+     "Pelham Quay Group"
+    ],
+    "term_length": "3 years"
+   }
+  },
+  {
+   "case_id": "contract__outsourcing__spurious__Outsourcing",
+   "doc_subclass": "outsourcing",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$475,000.00",
+    "cuad_family": "Outsourcing",
+    "document_name": "Outsourcing Agreement",
+    "effective_date": "2015-01-10",
+    "governing_law": "England and Wales",
+    "parties": [
+     "Halcyon Reed Partners LP",
+     "Quillfeather Holdings Inc."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "4 years"
+   },
+   "expected_subclass": "Outsourcing",
+   "predicted": {
+    "contract_value": "$475,000.00",
+    "cuad_family": "outsourcing",
+    "document_name": "Outsourcing Agreement",
+    "effective_date": "2015-01-10",
+    "governing_law": "England and Wales",
+    "maud_clauses": [
+     "No-Shop: Yes"
+    ],
+    "merger_consideration": "all_cash",
+    "parties": [
+     "Halcyon Reed Partners LP",
+     "Quillfeather Holdings Inc."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "4 years"
+   }
+  },
+  {
+   "case_id": "contract__promotion__mixed__Promotion",
+   "doc_subclass": "promotion",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$500,000.00",
+    "cuad_family": "Promotion",
+    "document_name": "Promotion Agreement",
+    "effective_date": "2016-02-11",
+    "governing_law": "Texas",
+    "parties": [
+     "Northmoor Dynamics Corp.",
+     "Brackenridge Labs LLC"
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "5 years"
+   },
+   "expected_subclass": "Promotion",
+   "predicted": {
+    "contract_value": "Wrong $500,000.00",
+    "cuad_family": "Promotion",
+    "effective_date": "Wrong 2016-02-11",
+    "governing_law": "Texas",
+    "maud_clauses": [
+     "No-Shop: Yes"
+    ],
+    "merger_consideration": "all_cash",
+    "parties": [
+     "Northmoor Dynamics Corp.",
+     "Brackenridge Labs LLC"
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "5 years"
+   }
+  },
+  {
+   "case_id": "contract__reseller__exact__Reseller",
+   "doc_subclass": "reseller",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$525,000.00",
+    "cuad_family": "Reseller",
+    "document_name": "Reseller Agreement",
+    "effective_date": "2017-03-12",
+    "governing_law": "Delaware",
+    "parties": [
+     "Pelham Quay Group",
+     "Tamarind Freight Co."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "1 years"
+   },
+   "expected_subclass": "Reseller",
+   "predicted": {
+    "contract_value": "$525,000.00",
+    "cuad_family": "Reseller",
+    "document_name": "Reseller Agreement",
+    "effective_date": "2017-03-12",
+    "governing_law": "Delaware",
+    "parties": [
+     "Pelham Quay Group",
+     "Tamarind Freight Co."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "1 years"
+   }
+  },
+  {
+   "case_id": "contract__service__partial__Service",
+   "doc_subclass": "service",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$550,000.00",
+    "cuad_family": "Service",
+    "document_name": "Service Agreement",
+    "effective_date": "2018-04-13",
+    "governing_law": "New York",
+    "parties": [
+     "Quillfeather Holdings Inc.",
+     "Orrin Vale Systems Ltd."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "2 years"
+   },
+   "expected_subclass": "Service",
+   "predicted": {
+    "contract_value": "$550,000.00 (amended)",
+    "cuad_family": "something else entirely",
+    "document_name": "Service Agreement",
+    "effective_date": "2018-04-13",
+    "governing_law": "New York",
+    "parties": [
+     "Quillfeather Holdings Inc.",
+     "Unrelated Party Ltd."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "something else entirely"
+   }
+  },
+  {
+   "case_id": "contract__sponsorship__missing__Sponsorship",
+   "doc_subclass": "sponsorship",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$575,000.00",
+    "cuad_family": "Sponsorship",
+    "document_name": "Sponsorship Agreement",
+    "effective_date": "2019-05-14",
+    "governing_law": "California",
+    "parties": [
+     "Brackenridge Labs LLC",
+     "Halcyon Reed Partners LP"
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "3 years"
+   },
+   "expected_subclass": "Sponsorship",
+   "predicted": {
+    "contract_value": "$575,000.00",
+    "cuad_family": "Sponsorship",
+    "parties": [
+     "Brackenridge Labs LLC",
+     "Halcyon Reed Partners LP"
+    ],
+    "term_length": "3 years"
+   }
+  },
+  {
+   "case_id": "contract__strategic_alliance__spurious__Strategic_Alliance",
+   "doc_subclass": "strategic_alliance",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$600,000.00",
+    "cuad_family": "Strategic Alliance",
+    "document_name": "Strategic Alliance Agreement",
+    "effective_date": "2020-06-15",
+    "governing_law": "England and Wales",
+    "parties": [
+     "Tamarind Freight Co.",
+     "Northmoor Dynamics Corp."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "4 years"
+   },
+   "expected_subclass": "Strategic Alliance",
+   "predicted": {
+    "contract_value": "$600,000.00",
+    "cuad_family": "strategic_alliance",
+    "document_name": "Strategic Alliance Agreement",
+    "effective_date": "2020-06-15",
+    "governing_law": "England and Wales",
+    "maud_clauses": [
+     "No-Shop: Yes"
+    ],
+    "merger_consideration": "all_cash",
+    "parties": [
+     "Tamarind Freight Co.",
+     "Northmoor Dynamics Corp."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "4 years"
+   }
+  },
+  {
+   "case_id": "contract__supply__mixed__Supply",
+   "doc_subclass": "supply",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$625,000.00",
+    "cuad_family": "Supply",
+    "document_name": "Supply Agreement",
+    "effective_date": "2021-07-16",
+    "governing_law": "Texas",
+    "parties": [
+     "Orrin Vale Systems Ltd.",
+     "Pelham Quay Group"
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "5 years"
+   },
+   "expected_subclass": "Supply",
+   "predicted": {
+    "contract_value": "Wrong $625,000.00",
+    "cuad_family": "Supply",
+    "effective_date": "Wrong 2021-07-16",
+    "governing_law": "Texas",
+    "maud_clauses": [
+     "No-Shop: Yes"
+    ],
+    "merger_consideration": "all_cash",
+    "parties": [
+     "Orrin Vale Systems Ltd.",
+     "Pelham Quay Group"
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "5 years"
+   }
+  },
+  {
+   "case_id": "contract__transportation__exact__Transportation",
+   "doc_subclass": "transportation",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$650,000.00",
+    "cuad_family": "Transportation",
+    "document_name": "Transportation Agreement",
+    "effective_date": "2022-08-17",
+    "governing_law": "Delaware",
+    "parties": [
+     "Halcyon Reed Partners LP",
+     "Quillfeather Holdings Inc."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "1 years"
+   },
+   "expected_subclass": "Transportation",
+   "predicted": {
+    "contract_value": "$650,000.00",
+    "cuad_family": "Transportation",
+    "document_name": "Transportation Agreement",
+    "effective_date": "2022-08-17",
+    "governing_law": "Delaware",
+    "parties": [
+     "Halcyon Reed Partners LP",
+     "Quillfeather Holdings Inc."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "1 years"
+   }
+  },
+  {
+   "case_id": "contract__service__cuad_labels_good",
+   "doc_subclass": "service",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "cuad_clause_labels": "{\"Document Name\": [{\"start\": 0, \"text\": \"MASTER SERVICES AGREEMENT\"}], \"Parties\": [{\"start\": 40, \"text\": \"Quillfeather Holdings Inc.\"}, {\"start\": 70, \"text\": \"Brackenridge Labs LLC\"}], \"Governing Law\": [{\"start\": 900, \"text\": \"governed by the laws of the State of Delaware\"}], \"Anti-Assignment\": [{\"start\": 700, \"text\": \"may not assign this Agreement\"}], \"Audit Rights\": [], \"Exclusivity\": []}"
+   },
+   "expected_subclass": "Service",
+   "predicted": {
+    "cuad_clauses": [
+     "Anti-Assignment: may not assign",
+     "Exclusivity: exclusive supplier",
+     "Co-Branding: joint logos"
+    ],
+    "document_name": "Master Services Agreement",
+    "governing_law": "Delaware",
+    "parties": [
+     "Quillfeather Holdings Inc.",
+     "Brackenridge Labs LLC"
+    ]
+   }
+  },
+  {
+   "case_id": "contract__license__cuad_labels_none_predicted",
+   "doc_subclass": "license",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "cuad_clause_labels": "{\"Document Name\": [{\"start\": 0, \"text\": \"MASTER SERVICES AGREEMENT\"}], \"Parties\": [{\"start\": 40, \"text\": \"Quillfeather Holdings Inc.\"}, {\"start\": 70, \"text\": \"Brackenridge Labs LLC\"}], \"Governing Law\": [{\"start\": 900, \"text\": \"governed by the laws of the State of Delaware\"}], \"Anti-Assignment\": [{\"start\": 700, \"text\": \"may not assign this Agreement\"}], \"Audit Rights\": [], \"Exclusivity\": []}"
+   },
+   "expected_subclass": "License_Agreements",
+   "predicted": {
+    "document_name": "Master Services Agreement"
+   }
+  },
+  {
+   "case_id": "contract__supply__cuad_labels_as_dict",
+   "doc_subclass": "supply",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "cuad_clause_labels": {
+     "Anti-Assignment": [
+      {
+       "start": 700,
+       "text": "may not assign this Agreement"
+      }
+     ],
+     "Audit Rights": [],
+     "Document Name": [
+      {
+       "start": 0,
+       "text": "MASTER SERVICES AGREEMENT"
+      }
+     ],
+     "Exclusivity": [],
+     "Governing Law": [
+      {
+       "start": 900,
+       "text": "governed by the laws of the State of Delaware"
+      }
+     ],
+     "Parties": [
+      {
+       "start": 40,
+       "text": "Quillfeather Holdings Inc."
+      },
+      {
+       "start": 70,
+       "text": "Brackenridge Labs LLC"
+      }
+     ]
+    }
+   },
+   "expected_subclass": "Supply",
+   "predicted": {
+    "cuad_clauses": [
+     "Audit Rights: books open to inspection"
+    ],
+    "parties": [
+     "Quillfeather Holdings Inc.",
+     "Gamma Inc"
+    ]
+   }
+  },
+  {
+   "case_id": "contract__ip__no_ground_truth",
+   "doc_subclass": "ip",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": null,
+   "expected_subclass": "IP",
+   "predicted": {
+    "document_name": "IP Assignment Agreement",
+    "parties": [
+     "Orrin Vale Systems Ltd."
+    ]
+   }
+  },
+  {
+   "case_id": "contract__service__prose_predicted",
+   "doc_subclass": "service",
+   "doc_text": "MASTER SERVICES AGREEMENT between Quillfeather Holdings Inc. and Brackenridge Labs LLC.",
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$550,000.00",
+    "cuad_family": "Service",
+    "document_name": "Service Agreement",
+    "effective_date": "2018-04-13",
+    "governing_law": "New York",
+    "parties": [
+     "Quillfeather Holdings Inc.",
+     "Orrin Vale Systems Ltd."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "2 years"
+   },
+   "expected_subclass": "Service",
+   "predicted": "The agreement is between Quillfeather Holdings and Brackenridge Labs, governed by Delaware law."
+  },
+  {
+   "case_id": "contract__reseller__parse_error_raw",
+   "doc_subclass": "reseller",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$500,000.00",
+    "cuad_family": "Promotion",
+    "document_name": "Promotion Agreement",
+    "effective_date": "2016-02-11",
+    "governing_law": "Texas",
+    "parties": [
+     "Northmoor Dynamics Corp.",
+     "Brackenridge Labs LLC"
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "5 years"
+   },
+   "expected_subclass": "Reseller",
+   "predicted": {
+    "_parse_error": true,
+    "_raw": "{\"document_name\": \"Reseller Agr"
+   }
+  },
+  {
+   "case_id": "contract__marketing__predicted_json_string",
+   "doc_subclass": "marketing",
+   "doc_text": null,
+   "doc_type": "contract",
+   "expected": {
+    "contract_value": "$425,000.00",
+    "cuad_family": "Marketing",
+    "document_name": "Marketing Agreement",
+    "effective_date": "2022-08-17",
+    "governing_law": "New York",
+    "parties": [
+     "Tamarind Freight Co.",
+     "Northmoor Dynamics Corp."
+    ],
+    "renewal_terms": "Automatically renews for successive one-year terms unless either party gives 60 days notice",
+    "term_length": "2 years"
+   },
+   "expected_subclass": "Marketing",
+   "predicted": "{\"document_name\": \"Marketing Agreement\", \"parties\": [\"Pelham Quay Group\"], \"governing_law\": \"New York\"}"
+  },
+  {
+   "case_id": "merger_agreement__all_cash__exact",
+   "doc_subclass": "all_cash",
+   "doc_text": null,
+   "doc_type": "merger_agreement",
+   "expected": {
+    "document_name": "AGREEMENT AND PLAN OF MERGER",
+    "effective_date": "2020-06-30",
+    "effective_time": "9:00 a.m. Eastern Time",
+    "governing_law": "Delaware",
+    "intent": "acquisition",
+    "keywords": [
+     "merger",
+     "consideration"
+    ],
+    "maud_clauses": [],
+    "merger_consideration": "all_cash",
+    "parties": [
+     "Quillfeather Holdings Inc.",
+     "Brackenridge Labs LLC"
+    ],
+    "subject_matter": "Acquisition of target by parent through merger"
+   },
+   "expected_subclass": "all_cash",
+   "predicted": {
+    "document_name": "AGREEMENT AND PLAN OF MERGER",
+    "effective_date": "2020-06-30",
+    "effective_time": "9:00 a.m. Eastern Time",
+    "governing_law": "Delaware",
+    "intent": "acquisition",
+    "keywords": [
+     "merger",
+     "consideration"
+    ],
+    "maud_clauses": [],
+    "merger_consideration": "all_cash",
+    "parties": [
+     "Quillfeather Holdings Inc.",
+     "Brackenridge Labs LLC"
+    ],
+    "subject_matter": "Acquisition of target by parent through merger"
+   }
+  },
+  {
+   "case_id": "merger_agreement__all_stock__partial",
+   "doc_subclass": "all_stock",
+   "doc_text": null,
+   "doc_type": "merger_agreement",
+   "expected": {
+    "document_name": "AGREEMENT AND PLAN OF MERGER",
+    "effective_date": "2021-06-30",
+    "effective_time": "9:00 a.m. Eastern Time",
+    "governing_law": "Delaware",
+    "intent": "acquisition",
+    "keywords": [
+     "merger",
+     "consideration"
+    ],
+    "maud_clauses": [],
+    "merger_consideration": "all_stock",
+    "parties": [
+     "Brackenridge Labs LLC",
+     "Tamarind Freight Co."
+    ],
+    "subject_matter": "Acquisition of target by parent through merger"
+   },
+   "expected_subclass": "all_stock",
+   "predicted": {
+    "document_name": "AGREEMENT AND PLAN OF MERGER",
+    "effective_date": "2021-06-30",
+    "effective_time": "something else entirely",
+    "governing_law": "Delaware",
+    "intent": "something else entirely",
+    "keywords": [
+     "merger",
+     "Unrelated Party Ltd."
+    ],
+    "maud_clauses": [],
+    "merger_consideration": "all_stock (amended)",
+    "parties": [
+     "Brackenridge Labs LLC",
+     "Unrelated Party Ltd."
+    ],
+    "subject_matter": "Acquisition of target by parent through merger"
+   }
+  },
+  {
+   "case_id": "merger_agreement__mixed_cash_stock__missing",
+   "doc_subclass": "mixed_cash_stock",
+   "doc_text": null,
+   "doc_type": "merger_agreement",
+   "expected": {
+    "document_name": "AGREEMENT AND PLAN OF MERGER",
+    "effective_date": "2022-06-30",
+    "effective_time": "9:00 a.m. Eastern Time",
+    "governing_law": "Delaware",
+    "intent": "acquisition",
+    "keywords": [
+     "merger",
+     "consideration"
+    ],
+    "maud_clauses": [],
+    "merger_consideration": "mixed_cash_stock",
+    "parties": [
+     "Tamarind Freight Co.",
+     "Orrin Vale Systems Ltd."
+    ],
+    "subject_matter": "Acquisition of target by parent through merger"
+   },
+   "expected_subclass": "mixed_cash_stock",
+   "predicted": {
+    "effective_time": "9:00 a.m. Eastern Time",
+    "intent": "acquisition",
+    "keywords": [
+     "merger",
+     "consideration"
+    ],
+    "merger_consideration": "mixed_cash_stock",
+    "parties": [
+     "Tamarind Freight Co.",
+     "Orrin Vale Systems Ltd."
+    ]
+   }
+  },
+  {
+   "case_id": "merger_agreement__mixed_cash_stock_election__spurious",
+   "doc_subclass": "mixed_cash_stock_election",
+   "doc_text": null,
+   "doc_type": "merger_agreement",
+   "expected": {
+    "document_name": "AGREEMENT AND PLAN OF MERGER",
+    "effective_date": "2023-06-30",
+    "effective_time": "9:00 a.m. Eastern Time",
+    "governing_law": "Delaware",
+    "intent": "acquisition",
+    "keywords": [
+     "merger",
+     "consideration"
+    ],
+    "maud_clauses": [],
+    "merger_consideration": "mixed_cash_stock_election",
+    "parties": [
+     "Orrin Vale Systems Ltd.",
+     "Halcyon Reed Partners LP"
+    ],
+    "subject_matter": "Acquisition of target by parent through merger"
+   },
+   "expected_subclass": "mixed_cash_stock_election",
+   "predicted": {
+    "cuad_clauses": [
+     "Exclusivity: x"
+    ],
+    "cuad_family": "license",
+    "document_name": "AGREEMENT AND PLAN OF MERGER",
+    "effective_date": "2023-06-30",
+    "effective_time": "9:00 a.m. Eastern Time",
+    "governing_law": "Delaware",
+    "intent": "acquisition",
+    "keywords": [
+     "merger",
+     "consideration"
+    ],
+    "maud_clauses": [],
+    "merger_consideration": "mixed_cash_stock_election",
+    "parties": [
+     "Orrin Vale Systems Ltd.",
+     "Halcyon Reed Partners LP"
+    ],
+    "subject_matter": "Acquisition of target by parent through merger"
+   }
+  },
+  {
+   "case_id": "merger_agreement__other__mixed",
+   "doc_subclass": "other",
+   "doc_text": null,
+   "doc_type": "merger_agreement",
+   "expected": {
+    "document_name": "AGREEMENT AND PLAN OF MERGER",
+    "effective_date": "2024-06-30",
+    "effective_time": "9:00 a.m. Eastern Time",
+    "governing_law": "Delaware",
+    "intent": "acquisition",
+    "keywords": [
+     "merger",
+     "consideration"
+    ],
+    "maud_clauses": [],
+    "merger_consideration": "other",
+    "parties": [
+     "Halcyon Reed Partners LP",
+     "Northmoor Dynamics Corp."
+    ],
+    "subject_matter": "Acquisition of target by parent through merger"
+   },
+   "expected_subclass": "other",
+   "predicted": {
+    "cuad_clauses": [
+     "Exclusivity: x"
+    ],
+    "cuad_family": "license",
+    "effective_date": "Wrong 2024-06-30",
+    "effective_time": "9:00 a.m. Eastern Time",
+    "governing_law": "Delaware",
+    "intent": "acquisition",
+    "keywords": [
+     "merger",
+     "consideration"
+    ],
+    "maud_clauses": [],
+    "merger_consideration": "Wrong other",
+    "parties": [
+     "Halcyon Reed Partners LP",
+     "Northmoor Dynamics Corp."
+    ],
+    "subject_matter": "Wrong Acquisition of target by parent through merger"
+   }
+  },
+  {
+   "case_id": "merger_agreement__all_cash__maud_labels_partial",
+   "doc_subclass": "all_cash",
+   "doc_text": null,
+   "doc_type": "merger_agreement",
+   "expected": {
+    "label_evidence": "MAUD-annotated clauses: synthetic",
+    "maud_clause_labels": "{\"Type of Consideration\": {\"answer\": \"All Cash\", \"valid_classes\": [\"All Cash\", \"All Stock\"]}, \"No-Shop\": {\"answer\": \"Yes\", \"valid_classes\": [\"No\", \"Yes\"]}, \"MAE Definition\": {\"answer\": \"No\", \"valid_classes\": [\"No\", \"Yes\"]}, \"Fiduciary exception:  Board determination (no-shop)\": {\"answer\": \"Superior Offer, or Acquisition Proposal reasonably likely/expected to result in a Superior Offer\", \"valid_classes\": []}}"
+   },
+   "expected_subclass": "all_cash",
+   "predicted": {
+    "document_name": "AGREEMENT AND PLAN OF MERGER",
+    "maud_clauses": [
+     "Type of Consideration: all cash",
+     "No-Shop: yes",
+     "MAE Definition: not specified"
+    ]
+   }
+  },
+  {
+   "case_id": "merger_agreement__all_stock__maud_labels_colon_question",
+   "doc_subclass": "all_stock",
+   "doc_text": null,
+   "doc_type": "merger_agreement",
+   "expected": {
+    "maud_clause_labels": "{\"Type of Consideration\": {\"answer\": \"All Cash\", \"valid_classes\": [\"All Cash\", \"All Stock\"]}, \"No-Shop\": {\"answer\": \"Yes\", \"valid_classes\": [\"No\", \"Yes\"]}, \"MAE Definition\": {\"answer\": \"No\", \"valid_classes\": [\"No\", \"Yes\"]}, \"Fiduciary exception:  Board determination (no-shop)\": {\"answer\": \"Superior Offer, or Acquisition Proposal reasonably likely/expected to result in a Superior Offer\", \"valid_classes\": []}}"
+   },
+   "expected_subclass": "all_stock",
+   "predicted": {
+    "maud_clauses": [
+     "Fiduciary exception: Board determination (no-shop): Superior Offer, or Acquisition Proposal reasonably likely/expected to result in a Superior Offer",
+     "No-Shop: No"
+    ],
+    "merger_consideration": "all_cash"
+   }
+  },
+  {
+   "case_id": "merger_agreement__other__maud_labels_no_clause_keys",
+   "doc_subclass": "other",
+   "doc_text": null,
+   "doc_type": "merger_agreement",
+   "expected": {
+    "maud_clause_labels": "{\"Type of Consideration\": {\"answer\": \"All Cash\", \"valid_classes\": [\"All Cash\", \"All Stock\"]}, \"No-Shop\": {\"answer\": \"Yes\", \"valid_classes\": [\"No\", \"Yes\"]}, \"MAE Definition\": {\"answer\": \"No\", \"valid_classes\": [\"No\", \"Yes\"]}, \"Fiduciary exception:  Board determination (no-shop)\": {\"answer\": \"Superior Offer, or Acquisition Proposal reasonably likely/expected to result in a Superior Offer\", \"valid_classes\": []}}"
+   },
+   "expected_subclass": "other",
+   "predicted": {
+    "document_name": "AGREEMENT AND PLAN OF MERGER",
+    "governing_law": "Delaware",
+    "parties": [
+     "Halcyon Reed Partners LP",
+     "Northmoor Dynamics Corp."
+    ]
+   }
+  },
+  {
+   "case_id": "merger_agreement__mixed_cash_stock__maud_object_clauses",
+   "doc_subclass": "mixed_cash_stock",
+   "doc_text": null,
+   "doc_type": "merger_agreement",
+   "expected": {
+    "maud_clause_labels": "{\"Type of Consideration\": {\"answer\": \"All Cash\", \"valid_classes\": [\"All Cash\", \"All Stock\"]}, \"No-Shop\": {\"answer\": \"Yes\", \"valid_classes\": [\"No\", \"Yes\"]}, \"MAE Definition\": {\"answer\": \"No\", \"valid_classes\": [\"No\", \"Yes\"]}, \"Fiduciary exception:  Board determination (no-shop)\": {\"answer\": \"Superior Offer, or Acquisition Proposal reasonably likely/expected to result in a Superior Offer\", \"valid_classes\": []}}"
+   },
+   "expected_subclass": "mixed_cash_stock",
+   "predicted": {
+    "maud_clauses": {
+     "MAE Definition": null,
+     "No-Shop": "Yes",
+     "Type of Consideration": "Mixed Cash/Stock"
+    }
+   }
+  },
+  {
+   "case_id": "merger_agreement__all_cash__no_ground_truth",
+   "doc_subclass": "all_cash",
+   "doc_text": null,
+   "doc_type": "merger_agreement",
+   "expected": null,
+   "expected_subclass": "all_cash",
+   "predicted": {
+    "document_name": "AGREEMENT AND PLAN OF MERGER",
+    "effective_date": "2020-06-30",
+    "effective_time": "9:00 a.m. Eastern Time",
+    "governing_law": "Delaware",
+    "intent": "acquisition",
+    "keywords": [
+     "merger",
+     "consideration"
+    ],
+    "maud_clauses": [],
+    "merger_consideration": "all_cash",
+    "parties": [
+     "Quillfeather Holdings Inc.",
+     "Brackenridge Labs LLC"
+    ],
+    "subject_matter": "Acquisition of target by parent through merger"
+   }
+  },
+  {
+   "case_id": "merger_agreement__all_stock__predicted_null",
+   "doc_subclass": "all_stock",
+   "doc_text": null,
+   "doc_type": "merger_agreement",
+   "expected": {
+    "document_name": "AGREEMENT AND PLAN OF MERGER",
+    "effective_date": "2021-06-30",
+    "effective_time": "9:00 a.m. Eastern Time",
+    "governing_law": "Delaware",
+    "intent": "acquisition",
+    "keywords": [
+     "merger",
+     "consideration"
+    ],
+    "maud_clauses": [],
+    "merger_consideration": "all_stock",
+    "parties": [
+     "Brackenridge Labs LLC",
+     "Tamarind Freight Co."
+    ],
+    "subject_matter": "Acquisition of target by parent through merger"
+   },
+   "expected_subclass": "all_stock",
+   "predicted": null
+  },
+  {
+   "case_id": "insurance_claim__carrier__partial__no_cms_source_table",
+   "doc_subclass": "carrier",
+   "doc_text": null,
+   "doc_type": "insurance_claim",
+   "expected": {
+    "claim_number": "CLM-40100",
+    "claim_type": "carrier",
+    "claimed_amount": "$1850.00",
+    "coverage_determination": "approved",
+    "damages_description": "Synthetic loss narrative describing damaged items and circumstances.",
+    "date_filed": "2024-01-20",
+    "date_of_loss": "2024-01-10",
+    "insured_party": "Imogen Farrow",
+    "insurer": "Marlowe Mutual Assurance",
+    "policy_number": "POL-7700",
+    "supporting_documents": [
+     "photos",
+     "repair estimate"
+    ]
+   },
+   "expected_subclass": "carrier",
+   "predicted": {
+    "claim_number": "CLM-40100",
+    "claim_type": "carrier",
+    "claimed_amount": "something else entirely",
+    "coverage_determination": "approved (amended)",
+    "damages_description": "Synthetic loss narrative describing damaged items and circumstances.",
+    "date_filed": "2024-01-20",
+    "date_of_loss": "2024-01-10 (amended)",
+    "insured_party": "something else entirely",
+    "insurer": "Marlowe Mutual Assurance",
+    "policy_number": "POL-7700 (amended)",
+    "supporting_documents": [
+     "photos",
+     "repair estimate"
+    ]
+   }
+  },
+  {
+   "case_id": "insurance_claim__inpatient__missing__no_cms_source_table",
+   "doc_subclass": "inpatient",
+   "doc_text": null,
+   "doc_type": "insurance_claim",
+   "expected": {
+    "claim_number": "CLM-40101",
+    "claim_type": "inpatient",
+    "claimed_amount": "$3700.00",
+    "coverage_determination": "denied",
+    "damages_description": "Synthetic loss narrative describing damaged items and circumstances.",
+    "date_filed": "2024-02-21",
+    "date_of_loss": "2024-02-11",
+    "insured_party": "Teodor Valcik",
+    "insurer": "Marlowe Mutual Assurance",
+    "policy_number": "POL-7701",
+    "supporting_documents": [
+     "photos",
+     "repair estimate"
+    ]
+   },
+   "expected_subclass": "inpatient",
+   "predicted": {
+    "claimed_amount": "$3700.00",
+    "coverage_determination": "denied",
+    "date_of_loss": "2024-02-11",
+    "insured_party": "Teodor Valcik",
+    "policy_number": "POL-7701"
+   }
+  },
+  {
+   "case_id": "insurance_claim__outpatient__spurious__no_cms_source_table",
+   "doc_subclass": "outpatient",
+   "doc_text": null,
+   "doc_type": "insurance_claim",
+   "expected": {
+    "claim_number": "CLM-40102",
+    "claim_type": "outpatient",
+    "claimed_amount": "$5550.00",
+    "coverage_determination": "pending",
+    "damages_description": "Synthetic loss narrative describing damaged items and circumstances.",
+    "date_filed": "2024-03-22",
+    "date_of_loss": "2024-03-12",
+    "insured_party": "Rhea Santangelo",
+    "insurer": "Marlowe Mutual Assurance",
+    "policy_number": "POL-7702",
+    "supporting_documents": [
+     "photos",
+     "repair estimate"
+    ]
+   },
+   "expected_subclass": "outpatient",
+   "predicted": {
+    "adjuster": "Ottoline Brandt",
+    "claim_number": "CLM-40102",
+    "claim_type": "outpatient",
+    "claimed_amount": "$5550.00",
+    "coverage_determination": "pending",
+    "damages_description": "Synthetic loss narrative describing damaged items and circumstances.",
+    "date_filed": "2024-03-22",
+    "date_of_loss": "2024-03-12",
+    "insured_party": "Rhea Santangelo",
+    "insurer": "Marlowe Mutual Assurance",
+    "keywords": [
+     "claim",
+     "loss"
+    ],
+    "policy_number": "POL-7702",
+    "supporting_documents": [
+     "photos",
+     "repair estimate"
+    ]
+   }
+  },
+  {
+   "case_id": "insurance_claim__pde__mixed__no_cms_source_table",
+   "doc_subclass": "pde",
+   "doc_text": null,
+   "doc_type": "insurance_claim",
+   "expected": {
+    "claim_number": "CLM-40103",
+    "claim_type": "pde",
+    "claimed_amount": "$7400.00",
+    "coverage_determination": "approved",
+    "damages_description": "Synthetic loss narrative describing damaged items and circumstances.",
+    "date_filed": "2024-04-23",
+    "date_of_loss": "2024-04-13",
+    "insured_party": "Corwin Abayomi",
+    "insurer": "Marlowe Mutual Assurance",
+    "policy_number": "POL-7703",
+    "supporting_documents": [
+     "photos",
+     "repair estimate"
+    ]
+   },
+   "expected_subclass": "pde",
+   "predicted": {
+    "adjuster": "Ottoline Brandt",
+    "claim_type": "pde",
+    "claimed_amount": "$7400.00",
+    "coverage_determination": "approved",
+    "damages_description": "Wrong Synthetic loss narrative describing damaged items and circumstances.",
+    "date_filed": "2024-04-23",
+    "date_of_loss": "Wrong 2024-04-13",
+    "insured_party": "Corwin Abayomi",
+    "insurer": "Wrong Marlowe Mutual Assurance",
+    "keywords": [
+     "claim",
+     "loss"
+    ],
+    "policy_number": "POL-7703",
+    "supporting_documents": [
+     "photos",
+     "repair estimate"
+    ]
+   }
+  },
+  {
+   "case_id": "insurance_claim__property__exact",
+   "doc_subclass": "property",
+   "doc_text": null,
+   "doc_type": "insurance_claim",
+   "expected": {
+    "claim_number": "CLM-40104",
+    "claim_type": "auto",
+    "claimed_amount": "$9250.00",
+    "coverage_determination": "denied",
+    "damages_description": "Synthetic loss narrative describing damaged items and circumstances.",
+    "date_filed": "2024-05-24",
+    "date_of_loss": "2024-05-14",
+    "denial_reasons": [
+     "Excluded peril"
+    ],
+    "insured_party": "Linnea Hartgrave",
+    "insurer": "Marlowe Mutual Assurance",
+    "policy_number": "POL-7704",
+    "supporting_documents": [
+     "photos",
+     "repair estimate"
+    ]
+   },
+   "expected_subclass": "property",
+   "predicted": {
+    "claim_number": "CLM-40104",
+    "claim_type": "auto",
+    "claimed_amount": "$9250.00",
+    "coverage_determination": "denied",
+    "damages_description": "Synthetic loss narrative describing damaged items and circumstances.",
+    "date_filed": "2024-05-24",
+    "date_of_loss": "2024-05-14",
+    "denial_reasons": [
+     "Excluded peril"
+    ],
+    "insured_party": "Linnea Hartgrave",
+    "insurer": "Marlowe Mutual Assurance",
+    "policy_number": "POL-7704",
+    "supporting_documents": [
+     "photos",
+     "repair estimate"
+    ]
+   }
+  },
+  {
+   "case_id": "insurance_claim__auto__partial",
+   "doc_subclass": "auto",
+   "doc_text": null,
+   "doc_type": "insurance_claim",
+   "expected": {
+    "claim_number": "CLM-40105",
+    "claim_type": "property",
+    "claimed_amount": "$11100.00",
+    "coverage_determination": "pending",
+    "damages_description": "Synthetic loss narrative describing damaged items and circumstances.",
+    "date_filed": "2024-06-25",
+    "date_of_loss": "2024-06-15",
+    "denial_reasons": [
+     "Excluded peril"
+    ],
+    "insured_party": "Dmitri Okonkwo-Reyes",
+    "insurer": "Marlowe Mutual Assurance",
+    "policy_number": "POL-7705",
+    "supporting_documents": [
+     "photos",
+     "repair estimate"
+    ]
+   },
+   "expected_subclass": "auto",
+   "predicted": {
+    "claim_number": "CLM-40105",
+    "claim_type": "property",
+    "claimed_amount": "something else entirely",
+    "coverage_determination": "pending (amended)",
+    "damages_description": "Synthetic loss narrative describing damaged items and circumstances.",
+    "date_filed": "2024-06-25",
+    "date_of_loss": "2024-06-15 (amended)",
+    "denial_reasons": [
+     "Unrelated Party Ltd."
+    ],
+    "insured_party": "something else entirely",
+    "insurer": "Marlowe Mutual Assurance",
+    "policy_number": "POL-7705 (amended)",
+    "supporting_documents": [
+     "photos",
+     "repair estimate"
+    ]
+   }
+  },
+  {
+   "case_id": "insurance_claim__carrier__cms_source_table_in_expected",
+   "doc_subclass": "carrier",
+   "doc_text": null,
+   "doc_type": "insurance_claim",
+   "expected": {
+    "claim_number": "CLM-40100",
+    "claim_type": "carrier",
+    "claimed_amount": "$1850.00",
+    "cms_source_table": "carrier",
+    "coverage_determination": "approved",
+    "damages_description": "Synthetic loss narrative describing damaged items and circumstances.",
+    "date_filed": "2024-01-20",
+    "date_of_loss": "2024-01-10",
+    "insured_party": "Imogen Farrow",
+    "insurer": "Marlowe Mutual Assurance",
+    "policy_number": "POL-7700",
+    "supporting_documents": [
+     "photos",
+     "repair estimate"
+    ]
+   },
+   "expected_subclass": "carrier",
+   "predicted": {
+    "claim_number": "CLM-40100",
+    "claim_type": "carrier",
+    "claimed_amount": "$1850.00",
+    "cms_source_table": "carrier",
+    "coverage_determination": "approved",
+    "damages_description": "Synthetic loss narrative describing damaged items and circumstances.",
+    "date_filed": "2024-01-20",
+    "date_of_loss": "2024-01-10",
+    "insured_party": "Imogen Farrow",
+    "insurer": "Marlowe Mutual Assurance",
+    "policy_number": "POL-7700",
+    "supporting_documents": [
+     "photos",
+     "repair estimate"
+    ]
+   }
+  },
+  {
+   "case_id": "insurance_claim__pde__predicted_cms_table_only_pred",
+   "doc_subclass": "pde",
+   "doc_text": null,
+   "doc_type": "insurance_claim",
+   "expected": {
+    "claim_number": "CLM-40103",
+    "claim_type": "pde",
+    "claimed_amount": "$7400.00",
+    "coverage_determination": "approved",
+    "damages_description": "Synthetic loss narrative describing damaged items and circumstances.",
+    "date_filed": "2024-04-23",
+    "date_of_loss": "2024-04-13",
+    "insured_party": "Corwin Abayomi",
+    "insurer": "Marlowe Mutual Assurance",
+    "policy_number": "POL-7703",
+    "supporting_documents": [
+     "photos",
+     "repair estimate"
+    ]
+   },
+   "expected_subclass": "pde",
+   "predicted": {
+    "claim_number": "CLM-40103",
+    "claim_type": "pde",
+    "claimed_amount": "$7400.00",
+    "cms_source_table": "pde",
+    "coverage_determination": "approved",
+    "damages_description": "Synthetic loss narrative describing damaged items and circumstances.",
+    "date_filed": "2024-04-23",
+    "date_of_loss": "2024-04-13",
+    "insured_party": "Corwin Abayomi",
+    "insurer": "Marlowe Mutual Assurance",
+    "policy_number": "POL-7703",
+    "supporting_documents": [
+     "photos",
+     "repair estimate"
+    ]
+   }
+  },
+  {
+   "case_id": "insurance_claim__property__no_ground_truth",
+   "doc_subclass": "property",
+   "doc_text": null,
+   "doc_type": "insurance_claim",
+   "expected": null,
+   "expected_subclass": "property",
+   "predicted": {
+    "claim_number": "CLM-40105",
+    "claim_type": "property",
+    "claimed_amount": "$11100.00",
+    "coverage_determination": "pending",
+    "damages_description": "Synthetic loss narrative describing damaged items and circumstances.",
+    "date_filed": "2024-06-25",
+    "date_of_loss": "2024-06-15",
+    "insured_party": "Dmitri Okonkwo-Reyes",
+    "insurer": "Marlowe Mutual Assurance",
+    "policy_number": "POL-7705",
+    "supporting_documents": [
+     "photos",
+     "repair estimate"
+    ]
+   }
+  },
+  {
+   "case_id": "insurance_claim__auto__predicted_list",
+   "doc_subclass": "auto",
+   "doc_text": null,
+   "doc_type": "insurance_claim",
+   "expected": {
+    "claim_number": "CLM-40104",
+    "claim_type": "auto",
+    "claimed_amount": "$9250.00",
+    "coverage_determination": "denied",
+    "damages_description": "Synthetic loss narrative describing damaged items and circumstances.",
+    "date_filed": "2024-05-24",
+    "date_of_loss": "2024-05-14",
+    "insured_party": "Linnea Hartgrave",
+    "insurer": "Marlowe Mutual Assurance",
+    "policy_number": "POL-7704",
+    "supporting_documents": [
+     "photos",
+     "repair estimate"
+    ]
+   },
+   "expected_subclass": "auto",
+   "predicted": [
+    {
+     "claim_number": "CLM-40104",
+     "claim_type": "auto",
+     "claimed_amount": "$9250.00",
+     "coverage_determination": "denied",
+     "damages_description": "Synthetic loss narrative describing damaged items and circumstances.",
+     "date_filed": "2024-05-24",
+     "date_of_loss": "2024-05-14",
+     "insured_party": "Linnea Hartgrave",
+     "insurer": "Marlowe Mutual Assurance",
+     "policy_number": "POL-7704",
+     "supporting_documents": [
+      "photos",
+      "repair estimate"
+     ]
+    }
+   ]
+  },
+  {
+   "case_id": "insurance_claim__outpatient__prose_predicted",
+   "doc_subclass": "outpatient",
+   "doc_text": null,
+   "doc_type": "insurance_claim",
+   "expected": {
+    "claim_number": "CLM-40102",
+    "claim_type": "outpatient",
+    "claimed_amount": "$5550.00",
+    "coverage_determination": "pending",
+    "damages_description": "Synthetic loss narrative describing damaged items and circumstances.",
+    "date_filed": "2024-03-22",
+    "date_of_loss": "2024-03-12",
+    "insured_party": "Rhea Santangelo",
+    "insurer": "Marlowe Mutual Assurance",
+    "policy_number": "POL-7702",
+    "supporting_documents": [
+     "photos",
+     "repair estimate"
+    ]
+   },
+   "expected_subclass": "outpatient",
+   "predicted": "Claim CLM-40102 filed by Corwin Abayomi for outpatient services; approved."
+  },
+  {
+   "case_id": "correspondence__email__exact",
+   "doc_subclass": "email",
+   "doc_text": null,
+   "doc_type": "correspondence",
+   "expected": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Rhea Santangelo"
+    ],
+    "communication_date": "2023-01-01",
+    "communication_type": "email",
+    "demand_amount": null,
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Teodor Valcik",
+    "sender": "Imogen Farrow",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "low"
+   },
+   "expected_subclass": "email",
+   "predicted": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Rhea Santangelo"
+    ],
+    "communication_date": "2023-01-01",
+    "communication_type": "email",
+    "demand_amount": null,
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Teodor Valcik",
+    "sender": "Imogen Farrow",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "low"
+   }
+  },
+  {
+   "case_id": "correspondence__memo__partial",
+   "doc_subclass": "memo",
+   "doc_text": null,
+   "doc_type": "correspondence",
+   "expected": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Corwin Abayomi"
+    ],
+    "communication_date": "2023-02-02",
+    "communication_type": "memo",
+    "demand_amount": null,
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Rhea Santangelo",
+    "sender": "Teodor Valcik",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "medium"
+   },
+   "expected_subclass": "memo",
+   "predicted": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Corwin Abayomi"
+    ],
+    "communication_date": "2023-02-02",
+    "communication_type": "something else entirely",
+    "demand_amount": null,
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Rhea Santangelo (amended)",
+    "sender": "Teodor Valcik",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot (amended)",
+    "urgency": "something else entirely"
+   }
+  },
+  {
+   "case_id": "correspondence__letter__missing",
+   "doc_subclass": "letter",
+   "doc_text": null,
+   "doc_type": "correspondence",
+   "expected": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Linnea Hartgrave"
+    ],
+    "communication_date": "2023-03-03",
+    "communication_type": "letter",
+    "demand_amount": null,
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Corwin Abayomi",
+    "sender": "Rhea Santangelo",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "high"
+   },
+   "expected_subclass": "letter",
+   "predicted": {
+    "communication_type": "letter",
+    "demand_amount": null,
+    "recipient": "Corwin Abayomi",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "high"
+   }
+  },
+  {
+   "case_id": "correspondence__notice__spurious",
+   "doc_subclass": "notice",
+   "doc_text": null,
+   "doc_type": "correspondence",
+   "expected": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Dmitri Okonkwo-Reyes"
+    ],
+    "communication_date": "2023-04-04",
+    "communication_type": "notice",
+    "demand_amount": null,
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Linnea Hartgrave",
+    "sender": "Corwin Abayomi",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "low"
+   },
+   "expected_subclass": "notice",
+   "predicted": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Dmitri Okonkwo-Reyes"
+    ],
+    "claim_number": "CLM-1",
+    "communication_date": "2023-04-04",
+    "communication_type": "notice",
+    "demand_amount": null,
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "policy_number": "POL-9",
+    "recipient": "Linnea Hartgrave",
+    "sender": "Corwin Abayomi",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "low"
+   }
+  },
+  {
+   "case_id": "correspondence__demand__mixed",
+   "doc_subclass": "demand",
+   "doc_text": null,
+   "doc_type": "correspondence",
+   "expected": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Imogen Farrow"
+    ],
+    "communication_date": "2023-05-05",
+    "communication_type": "demand",
+    "demand_amount": "$20000.00",
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Dmitri Okonkwo-Reyes",
+    "sender": "Linnea Hartgrave",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "medium"
+   },
+   "expected_subclass": "demand",
+   "predicted": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Imogen Farrow"
+    ],
+    "claim_number": "CLM-1",
+    "communication_date": "2023-05-05",
+    "communication_type": "demand",
+    "demand_amount": "Wrong $20000.00",
+    "intent": "Wrong inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "policy_number": "POL-9",
+    "recipient": "Dmitri Okonkwo-Reyes",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "medium"
+   }
+  },
+  {
+   "case_id": "correspondence__attorney_demand__exact",
+   "doc_subclass": "attorney_demand",
+   "doc_text": null,
+   "doc_type": "correspondence",
+   "expected": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Teodor Valcik"
+    ],
+    "communication_date": "2023-06-06",
+    "communication_type": "attorney_demand",
+    "demand_amount": "$24000.00",
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Imogen Farrow",
+    "sender": "Dmitri Okonkwo-Reyes",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "high"
+   },
+   "expected_subclass": "attorney_demand",
+   "predicted": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Teodor Valcik"
+    ],
+    "communication_date": "2023-06-06",
+    "communication_type": "attorney_demand",
+    "demand_amount": "$24000.00",
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Imogen Farrow",
+    "sender": "Dmitri Okonkwo-Reyes",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "high"
+   }
+  },
+  {
+   "case_id": "correspondence__press_release__partial",
+   "doc_subclass": "press_release",
+   "doc_text": null,
+   "doc_type": "correspondence",
+   "expected": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Rhea Santangelo"
+    ],
+    "communication_date": "2023-07-07",
+    "communication_type": "press_release",
+    "demand_amount": null,
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Teodor Valcik",
+    "sender": "Imogen Farrow",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "low"
+   },
+   "expected_subclass": "press_release",
+   "predicted": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Rhea Santangelo"
+    ],
+    "communication_date": "2023-07-07",
+    "communication_type": "something else entirely",
+    "demand_amount": null,
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Teodor Valcik (amended)",
+    "sender": "Imogen Farrow",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot (amended)",
+    "urgency": "something else entirely"
+   }
+  },
+  {
+   "case_id": "correspondence__meeting_request__missing",
+   "doc_subclass": "meeting_request",
+   "doc_text": null,
+   "doc_type": "correspondence",
+   "expected": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Corwin Abayomi"
+    ],
+    "communication_date": "2023-08-08",
+    "communication_type": "meeting_request",
+    "demand_amount": null,
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Rhea Santangelo",
+    "sender": "Teodor Valcik",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "medium"
+   },
+   "expected_subclass": "meeting_request",
+   "predicted": {
+    "communication_type": "meeting_request",
+    "demand_amount": null,
+    "recipient": "Rhea Santangelo",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "medium"
+   }
+  },
+  {
+   "case_id": "correspondence__other__spurious",
+   "doc_subclass": "other",
+   "doc_text": null,
+   "doc_type": "correspondence",
+   "expected": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Linnea Hartgrave"
+    ],
+    "communication_date": "2023-09-09",
+    "communication_type": "other",
+    "demand_amount": null,
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Corwin Abayomi",
+    "sender": "Rhea Santangelo",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "high"
+   },
+   "expected_subclass": null,
+   "predicted": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Linnea Hartgrave"
+    ],
+    "claim_number": "CLM-1",
+    "communication_date": "2023-09-09",
+    "communication_type": "other",
+    "demand_amount": null,
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "policy_number": "POL-9",
+    "recipient": "Corwin Abayomi",
+    "sender": "Rhea Santangelo",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "high"
+   }
+  },
+  {
+   "case_id": "correspondence__email__topic_sentiment_gt_match",
+   "doc_subclass": "email",
+   "doc_text": null,
+   "doc_type": "correspondence",
+   "expected": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Rhea Santangelo"
+    ],
+    "communication_date": "2023-01-01",
+    "communication_type": "email",
+    "content_topic": "scheduling",
+    "demand_amount": null,
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Teodor Valcik",
+    "sender": "Imogen Farrow",
+    "sentiment_label": "neutral",
+    "sentiment_score": 0.0,
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "topic_evidence": "synthetic",
+    "urgency": "low"
+   },
+   "expected_subclass": "email",
+   "predicted": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Rhea Santangelo"
+    ],
+    "communication_date": "2023-01-01",
+    "communication_type": "email",
+    "content_topic": "scheduling",
+    "demand_amount": null,
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Teodor Valcik",
+    "sender": "Imogen Farrow",
+    "sentiment_label": "neutral",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "low"
+   }
+  },
+  {
+   "case_id": "correspondence__memo__topic_sentiment_gt_mismatch",
+   "doc_subclass": "memo",
+   "doc_text": null,
+   "doc_type": "correspondence",
+   "expected": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Corwin Abayomi"
+    ],
+    "communication_date": "2023-02-02",
+    "communication_type": "memo",
+    "content_topic": "hr_personnel",
+    "demand_amount": null,
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Rhea Santangelo",
+    "sender": "Teodor Valcik",
+    "sentiment_label": "negative",
+    "sentiment_score": -0.6,
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "medium"
+   },
+   "expected_subclass": "memo",
+   "predicted": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Corwin Abayomi"
+    ],
+    "communication_date": "2023-02-02",
+    "communication_type": "memo",
+    "content_topic": "finance_earnings",
+    "demand_amount": null,
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Rhea Santangelo",
+    "sender": "Teodor Valcik",
+    "sentiment_label": "positive",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "medium"
+   }
+  },
+  {
+   "case_id": "correspondence__letter__topic_sentiment_gt_only",
+   "doc_subclass": "letter",
+   "doc_text": null,
+   "doc_type": "correspondence",
+   "expected": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Linnea Hartgrave"
+    ],
+    "communication_date": "2023-03-03",
+    "communication_type": "letter",
+    "content_topic": "legal_contracts",
+    "demand_amount": null,
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Corwin Abayomi",
+    "sender": "Rhea Santangelo",
+    "sentiment_label": "neutral",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "high"
+   },
+   "expected_subclass": "letter",
+   "predicted": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Linnea Hartgrave"
+    ],
+    "communication_date": "2023-03-03",
+    "communication_type": "letter",
+    "demand_amount": null,
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Corwin Abayomi",
+    "sender": "Rhea Santangelo",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "high"
+   }
+  },
+  {
+   "case_id": "correspondence__other__no_ground_truth",
+   "doc_subclass": "other",
+   "doc_text": null,
+   "doc_type": "correspondence",
+   "expected": null,
+   "expected_subclass": "other",
+   "predicted": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Linnea Hartgrave"
+    ],
+    "communication_date": "2023-09-09",
+    "communication_type": "other",
+    "demand_amount": null,
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Corwin Abayomi",
+    "sender": "Rhea Santangelo",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "high"
+   }
+  },
+  {
+   "case_id": "correspondence__notice__predicted_json_string",
+   "doc_subclass": "notice",
+   "doc_text": null,
+   "doc_type": "correspondence",
+   "expected": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Dmitri Okonkwo-Reyes"
+    ],
+    "communication_date": "2023-04-04",
+    "communication_type": "notice",
+    "demand_amount": null,
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Linnea Hartgrave",
+    "sender": "Corwin Abayomi",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "low"
+   },
+   "expected_subclass": "notice",
+   "predicted": "{\"sender\": \"Corwin Abayomi\", \"recipient\": \"Linnea Hartgrave\", \"additional_recipients\": [\"Dmitri Okonkwo-Reyes\"], \"communication_type\": \"notice\", \"communication_date\": \"2023-04-04\", \"demand_amount\": null, \"action_items\": [\"Send revised schedule\", \"Confirm attendance\"], \"urgency\": \"low\", \"intent\": \"inform\", \"subject_matter\": \"Quarterly logistics scheduling update for regional depot\", \"keywords\": [\"schedule\", \"depot\", \"update\"]}"
+  },
+  {
+   "case_id": "correspondence__demand__predicted_null",
+   "doc_subclass": "demand",
+   "doc_text": null,
+   "doc_type": "correspondence",
+   "expected": {
+    "action_items": [
+     "Send revised schedule",
+     "Confirm attendance"
+    ],
+    "additional_recipients": [
+     "Imogen Farrow"
+    ],
+    "communication_date": "2023-05-05",
+    "communication_type": "demand",
+    "demand_amount": "$20000.00",
+    "intent": "inform",
+    "keywords": [
+     "schedule",
+     "depot",
+     "update"
+    ],
+    "recipient": "Dmitri Okonkwo-Reyes",
+    "sender": "Linnea Hartgrave",
+    "subject_matter": "Quarterly logistics scheduling update for regional depot",
+    "urgency": "medium"
+   },
+   "expected_subclass": "demand",
+   "predicted": null
+  },
+  {
+   "case_id": "corporate_record__bylaws__exact",
+   "doc_subclass": "bylaws",
+   "doc_text": null,
+   "doc_type": "corporate_record",
+   "expected": {
+    "certifying_officer": "Imogen Farrow",
+    "effective_date": "2010-01-10",
+    "entity_name": "Quillfeather Holdings Inc.",
+    "intent": "governance_rules",
+    "jurisdiction": "Delaware",
+    "keywords": [
+     "synthetic",
+     "bylaws"
+    ],
+    "last_amended_date": "2010-01-10",
+    "record_type": "bylaws",
+    "signatories": [
+     "Imogen Farrow",
+     "Teodor Valcik"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 0"
+   },
+   "expected_subclass": "bylaws",
+   "predicted": {
+    "certifying_officer": "Imogen Farrow",
+    "effective_date": "2010-01-10",
+    "entity_name": "Quillfeather Holdings Inc.",
+    "intent": "governance_rules",
+    "jurisdiction": "Delaware",
+    "keywords": [
+     "synthetic",
+     "bylaws"
+    ],
+    "last_amended_date": "2010-01-10",
+    "record_type": "bylaws",
+    "signatories": [
+     "Imogen Farrow",
+     "Teodor Valcik"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 0"
+   }
+  },
+  {
+   "case_id": "corporate_record__articles_of_incorporation__partial",
+   "doc_subclass": "articles_of_incorporation",
+   "doc_text": null,
+   "doc_type": "corporate_record",
+   "expected": {
+    "authorized_capital": "Synthetic authorized capital text for case 1",
+    "effective_date": "2011-02-11",
+    "entity_name": "Brackenridge Labs LLC",
+    "filing_number": "5400013",
+    "incorporators": [
+     "Teodor Valcik",
+     "Rhea Santangelo"
+    ],
+    "intent": "entity_formation",
+    "jurisdiction": "New York",
+    "keywords": [
+     "synthetic",
+     "articles"
+    ],
+    "record_type": "articles_of_incorporation",
+    "registered_agent": "Teodor Valcik",
+    "signatories": [
+     "Teodor Valcik",
+     "Rhea Santangelo"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 1"
+   },
+   "expected_subclass": "articles_of_incorporation",
+   "predicted": {
+    "authorized_capital": "something else entirely",
+    "effective_date": "2011-02-11",
+    "entity_name": "Brackenridge Labs LLC",
+    "filing_number": "5400013 (amended)",
+    "incorporators": [
+     "Teodor Valcik",
+     "Unrelated Party Ltd."
+    ],
+    "intent": "entity_formation",
+    "jurisdiction": "New York",
+    "keywords": [
+     "synthetic",
+     "articles"
+    ],
+    "record_type": "articles_of_incorporation (amended)",
+    "registered_agent": "Teodor Valcik",
+    "signatories": [
+     "Teodor Valcik",
+     "Unrelated Party Ltd."
+    ],
+    "subject_matter": "something else entirely"
+   }
+  },
+  {
+   "case_id": "corporate_record__certificate_of_formation__missing",
+   "doc_subclass": "certificate_of_formation",
+   "doc_text": null,
+   "doc_type": "corporate_record",
+   "expected": {
+    "effective_date": "2012-03-12",
+    "entity_name": "Tamarind Freight Co.",
+    "filing_number": "5400026",
+    "intent": "entity_formation",
+    "jurisdiction": "California",
+    "keywords": [
+     "synthetic",
+     "certificate"
+    ],
+    "organizers": [
+     "Rhea Santangelo",
+     "Corwin Abayomi"
+    ],
+    "record_type": "articles_of_incorporation",
+    "registered_agent": "Rhea Santangelo",
+    "signatories": [
+     "Rhea Santangelo",
+     "Corwin Abayomi"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 2"
+   },
+   "expected_subclass": "certificate_of_formation",
+   "predicted": {
+    "filing_number": "5400026",
+    "organizers": [
+     "Rhea Santangelo",
+     "Corwin Abayomi"
+    ],
+    "record_type": "articles_of_incorporation",
+    "signatories": [
+     "Rhea Santangelo",
+     "Corwin Abayomi"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 2"
+   }
+  },
+  {
+   "case_id": "corporate_record__charter_amendment__spurious",
+   "doc_subclass": "charter_amendment",
+   "doc_text": null,
+   "doc_type": "corporate_record",
+   "expected": {
+    "amended_provisions": [
+     "amended_provisions item one",
+     "amended_provisions item two"
+    ],
+    "approval_date": "2013-04-13",
+    "effective_date": "2013-04-13",
+    "entity_name": "Orrin Vale Systems Ltd.",
+    "filing_number": "5400039",
+    "intent": "entity_formation",
+    "jurisdiction": "England and Wales",
+    "keywords": [
+     "synthetic",
+     "charter"
+    ],
+    "prior_entity_name": "Orrin Vale Systems Ltd.",
+    "record_type": "articles_of_incorporation",
+    "signatories": [
+     "Corwin Abayomi",
+     "Linnea Hartgrave"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 3"
+   },
+   "expected_subclass": "charter_amendment",
+   "predicted": {
+    "amended_provisions": [
+     "amended_provisions item one",
+     "amended_provisions item two"
+    ],
+    "approval_date": "2013-04-13",
+    "certifying_officer": "stray",
+    "effective_date": "2013-04-13",
+    "entity_name": "Orrin Vale Systems Ltd.",
+    "filing_number": "5400039",
+    "intent": "entity_formation",
+    "jurisdiction": "England and Wales",
+    "keywords": [
+     "synthetic",
+     "charter"
+    ],
+    "prior_entity_name": "Orrin Vale Systems Ltd.",
+    "record_type": "articles_of_incorporation",
+    "signatories": [
+     "Corwin Abayomi",
+     "Linnea Hartgrave"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 3"
+   }
+  },
+  {
+   "case_id": "corporate_record__powers_of_attorney__mixed",
+   "doc_subclass": "powers_of_attorney",
+   "doc_text": null,
+   "doc_type": "corporate_record",
+   "expected": {
+    "attorneys_in_fact": [
+     "Linnea Hartgrave",
+     "Dmitri Okonkwo-Reyes"
+    ],
+    "authority_scope": "Synthetic authority scope text for case 4",
+    "effective_date": "2014-05-14",
+    "entity_name": "Halcyon Reed Partners LP",
+    "expiration_date": "2014-05-14",
+    "intent": "authority_delegation",
+    "jurisdiction": "Texas",
+    "keywords": [
+     "synthetic",
+     "powers"
+    ],
+    "principal": "Halcyon Reed Partners LP",
+    "record_type": "powers_of_attorney",
+    "signatories": [
+     "Linnea Hartgrave",
+     "Dmitri Okonkwo-Reyes"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 4"
+   },
+   "expected_subclass": "powers_of_attorney",
+   "predicted": {
+    "attorneys_in_fact": [
+     "Linnea Hartgrave",
+     "Dmitri Okonkwo-Reyes"
+    ],
+    "authority_scope": "Synthetic authority scope text for case 4",
+    "certifying_officer": "stray",
+    "effective_date": "Wrong 2014-05-14",
+    "expiration_date": "Wrong 2014-05-14",
+    "intent": "Wrong authority_delegation",
+    "jurisdiction": "Texas",
+    "keywords": [
+     "synthetic",
+     "powers"
+    ],
+    "principal": "Wrong Halcyon Reed Partners LP",
+    "record_type": "powers_of_attorney",
+    "signatories": [
+     "Linnea Hartgrave",
+     "Dmitri Okonkwo-Reyes"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 4"
+   }
+  },
+  {
+   "case_id": "corporate_record__subsidiary_list__exact",
+   "doc_subclass": "subsidiary_list",
+   "doc_text": null,
+   "doc_type": "corporate_record",
+   "expected": {
+    "effective_date": "2015-06-15",
+    "entity_name": "Northmoor Dynamics Corp.",
+    "intent": "other",
+    "keywords": [
+     "synthetic",
+     "subsidiary"
+    ],
+    "record_type": "other",
+    "subject_matter": "Synthetic subject matter text for case 5",
+    "subsidiaries": [
+     "Northmoor Dynamics Corp.",
+     "Quillfeather Holdings Inc."
+    ],
+    "subsidiary_jurisdictions": [
+     "Dmitri Okonkwo-Reyes",
+     "Imogen Farrow"
+    ]
+   },
+   "expected_subclass": "subsidiary_list",
+   "predicted": {
+    "effective_date": "2015-06-15",
+    "entity_name": "Northmoor Dynamics Corp.",
+    "intent": "other",
+    "keywords": [
+     "synthetic",
+     "subsidiary"
+    ],
+    "record_type": "other",
+    "subject_matter": "Synthetic subject matter text for case 5",
+    "subsidiaries": [
+     "Northmoor Dynamics Corp.",
+     "Quillfeather Holdings Inc."
+    ],
+    "subsidiary_jurisdictions": [
+     "Dmitri Okonkwo-Reyes",
+     "Imogen Farrow"
+    ]
+   }
+  },
+  {
+   "case_id": "corporate_record__rights_instrument__partial",
+   "doc_subclass": "rights_instrument",
+   "doc_text": null,
+   "doc_type": "corporate_record",
+   "expected": {
+    "effective_date": "2016-07-16",
+    "entity_name": "Pelham Quay Group",
+    "exercise_price": "$7,000,000.00",
+    "holder": "Pelham Quay Group",
+    "instrument_kind": "Imogen Farrow",
+    "intent": "investor_rights",
+    "jurisdiction": "New York",
+    "keywords": [
+     "synthetic",
+     "rights"
+    ],
+    "record_type": "rights_instrument",
+    "rights_agent": "Imogen Farrow",
+    "securities_covered": "Synthetic securities covered text for case 6",
+    "signatories": [
+     "Imogen Farrow",
+     "Teodor Valcik"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 6"
+   },
+   "expected_subclass": "rights_instrument",
+   "predicted": {
+    "effective_date": "2016-07-16",
+    "entity_name": "Pelham Quay Group",
+    "exercise_price": "$7,000,000.00",
+    "holder": "Pelham Quay Group (amended)",
+    "instrument_kind": "Imogen Farrow",
+    "intent": "investor_rights (amended)",
+    "jurisdiction": "New York",
+    "keywords": [
+     "synthetic",
+     "Unrelated Party Ltd."
+    ],
+    "record_type": "rights_instrument (amended)",
+    "rights_agent": "Imogen Farrow",
+    "securities_covered": "something else entirely",
+    "signatories": [
+     "Imogen Farrow",
+     "Unrelated Party Ltd."
+    ],
+    "subject_matter": "Synthetic subject matter text for case 6"
+   }
+  },
+  {
+   "case_id": "corporate_record__indenture__missing",
+   "doc_subclass": "indenture",
+   "doc_text": null,
+   "doc_type": "corporate_record",
+   "expected": {
+    "effective_date": "2017-08-17",
+    "entity_name": "Quillfeather Holdings Inc.",
+    "guarantors": [
+     "Teodor Valcik",
+     "Rhea Santangelo"
+    ],
+    "intent": "investor_rights",
+    "jurisdiction": "California",
+    "keywords": [
+     "synthetic",
+     "indenture"
+    ],
+    "maturity_date": "2017-08-17",
+    "principal_amount": "$8,000,000.00",
+    "record_type": "other",
+    "securities_series": "Teodor Valcik",
+    "signatories": [
+     "Teodor Valcik",
+     "Rhea Santangelo"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 7",
+    "trustee": "Quillfeather Holdings Inc."
+   },
+   "expected_subclass": "indenture",
+   "predicted": {
+    "guarantors": [
+     "Teodor Valcik",
+     "Rhea Santangelo"
+    ],
+    "intent": "investor_rights",
+    "keywords": [
+     "synthetic",
+     "indenture"
+    ],
+    "principal_amount": "$8,000,000.00",
+    "record_type": "other",
+    "signatories": [
+     "Teodor Valcik",
+     "Rhea Santangelo"
+    ]
+   }
+  },
+  {
+   "case_id": "corporate_record__board_resolution__spurious",
+   "doc_subclass": "board_resolution",
+   "doc_text": null,
+   "doc_type": "corporate_record",
+   "expected": {
+    "acting_body": "Rhea Santangelo",
+    "action_approved": "Synthetic action approved text for case 8",
+    "effective_date": "2018-09-18",
+    "entity_name": "Brackenridge Labs LLC",
+    "intent": "corporate_action_approval",
+    "jurisdiction": "England and Wales",
+    "keywords": [
+     "synthetic",
+     "board"
+    ],
+    "record_type": "other",
+    "resolutions": [
+     "resolutions item one",
+     "resolutions item two"
+    ],
+    "signatories": [
+     "Rhea Santangelo",
+     "Corwin Abayomi"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 8"
+   },
+   "expected_subclass": "board_resolution",
+   "predicted": {
+    "acting_body": "Rhea Santangelo",
+    "action_approved": "Synthetic action approved text for case 8",
+    "certifying_officer": "stray",
+    "effective_date": "2018-09-18",
+    "entity_name": "Brackenridge Labs LLC",
+    "intent": "corporate_action_approval",
+    "jurisdiction": "England and Wales",
+    "keywords": [
+     "synthetic",
+     "board"
+    ],
+    "record_type": "other",
+    "resolutions": [
+     "resolutions item one",
+     "resolutions item two"
+    ],
+    "signatories": [
+     "Rhea Santangelo",
+     "Corwin Abayomi"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 8"
+   }
+  },
+  {
+   "case_id": "corporate_record__officer_certificate__mixed",
+   "doc_subclass": "officer_certificate",
+   "doc_text": null,
+   "doc_type": "corporate_record",
+   "expected": {
+    "addressee": "Corwin Abayomi",
+    "certified_matter": "Synthetic certified matter text for case 9",
+    "certifying_officer": "Corwin Abayomi",
+    "effective_date": "2019-01-10",
+    "entity_name": "Tamarind Freight Co.",
+    "intent": "governance_rules",
+    "jurisdiction": "Texas",
+    "keywords": [
+     "synthetic",
+     "officer"
+    ],
+    "officer_title": "Corwin Abayomi",
+    "record_type": "other",
+    "signatories": [
+     "Corwin Abayomi",
+     "Linnea Hartgrave"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 9"
+   },
+   "expected_subclass": "officer_certificate",
+   "predicted": {
+    "addressee": "Wrong Corwin Abayomi",
+    "certified_matter": "Synthetic certified matter text for case 9",
+    "certifying_officer": "stray",
+    "effective_date": "Wrong 2019-01-10",
+    "intent": "Wrong governance_rules",
+    "jurisdiction": "Texas",
+    "keywords": [
+     "synthetic",
+     "officer"
+    ],
+    "officer_title": "Corwin Abayomi",
+    "record_type": "other",
+    "signatories": [
+     "Corwin Abayomi",
+     "Linnea Hartgrave"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 9"
+   }
+  },
+  {
+   "case_id": "corporate_record__other__exact",
+   "doc_subclass": "other",
+   "doc_text": null,
+   "doc_type": "corporate_record",
+   "expected": {
+    "effective_date": "2020-02-11",
+    "entity_name": "Orrin Vale Systems Ltd.",
+    "filing_number": "5400130",
+    "intent": "other",
+    "jurisdiction": "Delaware",
+    "keywords": [
+     "synthetic",
+     "other"
+    ],
+    "record_type": "other",
+    "signatories": [
+     "Linnea Hartgrave",
+     "Dmitri Okonkwo-Reyes"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 10"
+   },
+   "expected_subclass": "other",
+   "predicted": {
+    "effective_date": "2020-02-11",
+    "entity_name": "Orrin Vale Systems Ltd.",
+    "filing_number": "5400130",
+    "intent": "other",
+    "jurisdiction": "Delaware",
+    "keywords": [
+     "synthetic",
+     "other"
+    ],
+    "record_type": "other",
+    "signatories": [
+     "Linnea Hartgrave",
+     "Dmitri Okonkwo-Reyes"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 10"
+   }
+  },
+  {
+   "case_id": "corporate_record__no_subclass__exact",
+   "doc_subclass": null,
+   "doc_text": null,
+   "doc_type": "corporate_record",
+   "expected": {
+    "effective_date": "2013-04-13",
+    "entity_name": "Orrin Vale Systems Ltd.",
+    "intent": "governance_rules",
+    "jurisdiction": "England and Wales",
+    "keywords": [
+     "synthetic",
+     "bylaws"
+    ],
+    "record_type": "bylaws",
+    "signatories": [
+     "Corwin Abayomi",
+     "Linnea Hartgrave"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 3"
+   },
+   "expected_subclass": null,
+   "predicted": {
+    "certifying_officer": "Corwin Abayomi",
+    "effective_date": "2013-04-13",
+    "entity_name": "Orrin Vale Systems Ltd.",
+    "intent": "governance_rules",
+    "jurisdiction": "England and Wales",
+    "keywords": [
+     "synthetic",
+     "bylaws"
+    ],
+    "last_amended_date": "2013-04-13",
+    "record_type": "bylaws",
+    "signatories": [
+     "Corwin Abayomi",
+     "Linnea Hartgrave"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 3"
+   }
+  },
+  {
+   "case_id": "corporate_record__no_subclass__partial_with_text",
+   "doc_subclass": null,
+   "doc_text": "AMENDED AND RESTATED BYLAWS OF QUILLFEATHER HOLDINGS INC. adopted March 4, 2019. Imogen Farrow, Secretary. Teodor Valcik, Chair.",
+   "doc_type": "corporate_record",
+   "expected": {
+    "effective_date": "2019-03-04",
+    "entity_name": "Quillfeather Holdings Inc.",
+    "filing_number": null,
+    "intent": "governance_rules",
+    "jurisdiction": "Delaware",
+    "keywords": [
+     "bylaws"
+    ],
+    "record_type": "bylaws",
+    "signatories": [
+     "Imogen Farrow",
+     "Teodor Valcik"
+    ],
+    "subject_matter": "Operating rules"
+   },
+   "expected_subclass": null,
+   "predicted": {
+    "entity_name": "Quillfeather Holdings Inc.",
+    "record_type": "bylaws",
+    "signatories": [
+     "Imogen Farrow"
+    ]
+   }
+  },
+  {
+   "case_id": "corporate_record__bylaws__no_ground_truth",
+   "doc_subclass": "bylaws",
+   "doc_text": null,
+   "doc_type": "corporate_record",
+   "expected": null,
+   "expected_subclass": "bylaws",
+   "predicted": {
+    "certifying_officer": "Teodor Valcik",
+    "effective_date": "2011-02-11",
+    "entity_name": "Brackenridge Labs LLC",
+    "intent": "governance_rules",
+    "jurisdiction": "New York",
+    "keywords": [
+     "synthetic",
+     "bylaws"
+    ],
+    "last_amended_date": "2011-02-11",
+    "record_type": "bylaws",
+    "signatories": [
+     "Teodor Valcik",
+     "Rhea Santangelo"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 1"
+   }
+  },
+  {
+   "case_id": "corporate_record__indenture__parse_error_raw",
+   "doc_subclass": "indenture",
+   "doc_text": null,
+   "doc_type": "corporate_record",
+   "expected": {
+    "effective_date": "2017-08-17",
+    "entity_name": "Quillfeather Holdings Inc.",
+    "guarantors": [
+     "Teodor Valcik",
+     "Rhea Santangelo"
+    ],
+    "intent": "investor_rights",
+    "jurisdiction": "California",
+    "keywords": [
+     "synthetic",
+     "indenture"
+    ],
+    "maturity_date": "2017-08-17",
+    "principal_amount": "$8,000,000.00",
+    "record_type": "other",
+    "securities_series": "Teodor Valcik",
+    "signatories": [
+     "Teodor Valcik",
+     "Rhea Santangelo"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 7",
+    "trustee": "Quillfeather Holdings Inc."
+   },
+   "expected_subclass": "indenture",
+   "predicted": {
+    "_parse_error": true,
+    "_raw": "Here is the record: {entity_name: Tam"
+   }
+  },
+  {
+   "case_id": "corporate_record__other__predicted_list",
+   "doc_subclass": "other",
+   "doc_text": null,
+   "doc_type": "corporate_record",
+   "expected": {
+    "effective_date": "2020-02-11",
+    "entity_name": "Orrin Vale Systems Ltd.",
+    "filing_number": "5400130",
+    "intent": "other",
+    "jurisdiction": "Delaware",
+    "keywords": [
+     "synthetic",
+     "other"
+    ],
+    "record_type": "other",
+    "signatories": [
+     "Linnea Hartgrave",
+     "Dmitri Okonkwo-Reyes"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 10"
+   },
+   "expected_subclass": "other",
+   "predicted": [
+    {
+     "entity_name": "Pelham Quay Group"
+    }
+   ]
+  },
+  {
+   "case_id": "corporate_record__subsidiary_list__prose_predicted",
+   "doc_subclass": "subsidiary_list",
+   "doc_text": null,
+   "doc_type": "corporate_record",
+   "expected": {
+    "effective_date": "2015-06-15",
+    "entity_name": "Northmoor Dynamics Corp.",
+    "intent": "other",
+    "keywords": [
+     "synthetic",
+     "subsidiary"
+    ],
+    "record_type": "other",
+    "subject_matter": "Synthetic subject matter text for case 5",
+    "subsidiaries": [
+     "Northmoor Dynamics Corp.",
+     "Quillfeather Holdings Inc."
+    ],
+    "subsidiary_jurisdictions": [
+     "Dmitri Okonkwo-Reyes",
+     "Imogen Farrow"
+    ]
+   },
+   "expected_subclass": "subsidiary_list",
+   "predicted": "This is a list of subsidiaries of Quillfeather Holdings Inc., all organized in Delaware."
+  },
+  {
+   "case_id": "corporate_record__charter_amendment__predicted_null",
+   "doc_subclass": "charter_amendment",
+   "doc_text": null,
+   "doc_type": "corporate_record",
+   "expected": {
+    "amended_provisions": [
+     "amended_provisions item one",
+     "amended_provisions item two"
+    ],
+    "approval_date": "2013-04-13",
+    "effective_date": "2013-04-13",
+    "entity_name": "Orrin Vale Systems Ltd.",
+    "filing_number": "5400039",
+    "intent": "entity_formation",
+    "jurisdiction": "England and Wales",
+    "keywords": [
+     "synthetic",
+     "charter"
+    ],
+    "prior_entity_name": "Orrin Vale Systems Ltd.",
+    "record_type": "articles_of_incorporation",
+    "signatories": [
+     "Corwin Abayomi",
+     "Linnea Hartgrave"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 3"
+   },
+   "expected_subclass": "charter_amendment",
+   "predicted": null
+  },
+  {
+   "case_id": "corporate_record__bylaws__predicted_json_string",
+   "doc_subclass": "bylaws",
+   "doc_text": null,
+   "doc_type": "corporate_record",
+   "expected": {
+    "certifying_officer": "Imogen Farrow",
+    "effective_date": "2010-01-10",
+    "entity_name": "Quillfeather Holdings Inc.",
+    "intent": "governance_rules",
+    "jurisdiction": "Delaware",
+    "keywords": [
+     "synthetic",
+     "bylaws"
+    ],
+    "last_amended_date": "2010-01-10",
+    "record_type": "bylaws",
+    "signatories": [
+     "Imogen Farrow",
+     "Teodor Valcik"
+    ],
+    "subject_matter": "Synthetic subject matter text for case 0"
+   },
+   "expected_subclass": "bylaws",
+   "predicted": "{\"entity_name\": \"Quillfeather Holdings Inc.\", \"record_type\": \"bylaws\", \"effective_date\": \"2010-01-10\", \"signatories\": [\"Imogen Farrow\", \"Teodor Valcik\"], \"jurisdiction\": \"Delaware\", \"intent\": \"governance_rules\", \"subject_matter\": \"Synthetic subject matter text for case 0\", \"keywords\": [\"synthetic\", \"bylaws\"], \"certifying_officer\": \"Imogen Farrow\", \"last_amended_date\": \"2010-01-10\"}"
+  }
+ ]
+}

@@ -8,7 +8,7 @@
 <br/>
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](pyproject.toml)
-[![Release v0.25.0](https://img.shields.io/badge/release-v0.26.0-6C63FF?style=for-the-badge)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.26.0)
+[![Release v0.27.2](https://img.shields.io/badge/release-v0.27.2-6C63FF?style=for-the-badge)](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.27.2)
 [![Offline core](https://img.shields.io/badge/scoring-offline_core-22C55E?style=for-the-badge)](docs/guides/SCORING.md)
 [![MIT](https://img.shields.io/badge/license-MIT-0EA5E9?style=for-the-badge)](pyproject.toml)
 
@@ -91,7 +91,7 @@ key or tracing service.
 <div align="center">
 
 ```bash
-pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.26.0"
+pip install "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.27.2"
 pip install -e .                # from a local checkout
 ```
 
@@ -115,7 +115,7 @@ A standalone consumer can pin this release explicitly:
 ```toml
 [project]
 dependencies = [
-    "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.26.0",
+    "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.27.2",
 ]
 ```
 
@@ -383,6 +383,7 @@ dojo-sync    [--task TRACE_NAME] [--session NAME] [--max-items N]
 
 Start at [`docs/README.md`](docs/README.md). The docs are grouped into guides, schemas, contracts and history.
 
+- **Supported public API** (what consumers may rely on): [`docs/guides/PUBLIC_API.md`](docs/guides/PUBLIC_API.md)
 - **Migrating a pipeline project**, including the v0.26.0 subpackage layout: [`docs/guides/MIGRATION.md`](docs/guides/MIGRATION.md)
 - **Scoring tables**: [`docs/guides/SCORING.md`](docs/guides/SCORING.md)
 - **Prompt catalog and eval-environment lineage** (`list_prompt_versions`, `prompt_chain`, `diff_prompt_versions`): [`docs/guides/PROMPTS.md`](docs/guides/PROMPTS.md)

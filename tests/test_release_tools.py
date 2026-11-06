@@ -57,6 +57,23 @@ def test_cut_dry_run_refuses_existing_section(release):
         release.cut_plan("0.25.0", today="2026-11-01", allow_dirty=True, allow_empty=True)
 
 
+def _has_tags(*tags: str) -> bool:
+    """True when every tag resolves locally (shallow cloud clones carry none)."""
+    return all(
+        subprocess.run(
+            ["git", "rev-parse", "-q", "--verify", f"refs/tags/{tag}"],
+            cwd=ROOT,
+            capture_output=True,
+        ).returncode
+        == 0
+        for tag in tags
+    )
+
+
+@pytest.mark.skipif(
+    not _has_tags("v0.24.2", "v0.25.0"),
+    reason="needs release tags; run `git fetch --unshallow --tags`",
+)
 def test_notes_render_contains_changelog_and_commit(release):
     """Offline notes carry the CHANGELOG section and the commit."""
     notes = release.build_notes(
@@ -130,3 +147,126 @@ def test_gh_unavailable_pattern_is_narrow():
     assert _GH_UNAVAILABLE.search("gh api failed: To get started with GitHub CLI, please run:  gh auth login")
     assert not _GH_UNAVAILABLE.search("gh pr list failed: unknown flag: --bogus")
     assert not _GH_UNAVAILABLE.search("gh release view failed: release not found")
+
+
+_LOCK_SAMPLE = '''version = 1
+revision = 5
+
+[[package]]
+name = "jellyfish"
+version = "1.2.0"
+
+[[package]]
+name = "llm-dojo-scoring"
+version = "{version}"
+source = {{ editable = "." }}
+'''
+
+
+def test_uv_lock_version_reads_the_root_package_entry(release):
+    """Only this package's ``[[package]]`` entry counts, not a dependency's version."""
+    assert release.uv_lock_version(_LOCK_SAMPLE.format(version="0.26.0")) == "0.26.0"
+    assert release.uv_lock_version("version = 1\n") is None
+
+
+def test_check_flags_stale_uv_lock(release):
+    """A uv.lock still recording the previous version is a chain error (CI's --frozen misses it)."""
+    state = release.chain_state()
+    stale = dict(state, uv_lock_version="0.0.1")
+    errors, _ = release.check_chain(stale)
+    assert any("uv.lock records" in e and "uv lock" in e for e in errors)
+
+
+def test_check_accepts_matching_or_absent_uv_lock(release):
+    """A matching lock, or no lock at all, adds no uv.lock error."""
+    state = release.chain_state()
+    for lock_version in (state["pyproject_version"], None):
+        errors, _ = release.check_chain(dict(state, uv_lock_version=lock_version))
+        assert not any("uv.lock" in e for e in errors)
+
+
+def test_cut_plan_reminds_to_relock(release):
+    """The cut plan's next steps tell the releaser to run ``uv lock``."""
+    plan = release.cut_plan("99.0.0", today="2026-11-03", allow_dirty=True, allow_empty=True)
+    assert any("uv lock" in step for step in plan["next"])
+
+
+def _offline_publish(release, monkeypatch, git_impl):
+    """Run ``publish_plan`` with every network/state lookup stubbed and ``git`` replaced."""
+    state = {"tags": []}
+    monkeypatch.setattr(release, "chain_state", lambda: state)
+    monkeypatch.setattr(release, "check_chain", lambda s: ([], []))
+    monkeypatch.setattr(release, "section_for", lambda v: {"stamp": None})
+    monkeypatch.setattr(release, "_resolve_commit", lambda ref: "a" * 40)
+    monkeypatch.setattr(release, "remote_tag_commit", lambda v: None)
+    monkeypatch.setattr(release, "remote_release", lambda v: None)
+    monkeypatch.setattr(release, "build_notes", lambda *a, **k: {"title": "t", "body": ""})
+    monkeypatch.setattr(release, "git", git_impl)
+    return release.publish_plan(
+        "9.9.9", commit_ref="HEAD", target="main", draft=True,
+        with_assets=False, push=False, title=None, notes_file=None,
+    )
+
+
+def _fake_git(lock: str | None, *, lock_read_fails: bool = False):
+    """A ``git`` stand-in for a commit stamped 9.9.9 with the given uv.lock (``None`` = absent)."""
+    files = {
+        "pyproject.toml": 'version = "9.9.9"\n',
+        "llm_dojo_scoring/__init__.py": '__version__ = "9.9.9"\n',
+    }
+
+    def git(*args):
+        """Serve the stubbed tree for ``rev-parse`` / ``ls-tree`` / ``show``."""
+        if args[0] == "rev-parse":
+            return "\n"  # standalone: the package is the repository root
+        if args[0] == "ls-tree":
+            return "uv.lock\n" if lock is not None else ""
+        if args[0] == "show":
+            path = args[1].split(":", 1)[1].removeprefix("./")  # cwd-relative, as git reads it
+            if path == "uv.lock":
+                if lock_read_fails:
+                    raise load_release().ReleaseError("git show failed: object read error")
+                return lock
+            return files[path]
+        raise AssertionError(args)
+
+    return git
+
+
+def test_publish_skips_lock_check_only_when_uv_lock_absent(release, monkeypatch):
+    """A commit without uv.lock passes; a stale lock at the commit is a hard error."""
+    plan = _offline_publish(release, monkeypatch, _fake_git(None))
+    assert not any("uv.lock" in e for e in plan["errors"])
+    plan = _offline_publish(
+        release, monkeypatch, _fake_git(_LOCK_SAMPLE.format(version="0.0.1"))
+    )
+    assert any("uv.lock records" in e for e in plan["errors"])
+
+
+def test_publish_fails_closed_when_uv_lock_read_fails(release, monkeypatch):
+    """A uv.lock that exists but cannot be read raises instead of skipping the check."""
+    with pytest.raises(Exception, match="object read error"):
+        _offline_publish(release, monkeypatch, _fake_git("x", lock_read_fails=True))
+
+
+def test_readme_pin_bump_moves_the_badge_alt_text(release, tmp_path, monkeypatch):
+    """0.27.2: the release badge's ``[Release vX]`` alt text moves with the badge and link."""
+    readme = tmp_path / "README.md"
+    readme.write_text(
+        "[![Release v0.27.1](https://img.shields.io/badge/release-v0.27.1-6C63FF)]"
+        "(https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.27.1)\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(release, "README", readme)
+    assert release._bump_readme_pins("0.27.1", "0.27.2") == 3
+    text = readme.read_text(encoding="utf-8")
+    assert "0.27.1" not in text and text.count("0.27.2") == 3
+
+
+def test_check_reports_a_stale_badge_alt_text(release):
+    """``check`` counts the badge alt text as a README pin, so a stale one is an error."""
+    import re
+
+    text = "[![Release v0.27.0](https://img.shields.io/badge/release-v0.27.2-6C63FF)]"
+    pins = set(re.findall(r"(?:release-|releases/tag/|\.git@|\[Release )v(\d+\.\d+\.\d+)", text))
+    assert pins == {"0.27.0", "0.27.2"}
