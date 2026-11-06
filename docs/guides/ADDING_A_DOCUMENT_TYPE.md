@@ -25,7 +25,9 @@ and `<Schema>` is its Pydantic model (e.g. `InsuranceClaimExtraction`).
 - [ ] **Subtypes**: the canonical snake_case keys, and the corpus surfaces they normalise
       from (folder-style labels, Hub strings).
 - [ ] **Field map**: each field and its scorer type: `name`, `date`, `money`, `id`,
-      `free_text`, `entity_list:<inner>`, or a scored enum. This map is the scoring contract;
+      `free_text`, `entity_list:<inner>`, or `label` for a closed enum (0.28.0: every
+      `label` field needs its vocabulary in `schemas/scored_enums.py`, and the scorer folds
+      aliases through `canonical_label` before the exact match). This map is the scoring contract;
       the Pydantic model and the taxonomy must match it exactly.
 - [ ] **Live or scored-later**:
       - A: rows already in mailroom-dataset → live class (all steps).
@@ -46,7 +48,7 @@ Every list below is checked by a drift test. Add `<type>` to all of them in one 
 | `config.py` | `DOC_CLASS_KEYS`; also `LIVE_DOC_CLASS_KEYS` if live |
 | `pipeline/mailroom.py` | `LIVE_DOC_TYPES` and `LIVE_SPECIALISTS` (live), or `RETIRED_*` |
 | `schemas/extraction_schemas.py` | `MAILROOM_DOC_TYPES` (must equal `LIVE_DOC_TYPES`) |
-| `schemas/corpus.py` | `DOC_TYPE_SUBCLASSES[<type>]`, `CORPUS_SUBCLASS_SURFACES[<type>]`, and the per-type tables lower in the file that every class has an entry in |
+| `schemas/corpus.py` | `DOC_TYPE_SUBCLASSES[<type>]`, the raw surfaces in `_RAW_SUBCLASS_SURFACES[<type>]` (`CORPUS_SUBCLASS_SURFACES` adds the canonical keys itself, for the v10 `subclass` column), and the per-type tables lower in the file that every class has an entry in |
 | `scoring/suites.py` | `SPECIALIST_DOC_TYPES[<agent>] = <type>` (this drives `DOC_TYPE_ALIASES`); `DEFAULT_FIELD_TYPES[<type>]` (the field map); `_AGENT_EXTRAS[<agent>]` for class extras; `_HONEST_GAPS[<agent>]` for any known gap |
 | `metrics/profiles.py` | a `DEFAULT_PROFILES` entry: `_p("<agent>", "<Title> Extraction", ("extract",), "extraction", doc_bundle="<type>")`. `DEFAULT_SUITES` is built from this, so `get_suite("<type>")` works once it exists |
 | `metrics/doc_bundles.py` | `DOC_TYPES` and `DOC_TYPE_BUNDLES[<type>]` (headline metrics) |
