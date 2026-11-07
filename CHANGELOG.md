@@ -4,6 +4,14 @@ All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
+### Changed
+
+- Production prompts re-vendored from llm-mailroom `19203eac` (#179's merge commit) with
+  `scripts/sync_production_prompts.py`. `get_prompt("sorter")` is now `sorter_condensed_v5`
+  (a bylaw amendment is `bylaws`, agreeing with the 0.28.1 sorter guide), replacing
+  `sorter_v15`; the other production bodies are unchanged and only their `source_commit`
+  moves. `tests/test_prompt_lineage.py` keeps the historical `sorter_v4` → `sorter_v14`
+  check by pinning the v14 body's sha256, and pins production to `sorter_condensed_v5`.
 
 ## [0.28.1] - 2026-11-07
 ### Changed
