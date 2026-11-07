@@ -59,9 +59,16 @@ def test_v14_confusions_are_named_in_the_guide():
     assert "Certificate of Designation" in guide["corporate_record"]["officer_certificate"]
     assert "never rights_instrument" in guide["corporate_record"]["officer_certificate"]
     assert "Amendment" in guide["corporate_record"]["charter_amendment"]
-    assert "bylaws adopted by the board" in guide["corporate_record"]["board_resolution"]
     assert "employment" in guide["contract"]["consulting"]
     assert "note purchase" in guide["contract"]["supply"]
+
+
+def test_a_bylaw_amendment_is_bylaws():
+    """A bylaw amendment is bylaws, never board_resolution (mailroom-dataset v10 rule C)."""
+    corporate = SORTER_SUBCLASS_GUIDE["corporate_record"]
+    assert "an amendment to the bylaws, even one the board adopted" in corporate["bylaws"]
+    assert "never board_resolution" in corporate["bylaws"]
+    assert "bylaw" not in corporate["board_resolution"].lower()
 
 
 def test_rendered_block_has_one_line_per_key():
