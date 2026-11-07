@@ -14,9 +14,9 @@ sorter prompt V14 (subclass 72.5% against the verified targets):
   ``articles_of_incorporation`` (``certificate_of_formation`` has no
   ground-truth rows; it is a scoring key only);
 - 9 board-adopted bylaw amendments called ``bylaws`` (v9.3 files them under
-  ``board_resolution``; the guide now calls them ``bylaws``, mailroom-dataset
-  v10 rule C, so scoring against v9.3 counts those 9 as wrong until v10
-  relabels them);
+  ``board_resolution``). The guide now calls every bylaw amendment ``bylaws``
+  (mailroom-dataset v10 rule C), and v9.3 labels 8 of them ``board_resolution``,
+  so scoring against v9.3 counts those 8 as wrong until v10 relabels them;
 - 36 consulting / employment, IP and note-purchase agreements called
   ``other``;
 - 364 correspondence forms missed because the corpus applies a marker
