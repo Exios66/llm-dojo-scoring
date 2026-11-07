@@ -4,6 +4,8 @@ All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
+
+## [0.28.1] - 2026-11-07
 ### Changed
 
 - Sorter guide: a bylaw amendment is `bylaws`, never `board_resolution`, even when the
@@ -29,7 +31,6 @@ Format based on Keep a Changelog; versioning is SemVer.
   cannot complete the chain; a commit pin that matches no tag, or two, is checked
   before any bump; and a failed pin lookup after a publish keeps the publish result.
   `release.py status --consumers` prints the same chain. Scripts only.
-
 
 ## [0.28.0] - 2026-11-06
 ### Changed
