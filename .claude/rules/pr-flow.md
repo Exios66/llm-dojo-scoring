@@ -5,8 +5,9 @@ mistakes we could have caught ourselves. So **nothing is pushed for review until
 been vetted locally and by a fresh-context reviewer.** Run these steps in order. Steps 4
 and 5 (pushing, opening and updating a PR) happen only when the user asked for a pull
 request; otherwise stop after step 3 and report the result with its evidence. A local
-commit needs no request; leave changes you did not make (the user's own edits) out of
-your commits and out of the gate, and say they exist in the report.
+commit needs no request. If the tree holds changes you did not make (the user's own
+edits), do not commit, stash or discard them: stop and ask the user how to proceed,
+because the gates below need a clean tree.
 
 `<base>` below is the branch the PR targets (`main` unless the user names another), fetched
 fresh: `git fetch origin <base>`.

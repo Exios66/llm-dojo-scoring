@@ -54,10 +54,10 @@ Full module table: `llm_dojo_scoring/README.md`.
 ## Commands
 
 ```bash
-uv run --extra dev pytest tests -q               # full suite (under a minute; one release test uses the network)
+uv run --locked --extra dev pytest tests -q      # full suite (under a minute; one release test uses the network)
 uv run --extra dev pytest tests/test_cli.py -q   # one file
 uvx ruff@0.17.3 check llm_dojo_scoring tests scripts examples   # lint gate, same version as CI
-uv run python scripts/freeze_goldens.py --check  # golden scores unchanged (exit 1 + diff on drift)
+uv run --locked python scripts/freeze_goldens.py --check   # golden scores unchanged (exit 1 + diff on drift)
 python scripts/release.py status                 # read-only: version / changelog / pin chain
 python scripts/release.py check                  # read-only: verify the chain is consistent
 ```

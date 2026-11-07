@@ -54,10 +54,10 @@ in any tool.
 
 ```bash
 uv sync --frozen --extra dev                     # install from the lock (what CI does)
-uv run --extra dev pytest tests -q               # full suite (~3,500 tests, under a minute; one release test uses the network)
+uv run --locked --extra dev pytest tests -q      # full suite (~3,500 tests, under a minute; one release test uses the network)
 uv run --extra dev pytest tests/test_cli.py -q   # one file
 uvx ruff@0.17.3 check llm_dojo_scoring tests scripts examples   # lint gate (CI pins 0.17.3)
-uv run python scripts/freeze_goldens.py --check  # golden score baseline (exit 1 + unified diff on drift)
+uv run --locked python scripts/freeze_goldens.py --check   # golden score baseline (exit 1 + unified diff on drift)
 uv run python scripts/freeze_goldens.py --write --reason "…"   # ONLY for an intended score change
 uv run python scripts/audit_consumer_surface.py --check   # consumer import surface (needs consumer checkouts; exit 2 if missing)
 python scripts/release.py status                 # read-only: version / changelog / pin chain

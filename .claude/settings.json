@@ -22,7 +22,8 @@
       "Bash(uv run --locked python scripts/freeze_goldens.py --check:*)",
       "Bash(uv sync --frozen:*)",
       "Bash(git rev-parse:*)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(uv lock --check:*)"
     ],
     "ask": [
       "Bash(git push:*)",
@@ -31,7 +32,11 @@
       "Bash(python scripts/release.py edit:*)",
       "Bash(python scripts/release.py assets:*)",
       "Bash(dojo-sync:*)",
-      "Bash(uv lock:*)"
+      "Bash(uv lock)",
+      "Bash(uv lock --upgrade:*)",
+      "Bash(uv lock --upgrade-package:*)",
+      "Bash(uv lock -U:*)",
+      "Bash(uv lock -P:*)"
     ],
     "deny": [
       "Read(./.env)",
