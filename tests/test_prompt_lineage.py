@@ -360,8 +360,13 @@ def test_notes_only_where_expected():
     assert flagged == {"sorter_v2", "sorter_v3", "sorter_v4", "merger_agreement_specialist_v4"}
 
 
-def test_sorter_v4_drops_the_duplicate_block_and_matches_production():
-    """Remove the duplicated sorter section and match the current production body."""
+#: sha256 of production sorter_v14 (llm-mailroom 9e8f30b2, sorter_v15 up to its appended
+#: CLASS BOUNDARIES section), kept so the historical lineage check survives production moving on.
+SORTER_V14_SHA256 = "905abc696c1975d5fe29c3f773738ac6836993d8f8e4cef40d1f6c30012e164f"
+
+
+def test_sorter_v4_drops_the_duplicate_block_and_matches_sorter_v14():
+    """Remove the duplicated sorter section; without its corporate block it is sorter_v14."""
     v4 = get_prompt_version("sorter_v4")
     assert v4.parent == "sorter_v3" and v4.lineage == "mutation" and v4.version == 4
     assert v4.text.count("CORPORATE RECORD SUBCLASS") == 1
@@ -369,20 +374,23 @@ def test_sorter_v4_drops_the_duplicate_block_and_matches_production():
         assert stale not in v4.text
     assert any("duplicate removed" in n for n in v4.changes["notes"])
     assert get_prompt_version("sorter_v3").changes["notes"]  # v3 keeps its duplicate-block note
-    # Without its corporate_record block, sorter_v4 is production sorter_v14.
-    # Production is now sorter_v15: sorter_v14 with the class-boundary and
-    # subclass-convention section (B1-B3, S1-S5) appended, nothing else changed.
-    # The dojo template ends in exactly one "\n"; the lineage text is raw.
+    # Without its corporate_record block, sorter_v4 is production sorter_v14 (pinned by hash:
+    # production has since moved to sorter_condensed_v5). The lineage text is raw.
     a = v4.text.index("\n\nCORPORATE RECORD SUBCLASS")
     b = v4.text.index("\n\nCONTRACT SUBGROUP")
     assert a < b
     stripped = v4.text[:a] + v4.text[b:]
-    prod = get_prompt("sorter")
-    assert prod.version == "sorter_v15"
-    cut = prod.text.index("\n\nCLASS BOUNDARIES (corpus conventions;")
-    assert prod.text[:cut] == stripped
-    assert prod.text.endswith("\n") and "CORPORATE RECORD SUBCLASS" not in prod.text[cut:]
+    assert hashlib.sha256(stripped.encode("utf-8")).hexdigest() == SORTER_V14_SHA256
     assert not v4.text.endswith("\n")
+
+
+def test_production_sorter_is_condensed_v5_with_rule_c():
+    """Production is llm-mailroom's sorter_condensed_v5: a bylaw amendment is bylaws."""
+    prod = get_prompt("sorter")
+    assert prod.version == "sorter_condensed_v5"
+    assert "a bylaw amendment is bylaws, never board_resolution" in prod.text
+    assert "CORPORATE RECORD SUBCLASS" not in prod.text
+    assert prod.text.endswith("\n") and not prod.text.endswith("\n\n")
 
 
 def test_production_templates_name_their_catalog_source_key():
