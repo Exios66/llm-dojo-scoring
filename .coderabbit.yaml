@@ -22,7 +22,6 @@ reviews:
   path_filters:
     - "!uv.lock"
     - "!tests/fixtures/golden/scores.json"
-    - "!tests/fixtures/consumer_surface.json"
   path_instructions:
     - path: "llm_dojo_scoring/**/*.py"
       instructions: |
@@ -46,6 +45,11 @@ reviews:
         Flag tests that were skipped, deleted or loosened, assertions that cannot fail, and
         script tests that import `scripts` directly instead of tests/conftest.py:load_script.
         A bug-fix PR should add a regression test that fails without the fix.
+    - path: "tests/fixtures/consumer_surface.json"
+      instructions: |
+        The downstream import surface (what llm-mailroom, local-mailroom-sandbox and
+        eval-environment import). Flag any removed or renamed entry: it breaks a consumer
+        unless the PR names the consumer bump and docs/guides/PUBLIC_API.md agrees.
     - path: "scripts/freeze_goldens.py"
       instructions: |
         The golden baseline may only change for an intended score change, with a --reason.
