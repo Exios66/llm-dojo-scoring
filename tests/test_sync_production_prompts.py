@@ -107,3 +107,22 @@ def test_changed_managed_body_is_refused_under_its_old_version(sync, tmp_path, c
     assert "managed production body changed" in capsys.readouterr().err
     assert (templates / "judge.production.md").read_text() == mod._render("judge_v3", "JUDGE BODY\n")
     assert catalog.read_text() == CATALOG
+
+
+def test_changed_managed_body_syncs_once_the_catalog_names_it(sync, tmp_path):
+    """Following the refusal's instruction (a new version and source_key) lets the sync run."""
+    mod, templates, catalog = sync
+    catalog.write_text(CATALOG.replace("version: judge_v3", "version: judge_v4")
+                       .replace("source_key: judge_v3", "source_key: judge_v4"))
+    assert mod.main(["--mailroom", str(_mailroom(tmp_path, judge="NEW JUDGE\n"))]) == 0
+    assert (templates / "judge.production.md").read_text() == mod._render("judge_v4", "NEW JUDGE\n")
+    assert "source_key: judge_v4" in catalog.read_text()
+
+
+def test_missing_lineage_refuses_frozen_bodies_with_a_clear_reason(sync, tmp_path, capsys):
+    """No lineage.json means no digest to check, so frozen_v1 bodies are refused by name."""
+    mod, _, _ = sync
+    root = _mailroom(tmp_path)
+    (root / "src" / "llm" / "frozen_v1" / "lineage.json").unlink()
+    assert mod.main(["--mailroom", str(root)]) == 1
+    assert "no frozen_v1 digest" in capsys.readouterr().err

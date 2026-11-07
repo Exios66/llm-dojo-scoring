@@ -37,7 +37,7 @@ correctness arms.
 
 | `family` | Meaning |
 | --- | --- |
-| `production` (default) | Live mailroom prompt bodies, re-vendored verbatim by `scripts/sync_production_prompts.py` from a mailroom checkout (each row records `source_commit`). Sorter is `sorter_v14`. The specialists use mailroom’s freeze (`version: v1`, `source_key: frozen_v1`). Corporate records stays at `_v6` (`fe13501f…`); its `production_prompts` evaluation stem is `_v7` (`253559fc…`). The other four specialists equal `production_prompts`. `reporter` is `kind: deterministic`. |
+| `production` (default) | Live mailroom prompt bodies, re-vendored verbatim by `scripts/sync_production_prompts.py` from a mailroom checkout (each row records `source_commit`). Sorter is `sorter_condensed_v5`. The specialists use mailroom’s freeze (`version: v1`, `source_key: frozen_v1`). Corporate records stays at `_v6` (`fe13501f…`); its `production_prompts` evaluation stem is `_v7` (`253559fc…`). The other four specialists equal `production_prompts`. `reporter` is `kind: deterministic`. |
 | `docclass` | Latest key from entity-extraction `src/prompts_docclass.py` (`sorter_docclass_v7`, `*_specialist_docclass_v1`, `reviewer_docclass_v1`, `judge_*_docclass_v1`, `arbiter_docclass_v1`, `boss_docclass_v1`). |
 | `production_prompts` | Frozen eval-environment **v1** specialist lineage (`mailroom-dataset-v1`, frozen 2026-09-26T05:09:29+00:00). Five sha256-locked stems; not grouped with `docclass`. |
 
@@ -250,6 +250,15 @@ The script imports mailroom's `llm.prompts.prompt_templates()`, writes every
 live body to `<agent>.production.md` verbatim behind a provenance comment, and
 updates the matching catalog rows. Agents retired in mailroom (for example
 `compliance_specialist`) keep their last vendored body and are not touched.
+
+It refuses, writes nothing and exits 1 in two cases:
+- **A frozen_v1 body that misses mailroom's digest.** mailroom serves frozen v1 from
+  whichever dojo it resolves, so each body must match the sha256 in mailroom's
+  `src/llm/frozen_v1/lineage.json`. Put this repo after `<mailroom>/src` on `PYTHONPATH`, so
+  mailroom reads this branch's catalog.
+- **A changed managed body whose catalog row still names the old key.** For a
+  `production`-bound (Langfuse-managed) row, give the new body a new `version` and
+  `source_key` in `catalog.yaml`, then re-sync.
 
 ### Not vendored
 
