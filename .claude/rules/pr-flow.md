@@ -2,7 +2,9 @@
 
 Bot reviewers (CodeRabbit, CodeAnt) should spend their attention on real bugs, not on
 mistakes we could have caught ourselves. So **nothing is pushed for review until it has
-been vetted locally and by a fresh-context reviewer.** Run these steps in order.
+been vetted locally and by a fresh-context reviewer.** Run these steps in order. Steps 4
+and 5 (pushing, opening and updating a PR) happen only when the user asked for a pull
+request; otherwise stop after step 3 and report the result with its evidence.
 
 ## 1. Local gate (before any push)
 
@@ -11,7 +13,7 @@ gates" in `CLAUDE.md` and `.claude/rules/evidence-contract.md`) and keep the raw
 At minimum:
 
 ```bash
-git status --short                                         # nothing unintended
+git status --short                                         # prints nothing: commit first
 git diff origin/main...HEAD --stat                         # the diff is the size you expect
 uvx ruff@0.17.3 check llm_dojo_scoring tests scripts examples   # the CI lint gate
 uv run --extra dev pytest tests -q                         # full suite, under a minute
@@ -44,7 +46,7 @@ Give it only:
 
 - the user's original request, quoted;
 - the base ref and branch name (`origin/main...HEAD`);
-- the draft PR description, including the evidence section;
+- the draft PR description with its evidence section, but without its review log;
 - the gate commands you ran and their exit codes.
 
 Do **not** give it the implementer's reasoning or the adversarial-review history; it must
@@ -52,7 +54,7 @@ judge the diff as a stranger would. Fix every BLOCKING and MAJOR finding, then r
 local gate. If the fixes were more than trivial, dispatch another fresh `pre-pr-reviewer`
 (at most two passes; then escalate to the user).
 
-## 4. Push and open a draft PR
+## 4. Push and open a draft PR (only when the user asked for a PR)
 
 - Push the designated branch only (`git push -u origin <branch>`). Never force-push, delete
   tags or amend release commits.

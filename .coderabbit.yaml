@@ -21,7 +21,6 @@ reviews:
       - ".*"
   path_filters:
     - "!uv.lock"
-    - "!tests/fixtures/golden/scores.json"
   path_instructions:
     - path: "llm_dojo_scoring/**/*.py"
       instructions: |
@@ -50,6 +49,11 @@ reviews:
         The downstream import surface (what llm-mailroom, local-mailroom-sandbox and
         eval-environment import). Flag any removed or renamed entry: it breaks a consumer
         unless the PR names the consumer bump and docs/guides/PUBLIC_API.md agrees.
+    - path: "tests/fixtures/golden/scores.json"
+      instructions: |
+        The frozen golden scores. Any change here is a score change for every consumer.
+        Flag it unless the PR shows the freeze_goldens.py --check diff before the rewrite,
+        a --reason, a before/after table for the affected metrics and a CHANGELOG.md entry.
     - path: "scripts/freeze_goldens.py"
       instructions: |
         The golden baseline may only change for an intended score change, with a --reason.
@@ -64,7 +68,8 @@ reviews:
       instructions: |
         Versions must move together via scripts/release.py cut (pyproject, __init__,
         CHANGELOG, README pins, tests/test_consumer_compat.py). Dependency changes need a
-        regenerated uv.lock. jellyfish must stay a core dependency.
+        regenerated uv.lock. uv.lock itself is excluded from review, so check the PR evidence
+        shows `uv lock --check` exiting 0. jellyfish must stay a core dependency.
   tools:
     markdownlint:
       enabled: true

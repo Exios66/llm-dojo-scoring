@@ -112,7 +112,7 @@ Detail: `docs/guides/SCORING.md`, `docs/contracts/`.
 
 ## Public API and consumers
 
-- `docs/guides/PUBLIC_API.md` is the supported surface. It is generated from
+- `docs/guides/PUBLIC_API.md` is the supported surface. It is written by hand and mirrors
   `tests/fixtures/consumer_surface.json`, a static AST scan of the consumer repositories
   made by `scripts/audit_consumer_surface.py`. `tests/test_public_api_doc.py` fails when a
   name in the fixture is missing from the page.
