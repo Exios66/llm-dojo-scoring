@@ -4,6 +4,25 @@ All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
+### Changed
+
+- Production prompts re-vendored from llm-mailroom `19203eac` (#179's merge commit) with
+  `scripts/sync_production_prompts.py`. `get_prompt("sorter")` is now `sorter_condensed_v5`
+  (a bylaw amendment is `bylaws`, agreeing with the 0.28.1 sorter guide), replacing
+  `sorter_v15`; the other production bodies are unchanged and only their `source_commit`
+  moves. `tests/test_prompt_lineage.py` keeps the historical `sorter_v4` → `sorter_v14`
+  check by pinning the v14 body's sha256, and pins production to `sorter_condensed_v5`.
+
+## [0.28.1] - 2026-11-07
+### Changed
+
+- Sorter guide: a bylaw amendment is `bylaws`, never `board_resolution`, even when the
+  board adopted it (mailroom-dataset v10 corpus rule C). The `bylaws` line now says so and
+  `board_resolution` no longer mentions bylaws. The v9.3 labels file 8 board-adopted bylaw
+  amendments under `board_resolution`, so scoring against v9.3 counts those 8 as wrong
+  until v10 relabels them. Consumers that render the guide (llm-mailroom sorter, sandbox
+  sorter lineage) pick this up on re-vendor.
+
 ### Fixed
 
 - `release.py publish` no longer ends with hard-coded, stale steps ("open/continue the
@@ -20,7 +39,6 @@ Format based on Keep a Changelog; versioning is SemVer.
   cannot complete the chain; a commit pin that matches no tag, or two, is checked
   before any bump; and a failed pin lookup after a publish keeps the publish result.
   `release.py status --consumers` prints the same chain. Scripts only.
-
 
 ## [0.28.0] - 2026-11-06
 ### Changed
