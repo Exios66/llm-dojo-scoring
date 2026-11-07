@@ -1,0 +1,74 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# PRs reach CodeRabbit only after the local gate and a fresh-context pre-PR review
+# (.claude/rules/pr-flow.md). Spend review attention on scoring correctness, public-API
+# breakage and stale docs, not on style.
+language: en-US
+tone_instructions: >-
+  Be precise and brief. Cite the file and line that contradicts the finding.
+  Prefer one consolidated finding for a fact that is wrong in several places.
+  Skip pure style nits; ruff (correctness-only rule set) runs in CI.
+reviews:
+  profile: assertive
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+  auto_review:
+    enabled: true
+    drafts: true
+    base_branches:
+      - ".*"
+  path_filters:
+    - "!uv.lock"
+    - "!tests/fixtures/golden/scores.json"
+    - "!tests/fixtures/consumer_surface.json"
+  path_instructions:
+    - path: "llm_dojo_scoring/**/*.py"
+      instructions: |
+        This package is the scoring engine for llm-mailroom, local-mailroom-sandbox and
+        eval-environment; a wrong number here is wrong everywhere.
+        1. Scoring correctness: check normalization is applied identically to expected and
+           predicted values; empty, None, NaN, ties and division by zero; float comparisons
+           use the documented tolerance; embedding rescue never fires for a blank value or
+           over a confident string score.
+        2. Public surface: flag any change to a name listed in docs/guides/PUBLIC_API.md, to
+           field_scoring, suite results or ScoreRecord shapes, and check the PR names the
+           consumer bump.
+        3. Layout: a moved or renamed module must stay importable through its legacy flat path
+           (llm_dojo_scoring/_layout.py LEGACY_MODULES).
+        4. Metric identity: a renamed or new metric must match metrics/registry.py and
+           docs/contracts/METRIC_IDS.md.
+        5. Code and docs must agree: when behavior, a default, a metric or a count changes,
+           check README.md, AGENTS.md, CHANGELOG.md and docs/ were updated in the same change.
+    - path: "tests/**/*.py"
+      instructions: |
+        Flag tests that were skipped, deleted or loosened, assertions that cannot fail, and
+        script tests that import `scripts` directly instead of tests/conftest.py:load_script.
+        A bug-fix PR should add a regression test that fails without the fix.
+    - path: "scripts/freeze_goldens.py"
+      instructions: |
+        The golden baseline may only change for an intended score change, with a --reason.
+        Flag any change that weakens the check or masks more than provenance.scorer_version.
+    - path: "**/*.md"
+      instructions: |
+        Documentation audit: relative links and #anchors resolve; every file path, command,
+        flag, function, metric id and version named in the text exists in this repository;
+        facts repeated on several pages agree (versions, pins, counts, metric names); no
+        "TODO" or "TBD" without a target. Correct or remove unverifiable claims.
+    - path: "pyproject.toml"
+      instructions: |
+        Versions must move together via scripts/release.py cut (pyproject, __init__,
+        CHANGELOG, README pins, tests/test_consumer_compat.py). Dependency changes need a
+        regenerated uv.lock. jellyfish must stay a core dependency.
+  tools:
+    markdownlint:
+      enabled: true
+    yamllint:
+      enabled: true
+    gitleaks:
+      enabled: true
+    github-checks:
+      enabled: true
+chat:
+  auto_reply: true
