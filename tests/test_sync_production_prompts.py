@@ -43,6 +43,7 @@ prompts:
 
 
 def _mailroom(tmp_path, *, specialist="SPEC BODY\n", judge="JUDGE BODY\n", digest=None):
+    """Build a minimal git-backed mailroom checkout with prompts and a frozen_v1 lineage."""
     root = tmp_path / "mailroom"
     pkg = root / "src" / "llm"
     (pkg / "frozen_v1").mkdir(parents=True)
@@ -66,6 +67,7 @@ def _mailroom(tmp_path, *, specialist="SPEC BODY\n", judge="JUDGE BODY\n", diges
 
 @pytest.fixture
 def sync(tmp_path, monkeypatch):
+    """Load the sync script with its catalog and templates redirected to tmp_path."""
     mod = load_script("sync_production_prompts")
     templates = tmp_path / "templates"
     templates.mkdir()
@@ -81,6 +83,7 @@ def sync(tmp_path, monkeypatch):
 
 
 def test_sync_writes_when_digest_matches_and_managed_body_is_unchanged(sync, tmp_path, capsys):
+    """A matching digest and an unchanged managed body sync and move source_commit."""
     mod, templates, catalog = sync
     assert mod.main(["--mailroom", str(_mailroom(tmp_path))]) == 0
     assert (templates / "corporate_records_specialist.production.md").read_text() == \
@@ -89,6 +92,7 @@ def test_sync_writes_when_digest_matches_and_managed_body_is_unchanged(sync, tmp
 
 
 def test_frozen_body_with_wrong_digest_is_refused_and_nothing_is_written(sync, tmp_path, capsys):
+    """A frozen_v1 body that misses mailroom's digest is refused; nothing is written."""
     mod, templates, catalog = sync
     assert mod.main(["--mailroom", str(_mailroom(tmp_path, digest="0" * 64))]) == 1
     assert "frozen_v1 body sha256" in capsys.readouterr().err
@@ -97,6 +101,7 @@ def test_frozen_body_with_wrong_digest_is_refused_and_nothing_is_written(sync, t
 
 
 def test_changed_managed_body_is_refused_under_its_old_version(sync, tmp_path, capsys):
+    """A changed managed body is refused instead of shipping under its old version."""
     mod, templates, catalog = sync
     assert mod.main(["--mailroom", str(_mailroom(tmp_path, judge="NEW JUDGE\n"))]) == 1
     assert "managed production body changed" in capsys.readouterr().err
