@@ -431,7 +431,7 @@ v0.11.0 is additive on the v0.10.0 scoring surface (formulas and T0 names are un
 ```python
 from llm_dojo_scoring.prompts import get_prompt, list_prompts
 
-# Live production template (mailroom sorter_v14 / contracts v32, …)
+# Live production template (the current mailroom production prompt)
 system = get_prompt("sorter").text
 
 # Docclass-merged arm (entity-extraction prompts_docclass latest keys)

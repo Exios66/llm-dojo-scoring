@@ -14,7 +14,7 @@ They are not eval targets in the model-visible string.
 ```python
 from llm_dojo_scoring.prompts import get_prompt, list_prompts
 
-get_prompt("sorter")                       # production (mailroom sorter_v14)
+get_prompt("sorter")                       # production (mailroom sorter_condensed_v5)
 get_prompt("sorter", family="docclass")    # docclass-merged arm (sorter_docclass_v7)
 get_prompt("contracts_specialist", family="production_prompts")  # frozen eval-environment v1
 get_prompt("intake")                       # kind=deterministic, text=""
@@ -37,7 +37,7 @@ correctness arms.
 
 | `family` | Meaning |
 | --- | --- |
-| `production` (default) | Live mailroom prompt bodies, re-vendored verbatim by `scripts/sync_production_prompts.py` from a mailroom checkout (each row records `source_commit`). Sorter is `sorter_v14`. The specialists use mailroom’s freeze (`version: v1`, `source_key: frozen_v1`). Corporate records stays at `_v6` (`fe13501f…`); its `production_prompts` evaluation stem is `_v7` (`253559fc…`). The other four specialists equal `production_prompts`. `reporter` is `kind: deterministic`. |
+| `production` (default) | Live mailroom prompt bodies, re-vendored verbatim by `scripts/sync_production_prompts.py` from a mailroom checkout (each row records `source_commit`). Sorter is `sorter_condensed_v5`. The specialists use mailroom’s freeze (`version: v1`, `source_key: frozen_v1`). Corporate records stays at `_v6` (`fe13501f…`); its `production_prompts` evaluation stem is `_v7` (`253559fc…`). The other four specialists equal `production_prompts`. `reporter` is `kind: deterministic`. |
 | `docclass` | Latest key from entity-extraction `src/prompts_docclass.py` (`sorter_docclass_v7`, `*_specialist_docclass_v1`, `reviewer_docclass_v1`, `judge_*_docclass_v1`, `arbiter_docclass_v1`, `boss_docclass_v1`). |
 | `production_prompts` | Frozen eval-environment **v1** specialist lineage (`mailroom-dataset-v1`, frozen 2026-09-26T05:09:29+00:00). Five sha256-locked stems; not grouped with `docclass`. |
 
@@ -139,8 +139,9 @@ between the two conventions.
 - `sorter_v3` contains its corporate_record block twice (known upstream defect);
   its `changes.notes` says so. `sorter_v4` removes the duplicate (also noted in
   its `changes.notes`) and, once its single corporate_record block is cut out,
-  equals the `production` sorter (`sorter_v14`) text plus the catalog's trailing
-  newline (lineage texts are raw; dojo templates end in exactly one `"\n"`).
+  equals the historical production sorter `sorter_v14` (llm-mailroom `9e8f30b2`;
+  `tests/test_prompt_lineage.py` pins its sha256, since production has moved to
+  `sorter_condensed_v5`). Lineage texts are raw; dojo templates end in exactly one `"\n"`.
 - `contracts_specialist_v33` (Modal parity prompt) is a re-keyed copy of the
   archived `contracts_specialist_v0`: its text equals `_v0` apart from a trailing
   newline (the entry's memo says so). It has no predecessor and the highest
@@ -249,6 +250,15 @@ The script imports mailroom's `llm.prompts.prompt_templates()`, writes every
 live body to `<agent>.production.md` verbatim behind a provenance comment, and
 updates the matching catalog rows. Agents retired in mailroom (for example
 `compliance_specialist`) keep their last vendored body and are not touched.
+
+It refuses, writes nothing and exits 1 in two cases:
+- **A frozen_v1 body that misses mailroom's digest.** mailroom serves frozen v1 from
+  whichever dojo it resolves, so each body must match the sha256 in mailroom's
+  `src/llm/frozen_v1/lineage.json`. Put this repo after `<mailroom>/src` on `PYTHONPATH`, so
+  mailroom reads this branch's catalog.
+- **A changed managed body whose catalog row still names the old key.** For a
+  `production`-bound (Langfuse-managed) row, give the new body a new `version` and
+  `source_key` in `catalog.yaml`, then re-sync.
 
 ### Not vendored
 
