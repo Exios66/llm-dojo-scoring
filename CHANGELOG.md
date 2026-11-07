@@ -8,8 +8,8 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 - Sorter guide: a bylaw amendment is `bylaws`, never `board_resolution`, even when the
   board adopted it (mailroom-dataset v10 corpus rule C). The `bylaws` line now says so and
-  `board_resolution` no longer mentions bylaws. The v9.3 labels file 9 board-adopted bylaw
-  amendments under `board_resolution`, so scoring against v9.3 counts those 9 as wrong
+  `board_resolution` no longer mentions bylaws. The v9.3 labels file 8 board-adopted bylaw
+  amendments under `board_resolution`, so scoring against v9.3 counts those 8 as wrong
   until v10 relabels them. Consumers that render the guide (llm-mailroom sorter, sandbox
   sorter lineage) pick this up on re-vendor.
 
