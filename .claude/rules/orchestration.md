@@ -85,4 +85,4 @@ Subagent reports are claims, not evidence. Before you tell the user anything is 
   (delegating the run to a `runner` is fine; reading its raw output is not optional);
 - check each item of `.claude/rules/evidence-contract.md` against what you hold.
 
-Then follow `.claude/rules/pr-flow.md` to get the change into a pull request.
+Then, if the user asked for a pull request, follow `.claude/rules/pr-flow.md` to open it.

@@ -12,8 +12,9 @@ becomes a wrong number in `llm-mailroom`, the sandbox and every report built on 
 1. **Evidence is output, not prose.** Quote the command, its exit code and the lines that
    prove the claim (the pytest summary line, the ruff result, the golden diff). "Should
    work", "looks right" and "I believe" are not evidence.
-2. **Evidence comes from the final state.** Re-run the gates after the last edit. Name the
-   commit the evidence was taken on (`git rev-parse --short HEAD`). Output from before a
+2. **Evidence comes from the final state.** Commit the last edit (local commits need no
+   request; pushing does), then re-run the gates on a clean tree (`git status --short`
+   prints nothing). Name that commit (`git rev-parse --short HEAD`). Output from before a
    later change is stale.
 3. **Prove the original problem is solved, not just that nothing broke.** For a bug, show
    a test that fails before the fix and passes after (red, then green). For a scoring
@@ -53,9 +54,18 @@ becomes a wrong number in `llm-mailroom`, the sandbox and every report built on 
   binaries to the feature branch. Push them to the orphan branch `pr-evidence`, under
   `<feature-branch>/`, and embed them with
   `![what it shows](https://github.com/Exios66/llm-dojo-scoring/blob/pr-evidence/<feature-branch>/<file>.png?raw=true)`.
-  That branch is never merged; pushing evidence files there is allowed. If the push is
+  That branch is never merged; pushing evidence files there is allowed (the one exception to
+  "push the designated branch only"). If it does not exist yet, create it on first use from a
+  separate worktree: `tmp=$(mktemp -d) && git worktree add --detach "$tmp" && git -C "$tmp" switch --orphan pr-evidence`,
+  then copy the files to `"$tmp/<feature-branch>/"`, `git -C "$tmp" add . && git -C "$tmp" commit -m "evidence: <feature-branch>"`
+  and `git -C "$tmp" push -u origin pr-evidence`. If the push is
   refused (cloud sessions are often limited to one branch), send the files to the user
   and list each file and what it shows under "Visual evidence" in the PR, marked
   "attached by hand". Never describe a screenshot you did not take.
+- **Keep captures free of real documents.** This repo and its `pr-evidence` branch are
+  public. Capture synthetic or sample data only, never real or client documents, names,
+  tokens or local paths. If a surface cannot be shown that way, redact it and check the
+  final image, or leave it out and say so under "Not verified". This covers files attached
+  by hand too.
 - **Final report to the user:** the same evidence, short. Lead with what was verified and
   what was not.

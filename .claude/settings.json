@@ -8,6 +8,7 @@
       "Bash(uv run pytest:*)",
       "Bash(ruff check:*)",
       "Bash(uvx ruff check:*)",
+      "Bash(uvx ruff@0.17.3 check:*)",
       "Bash(ruff format --check:*)",
       "Bash(python scripts/release.py status:*)",
       "Bash(python scripts/release.py check:*)",
