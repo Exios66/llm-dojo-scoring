@@ -32,3 +32,6 @@ reports/
 *.local.yaml
 *.pyc
 packages/llm-dojo-pipeline
+
+# PR evidence captured locally (screenshots, recordings); published via the pr-evidence branch
+.evidence/
