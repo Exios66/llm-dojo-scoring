@@ -18,6 +18,8 @@ Stdlib + the mailroom import only; all paths are relative to this repo root.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import re
 import subprocess
 import sys
@@ -106,8 +108,13 @@ def main(argv: list[str] | None = None) -> int:
     bound = _bound_prompt_versions()
     commit = _git_head(mailroom)
 
+    lineage_path = mailroom / "src" / "llm" / "frozen_v1" / "lineage.json"
+    frozen = json.loads(lineage_path.read_text(encoding="utf-8")).get("specialists", {}) \
+        if lineage_path.is_file() else {}
+
     head, blocks = _split_blocks(CATALOG.read_text(encoding="utf-8").splitlines())
     drifted: list[str] = []
+    refused: list[str] = []
     writes: dict[Path, str] = {}
     seen: set[str] = set()
 
@@ -122,13 +129,38 @@ def main(argv: list[str] | None = None) -> int:
             continue  # retired in mailroom (e.g. compliance); left untouched
         seen.add(agent)
         row_agent = block[0][len("- agent:"):].strip()
-        frozen = bound.get(agent) == "frozen_v1"
-        version, source_key = ("v1", "frozen_v1") if frozen else (
-            _field(block, "version") or "", _field(block, "source_key") or "")
+        key = bound.get(agent)
+        if key == "frozen_v1":
+            # mailroom serves frozen v1 from whichever dojo it resolves, so check the
+            # body against mailroom's own recorded digest before labelling it frozen_v1
+            want = (frozen.get(agent) or {}).get("sha256")
+            got = hashlib.sha256(live[agent].encode("utf-8")).hexdigest()
+            if want != got:
+                refused.append(
+                    f"{row_agent}: frozen_v1 body sha256 {got[:12]} != mailroom lineage.json "
+                    f"{want[:12]}" if want else
+                    f"{row_agent}: no frozen_v1 digest for it in {lineage_path}")
+                continue
+            version, source_key = "v1", "frozen_v1"
+        elif key and key != "production":
+            # a lineage key mailroom wires into production (e.g. sorter_v15): the
+            # vendored body is that version, so the row and provenance must name it
+            version = source_key = key
+        else:  # Langfuse-managed ("production" label): keep the catalog's own fields
+            version, source_key = _field(block, "version") or "", _field(block, "source_key") or ""
         want_kind = "deterministic" if agent in DETERMINISTIC else "llm"
         rendered = _render(source_key, live[agent])
         path = TEMPLATES / template
         cur = path.read_text(encoding="utf-8") if path.exists() else None
+        cur_key = re.match(r"<!-- provenance: \S+ (\S+) -->", cur or "")
+        if key in (None, "production") and cur is not None and cur != rendered \
+                and cur_key and cur_key.group(1) == source_key:
+            # a managed body changed (or an agent just moved to the managed binding) while
+            # the catalog still names the old body's key: give the new body its own name first
+            refused.append(f"{row_agent}: managed production body changed but its catalog "
+                           f"source_key is still {source_key}; set a new version and "
+                           "source_key for it, then re-sync")
+            continue
         if cur != rendered or _field(block, "version") != version \
                 or _field(block, "source_key") != source_key \
                 or _field(block, "kind") != want_kind:
@@ -140,6 +172,9 @@ def main(argv: list[str] | None = None) -> int:
         _set_field(block, "source_commit", commit, after="source_key")
 
     unvendored = sorted(set(live) - seen)
+    if refused:
+        print("refused (nothing written):\n  " + "\n  ".join(refused), file=sys.stderr)
+        return 1
     if args.check:
         if drifted:
             print("drifted production prompts:\n  " + "\n  ".join(drifted))
