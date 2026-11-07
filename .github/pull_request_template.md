@@ -45,7 +45,7 @@ Commit: `<short sha>`
 
 ## Public API and consumer impact
 
-<!-- Names added, changed or removed (see docs/guides/PUBLIC_API.md). Does llm-mailroom's pin or the sandbox vendor snapshot need a bump? "None" and why. -->
+<!-- Names added, changed or removed (see docs/guides/PUBLIC_API.md). Does llm-mailroom's pin or the sandbox vendor snapshot need a bump? Do eval-environment's suites or its frozen prompt lineage (`llm_dojo_scoring/prompts/`) change? "None" and why. -->
 
 ## Checklist
 
