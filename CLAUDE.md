@@ -27,8 +27,8 @@ is a cross-package event**: a wrong number here becomes a wrong number everywher
 | `LLM-Mailroom-Services/Digital-Mailroom` | **Integration hub.** Imports our merged `main` into `packages/llm-dojo-scoring` and refreshes vendor snapshots. Never develop here from the hub. |
 | `Lucius-Morningstar/mailroom-dataset` (HF) | The ground truth the scorers read (`schemas/gt_metadata.py`, `schemas/corpus.py`). |
 
-The surface consumers rely on is listed in `docs/guides/PUBLIC_API.md` (generated from
-`tests/fixtures/consumer_surface.json`). Changing anything on it needs the
+The surface consumers rely on is listed in `docs/guides/PUBLIC_API.md` (written by hand; it mirrors
+`tests/fixtures/consumer_surface.json`, and `tests/test_public_api_doc.py` checks that every consumed name is documented). Changing anything on it needs the
 `/cross-repo-bump` walk.
 
 ## File map
@@ -45,7 +45,7 @@ The surface consumers rely on is listed in `docs/guides/PUBLIC_API.md` (generate
 | `llm_dojo_scoring/integrations/` | Langfuse / Phoenix sync, `dojo-version` release awareness |
 | `llm_dojo_scoring/prompts/` | importable prompt catalog and frozen lineage |
 | `llm_dojo_scoring/config.py`, `cli.py` | `Settings` (`LLM_DOJO_SCORING_CONFIG`), the CLIs |
-| `tests/` | ~2,500 network-free tests; `tests/fixtures/golden/` is the golden score baseline |
+| `tests/` | ~3,500 tests, network-free but one release test; `tests/fixtures/golden/` is the golden score baseline |
 | `scripts/` | `release.py`, `freeze_goldens.py`, `audit_consumer_surface.py`, GT audits |
 | `docs/guides/`, `docs/contracts/`, `docs/schemas/` | scoring guides, metric ids and contracts, schema docs |
 
@@ -54,7 +54,7 @@ Full module table: `llm_dojo_scoring/README.md`.
 ## Commands
 
 ```bash
-uv run --extra dev pytest tests -q               # full suite (network-free, under a minute)
+uv run --extra dev pytest tests -q               # full suite (under a minute; one release test uses the network)
 uv run --extra dev pytest tests/test_cli.py -q   # one file
 uvx ruff@0.17.3 check llm_dojo_scoring tests scripts examples   # lint gate, same version as CI
 uv run python scripts/freeze_goldens.py --check  # golden scores unchanged (exit 1 + diff on drift)
@@ -82,7 +82,7 @@ the full suite and the golden check; `release-chain` runs `release.py check` on 
 | A score, metric, normalization or suite | + before/after scores on fixtures; if intended, `freeze_goldens.py --write --reason "…"` and a `CHANGELOG.md` entry |
 | Public names, `field_scoring`, suite results, `ScoreRecord` shapes | + `tests/test_consumer_compat.py`, `tests/test_public_api_doc.py`, `scripts/audit_consumer_surface.py --check` |
 | A moved or renamed module | + a test that imports the old flat path |
-| Dependencies | + `uv lock`, then `uv sync --frozen --extra dev` and the suite |
+| Dependencies | + `uv lock`, `uv lock --check` (exit 0), then `uv sync --frozen --extra dev` and the suite |
 | Versions / changelog | + `python scripts/release.py check` (quote its `WARN` lines) |
 
 **No type checker is configured.** Ruff's rule set is correctness-only (`pyproject.toml`).
@@ -109,7 +109,7 @@ Report exactly that; never claim "type-safe" or "fully linted".
 - Core deps are deliberately small. `jellyfish` is core (name matching silently degrades
   to `difflib` without it); do not move it back to an extra.
 - Embedding similarity only rescues an ambiguous string score and never a blank
-  prediction or expectation (`scoring/field_scoring.py:_with_embedding_rescue`).
+  prediction or expectation (`llm_dojo_scoring/scoring/field_scoring.py:_with_embedding_rescue`).
 - Secrets: `.env` is git-ignored; only `.env.example` is tracked. Never print or commit
   Langfuse keys. Never run `dojo-sync` against hosted services unless the user asks.
 

@@ -16,7 +16,13 @@
       "Bash(git diff:*)",
       "Bash(git log:*)",
       "Bash(git branch --show-current:*)",
-      "Bash(git branch --list:*)"
+      "Bash(git branch --list:*)",
+      "Bash(uv run --locked --extra dev pytest:*)",
+      "Bash(uv run python scripts/freeze_goldens.py --check:*)",
+      "Bash(uv run --locked python scripts/freeze_goldens.py --check:*)",
+      "Bash(uv sync --frozen:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git fetch:*)"
     ],
     "ask": [
       "Bash(git push:*)",
@@ -34,7 +40,13 @@
       "Bash(git tag -d:*)",
       "Bash(git push * --force*)",
       "Bash(git push * -f*)",
-      "Bash(git tag --delete:*)"
+      "Bash(git tag --delete:*)",
+      "Bash(git tag -f:*)",
+      "Bash(git tag --force:*)",
+      "Bash(git tag * -f*)",
+      "Bash(git tag * --force*)",
+      "Bash(git push * --delete*)",
+      "Bash(git push * +*)"
     ]
   },
   "hooks": {
