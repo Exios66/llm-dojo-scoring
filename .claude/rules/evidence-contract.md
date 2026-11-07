@@ -1,0 +1,61 @@
+# Evidence contract
+
+**Nothing is "done", "fixed", "passing" or "working" until you hold evidence for it.**
+This applies to the orchestrator, to every subagent report, to commit messages and to
+PR descriptions. A claim without evidence is a guess; label it as one or drop it.
+
+The Dojo defines what "correct" means for the whole constellation, so a wrong number here
+becomes a wrong number in `llm-mailroom`, the sandbox and every report built on them.
+
+## Rules
+
+1. **Evidence is output, not prose.** Quote the command, its exit code and the lines that
+   prove the claim (the pytest summary line, the ruff result, the golden diff). "Should
+   work", "looks right" and "I believe" are not evidence.
+2. **Evidence comes from the final state.** Re-run the gates after the last edit. Name the
+   commit the evidence was taken on (`git rev-parse --short HEAD`). Output from before a
+   later change is stale.
+3. **Prove the original problem is solved, not just that nothing broke.** For a bug, show
+   a test that fails before the fix and passes after (red, then green). For a scoring
+   change, show the scores before and after on concrete inputs.
+4. **Say what you did not verify, and why.** Skipped tests (the shallow-clone release test,
+   the `gh`-dependent publish test), optional extras you did not install, consumers you
+   could not check. Never present one test file as the full suite.
+5. **Re-verify subagent evidence.** The orchestrator re-runs at least the verification
+   gates itself (or reads a `runner`'s raw output) before repeating any subagent claim.
+6. **Never fabricate or "tidy" output.** Trimming is fine (mark it `…`); editing numbers,
+   dropping failures or merging runs is not.
+
+## What each kind of claim needs
+
+| Claim | Evidence |
+|:---|:---|
+| Tests pass | `uv run --extra dev pytest tests -q` summary line (`N passed, M skipped …`), exit code, commit. Name the skips. |
+| Lint clean | `uvx ruff@0.17.3 check llm_dojo_scoring tests scripts examples` → `All checks passed!` (the version CI pins). The rule set is correctness-only (see `pyproject.toml`); do not claim more than it checks. |
+| Type-checked | **No type checker is configured.** Say "not configured"; never claim "type-safe". |
+| Bug fixed | The new or changed regression test, its failing output on the old code, its passing output on the new code. |
+| Scoring unchanged | `uv run python scripts/freeze_goldens.py --check` → exit 0. |
+| Scoring intentionally changed | The `--check` diff before rewriting, `freeze_goldens.py --write --reason "…"`, a before/after table for the affected metrics, a `CHANGELOG.md` entry, and the consumer impact. |
+| Public API unchanged / changed | `tests/test_consumer_compat.py` and `tests/test_public_api_doc.py` pass; for a change, `docs/guides/PUBLIC_API.md` updated and `scripts/audit_consumer_surface.py --check` run (it needs the consumer checkouts; exit 2 means one is missing, say so). |
+| Legacy import paths still work | A test importing the old flat path (`llm_dojo_scoring.<old_name>`) passes when a module moved. |
+| Release chain consistent | `python scripts/release.py check` → exit 0, plus every `WARN` line quoted (warnings do not fail the check). |
+| Dependency change | `pyproject.toml` diff, `uv lock` re-run (never a hand-edited `uv.lock`), suite green with `uv sync --frozen`. |
+| Docs are true | Every command you added was run (paste the result) or is marked unverified; every path, name and version you mention exists. |
+| Visual change (README SVGs, `docs/assets/`, `visualize.py` / grid report output) | Before and after screenshots (Playwright, `deviceScaleFactor: 2`) of the rendered asset or report. |
+| Cross-repo impact | Whether `llm-mailroom` (pin) and the sandbox (vendor snapshot) need a bump, and which public names changed. "None" is a claim too: say why. |
+
+## Where evidence goes
+
+- **Text** (test summaries, ruff, golden check, command output) goes in the PR description
+  under "Evidence", inside `<details>` blocks for anything longer than ten lines. Use the
+  template in `.github/pull_request_template.md`.
+- **Screenshots and recordings:** save them under `.evidence/` (git-ignored); never commit
+  binaries to the feature branch. Push them to the orphan branch `pr-evidence`, under
+  `<feature-branch>/`, and embed them with
+  `![what it shows](https://github.com/Exios66/llm-dojo-scoring/blob/pr-evidence/<feature-branch>/<file>.png?raw=true)`.
+  That branch is never merged; pushing evidence files there is allowed. If the push is
+  refused (cloud sessions are often limited to one branch), send the files to the user
+  and list each file and what it shows under "Visual evidence" in the PR, marked
+  "attached by hand". Never describe a screenshot you did not take.
+- **Final report to the user:** the same evidence, short. Lead with what was verified and
+  what was not.
