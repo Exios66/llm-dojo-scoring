@@ -370,11 +370,33 @@ def test_sorter_v4_drops_the_duplicate_block_and_matches_production():
     assert any("duplicate removed" in n for n in v4.changes["notes"])
     assert get_prompt_version("sorter_v3").changes["notes"]  # v3 keeps its duplicate-block note
     # Without its corporate_record block, sorter_v4 is production sorter_v14.
+    # Production is now sorter_v15: sorter_v14 with the class-boundary and
+    # subclass-convention section (B1-B3, S1-S5) appended, nothing else changed.
     # The dojo template ends in exactly one "\n"; the lineage text is raw.
     a = v4.text.index("\n\nCORPORATE RECORD SUBCLASS")
     b = v4.text.index("\n\nCONTRACT SUBGROUP")
     assert a < b
     stripped = v4.text[:a] + v4.text[b:]
-    prod = get_prompt("sorter").text
-    assert prod == stripped + "\n"
+    prod = get_prompt("sorter")
+    assert prod.version == "sorter_v15"
+    cut = prod.text.index("\n\nCLASS BOUNDARIES (corpus conventions;")
+    assert prod.text[:cut] == stripped
+    assert prod.text.endswith("\n") and "CORPORATE RECORD SUBCLASS" not in prod.text[cut:]
     assert not v4.text.endswith("\n")
+
+
+def test_production_templates_name_their_catalog_source_key():
+    """A vendored production body carries the key it was synced under, and a
+    lineage-keyed row (sorter_vN) names that key as its version too, so one
+    version name never covers two different prompt bodies."""
+    import yaml
+
+    root = importlib.resources.files("llm_dojo_scoring.prompts")
+    catalog = yaml.safe_load(root.joinpath("catalog.yaml").read_text(encoding="utf-8"))
+    rows = [r for r in catalog["prompts"] if r.get("family") == "production" and r.get("template")]
+    assert rows
+    for row in rows:
+        head = root.joinpath("templates", row["template"]).read_text(encoding="utf-8").splitlines()[0]
+        assert head == f"<!-- provenance: {row['source_repo']} {row['source_key']} -->", row["agent"]
+        if row["source_key"].startswith(f"{row['agent']}_v"):
+            assert row["version"] == row["source_key"], row["agent"]

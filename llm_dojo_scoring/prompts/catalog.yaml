@@ -6,12 +6,12 @@ description: Importable prompt catalog for llm-dojo-scoring. LLM bodies are prod
 prompts:
 - agent: sorter
   family: production
-  version: sorter_v14
+  version: sorter_v15
   kind: llm
   metrics_bundle: classification
   doc_bundle: null
   source_repo: llm-mailroom
-  source_key: sorter_v14
+  source_key: sorter_v15
   source_commit: 9e8f30b279e7626c056b03511f823105760f80d7
   template: sorter.production.md
   priming: []

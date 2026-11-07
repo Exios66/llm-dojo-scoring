@@ -122,9 +122,15 @@ def main(argv: list[str] | None = None) -> int:
             continue  # retired in mailroom (e.g. compliance); left untouched
         seen.add(agent)
         row_agent = block[0][len("- agent:"):].strip()
-        frozen = bound.get(agent) == "frozen_v1"
-        version, source_key = ("v1", "frozen_v1") if frozen else (
-            _field(block, "version") or "", _field(block, "source_key") or "")
+        key = bound.get(agent)
+        if key == "frozen_v1":
+            version, source_key = "v1", "frozen_v1"
+        elif key and key != "production":
+            # a lineage key mailroom wires into production (e.g. sorter_v15): the
+            # vendored body is that version, so the row and provenance must name it
+            version = source_key = key
+        else:  # Langfuse-managed ("production" label): keep the catalog's own fields
+            version, source_key = _field(block, "version") or "", _field(block, "source_key") or ""
         want_kind = "deterministic" if agent in DETERMINISTIC else "llm"
         rendered = _render(source_key, live[agent])
         path = TEMPLATES / template
