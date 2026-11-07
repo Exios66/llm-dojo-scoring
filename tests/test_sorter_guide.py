@@ -66,7 +66,7 @@ def test_v14_confusions_are_named_in_the_guide():
 def test_a_bylaw_amendment_is_bylaws():
     """A bylaw amendment is bylaws, never board_resolution (mailroom-dataset v10 rule C)."""
     corporate = SORTER_SUBCLASS_GUIDE["corporate_record"]
-    assert "amendment to the bylaws" in corporate["bylaws"]
+    assert "an amendment to the bylaws, even one the board adopted" in corporate["bylaws"]
     assert "never board_resolution" in corporate["bylaws"]
     assert "bylaw" not in corporate["board_resolution"].lower()
 
