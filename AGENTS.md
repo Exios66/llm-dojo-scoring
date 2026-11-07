@@ -26,13 +26,17 @@ and for humans. Read it by section, on demand.
      every subagent change gets 1–3 adversarial review rounds sized to the change, then
      the orchestrator re-verifies.
    - `.claude/rules/pr-flow.md` — local gate → self-review → fresh-context pre-PR review
-     → draft PR → bot review (CodeRabbit, CodeAnt). Nothing is pushed for review unvetted.
+     → draft PR → bot review (CodeRabbit, CodeAnt). Pushing and opening a PR happen only
+     when the user asked for one; nothing is pushed for review unvetted.
 3. **Fill in `.github/pull_request_template.md`** for every PR: problem, change, evidence,
    what was not verified, review log, public API and consumer impact.
 
 Tools without named model tiers: use your strongest model only for orchestration and final
 verification, a mid-size model for implementation and review, and a small model for
-mechanical work. The subagent briefs in `.claude/agents/` work as prompts in any tool.
+mechanical work. A tool with only one model uses it for every role; the review rules still
+hold, so each adversarial round and the pre-PR review run in a new session or subagent that
+has not seen the implementation. The subagent briefs in `.claude/agents/` work as prompts
+in any tool.
 
 ## Contents
 
@@ -50,7 +54,7 @@ mechanical work. The subagent briefs in `.claude/agents/` work as prompts in any
 
 ```bash
 uv sync --frozen --extra dev                     # install from the lock (what CI does)
-uv run --extra dev pytest tests -q               # full suite (~2,500 tests, network-free, under a minute)
+uv run --extra dev pytest tests -q               # full suite (~3,500 tests, under a minute; one release test uses the network)
 uv run --extra dev pytest tests/test_cli.py -q   # one file
 uvx ruff@0.17.3 check llm_dojo_scoring tests scripts examples   # lint gate (CI pins 0.17.3)
 uv run python scripts/freeze_goldens.py --check  # golden score baseline (exit 1 + unified diff on drift)
@@ -59,7 +63,7 @@ uv run python scripts/audit_consumer_surface.py --check   # consumer import surf
 python scripts/release.py status                 # read-only: version / changelog / pin chain
 python scripts/release.py check                  # read-only: errors exit 1; WARN lines exit 0
 python scripts/release.py cut X.Y.Z              # dry run; --apply writes (needs the user's go-ahead)
-dojo-analyze / dojo-export / dojo-rescore / dojo-sync / dojo-version   # CLIs (see README "CLI reference")
+# CLIs: dojo-analyze, dojo-export, dojo-rescore, dojo-sync, dojo-version (see README "CLI reference")
 ```
 
 - Plain `pip install -e ".[dev]"` then `pytest` also works. Extras: `embeddings`
@@ -104,9 +108,9 @@ Detail: `docs/guides/SCORING.md`, `docs/contracts/`.
 - Embedding similarity is a **second signal** only below
   `field_scoring.embedding_rescue_below`; it never overrides a confident string score and
   never rescues a blank prediction or expectation.
-- Metric identity is fixed: names and tiers come from `metrics/registry.py` and
+- Metric identity is fixed: names and tiers come from `llm_dojo_scoring/metrics/registry.py` and
   `docs/contracts/METRIC_IDS.md`. Renaming a metric is a consumer-breaking change.
-- Scorecards fail closed (`metrics/scorecard_honesty.py`): no ground truth, no score.
+- Scorecards fail closed (`llm_dojo_scoring/metrics/scorecard_honesty.py`): no ground truth, no score.
 - `jellyfish` is a core dependency; without it name matching silently degrades to
   `difflib`. Do not move it back to an extra.
 
@@ -150,8 +154,10 @@ suite. CI runs `--check`. A diff means a score moved:
 
 ## Testing quirks
 
-- The suite is network-free. `test_cli_publish_dry_run_json` calls `git ls-remote` / `gh`
-  and skips itself without `gh`.
+- The suite is network-free except `test_cli_publish_dry_run_json`: it runs
+  `scripts/release.py publish` as a dry run, which calls `git ls-remote origin` and `gh`
+  (60-second timeout). It skips only when `gh` reports itself unavailable; offline, the
+  `git ls-remote` call can wait out the timeout.
 - `tests/test_release_tools.py` needs tags and full history: in a shallow clone,
   `test_notes_render_contains_changelog_and_commit` is skipped. `git fetch --unshallow --tags`
   lets it run.

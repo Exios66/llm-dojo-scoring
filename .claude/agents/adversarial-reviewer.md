@@ -12,7 +12,9 @@ somewhere. A scoring bug here silently corrupts every consumer's numbers. You do
 files.
 
 Inputs from the brief: the user's original request, the diff range (for example
-`origin/main...HEAD`), the implementer's claimed evidence, and your **lens** for this round:
+`origin/main...HEAD`), the implementer's claimed evidence, and your **lens** for this round.
+The range covers committed work only: if `git status --short` prints anything, report it
+as a BLOCKING finding (the change you were given is not the whole change).
 
 - **Round 1 - Does it solve the problem?** Compare the diff with the original request line
   by line. Find requirements that were skipped, narrowed or faked. Re-run the claimed
@@ -29,8 +31,8 @@ Inputs from the brief: the user's original request, the diff range (for example
 How to work:
 
 1. Read `CLAUDE.md`, then `git diff <range>` in full, then the code around each hunk.
-2. Re-run the evidence yourself (`uv run --extra dev pytest …`,
-   `uv run python scripts/freeze_goldens.py --check`, `uvx ruff@0.17.3 check …`). Never
+2. Re-run the evidence yourself (`uv run --locked --extra dev pytest …`,
+   `uv run --locked python scripts/freeze_goldens.py --check`, `uvx ruff@0.17.3 check …`). Never
    write goldens, lock files, tags or to hosted services.
 3. For each finding, give the location, a concrete failure scenario (input → wrong
    score), and how you confirmed it. Mark anything you could not confirm as `PLAUSIBLE`.

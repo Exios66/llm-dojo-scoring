@@ -20,7 +20,8 @@ closest models your tool offers.
    of itself. A subagent with no `model` inherits the main session's model, so:
    - prefer the project agents above (their frontmatter pins `model` and `effort`);
    - when you use a built-in type (`general-purpose`, `Explore`, `Plan`), **always** pass
-     `model: "sonnet"` or `model: "haiku"` and `effort: "high"` explicitly;
+     `model: "sonnet"` or `model: "haiku"` and `effort: "high"` explicitly (if your Claude
+     Code build has no per-call `effort`, use the project agents, whose frontmatter sets it);
    - a `fork` always runs on the main session's model, so do not fork for delegated work.
 2. Pick the **cheapest tier that can do the job well**. If a task needs judgement
    (choosing an approach, reading unfamiliar code, explaining *why*), it is `implementer`
@@ -36,7 +37,9 @@ closest models your tool offers.
 ## Writing a brief
 
 A subagent sees only its brief, not this conversation. Scope and prepare every brief
-for the circumstances. Include:
+for the circumstances. The `pre-pr-reviewer` is the exception: its brief is fixed by
+`.claude/rules/pr-flow.md` step 3 and gets none of the context below. Every other brief
+includes:
 
 - **Goal:** the user's original request, quoted, plus the slice this subagent owns.
 - **Context it cannot discover cheaply:** files and functions involved, decisions already
@@ -58,7 +61,9 @@ the orchestrator verifies it, and at most **three**. Size the rounds to the work
 | 2 | About 100 to 500 changed lines, several modules, or any behavior change. |
 | 3 | More than about 500 lines; or a public API, cross-repo contract, scoring or metric change, release, migration, security- or secrets-sensitive change. |
 
-Count lines with `git diff --stat <base>...HEAD`. Size and risk both count: a large
+Commit the subagent's work locally first (local commits need no request), so the count
+and every review see the whole change; then count lines with `git diff --stat <base>...HEAD`,
+after `git fetch origin <base>`. Size and risk both count: a large
 docs-only change is not tier 1. When in doubt, pick the higher tier.
 
 Each round is a **new** `adversarial-reviewer` instance (never resume a reviewer with
@@ -72,8 +77,10 @@ Each round is a **new** `adversarial-reviewer` instance (never resume a reviewer
    PR description and docs, anything that looks too easy.
 
 Between rounds, send BLOCKING and MAJOR findings back to an `implementer` (or fix them
-yourself if trivial), then start the next round on the updated diff. If BLOCKING
-findings remain after round 3, stop and report to the user; do not start a fourth round.
+yourself if trivial), commit, then start the next round on the updated diff. After the
+last round of the tier (round 1 for a one-round change), every BLOCKING finding is either
+fixed and verified by you, or you stop and report it to the user as unresolved; do not
+start a fourth round, and do not leave it for the pre-PR review to find.
 Record every round (lens, findings, what was fixed) for the PR's "Review log".
 
 ## Orchestrator verification (required)

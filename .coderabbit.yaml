@@ -35,7 +35,7 @@ reviews:
            consumer bump.
         3. Layout: a moved or renamed module must stay importable through its legacy flat path
            (llm_dojo_scoring/_layout.py LEGACY_MODULES).
-        4. Metric identity: a renamed or new metric must match metrics/registry.py and
+        4. Metric identity: a renamed or new metric must match llm_dojo_scoring/metrics/registry.py and
            docs/contracts/METRIC_IDS.md.
         5. Code and docs must agree: when behavior, a default, a metric or a count changes,
            check README.md, AGENTS.md, CHANGELOG.md and docs/ were updated in the same change.
@@ -60,6 +60,8 @@ reviews:
         Flag any change that weakens the check or masks more than provenance.scorer_version.
     - path: "**/*.md"
       instructions: |
+        Skip docs/history/** and docs/plans/**: they are past records, not current
+        contracts, and keep the paths and counts of their time.
         Documentation audit: relative links and #anchors resolve; every file path, command,
         flag, function, metric id and version named in the text exists in this repository;
         facts repeated on several pages agree (versions, pins, counts, metric names); no
