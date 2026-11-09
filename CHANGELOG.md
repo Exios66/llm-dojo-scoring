@@ -87,9 +87,10 @@ Format based on Keep a Changelog; versioning is SemVer.
   (capped at 0.67), garbled predictions that parse to nothing, day ranges, and two-digit
   years `69`-`75` (in a 2026 run), and full dates where one is a substring of the other (`11 August 2014`
   vs `1 August 2014`: 1.0 -> 0.67). Other fully dated pairs that parse on both sides do
-  not move. In date LISTS, the 0.67 cap is above `bipartite_match_threshold` (0.6), so a
-  dated prediction still pairs with a yearless label as a true positive; the per-field
-  score shows the cap.
+  not move. In MATCHING (date lists, `audit_scalar_field`, `audit_list_field`), a pair whose
+  year the label cannot verify is never a match, although its 0.67 field score would
+  clear `bipartite_match_threshold` (0.6): a dated prediction is not a true positive for
+  a yearless label, and a prediction naming stray extra years matches nothing.
   **Consumers:** this changes scores `llm-mailroom` and the sandbox report, so `llm-mailroom`
   needs a Dojo pin bump (`bump_dojo_scoring.py`) and the sandbox a vendor refresh once this
   is released. No public name changed.

@@ -833,3 +833,28 @@ def test_abbreviated_weekday_does_not_invent_a_day(text):
 def test_garbled_prediction_never_exceeds_the_partial_ceiling_against_a_partial_label():
     """Fuzzy credit for an unparseable prediction stays within 0.67 against a partial label."""
     assert fs.score_date_field("Q3 2014", "August 2014") <= 0.67
+
+
+def test_dated_prediction_is_never_a_list_match_for_a_yearless_label():
+    """In lists the 0.67 field cap would clear the 0.6 match threshold; pairing refuses it."""
+    res = fs.score_entity_list("date", ["August 18, 2015"], ["18th day of August"])
+    assert res.matched == 0 and res.f1 == 0.0
+    res = fs.score_entity_list("date", ["August 18"], ["18th day of August"])
+    assert res.matched == 1 and res.f1 == 1.0
+    res = fs.score_entity_list(
+        "date", ["August 18, 2014", "March 1, 2015"], ["August 18, 2014", "1st day of March"]
+    )
+    assert res.matched == 1
+
+
+def test_audits_do_not_count_an_unverified_year_as_matching_the_label():
+    """audit_scalar_field and audit_list_field use the strict date match too."""
+    assert fs.audit_scalar_field("date", "August 18, 2015", "18th day of August", None)["matched_gt"] == 0
+    assert fs.audit_scalar_field("date", "August 18", "18th day of August", None)["matched_gt"] == 1
+    assert fs.score_date_field("August 18, 2015", "18th day of August") == 0.67  # field score unchanged
+
+
+def test_audit_list_field_does_not_match_an_unverified_year():
+    """audit_list_field pairs dates with the same strict match."""
+    out = fs.audit_list_field("date", ["August 18, 2015"], ["18th day of August"], None)
+    assert out["matched_gt"] == 0
