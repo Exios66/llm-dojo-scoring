@@ -725,12 +725,9 @@ def _date_phrase_contained(container: str, target: str) -> bool:
         any(f" {month}" in target_norm for month in _MONTH_NAMES)
         or bool(re.search(r"\b\d{4}-\d{1,2}\b", target_norm))
     )
-    if dt is None:
-        # A partial date ("August 1") must match on word boundaries, so it is not
-        # found inside a different date ("August 18 2014").
-        found = bool(re.search(rf"(?<![a-z0-9]){re.escape(target_norm)}(?![a-z0-9])", nc))
-    else:
-        found = target_norm in nc
+    # Match on word boundaries, so a date is never found inside a different one
+    # ("august 1" in "august 18 2014", "1 august 2014" in "11 august 2014").
+    found = _contains_phrase(nc, target_norm)
     if found and (len(target_norm.split()) >= 3 or explicit_month):
         return True
     if dt is None:
@@ -741,7 +738,12 @@ def _date_phrase_contained(container: str, target: str) -> bool:
         f"{month} {dt.day} {dt.year}",
         f"{dt.day} {month} {dt.year}",
     ]
-    return any(norm(r) in nc for r in renderings)
+    return any(_contains_phrase(nc, norm(r)) for r in renderings)
+
+
+def _contains_phrase(haystack: str, phrase: str) -> bool:
+    """True when *phrase* occurs in *haystack* bounded by non-alphanumerics."""
+    return bool(re.search(rf"(?<![a-z0-9]){re.escape(phrase)}(?![a-z0-9])", haystack))
 
 
 # ---------------------------------------------------------------------------

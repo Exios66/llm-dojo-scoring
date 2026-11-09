@@ -671,3 +671,10 @@ def test_cms_table_token_on_claim_type_no_longer_matches_health_gt():
         assert out.field_scores["claim_type"] == 0.0, token
     right = score_extraction("insurance_claim", {}, {"claim_type": "health"}, exp)
     assert right.field_scores["claim_type"] == 1.0
+
+
+def test_full_date_is_not_contained_in_a_different_day():
+    """"1 August 2014" is a substring of "11 August 2014" but a different day."""
+    assert fs.score_date_field("11 August 2014", "1 August 2014") < 1.0
+    assert fs.score_date_field("1 August 2014", "11 August 2014") < 1.0
+    assert fs.score_date_field("signed on 1 August 2014 by", "1 August 2014") == 1.0
