@@ -400,12 +400,16 @@ def _parse_date_parts(text) -> Optional[_DateParts]:
     if not s:
         return None
     s = _ORDINAL_RE.sub(r"\1", s)
+    # "March 12,1999": dateutil drops a year glued to the comma and would
+    # report it as unstated, so the stated year must get its space back.
+    s = re.sub(r",(?=\d)", ", ", s)
     s = re.sub(
         r"\b(\d{1,2})[a-z]*(?:\s+[a-z]+)*\s+day\s+of\b", r"\1 day of", s,
         flags=re.IGNORECASE,
     )
+    # "16 day of August. 2012": a period before the year is OCR/typing noise.
     day_of_month = re.search(
-        r"\b(\d{1,2})\s+day\s+of\s+([A-Za-z]+)[,\s]*(\d{4})?", s, flags=re.IGNORECASE
+        r"\b(\d{1,2})\s+day\s+of\s+([A-Za-z]+)[,.\s]*(\d{4})?", s, flags=re.IGNORECASE
     )
     if day_of_month:
         month, day, year = day_of_month.group(2), day_of_month.group(1), day_of_month.group(3)

@@ -50,7 +50,9 @@ Format based on Keep a Changelog; versioning is SemVer.
   prediction that omits a year the GT states never scores above 0.67, and a year mismatch
   is never a match (0.33, or 0.67 within 45 days when both sides are fully dated). A
   yearless GT gives no year to check, so a prediction whose month and day match scores 1.0:
-  the GT, not the clock, decides this.
+  the GT, not the clock, decides this. A stated year is never lost to formatting noise:
+  `March 12,1999` (no space after the comma) and `16 day of August. 2012` keep their year
+  (both read as yearless before; found in mailroom-dataset v9.3 CUAD spans).
   Golden scores are unchanged (`freeze_goldens.py --check` passes).
   **Comparability:** date-field scores on rows whose GT is yearless or dayless move; a
   stored run scored before this change should be re-scored (`dojo-rescore`) before it is
