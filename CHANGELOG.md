@@ -51,8 +51,10 @@ Format based on Keep a Changelog; versioning is SemVer.
   critical information and a document's year is not the year the scorer runs in. A
   prediction that omits a year the GT states never scores above 0.67, and a year mismatch
   is never a match (0.33, or 0.67 within 45 days when both sides are fully dated). A
-  yearless GT gives no year to check, so a prediction whose month and day match scores 1.0:
-  the GT, not the clock, decides this. A stated year is never lost to formatting noise:
+  yearless GT cannot verify a year: a prediction that states one, in a parsed date or in
+  prose, scores at most 0.67 even when month and day match; a yearless prediction whose
+  month and day match scores 1.0. The GT, not the clock, decides this. A prediction that
+  names two different years is ambiguous and scores at most 0.67. A stated year is never lost to formatting noise:
   `March 12,1999` (no space after the comma) and `16 day of August. 2012` keep their year
   (both read as yearless before; found in mailroom-dataset v9.3 CUAD spans).
   A two-digit year uses a fixed pivot instead of dateutil's clock-based one, as Python's
@@ -67,7 +69,8 @@ Format based on Keep a Changelog; versioning is SemVer.
   A garbled date that parses to nothing keeps fuzzy name credit only when it names a
   four-digit year (`Augus 18, 2014` against `August 18, 2014` scores about 0.99, as on
   `main`), and never above 0.33 unless that is the labelled year. A day range
-  (`August 1-3, 2014`) reads as its first day; it read as the year 2003 before.
+  next to a month name (`August 1-3, 2014`, `1-3 August 2014`) reads as its first day; it
+  read as the year 2003 before. Numeric dates such as `8-18, 2014` are not ranges.
   An exact copy of a label that holds no date (`Effective upon signing`) scores 1.0. A
   copied blank template (`_____ day of ____`) or bare label (`Effective Date:`) still
   scores 0.0, and only an empty answer is right. An integral float year (`2014.0`)
@@ -77,7 +80,11 @@ Format based on Keep a Changelog; versioning is SemVer.
   stored run scored before this change should be re-scored (`dojo-rescore`) before it is
   compared with a later one. These also move: yearless-GT rows with a dated prediction
   (capped at 0.67), garbled predictions that parse to nothing, day ranges, and two-digit
-  years `69`-`76`. Fully dated pairs that both parse do not move.
+  years `69`-`76`, and full dates where one is a substring of the other (`11 August 2014`
+  vs `1 August 2014`: 1.0 -> 0.67). Other fully dated pairs that parse on both sides do
+  not move. In date LISTS, the 0.67 cap is above `bipartite_match_threshold` (0.6), so a
+  dated prediction still pairs with a yearless label as a true positive; the per-field
+  score shows the cap.
   **Consumers:** this changes scores `llm-mailroom` and the sandbox report, so `llm-mailroom`
   needs a Dojo pin bump (`bump_dojo_scoring.py`) and the sandbox a vendor refresh once this
   is released. No public name changed.
