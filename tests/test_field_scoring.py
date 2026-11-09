@@ -104,6 +104,152 @@ def test_date_field():
     assert fs.score_date_field("Executed March 1, 1996 and November 5, 1996", "November 5, 1996") == 1.0
 
 
+@pytest.fixture
+def freeze_clock(monkeypatch):
+    """Return ``freeze(year)``: make dateutil's parse default (``datetime.now()``) report ``year``."""
+    import datetime as real_datetime
+    import types
+
+    from dateutil.parser import _parser
+
+    def freeze(year: int) -> None:
+        """Pin the clock that dateutil reads when it fills missing date components."""
+
+        class _Frozen(real_datetime.datetime):
+            """A datetime whose ``now()`` is pinned to the chosen year."""
+
+            @classmethod
+            def now(cls, tz=None):
+                """Return a fixed mid-year instant in ``year``."""
+                return cls(year, 7, 15, 12, 0, 0)
+
+        fake = types.SimpleNamespace(**vars(real_datetime))
+        fake.datetime = _Frozen
+        monkeypatch.setattr(_parser, "datetime", fake)
+
+    return freeze
+
+
+def _scores_in_years(freeze, pred, exp, years=(2014, 2031)):
+    """Score one pair under several frozen clocks and return the score for each."""
+    seen = []
+    for year in years:
+        freeze(year)
+        seen.append(fs.score_date_field(pred, exp))
+    return seen
+
+
+@pytest.mark.parametrize(
+    ("pred", "exp", "expected"),
+    [
+        # yearless GT, fully dated prediction with the same month/day: nothing to disagree on
+        ("August 18, 2014", "18th day of August", 1.0),
+        ("2014-08-18", "August 18", 1.0),
+        # yearless GT, day differs: month only
+        ("August 20, 2014", "18th day of August", 0.33),
+        # month differs (day matches only): nothing shared
+        ("September 18, 2014", "18th day of August", 0.0),
+        # dated GT, yearless prediction: partial credit, never 1.0
+        ("August 18", "August 18, 2014", 0.67),
+        ("18th day of August", "August 18, 2014", 0.67),
+        ("18 August", "18 August 2014", 0.67),  # a prediction inside the label is not a full match
+        ("August 20", "August 18, 2014", 0.33),
+        ("September 18", "August 18, 2014", 0.0),
+        # dayless GT: the prediction may state any day
+        ("August 18, 2014", "August 2014", 1.0),
+        ("August 2014", "August 2014", 1.0),
+        ("August 2015", "August 2014", 0.33),
+        # dayless prediction against a fully dated GT
+        ("August 2014", "August 18, 2014", 0.67),
+        # both yearless
+        ("August 18", "18th day of August", 1.0),
+        ("August 19", "18th day of August", 0.33),
+        # Feb 29 only exists in leap years; the clock year must not matter
+        ("February 29", "29th day of February", 1.0),
+        ("February 29, 2024", "29th day of February", 1.0),
+        ("February 29", "February 29, 2024", 0.67),
+        # yearless GT is not "contained" in a different day that merely shares a prefix
+        ("August 18, 2014", "August 1", 0.33),
+    ],
+)
+def test_date_field_partial_dates_are_clock_independent(freeze_clock, pred, exp, expected):
+    """Score yearless and dayless dates on the components both sides state, in any year."""
+    assert _scores_in_years(freeze_clock, pred, exp) == [expected, expected]
+
+
+def test_partial_date_phrase_matches_on_word_boundaries():
+    """A yearless phrase is found only as whole words, not inside a different day."""
+    assert fs._date_phrase_contained("signed on august 18 2014", "on august 18")
+    assert not fs._date_phrase_contained("signed on august 18 2014", "on august 1")
+
+
+def test_date_field_yearless_gt_does_not_depend_on_wall_clock_year(freeze_clock):
+    """Issue #134: a yearless GT scored 1.0 in the prediction's year and 0.33 in every other."""
+    scores = _scores_in_years(freeze_clock, "August 18, 2014", "18th day of August", years=(2014, 2026, 2031))
+    assert scores == [1.0, 1.0, 1.0]
+
+
+def test_date_field_fully_dated_pairs_are_unchanged(freeze_clock):
+    """Keep the 45-day window and the year/month tiers for fully dated pairs."""
+    freeze_clock(2031)
+    assert fs.score_date_field("March 3, 2024", "03/03/2024") == 1.0
+    assert fs.score_date_field("March 3, 2024", "March 1, 2024") == 0.67
+    assert fs.score_date_field("March 3, 2024", "March 30, 2024") == 0.67
+    assert fs.score_date_field("March 3, 2024", "April 10, 2024") == 0.67  # 38 days
+    assert fs.score_date_field("March 3, 2024", "June 3, 2024") == 0.33  # same year only
+    assert fs.score_date_field("March 3, 2024", "June 3, 2023") == 0.0
+    assert fs.score_date_field("March 3, 2024", "March 3, 2023") == 0.33
+    assert fs.score_date_field("March 3, 2024", "2023-01-01") == 0.0
+
+
+def test_date_field_window_applies_only_to_fully_dated_pairs(freeze_clock):
+    """A yearless side is compared by components, never by distance in days."""
+    freeze_clock(2014)
+    # 7 days apart in 2014, but the GT states no year: day differs, month matches.
+    assert fs.score_date_field("August 25, 2014", "August 18") == 0.33
+    # Crossing a month boundary is not rescued by closeness either.
+    assert fs.score_date_field("September 2, 2014", "August 30") == 0.0
+
+
+def test_parse_date_is_deterministic_for_partial_dates(freeze_clock):
+    """parse_date returns a date only when year, month and day are all stated; never reads the clock."""
+    import datetime
+
+    for year in (2014, 2031):
+        freeze_clock(year)
+        assert fs.parse_date("18th day of August") is None
+        assert fs.parse_date("August 18") is None
+        assert fs.parse_date("August 2014") is None
+        assert fs.parse_date("2014") is None
+        assert fs.parse_date("February 29") is None
+        assert fs.parse_date("August 18, 2014") == datetime.date(2014, 8, 18)
+        assert fs.parse_date("18th day of August, 2014") == datetime.date(2014, 8, 18)
+        assert fs.parse_date("2024-02-29") == datetime.date(2024, 2, 29)
+        assert fs.parse_date("Effective Date") is None
+        assert fs.parse_date("") is None
+
+
+def test_date_parts_report_only_stated_components(freeze_clock):
+    """The component parser names exactly what the text states, whatever the clock says."""
+    for year in (2014, 2031):
+        freeze_clock(year)
+        assert fs._parse_date_parts("18th day of August") == (None, 8, 18)
+        assert fs._parse_date_parts("August 2014") == (2014, 8, None)
+        assert fs._parse_date_parts("February 29") == (None, 2, 29)
+        assert fs._parse_date_parts("2000-01-01") == (2000, 1, 1)
+        assert fs._parse_date_parts("August 18, 2014") == (2014, 8, 18)
+        assert fs._parse_date_parts("18") is None  # a bare day number is not a date
+        assert fs._parse_date_parts("_____ day of ________, 19____") is None
+
+
+def test_date_field_blank_template_gt_is_still_null_in_any_year(freeze_clock):
+    """A partial-date parse must not turn a blank-template GT into a real date."""
+    for year in (2014, 2031):
+        freeze_clock(year)
+        assert fs.score_date_field("", "_____ day of ________, 19____") == 1.0
+        assert fs.score_date_field("March 3, 2024", "_____ day of ________, 19____") == 0.0
+
+
 # ---------------------------------------------------------------------------
 # Entity lists
 # ---------------------------------------------------------------------------
