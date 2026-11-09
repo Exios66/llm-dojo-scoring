@@ -53,6 +53,11 @@ Format based on Keep a Changelog; versioning is SemVer.
   the GT, not the clock, decides this. A stated year is never lost to formatting noise:
   `March 12,1999` (no space after the comma) and `16 day of August. 2012` keep their year
   (both read as yearless before; found in mailroom-dataset v9.3 CUAD spans).
+  A two-digit year uses a fixed pivot instead of dateutil's clock-based one, as Python's
+  `%y` does: `00`-`68` read as 2000-2068 and `69`-`99` as 1969-1999. So `1/1/77` is 1977
+  in any run year. Only `69`-`76` move (they read as 2069-2076 in a 2026 run).
+  A date containing a different day as a substring (`11 August 2014` vs `1 August 2014`)
+  is no longer a containment match.
   Golden scores are unchanged (`freeze_goldens.py --check` passes).
   **Comparability:** date-field scores on rows whose GT is yearless or dayless move; a
   stored run scored before this change should be re-scored (`dojo-rescore`) before it is
