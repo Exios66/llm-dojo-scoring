@@ -1,6 +1,8 @@
 """Field-scoring tests: scalar scorers, entity lists, factuality audit, and
 composite score_extraction (ported behavior)."""
 
+from datetime import date
+
 import pytest
 
 from llm_dojo_scoring import field_scoring as fs
@@ -285,6 +287,17 @@ def test_date_parts_report_only_stated_components(freeze_clock):
         assert fs._parse_date_parts("18") is None  # a bare day number is not a date
         assert fs._parse_date_parts("_____ day of ________, 19____") is None
 
+
+
+def test_stated_year_survives_spacing_and_punctuation_noise(freeze_clock):
+    """A year the text states is never reported as missing (CUAD spans in mailroom-dataset v9.3)."""
+    for year in (2014, 2031):
+        freeze_clock(year)
+        assert fs._parse_date_parts("March 12,1999") == (1999, 3, 12)
+        assert fs._parse_date_parts("16 day of August. 2012") == (2012, 8, 16)
+        assert fs.parse_date("March 12,1999") == date(1999, 3, 12)
+        assert fs.score_date_field("March 12, 1999", "March 12,1999") == 1.0
+        assert fs.score_date_field("March 12, 2003", "March 12,1999") == 0.33
 
 def test_date_field_blank_template_gt_is_still_null_in_any_year(freeze_clock):
     """A partial-date parse must not turn a blank-template GT into a real date."""
