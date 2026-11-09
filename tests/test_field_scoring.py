@@ -144,9 +144,11 @@ def _scores_in_years(freeze, pred, exp, years=(2014, 2031)):
 @pytest.mark.parametrize(
     ("pred", "exp", "expected"),
     [
-        # yearless GT, fully dated prediction with the same month/day: nothing to disagree on
-        ("August 18, 2014", "18th day of August", 1.0),
-        ("2014-08-18", "August 18", 1.0),
+        # yearless GT, dated prediction with the same month/day: the year cannot be
+        # verified, so never a full match (the year is critical)
+        ("August 18, 2014", "18th day of August", 0.67),
+        ("2014-08-18", "August 18", 0.67),
+        ("August 18", "18th day of August", 1.0),
         # yearless GT, day differs: month only
         ("August 20, 2014", "18th day of August", 0.33),
         # month differs (day matches only): nothing shared
@@ -168,7 +170,7 @@ def _scores_in_years(freeze, pred, exp, years=(2014, 2031)):
         ("August 19", "18th day of August", 0.33),
         # Feb 29 only exists in leap years; the clock year must not matter
         ("February 29", "29th day of February", 1.0),
-        ("February 29, 2024", "29th day of February", 1.0),
+        ("February 29, 2024", "29th day of February", 0.67),
         ("February 29", "February 29, 2024", 0.67),
         # yearless GT is not "contained" in a different day that merely shares a prefix
         ("August 18, 2014", "August 1", 0.33),
@@ -186,9 +188,13 @@ def test_partial_date_phrase_matches_on_word_boundaries():
 
 
 def test_date_field_yearless_gt_does_not_depend_on_wall_clock_year(freeze_clock):
-    """Issue #134: a yearless GT scored 1.0 in the prediction's year and 0.33 in every other."""
+    """Issue #134: a yearless GT scored 1.0 in the prediction's year and 0.33 in every other.
+
+    It now scores the same in every run year: 0.67, because a yearless label cannot
+    verify the year the prediction states.
+    """
     scores = _scores_in_years(freeze_clock, "August 18, 2014", "18th day of August", years=(2014, 2026, 2031))
-    assert scores == [1.0, 1.0, 1.0]
+    assert scores == [0.67, 0.67, 0.67]
 
 
 def test_date_field_fully_dated_pairs_are_unchanged(freeze_clock):
@@ -244,8 +250,8 @@ def test_year_is_never_invented_or_overlooked(freeze_clock):
     assert fs.score_date_field("August 2014", "August 18, 2014") < 1.0
     assert fs.score_date_field("August 18, 2015", "August 18, 2014") == 0.33  # not a match
     assert fs.score_date_field("August 18, 2015", "August 2014") == 0.33
-    # a yearless GT states no year, so a pred agreeing on month and day is right in any year
-    assert fs.score_date_field("August 18, 1999", "18th day of August") == 1.0
+    # a yearless GT cannot verify a stated year, so a dated pred is never a full match
+    assert fs.score_date_field("August 18, 1999", "18th day of August") == 0.67
 
 
 def test_date_parsing_never_reads_the_clock():
@@ -723,3 +729,42 @@ def test_weekday_name_does_not_invent_a_day():
     """'Monday August 2014' states year and month; the weekday is not a day of the month."""
     assert tuple(fs._parse_date_parts("Monday August 2014")) == (2014, 8, None)
     assert tuple(fs._parse_date_parts("Tuesday, December 12, 2014")) == (2014, 12, 12)
+
+
+@pytest.mark.parametrize("pred", ["Augus 18, 2014", "Aug. l8, 2014", "Augst 18 2014"])
+def test_garbled_date_naming_the_year_keeps_fuzzy_credit(pred):
+    """OCR-garbled dates that name the labelled year keep fuzzy credit instead of 0.0."""
+    assert fs.score_date_field(pred, "August 18, 2014") > 0.67
+
+
+def test_garbled_date_with_the_wrong_year_is_capped():
+    """A garbled date naming a different year never scores above 0.33."""
+    assert fs.score_date_field("Augus 18, 2015", "August 18, 2014") <= 0.33
+
+
+@pytest.mark.parametrize(
+    "text, parts",
+    [("August 1-3, 2014", (2014, 8, 1)), ("1-3 August 2014", (2014, 8, 1)),
+     ("2014-08-18", (2014, 8, 18)), ("18-08-2014", (2014, 8, 18))],
+)
+def test_day_range_reads_its_first_day_not_a_year(text, parts):
+    """A day range never turns its second number into the year."""
+    assert tuple(fs._parse_date_parts(text)) == parts
+
+
+@pytest.mark.parametrize("label", ["Effective upon signing", "Wednesday", "12:30 pm"])
+def test_exact_copy_of_a_non_date_label_matches(label):
+    """An exact copy of a label that holds no date is the labelled value."""
+    assert fs.score_date_field(label, label) == 1.0
+
+
+@pytest.mark.parametrize("label", ["_____ day of ________, 19____", "Effective Date:", "Effective Date"])
+def test_copied_blank_template_or_bare_label_is_not_a_match(label):
+    """A copied blank template or bare label is not a date; only an empty answer is right."""
+    assert fs.score_date_field(label, label) == 0.0
+    assert fs.score_date_field("", label) == 1.0
+
+
+def test_integral_float_year_matches_its_text():
+    """A NaN-promoted year column (2014.0) scores like the text 2014."""
+    assert fs.score_date_field(2014.0, "2014") == fs.score_date_field("2014", "2014")

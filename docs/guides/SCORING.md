@@ -444,7 +444,7 @@ Mean absolute date error in days (run-level diagnostic)
 - **ground_truth:** `required`
 - **units:** `days` · **aggregation:** `mean`
 - **citation:** Mean absolute error in days after date parse (diagnostics.extraction_diagnostics).
-- **inclusion:** None when neither side parses to a date. Empty GT dates skipped.
+- **inclusion:** None when neither side parses to a full date (year, month and day). Partial dates (yearless or dayless) are skipped, not compared on an invented component. Empty GT dates skipped.
 - **notes:** Existing diagnostics surface; registered so every specialist suite can emit it
 
 ### `determination_consistency` (T1)

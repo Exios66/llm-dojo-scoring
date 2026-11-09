@@ -23,16 +23,18 @@ Format based on Keep a Changelog; versioning is SemVer.
   fixed fill-in dates that differ in year, month and day, and a component that differs
   between the two parses was not stated by the text.
   `score_date_field` compares only the components both sides state:
-  - yearless or dayless GT, prediction agrees on everything the GT states: `1.0`;
+  - yearless or dayless GT, prediction agrees on everything the GT states: `1.0`, except
+    that a prediction stating a year against a yearless GT scores at most `0.67`: the
+    label cannot verify the year, and the year is critical (fix the label instead);
   - prediction omits a component the GT states (never `1.0`): `0.67` when two or more
     components agree, `0.33` when only the year or only the month does;
   - a shared component differs: `0.33` when the shared year or month still agrees, else `0.0`;
   - the 45-day window now applies only when both sides state year, month and day, and
-    fully dated pairs score exactly as before.
+    fully dated pairs that both parse score exactly as before.
 
   | pred | GT | before (run in 2026) | after (any year) |
   | --- | --- | --- | --- |
-  | `August 18, 2014` | `18th day of August` | 0.33 (1.0 if run in 2014) | 1.0 |
+  | `August 18, 2014` | `18th day of August` | 0.33 (1.0 if run in 2014) | 0.67 |
   | `August 18` | `August 18, 2014` | 0.33 (1.0 if run in 2014) | 0.67 |
   | `August 18, 2014` | `August 2014` | 0.67 | 1.0 |
   | `February 29` | `29th day of February` | 0.84 (fuzzy fallback: 2026 has no Feb 29) | 1.0 |
@@ -62,10 +64,20 @@ Format based on Keep a Changelog; versioning is SemVer.
   label instead of falling through to fuzzy name scoring (it scored 1.0 on this branch
   before the fix, 0.0 on `main`). A weekday name never supplies a day of the month:
   `Monday August 2014` states year and month only.
+  A garbled date that parses to nothing keeps fuzzy name credit only when it names a
+  four-digit year (`Augus 18, 2014` against `August 18, 2014` scores about 0.99, as on
+  `main`), and never above 0.33 unless that is the labelled year. A day range
+  (`August 1-3, 2014`) reads as its first day; it read as the year 2003 before.
+  An exact copy of a label that holds no date (`Effective upon signing`) scores 1.0. A
+  copied blank template (`_____ day of ____`) or bare label (`Effective Date:`) still
+  scores 0.0, and only an empty answer is right. An integral float year (`2014.0`)
+  scores like the text `2014`.
   Golden scores are unchanged (`freeze_goldens.py --check` passes).
   **Comparability:** date-field scores on rows whose GT is yearless or dayless move; a
   stored run scored before this change should be re-scored (`dojo-rescore`) before it is
-  compared with a later one. Other date scores do not move.
+  compared with a later one. These also move: yearless-GT rows with a dated prediction
+  (capped at 0.67), garbled predictions that parse to nothing, day ranges, and two-digit
+  years `69`-`76`. Fully dated pairs that both parse do not move.
   **Consumers:** this changes scores `llm-mailroom` and the sandbox report, so `llm-mailroom`
   needs a Dojo pin bump (`bump_dojo_scoring.py`) and the sandbox a vendor refresh once this
   is released. No public name changed.
