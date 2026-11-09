@@ -822,3 +822,14 @@ def test_audit_grounds_a_yearless_prediction_in_the_document():
     doc = "This Agreement is made on August 18, 2014 by the parties."
     assert fs.audit_scalar_field("date", "August 18", "", doc)["verified_in_doc"] == 1
     assert fs.audit_scalar_field("date", "August 19", "", doc)["verified_in_doc"] == 0
+
+
+@pytest.mark.parametrize("text", ["Mon Aug 2014", "Tue Aug 2014", "Sat., Aug 2014", "Wed Aug 2014"])
+def test_abbreviated_weekday_does_not_invent_a_day(text):
+    """An abbreviated weekday is not a day of the month either."""
+    assert tuple(fs._parse_date_parts(text)) == (2014, 8, None)
+
+
+def test_garbled_prediction_never_exceeds_the_partial_ceiling_against_a_partial_label():
+    """Fuzzy credit for an unparseable prediction stays within 0.67 against a partial label."""
+    assert fs.score_date_field("Q3 2014", "August 2014") <= 0.67

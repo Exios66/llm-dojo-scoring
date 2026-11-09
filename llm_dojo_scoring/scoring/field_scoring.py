@@ -436,7 +436,10 @@ def _parse_date_parts(text) -> Optional[_DateParts]:
     s = re.sub(r"(?<![\d/.\-])(\d{1,2})\s*[-\u2013]\s*\d{1,2}(?=\s+[A-Za-z]{3,})", r"\1", s)
     # A weekday name is not a day of the month: dateutil would resolve "Monday
     # August 2014" to the first Monday after each probe default and invent a day.
-    s = re.sub(r"\b(?:mon|tues|wednes|thurs|fri|satur|sun)day\b,?", " ", s, flags=re.IGNORECASE)
+    s = re.sub(
+        r"\b(?:(?:mon|tues|wednes|thurs|fri|satur|sun)day|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)\b\.?,?",
+        " ", s, flags=re.IGNORECASE,
+    )
     s = re.sub(r"\s+", " ", s).strip()
     s = re.sub(
         r"\b(\d{1,2})[a-z]*(?:\s+[a-z]+)*\s+day\s+of\b", r"\1 day of", s,
@@ -760,6 +763,9 @@ def _score_date_field_uncapped(pred, exp, embedding=None) -> float:
         score = score_name_field(pred, exp, embedding=embedding)
         if es.year is not None and es.year not in pred_years:
             score = min(score, 0.33)
+        if not es.is_full:
+            # Never more than the partial-date ceiling against a partial label.
+            score = min(score, 0.67)
         return score
     return score_name_field(pred, exp, embedding=embedding)
 
