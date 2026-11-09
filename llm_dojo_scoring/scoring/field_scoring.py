@@ -653,19 +653,37 @@ def score_date_field(pred, exp, embedding=None) -> float:
     """
     pred, exp = _integral_float_as_text(pred), _integral_float_as_text(exp)
     score = _score_date_field_uncapped(pred, exp, embedding=embedding)
-    if score > _UNVERIFIED_YEAR_CAP:
-        ps, es = _parse_date_parts(pred), _parse_date_parts(exp)
-        pred_years = _stated_years(pred) | ({ps.year} if ps is not None and ps.year else set())
-        # A yearless label cannot verify a year the prediction states, in a
-        # parsed date or in prose ("dated August 18, 2015").
-        if es is not None and es.year is None and pred_years:
-            return _UNVERIFIED_YEAR_CAP
-        # A prediction naming several years the label does not state is
-        # ambiguous, never a full match ("August 1, 2014 and August 18, 2015").
-        # A label that itself spans those years ("2014 to 2016") is not.
-        if len(pred_years) > 1 and not pred_years <= _stated_years(exp):
-            return _UNVERIFIED_YEAR_CAP
+    if score > _UNVERIFIED_YEAR_CAP and _date_year_unverified(pred, exp):
+        return _UNVERIFIED_YEAR_CAP
     return score
+
+
+def _date_year_unverified(pred, exp) -> bool:
+    """True when the label cannot verify the year(s) the prediction states.
+
+    A yearless label cannot verify any year the prediction states, in a parsed
+    date or in prose ("dated August 18, 2015"). A prediction naming several
+    years the label does not state ("August 1, 2014 and August 18, 2015") is
+    ambiguous; a label that itself spans those years ("2014 to 2016") is not.
+    """
+    pred, exp = _integral_float_as_text(pred), _integral_float_as_text(exp)
+    ps, es = _parse_date_parts(pred), _parse_date_parts(exp)
+    pred_years = _stated_years(pred) | ({ps.year} if ps is not None and ps.year else set())
+    if es is not None and es.year is None and pred_years:
+        return True
+    return len(pred_years) > 1 and not pred_years <= _stated_years(exp)
+
+
+def _date_match_similarity(pred, exp, embedding=None) -> float:
+    """Date similarity for MATCHING (list pairing, audits): an unverified year never matches.
+
+    :func:`score_date_field` caps such a pair at 0.67 as a field score, which is
+    above ``bipartite_match_threshold``; for pairing it counts as no match, so a
+    dated prediction is never a true positive for a yearless label.
+    """
+    if _date_year_unverified(pred, exp):
+        return 0.0
+    return score_date_field(pred, exp, embedding=embedding)
 
 
 def _stated_years(text) -> set:
@@ -936,6 +954,8 @@ def _element_similarity(element_type: str, item: str, exp: str, embedding=None) 
     For ``free_text`` elements, when the item covers >= the verification
     coverage of the answer's plain tokens, that coverage is the similarity
     (the item IS the labeled clause, quoted at length)."""
+    if element_type == "date":
+        return _date_match_similarity(item, exp, embedding=embedding)
     base = _element_scorer(element_type)(item, exp, embedding=embedding)
     if element_type == "free_text":
         answer_tokens = set(_tokenize(str(exp)))
@@ -1189,7 +1209,7 @@ def audit_scalar_field(field_type: str, pred, exp, doc_text: str | None) -> dict
                 "true_items": 0, "verified_precision": 0.0,
                 "hallucinated": 0, "hallucination_rate": 0.0,
                 "doc_verification": bool(doc_text)}
-    scorer = FIELD_SCORERS.get(field_type, score_name_field)
+    scorer = _date_match_similarity if field_type == "date" else FIELD_SCORERS.get(field_type, score_name_field)
     threshold = get_bipartite_match_threshold()
     matched = exp not in (None, "") and scorer(pred, str(exp)) >= threshold
     in_doc = False
