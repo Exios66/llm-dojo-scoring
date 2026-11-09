@@ -54,7 +54,12 @@ Format based on Keep a Changelog; versioning is SemVer.
   yearless GT cannot verify a year: a prediction that states one, in a parsed date or in
   prose, scores at most 0.67 even when month and day match; a yearless prediction whose
   month and day match scores 1.0. The GT, not the clock, decides this. A prediction that
-  names two different years is ambiguous and scores at most 0.67. A stated year is never lost to formatting noise:
+  names two different years is ambiguous and scores at most 0.67, unless the label states
+  those years itself (an exact copy of `August 18, 2014 to August 18, 2016` scores 1.0).
+  `sandbox_scoring._same_date` compares stated components: the same yearless date
+  (`18th day of August` / `August 18`) still matches, a yearless date never matches a
+  dated one. `audit_scalar_field` grounds a partial date prediction (`August 18`) in a
+  document date that agrees on every component it states. A stated year is never lost to formatting noise:
   `March 12,1999` (no space after the comma) and `16 day of August. 2012` keep their year
   (both read as yearless before; found in mailroom-dataset v9.3 CUAD spans).
   A two-digit year uses a fixed pivot instead of dateutil's clock-based one, as Python's

@@ -657,8 +657,10 @@ def score_date_field(pred, exp, embedding=None) -> float:
         # parsed date or in prose ("dated August 18, 2015").
         if es is not None and es.year is None and pred_years:
             return _UNVERIFIED_YEAR_CAP
-        # A prediction naming several years is ambiguous, never a full match.
-        if len(pred_years) > 1:
+        # A prediction naming several years the label does not state is
+        # ambiguous, never a full match ("August 1, 2014 and August 18, 2015").
+        # A label that itself spans those years ("2014 to 2016") is not.
+        if len(pred_years) > 1 and not pred_years <= _stated_years(exp):
             return _UNVERIFIED_YEAR_CAP
     return score
 
@@ -1149,13 +1151,22 @@ _DATE_CANDIDATE_RE = re.compile(
 
 
 def _date_grounded_in_doc(pred_date, doc_text: str) -> bool:
-    """True when the document contains a date parseable to ``pred_date``,
-    in ANY format (numeric dashed, slashed, or prose month-name)."""
+    """True when the document contains a date that agrees with ``pred_date``,
+    in ANY format (numeric dashed, slashed, or prose month-name).
+
+    ``pred_date`` is a ``datetime.date`` or the :class:`_DateParts` of a
+    partial date. A partial prediction ("August 18") is grounded by a document
+    date that agrees on every component it states; no component is invented.
+    """
     if pred_date is None or not doc_text:
         return False
+    if not isinstance(pred_date, _DateParts):
+        pred_date = _DateParts(pred_date.year, pred_date.month, pred_date.day)
     for match in _DATE_CANDIDATE_RE.finditer(doc_text):
-        candidate = _parse_date(match.group(0))
-        if candidate is not None and candidate == pred_date:
+        candidate = _parse_date_parts(match.group(0))
+        if candidate is not None and all(
+            want is None or want == got for want, got in zip(pred_date, candidate)
+        ):
             return True
     return False
 
@@ -1178,7 +1189,7 @@ def audit_scalar_field(field_type: str, pred, exp, doc_text: str | None) -> dict
     in_doc = False
     if doc_text:
         if field_type == "date":
-            in_doc = _date_grounded_in_doc(_parse_date(pred), doc_text)
+            in_doc = _date_grounded_in_doc(_parse_date_parts(pred), doc_text)
         else:
             it_tokens = _verification_tokens(pred, field_type)
             dt_tokens = _containment_tokens(doc_text)

@@ -797,3 +797,28 @@ def test_numeric_month_day_is_not_read_as_a_day_range(text, parts):
     """Only a range next to a month word is a day range; "8-18, 2014" keeps its day."""
     got = fs._parse_date_parts(text)
     assert (None if got is None else tuple(got)) == parts
+
+
+@pytest.mark.parametrize(
+    "label",
+    ["August 18, 2014 to August 18, 2016", "January 1, 2014 through December 31, 2016"],
+)
+def test_exact_copy_of_a_multi_year_label_is_a_full_match(label):
+    """The several-years cap does not apply when the label states those years itself."""
+    assert fs.score_date_field(label, label) == 1.0
+
+
+def test_partial_date_prediction_is_grounded_by_an_agreeing_document_date():
+    """A yearless prediction is grounded by a document date agreeing on what it states."""
+    doc = "This Agreement is made on August 18, 2014 by the parties."
+    assert fs._date_grounded_in_doc(fs._parse_date_parts("August 18"), doc)
+    assert not fs._date_grounded_in_doc(fs._parse_date_parts("August 19"), doc)
+    assert fs._date_grounded_in_doc(fs._parse_date_parts("August 18, 2014"), doc)
+    assert not fs._date_grounded_in_doc(fs._parse_date_parts("August 18, 2015"), doc)
+
+
+def test_audit_grounds_a_yearless_prediction_in_the_document():
+    """audit_scalar_field verifies a partial date against an agreeing document date."""
+    doc = "This Agreement is made on August 18, 2014 by the parties."
+    assert fs.audit_scalar_field("date", "August 18", "", doc)["verified_in_doc"] == 1
+    assert fs.audit_scalar_field("date", "August 19", "", doc)["verified_in_doc"] == 0
