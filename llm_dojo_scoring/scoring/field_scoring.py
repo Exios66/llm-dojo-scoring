@@ -380,6 +380,31 @@ class _DateParts(NamedTuple):
 # years are leap years, so "February 29" parses.
 _DATE_PROBE_A = (2000, 1, 1)
 _DATE_PROBE_B = (2004, 3, 3)
+# Two-digit years use a FIXED pivot, never the clock: dateutil's default
+# parserinfo picks the century from today's year, so "1/1/77" would read as
+# 1977 now and as 2077 from 2027. Like Python's ``%y``: 00-68 -> 2000-2068,
+# 69-99 -> 1969-1999.
+_TWO_DIGIT_YEAR_PIVOT = 69
+_DATE_PARSERINFO = None
+
+
+def _date_parserinfo():
+    """Return the shared dateutil ``parserinfo`` with the fixed two-digit-year pivot."""
+    global _DATE_PARSERINFO
+    if _DATE_PARSERINFO is None:
+        from dateutil import parser
+
+        class _FixedPivotParserInfo(parser.parserinfo):
+            """``parserinfo`` whose two-digit-year century never depends on the clock."""
+
+            def convertyear(self, year, century_specified=False):
+                """Map a two-digit year with the fixed pivot; leave stated centuries alone."""
+                if year < 100 and not century_specified:
+                    return year + (1900 if year >= _TWO_DIGIT_YEAR_PIVOT else 2000)
+                return year
+
+        _DATE_PARSERINFO = _FixedPivotParserInfo()
+    return _DATE_PARSERINFO
 
 
 def _parse_date_parts(text) -> Optional[_DateParts]:
@@ -420,8 +445,9 @@ def _parse_date_parts(text) -> Optional[_DateParts]:
 
         from dateutil import parser
 
-        a = parser.parse(s, default=datetime.datetime(*_DATE_PROBE_A))
-        b = parser.parse(s, default=datetime.datetime(*_DATE_PROBE_B))
+        info = _date_parserinfo()
+        a = parser.parse(s, parserinfo=info, default=datetime.datetime(*_DATE_PROBE_A))
+        b = parser.parse(s, parserinfo=info, default=datetime.datetime(*_DATE_PROBE_B))
     except (ValueError, OverflowError):
         return None
     parts = _DateParts(
@@ -661,10 +687,11 @@ def score_date_field(pred, exp, embedding=None) -> float:
         return 1.0
     if ps is not None and es is not None:
         if ps.is_full and es.is_full:
-            dp, de = _parse_date(pred), _parse_date(exp)
-            if dp is not None and de is not None:
-                return _score_full_dates(dp, de)
-            return 0.0  # a stated date that does not exist (e.g. Feb 30)
+            # Reuse the parsed components instead of parsing both sides again.
+            # Full parts are always a real date: dateutil rejects "Feb 30".
+            import datetime
+
+            return _score_full_dates(datetime.date(*ps), datetime.date(*es))
         return _score_partial_dates(ps, es)
     return score_name_field(pred, exp, embedding=embedding)
 

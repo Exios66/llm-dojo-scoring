@@ -678,3 +678,32 @@ def test_full_date_is_not_contained_in_a_different_day():
     assert fs.score_date_field("11 August 2014", "1 August 2014") < 1.0
     assert fs.score_date_field("1 August 2014", "11 August 2014") < 1.0
     assert fs.score_date_field("signed on 1 August 2014 by", "1 August 2014") == 1.0
+
+
+@pytest.mark.parametrize(
+    "text, year",
+    [("1/1/77", 1977), ("1/1/50", 2050), ("1/1/68", 2068), ("1/1/69", 1969), ("1/1/00", 2000),
+     ("March 3, 99", 1999), ("1/1/1877", 1877)],
+)
+@pytest.mark.parametrize("today", [2014, 2026, 2031, 2080])
+def test_two_digit_year_uses_a_fixed_pivot_not_the_clock(monkeypatch, text, year, today):
+    """A two-digit year maps to the same century whatever year the run happens in.
+
+    dateutil's default ``parserinfo`` reads ``time.localtime()`` for its century
+    pivot, so the test pins that clock and rebuilds the cached parserinfo.
+    """
+    import time
+
+    pinned = time.struct_time((today, 6, 1, 12, 0, 0, 0, 152, 0))
+    monkeypatch.setattr(time, "localtime", lambda *a: pinned)
+    monkeypatch.setattr(fs, "_DATE_PARSERINFO", None, raising=False)
+    assert fs._parse_date_parts(text).year == year
+
+
+def test_full_date_pairs_are_parsed_once_per_side(monkeypatch):
+    """Scoring a fully dated pair parses each side once, not again for the full-date branch."""
+    calls = []
+    real = fs._parse_date_parts
+    monkeypatch.setattr(fs, "_parse_date_parts", lambda t: calls.append(t) or real(t))
+    fs.score_date_field("March 1, 2014", "March 20, 2014")
+    assert calls.count("March 1, 2014") <= 2 and calls.count("March 20, 2014") <= 2
