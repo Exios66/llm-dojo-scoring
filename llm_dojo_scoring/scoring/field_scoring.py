@@ -428,6 +428,14 @@ def _parse_date_parts(text) -> Optional[_DateParts]:
     # "March 12,1999": dateutil drops a year glued to the comma and would
     # report it as unstated, so the stated year must get its space back.
     s = re.sub(r",(?=\d)", ", ", s)
+    # A day range ("August 1-3, 2014", "1-3 August 2014") names its first day;
+    # dateutil would read the second number as a year. ISO and numeric dates
+    # (2014-08-18, 18-08-2014) are untouched: the range must sit next to a word
+    # or a ", YYYY".
+    s = re.sub(
+        r"(?<![\d/.\-])(\d{1,2})\s*[-\u2013]\s*\d{1,2}(?=\s*,?\s+(?:\d{4}\b|[A-Za-z]))",
+        r"\1", s,
+    )
     # A weekday name is not a day of the month: dateutil would resolve "Monday
     # August 2014" to the first Monday after each probe default and invent a day.
     s = re.sub(r"\b(?:mon|tues|wednes|thurs|fri|satur|sun)day\b,?", " ", s, flags=re.IGNORECASE)
@@ -631,7 +639,34 @@ def score_containment_field(pred, exp, embedding=None) -> float:
     return round(len(te & tp) / len(te), 4)
 
 
+# A label that states no year cannot verify the year a prediction states, so the
+# prediction never earns full credit for it (the owner's rule: the year is critical).
+_UNVERIFIED_YEAR_CAP = 0.67
+
+
 def score_date_field(pred, exp, embedding=None) -> float:
+    """Score a date prediction; see :func:`_score_date_field_uncapped` for the rules.
+
+    A prediction that states a year scores at most 0.67 against a label that
+    states none: the year cannot be verified, so it is never a full match.
+    """
+    pred, exp = _integral_float_as_text(pred), _integral_float_as_text(exp)
+    score = _score_date_field_uncapped(pred, exp, embedding=embedding)
+    if score > _UNVERIFIED_YEAR_CAP:
+        ps, es = _parse_date_parts(pred), _parse_date_parts(exp)
+        if ps is not None and es is not None and ps.year is not None and es.year is None:
+            return _UNVERIFIED_YEAR_CAP
+    return score
+
+
+def _integral_float_as_text(value):
+    """Render an integral float (a NaN-promoted year column: 2014.0) as "2014"."""
+    if isinstance(value, float) and value == value and value.is_integer():
+        return str(int(value))
+    return value
+
+
+def _score_date_field_uncapped(pred, exp, embedding=None) -> float:
     """Parse to canonical date, then exact match — with containment and
     partial-credit fallbacks. Never reads the clock.
 
@@ -640,10 +675,10 @@ def score_date_field(pred, exp, embedding=None) -> float:
     no day. A missing component is never invented: not from today's date and
     not from a placeholder. The year is critical information, and the year of
     a document is not the year the scorer runs in. Whether a yearless label
-    fixes the year is therefore decided by the LABEL, not by the clock: a
-    yearless label gives no year to check, so a prediction that agrees on
-    month and day scores 1.0, while a prediction that leaves out a year the
-    label states never scores 1.0.
+    fixes the year is therefore decided by the LABEL, not by the clock. A
+    prediction that leaves out a year the label states never scores 1.0, and
+    :func:`score_date_field` caps a prediction stating a year at 0.67 against
+    a yearless label, because that label cannot verify the year.
 
     Rules, in order:
 
@@ -683,7 +718,13 @@ def score_date_field(pred, exp, embedding=None) -> float:
     # "Effective Date:") hold NO actual date. The model answering null is
     # CORRECT, and a fabricated date is not the labeled date.
     if es is None and _date_expected_is_null(exp):
-        return 1.0 if not str(pred).strip() else 0.0
+        if not str(pred).strip():
+            return 1.0
+        # An exact copy of a non-date label ("Effective upon signing") is the
+        # labelled value; a copied blank template or bare label is not a date.
+        if not _date_is_blank_or_bare_label(exp) and normalize_text(pred) == normalize_text(exp):
+            return 1.0
+        return 0.0
     pred_omits_label_component = es is not None and (ps is None or bool(es.stated - ps.stated))
     if _date_phrase_contained(pred, exp) or (
         not pred_omits_label_component and _date_phrase_contained(exp, pred)
@@ -698,9 +739,17 @@ def score_date_field(pred, exp, embedding=None) -> float:
             return _score_full_dates(datetime.date(*ps), datetime.date(*es))
         return _score_partial_dates(ps, es)
     if es is not None:
-        # The label states a date but the prediction states no date component
-        # ("12", "Tuesday"): a fragment is not the date, so no fuzzy name credit.
-        return 0.0
+        # The label states a date but the prediction parses to no date. A bare
+        # fragment ("12", "Tuesday") is not the date and gets nothing. A garbled
+        # date that names a year ("Augus 18, 2014", "FY2014") keeps fuzzy credit,
+        # but never above 0.33 unless it names the labelled year.
+        pred_years = set(re.findall(r"(?<!\d)((?:19|20)\d{2})(?!\d)", str(pred)))
+        if not pred_years:
+            return 0.0
+        score = score_name_field(pred, exp, embedding=embedding)
+        if es.year is not None and str(es.year) not in pred_years:
+            score = min(score, 0.33)
+        return score
     return score_name_field(pred, exp, embedding=embedding)
 
 
@@ -741,6 +790,17 @@ def _date_expected_is_null(exp: str) -> bool:
         if not re.search(r"\b(19|20)\d{2}\b", low):
             return True
     return False
+
+
+def _date_is_blank_or_bare_label(exp: str) -> bool:
+    """True for a blank template line ("_____ day of ____") or a bare label ("Effective Date:")."""
+    low = str(exp).strip().lower()
+    return (
+        "_" in low
+        or "blank" in low
+        or low.endswith(":")
+        or bool(re.fullmatch(r"[a-z ]*\bdate\b[a-z ]*", low))
+    )
 
 
 def _date_phrase_contained(container: str, target: str) -> bool:
