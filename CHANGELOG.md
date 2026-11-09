@@ -63,7 +63,7 @@ Format based on Keep a Changelog; versioning is SemVer.
   (both read as yearless before; found in mailroom-dataset v9.3 CUAD spans).
   A two-digit year uses a fixed pivot instead of dateutil's clock-based one, as Python's
   `%y` does: `00`-`68` read as 2000-2068 and `69`-`99` as 1969-1999. So `1/1/77` is 1977
-  in any run year. Only `69`-`76` move (they read as 2069-2076 in a 2026 run).
+  in any run year. In a 2026 run only `69`-`75` move (they read as 2069-2075 before).
   A date containing a different day as a substring (`11 August 2014` vs `1 August 2014`)
   is no longer a containment match.
   A prediction that states no date component (`12`, `Tuesday`) scores 0.0 against a dated
@@ -85,7 +85,7 @@ Format based on Keep a Changelog; versioning is SemVer.
   stored run scored before this change should be re-scored (`dojo-rescore`) before it is
   compared with a later one. These also move: yearless-GT rows with a dated prediction
   (capped at 0.67), garbled predictions that parse to nothing, day ranges, and two-digit
-  years `69`-`76`, and full dates where one is a substring of the other (`11 August 2014`
+  years `69`-`75` (in a 2026 run), and full dates where one is a substring of the other (`11 August 2014`
   vs `1 August 2014`: 1.0 -> 0.67). Other fully dated pairs that parse on both sides do
   not move. In date LISTS, the 0.67 cap is above `bipartite_match_threshold` (0.6), so a
   dated prediction still pairs with a yearless label as a true positive; the per-field
