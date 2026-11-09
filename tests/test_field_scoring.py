@@ -858,3 +858,17 @@ def test_audit_list_field_does_not_match_an_unverified_year():
     """audit_list_field pairs dates with the same strict match."""
     out = fs.audit_list_field("date", ["August 18, 2015"], ["18th day of August"], None)
     assert out["matched_gt"] == 0
+
+
+@pytest.mark.parametrize(
+    "pred, label, matched",
+    [
+        (["August 1, 2014 and August 18, 2015"], ["August 18, 2014"], 0),  # stray extra year
+        (["August 1, 2014 and August 18, 2015"], ["August 1, 2014 and August 18, 2015"], 1),
+        (["dated August 18, 2015"], ["18th day of August"], 0),  # a year in prose
+        ([2014.0], ["2014"], 1),  # NaN-promoted year column
+    ],
+)
+def test_strict_date_list_matching_cases(pred, label, matched):
+    """List pairing for dates: unverified or stray years never match; exact copies do."""
+    assert fs.score_entity_list("date", pred, label).matched == matched
