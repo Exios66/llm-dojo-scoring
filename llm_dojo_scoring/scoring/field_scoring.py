@@ -428,6 +428,10 @@ def _parse_date_parts(text) -> Optional[_DateParts]:
     # "March 12,1999": dateutil drops a year glued to the comma and would
     # report it as unstated, so the stated year must get its space back.
     s = re.sub(r",(?=\d)", ", ", s)
+    # A weekday name is not a day of the month: dateutil would resolve "Monday
+    # August 2014" to the first Monday after each probe default and invent a day.
+    s = re.sub(r"\b(?:mon|tues|wednes|thurs|fri|satur|sun)day\b,?", " ", s, flags=re.IGNORECASE)
+    s = re.sub(r"\s+", " ", s).strip()
     s = re.sub(
         r"\b(\d{1,2})[a-z]*(?:\s+[a-z]+)*\s+day\s+of\b", r"\1 day of", s,
         flags=re.IGNORECASE,
@@ -680,7 +684,7 @@ def score_date_field(pred, exp, embedding=None) -> float:
     # CORRECT, and a fabricated date is not the labeled date.
     if es is None and _date_expected_is_null(exp):
         return 1.0 if not str(pred).strip() else 0.0
-    pred_omits_label_component = ps is not None and es is not None and bool(es.stated - ps.stated)
+    pred_omits_label_component = es is not None and (ps is None or bool(es.stated - ps.stated))
     if _date_phrase_contained(pred, exp) or (
         not pred_omits_label_component and _date_phrase_contained(exp, pred)
     ):
@@ -693,6 +697,10 @@ def score_date_field(pred, exp, embedding=None) -> float:
 
             return _score_full_dates(datetime.date(*ps), datetime.date(*es))
         return _score_partial_dates(ps, es)
+    if es is not None:
+        # The label states a date but the prediction states no date component
+        # ("12", "Tuesday"): a fragment is not the date, so no fuzzy name credit.
+        return 0.0
     return score_name_field(pred, exp, embedding=embedding)
 
 

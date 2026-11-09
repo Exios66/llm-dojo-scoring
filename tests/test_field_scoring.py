@@ -707,3 +707,19 @@ def test_full_date_pairs_are_parsed_once_per_side(monkeypatch):
     monkeypatch.setattr(fs, "_parse_date_parts", lambda t: calls.append(t) or real(t))
     fs.score_date_field("March 1, 2014", "March 20, 2014")
     assert calls.count("March 1, 2014") <= 2 and calls.count("March 20, 2014") <= 2
+
+
+@pytest.mark.parametrize(
+    "pred, gt",
+    [("12", "December 12, 2014"), ("12th", "12th day of December, 2014"),
+     ("Tuesday", "Tuesday, December 12, 2014"), ("12", "2014-12-12"), ("12", "12/12/2014")],
+)
+def test_a_date_fragment_is_not_the_labelled_date(pred, gt):
+    """A prediction stating no date component gets no fuzzy name credit against a dated label."""
+    assert fs.score_date_field(pred, gt) == 0.0
+
+
+def test_weekday_name_does_not_invent_a_day():
+    """'Monday August 2014' states year and month; the weekday is not a day of the month."""
+    assert tuple(fs._parse_date_parts("Monday August 2014")) == (2014, 8, None)
+    assert tuple(fs._parse_date_parts("Tuesday, December 12, 2014")) == (2014, 12, 12)

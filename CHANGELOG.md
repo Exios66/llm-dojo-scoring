@@ -58,6 +58,10 @@ Format based on Keep a Changelog; versioning is SemVer.
   in any run year. Only `69`-`76` move (they read as 2069-2076 in a 2026 run).
   A date containing a different day as a substring (`11 August 2014` vs `1 August 2014`)
   is no longer a containment match.
+  A prediction that states no date component (`12`, `Tuesday`) scores 0.0 against a dated
+  label instead of falling through to fuzzy name scoring (it scored 1.0 on this branch
+  before the fix, 0.0 on `main`). A weekday name never supplies a day of the month:
+  `Monday August 2014` states year and month only.
   Golden scores are unchanged (`freeze_goldens.py --check` passes).
   **Comparability:** date-field scores on rows whose GT is yearless or dayless move; a
   stored run scored before this change should be re-scored (`dojo-rescore`) before it is
