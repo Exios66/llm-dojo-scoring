@@ -42,9 +42,15 @@ Format based on Keep a Changelog; versioning is SemVer.
   "August 2014" (new private `_parse_date_parts` returns the stated components).
   `diagnostics` date R² and `date_mae_days` therefore skip partial dates instead of
   comparing a clock-filled date.
-  `sandbox_scoring._same_date` compares stated components, so a yearless date equals only a
-  yearless one. A date prediction that is a strict prefix of a dated GT (`18 August` vs
+  `sandbox_scoring._same_date` therefore treats a partial date as not matching (it needs a
+  full date on both sides); a yearless value cannot be verified against a dated one. A date prediction that is a strict prefix of a dated GT (`18 August` vs
   `18 August 2014`) is no longer a containment match.
+  No date component is ever invented, from the clock or from a placeholder: the year is
+  critical information and a document's year is not the year the scorer runs in. A
+  prediction that omits a year the GT states never scores above 0.67, and a year mismatch
+  is never a match (0.33, or 0.67 within 45 days when both sides are fully dated). A
+  yearless GT gives no year to check, so a prediction whose month and day match scores 1.0:
+  the GT, not the clock, decides this.
   Golden scores are unchanged (`freeze_goldens.py --check` passes).
   **Comparability:** date-field scores on rows whose GT is yearless or dayless move; a
   stored run scored before this change should be re-scored (`dojo-rescore`) before it is

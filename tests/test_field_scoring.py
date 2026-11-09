@@ -229,6 +229,50 @@ def test_parse_date_is_deterministic_for_partial_dates(freeze_clock):
         assert fs.parse_date("") is None
 
 
+def test_parse_date_returns_none_for_yearless_and_dayless_text():
+    """No date component is invented: partial text is not a date."""
+    assert fs.parse_date("18th day of August") is None
+    assert fs.parse_date("August 2014") is None
+
+
+def test_year_is_never_invented_or_overlooked(freeze_clock):
+    """A year the GT states is checked; a mismatching year never counts as a match."""
+    freeze_clock(2014)
+    assert fs.score_date_field("August 18", "August 18, 2014") < 1.0
+    assert fs.score_date_field("August 2014", "August 18, 2014") < 1.0
+    assert fs.score_date_field("August 18, 2015", "August 18, 2014") == 0.33  # not a match
+    assert fs.score_date_field("August 18, 2015", "August 2014") == 0.33
+    # a yearless GT states no year, so a pred agreeing on month and day is right in any year
+    assert fs.score_date_field("August 18, 1999", "18th day of August") == 1.0
+
+
+def test_date_parsing_never_reads_the_clock():
+    """Every dateutil call passes an explicit default; no scoring code asks for today's date."""
+    import ast
+    import pathlib
+
+    import llm_dojo_scoring
+
+    root = pathlib.Path(llm_dojo_scoring.__file__).parent
+    importers = set()
+    for path in root.rglob("*.py"):
+        text = path.read_text()
+        if "dateutil" in text:
+            importers.add(path.relative_to(root).as_posix())
+    assert importers == {"scoring/field_scoring.py"}
+
+    tree = ast.parse((root / "scoring" / "field_scoring.py").read_text())
+    parse_calls = 0
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+            continue
+        assert node.func.attr not in {"now", "today", "utcnow"}
+        if node.func.attr == "parse":
+            parse_calls += 1
+            assert "default" in {kw.arg for kw in node.keywords}
+    assert parse_calls == 2
+
+
 def test_date_parts_report_only_stated_components(freeze_clock):
     """The component parser names exactly what the text states, whatever the clock says."""
     for year in (2014, 2031):

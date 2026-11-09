@@ -603,7 +603,13 @@ def score_date_field(pred, exp, embedding=None) -> float:
 
     A date states some of (year, month, day); a yearless CUAD date such as
     "18th day of August" states month and day only, and "August 2014" states
-    no day. Missing components are NOT filled in from today's date.
+    no day. A missing component is never invented: not from today's date and
+    not from a placeholder. The year is critical information, and the year of
+    a document is not the year the scorer runs in. Whether a yearless label
+    fixes the year is therefore decided by the LABEL, not by the clock: a
+    yearless label gives no year to check, so a prediction that agrees on
+    month and day scores 1.0, while a prediction that leaves out a year the
+    label states never scores 1.0.
 
     Rules, in order:
 

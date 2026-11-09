@@ -295,10 +295,10 @@ def _value_ok(field: str, value: Any, spans: list[str]) -> bool:
 
 
 def _same_date(a: Any, b: Any) -> bool:
-    """Whether two date strings state the same date components (a yearless date equals only a yearless one)."""
-    from ..scoring.field_scoring import _parse_date_parts
+    """Whether two date strings parse to the same calendar date."""
+    from ..scoring.field_scoring import _parse_date
 
-    da, db = _parse_date_parts(str(a)), _parse_date_parts(str(b))
+    da, db = _parse_date(str(a)), _parse_date(str(b))
     return da is not None and da == db
 
 
