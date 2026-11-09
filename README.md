@@ -428,7 +428,7 @@ No. The deterministic core needs no model, API key or tracing service. Embedding
 <details>
 <summary><b>Why not just compare the strings?</b></summary>
 
-Because `"March 3, 2026"` and `"2026-03-03"` are the same fact. `field_scoring` uses one algorithm per field type: IDs are normalized then matched exactly, dates are parsed to ISO with partial-credit fallbacks, money is parsed and compared with a one-cent tolerance, names use Jaro-Winkler plus a token-set ratio, free text uses SQuAD-style token F1, and entity lists use Hungarian bipartite matching.
+Because `"March 3, 2026"` and `"2026-03-03"` are the same fact. `field_scoring` uses one algorithm per field type: IDs are normalized then matched exactly, dates are parsed to ISO with partial-credit fallbacks (a yearless or dayless date is compared on the components it states, never filled in from today's date), money is parsed and compared with a one-cent tolerance, names use Jaro-Winkler plus a token-set ratio, free text uses SQuAD-style token F1, and entity lists use Hungarian bipartite matching.
 
 </details>
 

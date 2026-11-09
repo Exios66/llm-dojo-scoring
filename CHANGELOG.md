@@ -13,6 +13,46 @@ Format based on Keep a Changelog; versioning is SemVer.
   moves. `tests/test_prompt_lineage.py` keeps the historical `sorter_v4` → `sorter_v14`
   check by pinning the v14 body's sha256, and pins production to `sorter_condensed_v5`.
 
+### Fixed
+
+- Date scoring no longer reads the clock (#134, split from llm-mailroom#195).
+  `field_scoring._parse_date` handed `dateutil` the bare text, and `dateutil` fills every
+  component the text omits from today's date: the CUAD-style "18th day of August" got the
+  current year, and "August 2014" got today's day of the month. A yearless ground truth
+  therefore scored differently every calendar year. The parser now parses twice with two
+  fixed fill-in dates that differ in year, month and day, and a component that differs
+  between the two parses was not stated by the text.
+  `score_date_field` compares only the components both sides state:
+  - yearless or dayless GT, prediction agrees on everything the GT states: `1.0`;
+  - prediction omits a component the GT states (never `1.0`): `0.67` when two or more
+    components agree, `0.33` when only the year or only the month does;
+  - a shared component differs: `0.33` when the shared year or month still agrees, else `0.0`;
+  - the 45-day window now applies only when both sides state year, month and day, and
+    fully dated pairs score exactly as before.
+
+  | pred | GT | before (run in 2026) | after (any year) |
+  | --- | --- | --- | --- |
+  | `August 18, 2014` | `18th day of August` | 0.33 (1.0 if run in 2014) | 1.0 |
+  | `August 18` | `August 18, 2014` | 0.33 (1.0 if run in 2014) | 0.67 |
+  | `August 18, 2014` | `August 2014` | 0.67 | 1.0 |
+  | `February 29` | `29th day of February` | 0.84 (fuzzy fallback: 2026 has no Feb 29) | 1.0 |
+
+  `parse_date` (and `_parse_date`) now returns a `datetime.date` only when the text states
+  year, month and day, and `None` for a partial date such as "18th day of August" or
+  "August 2014" (new private `_parse_date_parts` returns the stated components).
+  `diagnostics` date R² and `date_mae_days` therefore skip partial dates instead of
+  comparing a clock-filled date.
+  `sandbox_scoring._same_date` compares stated components, so a yearless date equals only a
+  yearless one. A date prediction that is a strict prefix of a dated GT (`18 August` vs
+  `18 August 2014`) is no longer a containment match.
+  Golden scores are unchanged (`freeze_goldens.py --check` passes).
+  **Comparability:** date-field scores on rows whose GT is yearless or dayless move; a
+  stored run scored before this change should be re-scored (`dojo-rescore`) before it is
+  compared with a later one. Other date scores do not move.
+  **Consumers:** this changes scores `llm-mailroom` and the sandbox report, so `llm-mailroom`
+  needs a Dojo pin bump (`bump_dojo_scoring.py`) and the sandbox a vendor refresh once this
+  is released. No public name changed.
+
 ## [0.28.1] - 2026-11-07
 ### Changed
 
