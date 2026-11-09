@@ -230,3 +230,20 @@ def test_facility_id_requires_a_digit_bearing_token(pred, exp, score):
     from llm_dojo_scoring.scoring.field_scoring import score_cms_doc_ref
 
     assert score_cms_doc_ref(pred, exp) == score
+
+
+def test_same_yearless_date_matches_itself_but_not_a_dated_one():
+    """CUAD Agreement Dates are often yearless: the same yearless date still matches."""
+    gt = {"Agreement Date": ["18th day of August"]}
+    assert effective_from_agreement("18th day of August", gt)
+    assert effective_from_agreement("August 18", gt)
+    assert not effective_from_agreement("August 18, 2014", gt)  # no year is invented
+
+
+def test_date_regression_pairs_skip_partial_dates():
+    """Date R² and MAE compare full dates only; a partial date is skipped, not clock-filled."""
+    from llm_dojo_scoring.analysis.diagnostics import _date_pair_days
+
+    assert _date_pair_days("August 18, 2014", "2014-08-18") is not None
+    assert _date_pair_days("August 18", "August 18, 2014") is None
+    assert _date_pair_days("August 2014", "August 18, 2014") is None
