@@ -44,9 +44,8 @@ Format based on Keep a Changelog; versioning is SemVer.
   "August 2014" (new private `_parse_date_parts` returns the stated components).
   `diagnostics` date R² and `date_mae_days` therefore skip partial dates instead of
   comparing a clock-filled date.
-  `sandbox_scoring._same_date` therefore treats a partial date as not matching (it needs a
-  full date on both sides); a yearless value cannot be verified against a dated one. A date prediction that is a strict prefix of a dated GT (`18 August` vs
-  `18 August 2014`) is no longer a containment match.
+  A date prediction that is a strict prefix of a dated GT (`18 August` vs `18 August 2014`)
+  is no longer a containment match.
   No date component is ever invented, from the clock or from a placeholder: the year is
   critical information and a document's year is not the year the scorer runs in. A
   prediction that omits a year the GT states never scores above 0.67, and a year mismatch
@@ -68,12 +67,13 @@ Format based on Keep a Changelog; versioning is SemVer.
   A date containing a different day as a substring (`11 August 2014` vs `1 August 2014`)
   is no longer a containment match.
   A prediction that states no date component (`12`, `Tuesday`) scores 0.0 against a dated
-  label instead of falling through to fuzzy name scoring (it scored 1.0 on this branch
-  before the fix, 0.0 on `main`). A weekday name never supplies a day of the month:
-  `Monday August 2014` states year and month only.
+  label instead of falling through to fuzzy name scoring. A weekday name, full or
+  abbreviated, never supplies a day of the month: `Monday August 2014` and `Mon Aug 2014`
+  state year and month only.
   A garbled date that parses to nothing keeps fuzzy name credit only when it names a
-  four-digit year (`Augus 18, 2014` against `August 18, 2014` scores about 0.99, as on
-  `main`), and never above 0.33 unless that is the labelled year. A day range
+  four-digit year (`Augus 18, 2014` against `August 18, 2014`: 0.96 on `main`, 0.99 now),
+  never above 0.33 unless that is the labelled year, and never above 0.67 against a
+  partial label (`Q3 2014` against `August 2014`). A day range
   next to a month name (`August 1-3, 2014`, `1-3 August 2014`) reads as its first day; it
   read as the year 2003 before. Numeric dates such as `8-18, 2014` are not ranges.
   An exact copy of a label that holds no date (`Effective upon signing`) scores 1.0. A
