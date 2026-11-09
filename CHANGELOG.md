@@ -13,6 +13,88 @@ Format based on Keep a Changelog; versioning is SemVer.
   moves. `tests/test_prompt_lineage.py` keeps the historical `sorter_v4` → `sorter_v14`
   check by pinning the v14 body's sha256, and pins production to `sorter_condensed_v5`.
 
+### Fixed
+
+- Date scoring no longer reads the clock (#134, split from llm-mailroom#195).
+  `field_scoring._parse_date` handed `dateutil` the bare text, and `dateutil` fills every
+  component the text omits from today's date: the CUAD-style "18th day of August" got the
+  current year, and "August 2014" got today's day of the month. A yearless ground truth
+  therefore scored differently every calendar year. The parser now parses twice with two
+  fixed fill-in dates that differ in year, month and day, and a component that differs
+  between the two parses was not stated by the text.
+  `score_date_field` compares only the components both sides state:
+  - yearless or dayless GT, prediction agrees on everything the GT states: `1.0`, except
+    that a prediction stating a year against a yearless GT scores at most `0.67`: the
+    label cannot verify the year, and the year is critical (fix the label instead);
+  - prediction omits a component the GT states (never `1.0`): `0.67` when two or more
+    components agree, `0.33` when only the year or only the month does;
+  - a shared component differs: `0.33` when the shared year or month still agrees, else `0.0`;
+  - the 45-day window now applies only when both sides state year, month and day, and
+    fully dated pairs that both parse score exactly as before.
+
+  | pred | GT | before (run in 2026) | after (any year) |
+  | --- | --- | --- | --- |
+  | `August 18, 2014` | `18th day of August` | 0.33 (1.0 if run in 2014) | 0.67 |
+  | `August 18` | `August 18, 2014` | 0.33 (1.0 if run in 2014) | 0.67 |
+  | `August 18, 2014` | `August 2014` | 0.67 | 1.0 |
+  | `February 29` | `29th day of February` | 0.84 (fuzzy fallback: 2026 has no Feb 29) | 1.0 |
+
+  `parse_date` (and `_parse_date`) now returns a `datetime.date` only when the text states
+  year, month and day, and `None` for a partial date such as "18th day of August" or
+  "August 2014" (new private `_parse_date_parts` returns the stated components).
+  `diagnostics` date R² and `date_mae_days` therefore skip partial dates instead of
+  comparing a clock-filled date.
+  A date prediction that is a strict prefix of a dated GT (`18 August` vs `18 August 2014`)
+  is no longer a containment match.
+  No date component is ever invented, from the clock or from a placeholder: the year is
+  critical information and a document's year is not the year the scorer runs in. A
+  prediction that omits a year the GT states never scores above 0.67, and a year mismatch
+  is never a match (0.33, or 0.67 within 45 days when both sides are fully dated). A
+  yearless GT cannot verify a year: a prediction that states one, in a parsed date or in
+  prose, scores at most 0.67 even when month and day match; a yearless prediction whose
+  month and day match scores 1.0. The GT, not the clock, decides this. A prediction that
+  names two different years is ambiguous and scores at most 0.67, unless the label states
+  those years itself (an exact copy of `August 18, 2014 to August 18, 2016` scores 1.0).
+  `sandbox_scoring._same_date` compares stated components: the same yearless date
+  (`18th day of August` / `August 18`) still matches, a yearless date never matches a
+  dated one. `audit_scalar_field` grounds a partial date prediction (`August 18`) in a
+  document date that agrees on every component it states. A stated year is never lost to formatting noise:
+  `March 12,1999` (no space after the comma) and `16 day of August. 2012` keep their year
+  (both read as yearless before; found in mailroom-dataset v9.3 CUAD spans).
+  A two-digit year uses a fixed pivot instead of dateutil's clock-based one, as Python's
+  `%y` does: `00`-`68` read as 2000-2068 and `69`-`99` as 1969-1999. So `1/1/77` is 1977
+  in any run year. In a 2026 run only `69`-`75` move (they read as 2069-2075 before).
+  A date containing a different day as a substring (`11 August 2014` vs `1 August 2014`)
+  is no longer a containment match.
+  A prediction that states no date component (`12`, `Tuesday`) scores 0.0 against a dated
+  label instead of falling through to fuzzy name scoring. A weekday name, full or
+  abbreviated, never supplies a day of the month: `Monday August 2014` and `Mon Aug 2014`
+  state year and month only.
+  A garbled date that parses to nothing keeps fuzzy name credit only when it names a
+  four-digit year (`Augus 18, 2014` against `August 18, 2014`: 0.96 on `main`, 0.99 now),
+  never above 0.33 unless that is the labelled year, and never above 0.67 against a
+  partial label (`Q3 2014` against `August 2014`). A day range
+  next to a month name (`August 1-3, 2014`, `1-3 August 2014`) reads as its first day; it
+  read as the year 2003 before. Numeric dates such as `8-18, 2014` are not ranges.
+  An exact copy of a label that holds no date (`Effective upon signing`) scores 1.0. A
+  copied blank template (`_____ day of ____`) or bare label (`Effective Date:`) still
+  scores 0.0, and only an empty answer is right. An integral float year (`2014.0`)
+  scores like the text `2014`.
+  Golden scores are unchanged (`freeze_goldens.py --check` passes).
+  **Comparability:** date-field scores on rows whose GT is yearless or dayless move; a
+  stored run scored before this change should be re-scored (`dojo-rescore`) before it is
+  compared with a later one. These also move: yearless-GT rows with a dated prediction
+  (capped at 0.67), garbled predictions that parse to nothing, day ranges, and two-digit
+  years `69`-`75` (in a 2026 run), and full dates where one is a substring of the other (`11 August 2014`
+  vs `1 August 2014`: 1.0 -> 0.67). Other fully dated pairs that parse on both sides do
+  not move. In MATCHING (date lists, `audit_scalar_field`, `audit_list_field`), a pair whose
+  year the label cannot verify is never a match, although its 0.67 field score would
+  clear `bipartite_match_threshold` (0.6): a dated prediction is not a true positive for
+  a yearless label, and a prediction naming stray extra years matches nothing.
+  **Consumers:** this changes scores `llm-mailroom` and the sandbox report, so `llm-mailroom`
+  needs a Dojo pin bump (`bump_dojo_scoring.py`) and the sandbox a vendor refresh once this
+  is released. No public name changed.
+
 ## [0.28.1] - 2026-11-07
 ### Changed
 
