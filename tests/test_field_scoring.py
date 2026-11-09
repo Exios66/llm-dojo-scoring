@@ -768,3 +768,32 @@ def test_copied_blank_template_or_bare_label_is_not_a_match(label):
 def test_integral_float_year_matches_its_text():
     """A NaN-promoted year column (2014.0) scores like the text 2014."""
     assert fs.score_date_field(2014.0, "2014") == fs.score_date_field("2014", "2014")
+
+
+@pytest.mark.parametrize(
+    "pred",
+    ["dated August 18, 2015", "This Agreement is made as of August 18, 2015",
+     "August 18, 2015 and August 18, 2016", "Augus 18, 2014"],
+)
+def test_yearless_label_caps_a_year_stated_anywhere_in_the_prediction(pred):
+    """The yearless-label cap applies to years in prose and garbled dates too."""
+    assert fs.score_date_field(pred, "August 18") <= 0.67
+
+
+@pytest.mark.parametrize(
+    "pred",
+    ["August 1, 2014 and August 18, 2015", "August 18, 2014 and August 18, 2015"],
+)
+def test_prediction_naming_several_years_is_never_a_full_match(pred):
+    """A prediction naming two different years is ambiguous."""
+    assert fs.score_date_field(pred, "August 18, 2014") <= 0.67
+
+
+@pytest.mark.parametrize(
+    "text, parts",
+    [("8-18, 2014", (2014, 8, 18)), ("12-14 2014", (2014, 12, 14)), ("Aug. 1-3, 2014", (2014, 8, 1))],
+)
+def test_numeric_month_day_is_not_read_as_a_day_range(text, parts):
+    """Only a range next to a month word is a day range; "8-18, 2014" keeps its day."""
+    got = fs._parse_date_parts(text)
+    assert (None if got is None else tuple(got)) == parts

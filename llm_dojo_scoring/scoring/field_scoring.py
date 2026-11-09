@@ -432,10 +432,8 @@ def _parse_date_parts(text) -> Optional[_DateParts]:
     # dateutil would read the second number as a year. ISO and numeric dates
     # (2014-08-18, 18-08-2014) are untouched: the range must sit next to a word
     # or a ", YYYY".
-    s = re.sub(
-        r"(?<![\d/.\-])(\d{1,2})\s*[-\u2013]\s*\d{1,2}(?=\s*,?\s+(?:\d{4}\b|[A-Za-z]))",
-        r"\1", s,
-    )
+    s = re.sub(r"\b([A-Za-z]{3,}\.?\s+\d{1,2})\s*[-\u2013]\s*\d{1,2}\b(?![-/.]\d)", r"\1", s)
+    s = re.sub(r"(?<![\d/.\-])(\d{1,2})\s*[-\u2013]\s*\d{1,2}(?=\s+[A-Za-z]{3,})", r"\1", s)
     # A weekday name is not a day of the month: dateutil would resolve "Monday
     # August 2014" to the first Monday after each probe default and invent a day.
     s = re.sub(r"\b(?:mon|tues|wednes|thurs|fri|satur|sun)day\b,?", " ", s, flags=re.IGNORECASE)
@@ -654,9 +652,20 @@ def score_date_field(pred, exp, embedding=None) -> float:
     score = _score_date_field_uncapped(pred, exp, embedding=embedding)
     if score > _UNVERIFIED_YEAR_CAP:
         ps, es = _parse_date_parts(pred), _parse_date_parts(exp)
-        if ps is not None and es is not None and ps.year is not None and es.year is None:
+        pred_years = _stated_years(pred) | ({ps.year} if ps is not None and ps.year else set())
+        # A yearless label cannot verify a year the prediction states, in a
+        # parsed date or in prose ("dated August 18, 2015").
+        if es is not None and es.year is None and pred_years:
+            return _UNVERIFIED_YEAR_CAP
+        # A prediction naming several years is ambiguous, never a full match.
+        if len(pred_years) > 1:
             return _UNVERIFIED_YEAR_CAP
     return score
+
+
+def _stated_years(text) -> set:
+    """Four-digit years (1900-2099) written in *text*."""
+    return {int(y) for y in re.findall(r"(?<!\d)((?:19|20)\d{2})(?!\d)", str(text))}
 
 
 def _integral_float_as_text(value):
@@ -743,11 +752,11 @@ def _score_date_field_uncapped(pred, exp, embedding=None) -> float:
         # fragment ("12", "Tuesday") is not the date and gets nothing. A garbled
         # date that names a year ("Augus 18, 2014", "FY2014") keeps fuzzy credit,
         # but never above 0.33 unless it names the labelled year.
-        pred_years = set(re.findall(r"(?<!\d)((?:19|20)\d{2})(?!\d)", str(pred)))
+        pred_years = _stated_years(pred)
         if not pred_years:
             return 0.0
         score = score_name_field(pred, exp, embedding=embedding)
-        if es.year is not None and str(es.year) not in pred_years:
+        if es.year is not None and es.year not in pred_years:
             score = min(score, 0.33)
         return score
     return score_name_field(pred, exp, embedding=embedding)
