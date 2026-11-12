@@ -57,3 +57,11 @@ def test_every_legacy_alias_points_at_an_existing_module():
     """No legacy flat name aliases a module that was deleted."""
     dangling = sorted(f for f, t in LEGACY_MODULES.items() if not _module_file_exists(t))
     assert not dangling, f"LEGACY_MODULES entries point at deleted modules: {dangling}"
+
+
+@pytest.mark.parametrize(
+    "dotted", sorted(d for d, e in SURFACE["modules"].items() if e["legacy"])
+)
+def test_module_consumers_import_by_flat_path_keeps_its_alias(dotted):
+    """A module consumers import by a legacy flat path still has one (pinned by the fixture, not by LEGACY_MODULES)."""
+    assert dotted in _FLAT_BY_TARGET, f"llm_dojo_scoring.{dotted} lost the legacy flat alias consumers import"

@@ -355,7 +355,10 @@ def test_only_write_refreshes_requested_codes_and_keeps_the_others(monkeypatch, 
     assert audit.main(["--only", "MAIL", "--write"]) == 0
 
     written = json.loads(fixture.read_text(encoding="utf-8"))
-    assert written["top_level"]["keep"] == pinned["top_level"]["keep"]
+    kept = dict(written["top_level"]["keep"])
+    # ``in_all`` is re-read from the real package's ``__all__``, which lacks the synthetic name.
+    assert kept.pop("in_all") is False
+    assert kept == {k: v for k, v in pinned["top_level"]["keep"].items() if k != "in_all"}
     assert [s["file"] for s in written["top_level"]["x"]["consumers"]] == ["new.py"]
 
 
@@ -416,9 +419,13 @@ def test_partial_merge_reclassifies_retained_root_names():
     existing = _surface({"eda_only": [_site("EDA", "eda.py")]}, mail_sites=[_site("MAIL")])
     fresh = _surface({}, mail_sites=[_site("MAIL")])
     fresh["generated_from"] = {"MAIL": existing["generated_from"]["MAIL"]}
-    merged = audit.merge_fixture(existing, fresh, {"MAIL"}, classify=lambda name: ("missing", None))
+    existing["top_level"]["eda_only"]["in_all"] = True
+    merged = audit.merge_fixture(
+        existing, fresh, {"MAIL"}, classify=lambda name: ("missing", None), exported=set()
+    )
     assert merged["top_level"]["eda_only"]["kind"] == "missing"
     assert merged["top_level"]["eda_only"]["defined_in"] is None
+    assert merged["top_level"]["eda_only"]["in_all"] is False
 
 
 def test_only_check_rejects_a_retained_name_the_package_no_longer_exports(monkeypatch, tmp_path, capsys):

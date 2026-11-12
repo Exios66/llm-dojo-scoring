@@ -36,7 +36,7 @@ import os
 import subprocess
 import sys
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
@@ -889,13 +889,16 @@ def _reclassified(
     merged: dict[str, Any],
     fresh: dict[str, Any],
     classify: Callable[[str], tuple[str, str | None]] | None,
+    exported: Collection[str] | None = None,
 ) -> dict[str, Any]:
-    """Re-read ``kind`` / ``defined_in`` of root names kept only for unrescanned consumers."""
-    if classify is None:
-        return merged
+    """Re-read ``kind`` / ``defined_in`` / ``in_all`` of root names kept only for unrescanned consumers."""
     for name, entry in merged.items():
-        if name not in fresh:
+        if name in fresh:
+            continue
+        if classify is not None:
             entry["kind"], entry["defined_in"] = classify(name)
+        if exported is not None:
+            entry["in_all"] = name in exported
     return merged
 
 
@@ -904,6 +907,7 @@ def merge_fixture(
     fresh: dict[str, Any],
     only: set[str],
     classify: Callable[[str], tuple[str, str | None]] | None = None,
+    exported: Collection[str] | None = None,
 ) -> dict[str, Any]:
     """Combine a fresh scan of the ``only`` codes with the recorded fixture.
 
@@ -911,7 +915,8 @@ def merge_fixture(
     are replaced by the rescan.  Package-derived facts (``supported``, aliases)
     come from the fresh scan.  ``classify(name) -> (kind, defined_in)`` re-reads a
     retained root name against the current package, so a removed export shows up
-    as ``kind == "missing"`` instead of keeping its stale record.
+    as ``kind == "missing"`` instead of keeping its stale record; ``exported`` (the
+    package's ``__all__``) refreshes their ``in_all`` the same way.
     """
     generated_from = {
         label: {key: value for key, value in meta.items() if key != "path"}
@@ -954,6 +959,7 @@ def merge_fixture(
             _merge_named(existing.get("top_level", {}), fresh["top_level"], only, "consumers"),
             fresh["top_level"],
             classify,
+            exported,
         ),
         "modules": _merge_modules(existing.get("modules", {}), fresh["modules"], only),
         "dispatch": dispatch,
@@ -1100,7 +1106,11 @@ def main(argv: list[str] | None = None) -> int:
         _print_coverage(data)
         index = PackageIndex()
         data = merge_fixture(
-            existing or _EMPTY_FIXTURE, data, only, classify=lambda name: _classify_top_level(name, index)
+            existing or _EMPTY_FIXTURE,
+            data,
+            only,
+            classify=lambda name: _classify_top_level(name, index),
+            exported=set(getattr(index.package, "__all__", ())),
         )
         gone = sorted(name for name, entry in data["top_level"].items() if entry["kind"] == "missing")
         if gone:

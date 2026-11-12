@@ -671,7 +671,7 @@ def __getattr__(name: str) -> Any:
     elif name in _REMOVED:
         raise AttributeError(
             f"llm_dojo_scoring.{name} was removed in the production slim-down; "
-            "see CHANGELOG.md (Unreleased, Removed) for its replacement"
+            "see CHANGELOG.md (Unreleased, Removed) for why, and for its replacement where one exists"
         )
     else:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
