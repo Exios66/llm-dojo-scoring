@@ -94,6 +94,18 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
 
 ### Fixed
 
+- **Score change.** Money strings with a currency word next to a K/M/B suffix parsed to `None`
+  (#133): `parse_money("1.2M USD")` and `parse_money("USD 1.2M")` are now `1200000.0`
+  (`"5K dollars"` → `5000.0`, `"EUR 3B"` → `3e9`; `"$1.2M"` and `"3 dollars"` unchanged).
+  Currency words are stripped before the suffix check.
+- **Score change.** A perfect `insurance_claim / carrier` extraction scored 0.9412 (#132): the
+  `cms_source_table` marker is derived from the subclass, the production extractor never emits
+  it, and silence on it scored 0. It is now not scored when the prediction states no table; a
+  table stated on `cms_source_table` or, as the frozen prompt does, on `claim_type`, is still
+  scored, and `score_document` now keeps a stated `cms_source_table` through scoping. Field-micro
+  recall follows the same rule. The golden cases do not exercise either change
+  (`freeze_goldens.py --check` exit 0); `SCORE_CHANGELOG` gains a 0.29.0 entry for
+  `pipeline.extraction.overall`.
 - Date scoring no longer reads the clock (#134, split from llm-mailroom#195).
   `field_scoring._parse_date` handed `dateutil` the bare text, and `dateutil` fills every
   component the text omits from today's date: the CUAD-style "18th day of August" got the
