@@ -198,6 +198,18 @@ def test_cuad_fields_count_rows_that_carry_their_own_category(mod, inject_status
     assert "source-container coverage" not in contract
 
 
+
+def test_empty_category_counts_fall_back_to_the_container(mod, inject_status):
+    """A status whose ``label_categories`` has no entry for the class keeps the container count and note."""
+    status = _contract_status()
+    status["label_categories"] = {}
+    inject_status(status)
+    contract = mod.render(status).split("## contract", 1)[1].split("\n## ", 1)[0]
+    parties = next(line for line in contract.splitlines() if line.startswith("| `parties` |"))
+    assert "| 8 / 10 |" in parties
+    assert "source-container coverage" in contract
+
+
 def test_render_reports_a_class_with_no_rows(mod, inject_status):
     """A class absent from the status says so instead of inventing counts."""
     status = _status(150)

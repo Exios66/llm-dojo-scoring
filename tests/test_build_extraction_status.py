@@ -209,7 +209,7 @@ def test_build_counts_rows_per_cuad_category(mod):
         _row("contract", "license", {"cuad_clause_labels": labels_a}),
         _row("contract", "license", {"cuad_clause_labels": json.dumps(labels_b)}),
         _row("contract", "license", {}),
-        _row("insurance_claim", "auto", {"intent": "claim_filing"}),
+        _row("insurance_claim", "auto", {"intent": "claim_filing", "cuad_clause_labels": {"Parties": [{"text": "X"}]}}),
     ]
     out = mod.build(rows, "vtest", COMMIT)
     assert out["label_categories"] == {
