@@ -57,6 +57,7 @@ uv run --locked --extra dev pytest tests -q      # full suite (under a minute; o
 uv run --extra dev pytest tests/test_field_scoring.py -q   # one file
 uvx ruff@0.17.3 check llm_dojo_scoring tests scripts examples   # lint gate, same version as CI
 uv run --locked python scripts/freeze_goldens.py --check   # golden scores unchanged (exit 1 + diff on drift)
+uv run --locked python scripts/ci.py --tier full  # every CI gate in CI's order (--tier smoke: seconds)
 python scripts/release.py status                 # read-only: version / changelog / pin chain
 python scripts/release.py check                  # read-only: verify the chain is consistent
 ```
@@ -72,8 +73,8 @@ python scripts/release.py check                  # read-only: verify the chain i
 ## Verification gates
 
 Run the ones that match the change, on the final state, and keep the output for the PR
-(`.claude/rules/evidence-contract.md`). CI (`.circleci/config.yml`, job `test`) runs ruff,
-the full suite and the golden check; `release-chain` runs `release.py check` on `main`.
+(`.claude/rules/evidence-contract.md`). CI (`.circleci/config.yml`, job `test`) runs `scripts/ci.py --tier full`:
+ruff, `uv lock --check`, the full suite, the golden check and the GT coverage page check; `release-chain` runs `release.py check` on `main`.
 
 | Change touches | Run |
 |:---|:---|

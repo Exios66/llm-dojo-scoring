@@ -11,14 +11,15 @@
 ## Running Tests
 
 ```bash
-uv run --extra dev pytest tests/        # from the repository root
-# or, after `pip install -e ".[dev]"`:
-python -m pytest tests -q
+uv run --locked --extra dev pytest tests -q -rs     # the full suite, from the repository root
+uv run --locked python scripts/ci.py --tier full    # every CI gate, in CI's order
+uv run --locked python scripts/ci.py --tier smoke   # ruff + the contract tests, seconds
 ```
 
-> `tests/test_release_tools.py` runs `git log vX.Y.Z..HEAD`, so it needs tags and
-> full history. In a shallow clone run `git fetch --unshallow --tags` first, or
-> expect that one test to fail.
+> `tests/test_release_tools.py::test_notes_render_contains_changelog_and_commit` runs
+> `git log vX.Y.Z..HEAD`, so it needs tags and full history; in a shallow clone it is
+> skipped (`git fetch --unshallow --tags` lets it run). `test_cli_publish_dry_run_json`
+> skips when the GitHub CLI or the network is unavailable.
 
 ## Test Structure
 
