@@ -101,14 +101,16 @@ _GH_UNAVAILABLE = re.compile(
 )
 
 
-def _publish_dry_run(tmp_path, timeout, real_gh=None):
-    """Run ``release.py publish --json`` with a ``gh`` shim that records its first call.
+def _run_with_gh_shim(tmp_path, cmd, timeout, real_gh=None):
+    """Run *cmd* with a ``gh`` shim that marks each ``gh`` call while it runs.
 
-    A timeout is only a network-unavailability skip when the shim shows the
-    process stalled inside ``gh``; a timeout anywhere else is re-raised so a
-    hang in local processing still fails the test.
+    The shim creates one marker per call and removes it when ``gh`` exits, so a
+    timeout is a network-unavailability skip only while a ``gh`` call is still
+    running. A timeout anywhere else, before ``gh`` or after it returned, is
+    re-raised so a hang in local processing still fails the test.
     """
-    marker = tmp_path / "gh-called"
+    markers = tmp_path / "gh-running"
+    markers.mkdir()
     env = dict(os.environ)
     real_gh = real_gh or shutil.which("gh")
     if real_gh:
@@ -117,26 +119,27 @@ def _publish_dry_run(tmp_path, timeout, real_gh=None):
         shim_dir = tmp_path / "bin"
         shim_dir.mkdir()
         shim = shim_dir / "gh"
-        shim.write_text('#!/bin/sh\n: > "$GH_MARKER"\nexec "$REAL_GH" "$@"\n')
+        shim.write_text(
+            '#!/bin/sh\nm="$GH_MARKERS/$$"\n: > "$m"\n"$REAL_GH" "$@"\nrc=$?\nrm -f "$m"\nexit $rc\n'
+        )
         shim.chmod(0o755)
         env.update(
             PATH=f"{shim_dir}{os.pathsep}{os.environ.get('PATH', '')}",
-            GH_MARKER=str(marker),
+            GH_MARKERS=str(markers),
             REAL_GH=real_gh,
         )
     try:
-        return subprocess.run(
-            [sys.executable, str(SCRIPT), "publish", "0.25.0", "--commit", "HEAD", "--json"],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            env=env,
-        )
+        return subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=timeout, env=env)
     except subprocess.TimeoutExpired:
-        if marker.exists():
+        if any(markers.iterdir()):
             pytest.skip(f"gh stalled for {timeout} s (network unavailable)")
         raise
+
+
+def _publish_dry_run(tmp_path, timeout, real_gh=None):
+    """Run ``release.py publish --json`` under the ``gh`` shim (see ``_run_with_gh_shim``)."""
+    cmd = [sys.executable, str(SCRIPT), "publish", "0.25.0", "--commit", "HEAD", "--json"]
+    return _run_with_gh_shim(tmp_path, cmd, timeout, real_gh)
 
 
 def _payload_or_skip(proc):
@@ -165,19 +168,30 @@ def test_cli_publish_dry_run_json(tmp_path):
     assert any("already published" in e for e in payload["errors"])
 
 
+def _fake_gh(tmp_path, body):
+    """An executable stand-in for ``gh`` running the shell *body*."""
+    fake = tmp_path / "fake-gh"
+    fake.write_text(f"#!/bin/sh\n{body}\n")
+    fake.chmod(0o755)
+    return str(fake)
+
+
 def test_publish_dry_run_timeout_outside_gh_is_not_skipped(tmp_path):
     """A timeout before any ``gh`` call is a failure, not a network skip."""
     with pytest.raises(subprocess.TimeoutExpired):
-        _publish_dry_run(tmp_path, timeout=0.05)
+        _run_with_gh_shim(tmp_path, ["sh", "-c", "sleep 30"], 1, _fake_gh(tmp_path, "exit 0"))
+
+
+def test_timeout_after_a_finished_gh_call_is_not_skipped(tmp_path):
+    """A local hang after ``gh`` returned is a failure: the shim clears its marker on exit."""
+    with pytest.raises(subprocess.TimeoutExpired):
+        _run_with_gh_shim(tmp_path, ["sh", "-c", "gh api x; sleep 30"], 2, _fake_gh(tmp_path, "exit 0"))
 
 
 def test_publish_dry_run_gh_stall_is_a_skip(tmp_path):
     """A timeout while ``gh`` is hanging is the one classified as network unavailability."""
-    slow = tmp_path / "slow-gh"
-    slow.write_text("#!/bin/sh\nsleep 30\n")
-    slow.chmod(0o755)
     with pytest.raises(pytest.skip.Exception, match="gh stalled"):
-        _publish_dry_run(tmp_path, timeout=6, real_gh=str(slow))
+        _publish_dry_run(tmp_path, timeout=6, real_gh=_fake_gh(tmp_path, "sleep 30"))
 
 
 def test_missing_executable_is_a_release_error(release):

@@ -239,7 +239,8 @@ def build(rows: list[dict[str, Any]], revision: str, commit: str) -> dict[str, A
                 "surfaces": dict(sorted(surfaces[(dt, subtype)].items())),
                 "fields": fields,
             }
-        out["doc_types"][doc_type] = subtypes
+        if subtypes:  # a class with no rows stays absent, so registry checks see the gap
+            out["doc_types"][doc_type] = subtypes
     return out
 
 

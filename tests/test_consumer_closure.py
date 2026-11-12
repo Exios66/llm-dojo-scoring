@@ -621,3 +621,19 @@ def test_a_consumer_checkout_with_no_source_files_exits_2(tmp_path, fake_package
     assert cc.main([*args, "--write"]) == 2
     assert "MAIL" in capsys.readouterr().err
     assert not (tmp_path / "out" / "closure.json").exists()
+
+
+def test_dotted_imports_must_name_a_whole_module_path(fake_package):
+    """``import``/``from`` of a dotted path whose tail is no module is unresolved; attributes are not."""
+    pkg = cc.load_package(fake_package)
+    source = (
+        "import llm_dojo_scoring.scoring.gone\n"
+        "from llm_dojo_scoring.core.missing import x\n"
+        "from llm_dojo_scoring.scoring.core import core_fn\n"
+        "from llm_dojo_scoring.scoring import util\n"
+    )
+    found = cc.scan_source(pkg, source)
+    assert found.unresolved == {"scoring.gone", "core.missing"}
+    surface = {"modules": {"scoring.core": {}, "core.missing": {}, "scoring.gone": {}}}
+    recorded = cc.scan_consumer_surface(pkg, surface, cc.dispatch_homes(pkg))
+    assert recorded.unresolved == {"core.missing", "scoring.gone"}
