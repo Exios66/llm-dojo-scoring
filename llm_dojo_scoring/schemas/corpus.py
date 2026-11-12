@@ -37,6 +37,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..config import CONTRACT_SUBTYPE_KEYS, MAUD_CONSIDERATION_TYPES, SUBTYPE_UNKNOWN
+from .doc_classes import DOC_CLASSES, ROSTER_DOC_TYPES, field_names, in_order
 from .equivalences import (
     equivalent_doc_subclasses,
     equivalent_subtypes,
@@ -74,20 +75,26 @@ __all__ = [
 #: Hugging Face dataset id this module is pinned to.
 CORPUS_ID = "Lucius-Morningstar/mailroom-dataset"
 
-#: Doc types that have at least one ground-truth row in the published merge.
-CORPUS_DOC_TYPES: tuple[str, ...] = (
+#: Legacy order of the corpus class tuples (corpus-present, then corpus-absent).
+#: A class added to the registry is appended after these.
+_CORPUS_ORDER = (
     "contract",
     "insurance_claim",
     "merger_agreement",
     "correspondence",
     "corporate_record",
-)
-
-#: Native mailroom classes with no rows in the published merge.
-CORPUS_ABSENT_DOC_TYPES: tuple[str, ...] = (
     "due_diligence",
     "compliance_filing",
     "court_opinion",
+)
+
+#: Doc types that have at least one ground-truth row in the published merge
+#: (``DocClass.in_corpus`` in ``schemas/doc_classes.py``).
+CORPUS_DOC_TYPES: tuple[str, ...] = in_order((k for k, c in DOC_CLASSES.items() if c.in_corpus), _CORPUS_ORDER)
+
+#: Native mailroom classes with no rows in the published merge.
+CORPUS_ABSENT_DOC_TYPES: tuple[str, ...] = in_order(
+    (k for k, c in DOC_CLASSES.items() if not c.in_corpus), _CORPUS_ORDER
 )
 
 #: Full native taxonomy (corpus-present ∪ corpus-absent).
@@ -284,130 +291,11 @@ CORPUS_DIFFERENTIATORS: dict[str, tuple[str, ...]] = {
 }
 
 #: Extraction-schema fields each specialist suite must score, aligned to
-#: live mailroom ``EXTRACTION_SCHEMAS`` + taxonomy ``field_types``.
-#: Merger is ``MergerAgreementExtraction`` (no CUAD family/clauses).
-#: ``document_name`` is on the contracts / merger schema.
-CORPUS_EXTRACTION_FIELDS: dict[str, tuple[str, ...]] = {
-    # ContractExtraction v2 (0.28.0): no parse-compat merger keys.
-    "contract": (
-        "document_name",
-        "parties",
-        "party_roles",
-        "signatories",
-        "agreement_date",
-        "effective_date",
-        "expiration_date",
-        "term_length",
-        "renewal_terms",
-        "termination_notice_period",
-        "governing_law",
-        "dispute_forum",
-        "contract_value",
-        "payment_terms",
-        "territory",
-        "cuad_family",
-        "cuad_clauses",
-    ),
-    # MergerAgreementExtraction v2 (0.28.0).
-    "merger_agreement": (
-        "document_name",
-        "parties",
-        "acquirer",
-        "target",
-        "merger_sub",
-        "signatories",
-        "effective_date",
-        "effective_time",
-        "governing_law",
-        "per_share_cash_amount",
-        "exchange_ratio",
-        "target_termination_fee",
-        "parent_termination_fee",
-        "outside_date",
-        "financial_advisors",
-        "legal_counsel",
-        "merger_consideration",
-        "maud_clauses",
-        "intent",
-        "subject_matter",
-        "keywords",
-    ),
-    "corporate_record": (
-        "entity_name",
-        "record_type",
-        "effective_date",
-        "signatories",
-        "jurisdiction",
-        "filing_number",
-        "intent",
-        "subject_matter",
-        "keywords",
-    ),
-    "due_diligence": (
-        "target_entity",
-        "diligence_type",
-        "material_findings",
-        "risk_flags",
-        "outstanding_items",
-        "document_date",
-        "prepared_by",
-    ),
-    "correspondence": (
-        "sender",
-        "recipient",
-        "additional_recipients",
-        "communication_type",
-        "communication_date",
-        "demand_amount",
-        "action_items",
-        "urgency",
-        "intent",
-        "subject_matter",
-        "keywords",
-    ),
-    "compliance_filing": (
-        "filing_type",
-        "regulatory_body",
-        "filing_date",
-        "due_date",
-        "entity_name",
-        "key_requirements",
-        "status",
-        "reference_number",
-    ),
-    "court_opinion": (
-        "case_name",
-        "court",
-        "date_decided",
-        "docket_number",
-        "opinion_type",
-        "parties",
-        "holding",
-        "legal_issues",
-        "outcome",
-        "citations",
-        "authored_by",
-    ),
-    "insurance_claim": (
-        "claim_number",
-        "policy_number",
-        "insurer",
-        "insured_party",
-        "claim_type",
-        "date_of_loss",
-        "date_filed",
-        "claimed_amount",
-        "adjuster",
-        "damages_description",
-        "coverage_determination",
-        "denial_reasons",
-        "supporting_documents",
-        "intent",
-        "subject_matter",
-        "keywords",
-        "claim_checklist",
-    ),
-}
+#: live mailroom ``EXTRACTION_SCHEMAS`` + taxonomy ``field_types``, derived from the
+#: document-class registry (``schemas/doc_classes.py``: edit the field there, not
+#: here), in specialist-roster order. Merger is ``MergerAgreementExtraction`` (no
+#: CUAD family/clauses); ``document_name`` is on the contracts / merger schema.
+CORPUS_EXTRACTION_FIELDS: dict[str, tuple[str, ...]] = {key: field_names(key) for key in ROSTER_DOC_TYPES}
 
 #: CUAD v1 clause-category names as they appear in ``cuad_clause_labels``.
 CUAD_CLAUSE_CATEGORIES: tuple[str, ...] = (
