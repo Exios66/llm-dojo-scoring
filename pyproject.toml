@@ -35,7 +35,8 @@ embeddings = [
 tracing = [
     "langfuse>=2.50",
 ]
-dev = ["pytest>=8.0", "pytest-mock>=3.14"]
+# jsonschema + pydantic: the schema-contract tests skip silently without them.
+dev = ["pytest>=8.0", "pytest-mock>=3.14", "jsonschema>=4.0", "pydantic>=2.0"]
 # MAUD catalog generation/replay against the pinned Hub dataset
 # (scripts/gen_maud_catalog.py, scripts/verify_gt_penalties.py).
 catalog = [

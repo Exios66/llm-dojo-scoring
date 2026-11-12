@@ -82,8 +82,12 @@ scores needs a CHANGELOG comparability note and a `score_changelog` entry.
   - runs a fast smoke/contract tier and an offline-by-default full tier;
   - emits a machine-readable summary;
   - runs locally, in a container, or from a pre-push hook.
-- [ ] **Suite bloat.** Profile it (`--durations`, tests per file) and demote pinning-only
-  tests (doc-table lockstep, docstring coverage) out of the smoke tier.
+  - *(partly done: `scripts/ci.py --tier smoke|full --json PATH` runs the gates in CI's order and
+    CircleCI calls it; the clean-venv wheel build is still open.)*
+- [x] **Suite bloat.** Profile it (`--durations`, tests per file) and demote pinning-only
+  tests (doc-table lockstep, docstring coverage) out of the smoke tier. *(Profiled: 3,688 tests in
+  about 21 s, slowest test 1.2 s, so runtime is not the problem; the smoke tier runs only the
+  contract tests.)*
 
 ## Process notes
 

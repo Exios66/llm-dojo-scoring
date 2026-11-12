@@ -59,9 +59,6 @@ jobs:
           name: Install (locked, dev extra)
           command: uv sync --frozen --extra dev
       - run:
-          name: ruff (correctness gate, config in pyproject.toml)
-          command: uvx ruff@0.17.3 check llm_dojo_scoring tests scripts examples
-      - run:
           name: Save uv store
           command: uv cache prune --ci
       - save_cache:
@@ -69,23 +66,13 @@ jobs:
           paths:
             - ~/.cache/uv
       - run:
-          # One test (test_cli_publish_dry_run_json) calls git ls-remote / gh and
-          # skips itself when gh is unavailable; everything else is offline.
-          name: Pytest (no network, no real LLM)
-          command: uv run --frozen --no-sync python -m pytest tests -q -p no:cacheprovider --junitxml=test-results/junit.xml
+          # scripts/ci.py runs, in order: ruff, uv lock --check, pytest (-rs prints
+          # every skip), the golden check and the GT coverage page check; it stops at
+          # the first failure. One test (test_cli_publish_dry_run_json) calls gh and
+          # skips itself when gh or the network is unavailable; everything else is offline.
+          name: CI gates (scripts/ci.py --tier full)
+          command: uv run --frozen --no-sync python scripts/ci.py --tier full --junit test-results/junit.xml --json test-results/ci.json
           no_output_timeout: 20m
-      - run:
-          # Guarded: the script lands with PR #104; until then main skips it.
-          name: Golden scores unchanged (scripts/freeze_goldens.py --check)
-          command: |
-            if [ -f scripts/freeze_goldens.py ]; then
-              uv run --frozen --no-sync python scripts/freeze_goldens.py --check
-            else
-              echo "scripts/freeze_goldens.py not present; skipping golden check"
-            fi
-      - run:
-          name: GT coverage page current (scripts/render_gt_coverage.py --check)
-          command: uv run --frozen --no-sync python scripts/render_gt_coverage.py --check
       - store_test_results:
           path: test-results
       - run:
