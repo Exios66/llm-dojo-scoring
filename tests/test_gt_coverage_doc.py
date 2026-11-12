@@ -188,9 +188,9 @@ def test_cuad_fields_count_rows_that_carry_their_own_category(mod, inject_status
         if (m := re.match(r"\| `([a-z_]+)` \|", line))
     }
     assert "| 6 / 10 |" in rows["parties"]  # rows whose span gives a value
-    assert "7 labelled, 1 with no span (truth: absent)" in rows["parties"]
+    assert "7 labelled, 1 with no span" in rows["parties"]
     assert "| 2 / 10 |" in rows["governing_law"]
-    assert "5 labelled, 3 with no span (truth: absent)" in rows["governing_law"]
+    assert "5 labelled, 3 with no span" in rows["governing_law"]
     assert "| 0 / 10 |" in rows["renewal_terms"]  # no row labels that category
     assert "0 labelled" in rows["renewal_terms"]
     assert "| 8 / 10 |" in rows["cuad_clauses"]  # all categories: the container count

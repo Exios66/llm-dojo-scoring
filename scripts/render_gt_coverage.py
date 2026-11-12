@@ -27,6 +27,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from llm_dojo_scoring.pipeline.sandbox_scoring import FIELD_CATEGORY as _FIELD_CATEGORY  # noqa: E402
 from llm_dojo_scoring.schemas import extraction_schemas as _schemas  # noqa: E402
 from llm_dojo_scoring.schemas.corpus import cms_source_table as _cms_source_table  # noqa: E402
 
@@ -46,7 +47,8 @@ _CONTAINER_NOTE = (
 _CATEGORY_NOTE = (
     "Fields whose truth comes from `cuad_clause_labels` show category coverage: the count is "
     "the rows whose CUAD label for that field's own category has a span. A row that labels the "
-    "category with no span is scored as an absent value; the Note gives both counts. "
+    "category with no span expects an absent value (for `effective_date`, a value equal to the "
+    "row's Agreement Date is also accepted); the Note gives both counts. "
     "`cuad_clauses` reads every category, so it counts the rows with any CUAD label."
 )
 
@@ -65,14 +67,15 @@ def _cuad_category(status: Mapping[str, Any], doc_type: str, spec: Any) -> Mappi
     """The per-category counts of a single-category CUAD field (``{}`` when no row labels it).
 
     ``with_spans`` is the field's populated count (rows whose span answers the category);
-    ``labeled`` adds the rows that label it with no span (truth: absent).
+    ``labeled`` adds the rows that label it with no span (scored as an expected absence).
 
     ``None`` when the field is not a single-category CUAD field or the status has no
     per-category counts (an older status file): the container count applies then.
     """
     counts = _category_counts(status, doc_type)
-    category = _schemas._CUAD_DERIVED.get(spec.name) if spec.source == "cuad_clause_labels" else None
-    if counts is None or category is None or spec.name == "cuad_clauses":
+    # The scorer's own field -> category map, so the page counts what is scored.
+    category = _FIELD_CATEGORY.get(spec.name) if spec.source == "cuad_clause_labels" else None
+    if counts is None or category is None:
         return None
     return counts.get(category, {})
 
@@ -121,7 +124,7 @@ def _class_section(status: Mapping[str, Any], doc_type: str) -> list[str]:
         category = _cuad_category(status, doc_type, spec)
         if category is not None:
             labeled = int(category.get("labeled", 0))
-            note += f"; {_n(labeled)} labelled, {_n(labeled - populated)} with no span (truth: absent)"
+            note += f"; {_n(labeled)} labelled, {_n(labeled - populated)} with no span"
         lines.append(
             f"| `{name}` | {spec.field_type} | {spec.status} | {_n(populated)} / {_n(schema.rows)} "
             f"| {share} | {spec.source} | {note} |"
