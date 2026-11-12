@@ -586,9 +586,12 @@ def scan_source(pkg: Package, text: str, homes: Mapping[str, str] | None = None)
                 if alias.name == pkg.name:
                     pkg_aliases.add(alias.asname or pkg.name)
                 elif alias.name.startswith(pkg.name + "."):
-                    module, _ = resolve_modules(pkg, alias.name[len(pkg.name) + 1 :])
+                    dotted = alias.name[len(pkg.name) + 1 :]
+                    module, rest = resolve_modules(pkg, dotted)
                     if module:
                         scan.modules.add(module)
+                    if module is None or rest:  # ``import a.b.c`` needs every segment to be a module
+                        scan.unresolved.add(dotted)
                     if alias.asname:
                         if module:
                             mod_aliases[alias.asname] = module
@@ -620,8 +623,8 @@ def scan_source(pkg: Package, text: str, homes: Mapping[str, str] | None = None)
                     if module and not rest and f"{module}.{alias.name}" in pkg.files:
                         mod_aliases[bound] = f"{module}.{alias.name}"
             names = [a.name for a in node.names if a.name != "*"]
-            module, _ = resolve_modules(pkg, target) if target else (None, [])
-            if target and module is None:
+            module, rest = resolve_modules(pkg, target) if target else (None, [])
+            if target and (module is None or rest):  # ``from a.b import`` needs a module a.b
                 scan.unresolved.add(target)
             scan.modules |= modules_for_from_import(pkg, target, names) if target else set()
         elif isinstance(node, ast.Constant) and isinstance(node.value, str):
@@ -709,10 +712,10 @@ def scan_consumer_surface(pkg: Package, data: Mapping[str, Any], homes: Mapping[
         elif name not in pkg.root_names:
             scan.unresolved.add(name)
     for dotted in data.get("modules", {}):
-        module, _ = resolve_modules(pkg, dotted)
+        module, rest = resolve_modules(pkg, dotted)
         if module:
             scan.modules.add(module)
-        else:
+        if module is None or rest:  # a recorded module path must name a whole module
             scan.unresolved.add(dotted)
     for patch in data.get("patches", []):
         dotted = _dotted_string(pkg, str(patch.get("target", "")))

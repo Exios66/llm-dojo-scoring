@@ -192,3 +192,10 @@ def test_committed_status_file_carries_vocabulary_and_still_loads():
     assert es.extraction_schema("insurance_claim").rows == sum(
         part["rows"] for part in data["doc_types"]["insurance_claim"].values()
     )
+
+
+def test_build_writes_no_doc_types_entry_for_a_class_without_rows(mod):
+    """A class absent from the rows gets no ``doc_types`` key, so the registry check sees it."""
+    rows = [_row("insurance_claim", "auto", {"intent": "claim_filing"})]
+    out = mod.build(rows, "vtest", COMMIT)
+    assert set(out["doc_types"]) == {"insurance_claim"}
