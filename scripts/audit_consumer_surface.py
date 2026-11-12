@@ -1105,7 +1105,7 @@ def main(argv: list[str] | None = None) -> int:
         gone = sorted(name for name, entry in data["top_level"].items() if entry["kind"] == "missing")
         if gone:
             print(
-                "consumers that were not rescanned import root names the package no longer has: "
+                "recorded consumers import root names the package no longer has: "
                 + ", ".join(gone),
                 file=sys.stderr,
             )
