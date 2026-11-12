@@ -65,3 +65,17 @@ def test_every_legacy_alias_points_at_an_existing_module():
 def test_module_consumers_import_by_flat_path_keeps_its_alias(dotted):
     """A module consumers import by a legacy flat path still has one (pinned by the fixture, not by LEGACY_MODULES)."""
     assert dotted in _FLAT_BY_TARGET, f"llm_dojo_scoring.{dotted} lost the legacy flat alias consumers import"
+
+
+@pytest.mark.parametrize(
+    "dotted", sorted(d for d, e in SURFACE["modules"].items() if e["legacy"])
+)
+def test_required_flat_name_maps_to_the_same_module(dotted):
+    """The flat name consumers import (the module's last segment) still aliases that exact module."""
+    flat = dotted.rsplit(".", 1)[-1]
+    assert LEGACY_MODULES.get(flat) == dotted, (
+        f"legacy flat name {flat!r} no longer aliases llm_dojo_scoring.{dotted}"
+    )
+    assert importlib.import_module(f"llm_dojo_scoring.{flat}") is importlib.import_module(
+        f"llm_dojo_scoring.{dotted}"
+    )
