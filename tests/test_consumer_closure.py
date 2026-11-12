@@ -610,3 +610,14 @@ def test_lazy_root_tables_resolve_root_names(fake_package):
     assert names["renamed_util"] == "scoring.util"
     assert names["lazy"] == "lazy"
     assert names["held_two"] == "held.two"
+
+
+def test_a_consumer_checkout_with_no_source_files_exits_2(tmp_path, fake_package, consumers, capsys):
+    """An existing directory with nothing to scan is not a consumer: exit 2, nothing written."""
+    _mail, sbx = consumers
+    empty = tmp_path / "unrelated"
+    empty.mkdir()
+    args = _cli_args(tmp_path, fake_package, "--mailroom", str(empty), "--sandbox", str(sbx))
+    assert cc.main([*args, "--write"]) == 2
+    assert "MAIL" in capsys.readouterr().err
+    assert not (tmp_path / "out" / "closure.json").exists()

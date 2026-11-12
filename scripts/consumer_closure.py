@@ -1004,6 +1004,8 @@ def collect_sources(
             files = read_consumer(root, ref, prefixes)
         except MissingInput as exc:
             raise MissingInput(f"{code}: {exc}") from exc
+        if not files:
+            raise MissingInput(f"{code}: no Python files under {', '.join(prefixes)} in the checkout")
         scan, failures = scan_files(pkg, files, homes)
         meta: dict[str, Any] = {"commit": commit_of(root, ref or "HEAD"), "files_scanned": len(files)}
         if failures:

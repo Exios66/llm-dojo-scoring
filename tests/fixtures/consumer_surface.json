@@ -2912,7 +2912,7 @@
         }
       ],
       "defined_in": "scoring.agent_rubrics",
-      "in_all": false,
+      "in_all": true,
       "kind": "module"
     },
     "aggregate_sandbox_scores": {
@@ -3322,7 +3322,7 @@
         }
       ],
       "defined_in": "scoring.legalbench_scoring",
-      "in_all": false,
+      "in_all": true,
       "kind": "module"
     },
     "list_suites": {
@@ -3395,7 +3395,7 @@
         }
       ],
       "defined_in": "pipeline.pipeline_scoring",
-      "in_all": false,
+      "in_all": true,
       "kind": "module"
     },
     "score_category_presence": {
