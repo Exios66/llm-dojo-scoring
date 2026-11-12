@@ -1,0 +1,757 @@
+{
+  "dispatch_keys": {
+    "get_suite": [
+      "contract",
+      "corporate_records_specialist",
+      "correspondence_specialist",
+      "court_opinion",
+      "due_diligence",
+      "intake",
+      "local_vs_api",
+      "merger_agreement",
+      "sorter"
+    ],
+    "score_task": [
+      "docclass"
+    ],
+    "suite_for_doc_type": [
+      "corporate_record"
+    ]
+  },
+  "generated_by": "scripts/consumer_closure.py",
+  "modules": {
+    "__init__": {
+      "decision": "keep",
+      "lines": 467,
+      "reason": "package root (its eager imports are ignored; Task 5 makes it lazy)"
+    },
+    "_layout": {
+      "decision": "keep",
+      "lines": 124,
+      "reason": "legacy flat-path alias installer, imported by the package root"
+    },
+    "analysis": {
+      "decision": "keep",
+      "lines": 1,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface"
+    },
+    "analysis.bootstrap": {
+      "decision": "keep",
+      "lines": 150,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "analysis.calibration": {
+      "decision": "keep",
+      "lines": 396,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface"
+    },
+    "analysis.cost": {
+      "decision": "keep",
+      "lines": 178,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "analysis.diagnostics": {
+      "decision": "keep",
+      "lines": 326,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "analysis.error_analysis": {
+      "decision": "delete",
+      "lines": 272,
+      "reason": "no consumer reaches it; imported only by analysis.interpret, analysis.report, analysis.visualize, cli, ..."
+    },
+    "analysis.experiment": {
+      "decision": "keep",
+      "lines": 109,
+      "reason": "consumer import: SBX, consumer_surface"
+    },
+    "analysis.export": {
+      "decision": "delete",
+      "lines": 700,
+      "reason": "no consumer reaches it; imported only by cli, integrations.langfuse_sync, the root __init__"
+    },
+    "analysis.failure_modes": {
+      "decision": "delete",
+      "lines": 184,
+      "reason": "no consumer reaches it; imported only by integrations.langfuse_sync, the root __init__"
+    },
+    "analysis.grid": {
+      "decision": "delete",
+      "lines": 949,
+      "reason": "no consumer reaches it; imported only by the root __init__"
+    },
+    "analysis.interpret": {
+      "decision": "delete",
+      "lines": 321,
+      "reason": "no consumer reaches it; imported only by analysis.report, the root __init__"
+    },
+    "analysis.io": {
+      "decision": "delete",
+      "lines": 233,
+      "reason": "no consumer reaches it; imported only by cli, the root __init__"
+    },
+    "analysis.report": {
+      "decision": "delete",
+      "lines": 183,
+      "reason": "no consumer reaches it; imported only by cli, the root __init__"
+    },
+    "analysis.serving": {
+      "decision": "keep",
+      "lines": 1557,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "analysis.visualize": {
+      "decision": "delete",
+      "lines": 314,
+      "reason": "no consumer reaches it; imported only by cli, the root __init__"
+    },
+    "cli": {
+      "decision": "delete",
+      "lines": 335,
+      "reason": "no consumer reaches it; nothing imports it"
+    },
+    "config": {
+      "decision": "keep",
+      "lines": 632,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "integrations": {
+      "decision": "hold",
+      "lines": 1,
+      "reason": "package of held integrations.update_awareness"
+    },
+    "integrations.langfuse_sync": {
+      "decision": "delete",
+      "lines": 720,
+      "reason": "no consumer reaches it; imported only by cli, the root __init__"
+    },
+    "integrations.phoenix_sync": {
+      "decision": "delete",
+      "lines": 150,
+      "reason": "no consumer reaches it; imported only by cli, the root __init__"
+    },
+    "integrations.update_awareness": {
+      "decision": "hold",
+      "lines": 530,
+      "reason": "release tooling behind the dojo-version CLI, Dojo #66"
+    },
+    "metrics": {
+      "decision": "keep",
+      "lines": 1,
+      "reason": "package of kept metrics.bundles"
+    },
+    "metrics.bundles": {
+      "decision": "keep",
+      "lines": 387,
+      "reason": "imported by kept metrics.pruning"
+    },
+    "metrics.doc_bundles": {
+      "decision": "keep",
+      "lines": 289,
+      "reason": "imported by kept metrics.profiles"
+    },
+    "metrics.emitter": {
+      "decision": "keep",
+      "lines": 449,
+      "reason": "consumer import: SBX, consumer_surface"
+    },
+    "metrics.metric_meta": {
+      "decision": "keep",
+      "lines": 605,
+      "reason": "imported by kept metrics.registry"
+    },
+    "metrics.profiles": {
+      "decision": "keep",
+      "lines": 417,
+      "reason": "imported by kept metrics.pruning"
+    },
+    "metrics.pruning": {
+      "decision": "keep",
+      "lines": 97,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "metrics.registry": {
+      "decision": "keep",
+      "lines": 1389,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "metrics.score_changelog": {
+      "decision": "keep",
+      "lines": 110,
+      "reason": "imported by kept analysis.serving"
+    },
+    "metrics.scorecard_honesty": {
+      "decision": "keep",
+      "lines": 1156,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "pipeline": {
+      "decision": "keep",
+      "lines": 1,
+      "reason": "package of kept pipeline.archive"
+    },
+    "pipeline.archive": {
+      "decision": "keep",
+      "lines": 1125,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface, contract_surface"
+    },
+    "pipeline.intake": {
+      "decision": "keep",
+      "lines": 417,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "pipeline.mailroom": {
+      "decision": "keep",
+      "lines": 339,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "pipeline.pilot_labels": {
+      "decision": "keep",
+      "lines": 172,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "pipeline.pilot_summary": {
+      "decision": "keep",
+      "lines": 51,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "pipeline.pipeline_scoring": {
+      "decision": "keep",
+      "lines": 202,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "pipeline.pipeline_verdict": {
+      "decision": "keep",
+      "lines": 35,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "pipeline.sandbox_agent_scoring": {
+      "decision": "delete",
+      "lines": 33,
+      "reason": "no consumer reaches it; nothing imports it"
+    },
+    "pipeline.sandbox_composite": {
+      "decision": "delete",
+      "lines": 13,
+      "reason": "no consumer reaches it; nothing imports it"
+    },
+    "pipeline.sandbox_schema_adherence": {
+      "decision": "keep",
+      "lines": 479,
+      "reason": "consumer import: MAIL@origin/stack/03-audit-live-row, contract_surface"
+    },
+    "pipeline.sandbox_scoring": {
+      "decision": "keep",
+      "lines": 479,
+      "reason": "consumer import: SBX, consumer_surface"
+    },
+    "prompts": {
+      "decision": "keep",
+      "lines": 187,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "prompts.lineage": {
+      "decision": "keep",
+      "lines": 255,
+      "reason": "imported by kept prompts"
+    },
+    "schemas": {
+      "decision": "keep",
+      "lines": 1,
+      "reason": "imported by kept scoring.suites"
+    },
+    "schemas.corporate_record_relabel": {
+      "decision": "keep",
+      "lines": 183,
+      "reason": "consumer import: consumer_surface"
+    },
+    "schemas.corporate_record_schema": {
+      "decision": "keep",
+      "lines": 732,
+      "reason": "consumer import: MAIL@origin/claude/howdy-n8vcc1, SBX, consumer_surface"
+    },
+    "schemas.corpus": {
+      "decision": "keep",
+      "lines": 636,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "schemas.correspondence_gt_audit": {
+      "decision": "hold",
+      "lines": 349,
+      "reason": "correspondence ground-truth audit, Dojo #94"
+    },
+    "schemas.cuad_schema": {
+      "decision": "keep",
+      "lines": 1122,
+      "reason": "consumer import: MAIL@origin/claude/howdy-n8vcc1"
+    },
+    "schemas.equivalences": {
+      "decision": "keep",
+      "lines": 76,
+      "reason": "consumer import: SBX, consumer_surface"
+    },
+    "schemas.extraction_schemas": {
+      "decision": "keep",
+      "lines": 560,
+      "reason": "consumer import: MAIL@origin/claude/howdy-n8vcc1"
+    },
+    "schemas.gt_metadata": {
+      "decision": "keep",
+      "lines": 328,
+      "reason": "consumer import: consumer_surface"
+    },
+    "schemas.intents": {
+      "decision": "keep",
+      "lines": 224,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "schemas.maud": {
+      "decision": "keep",
+      "lines": 530,
+      "reason": "imported by kept metrics.scorecard_honesty"
+    },
+    "schemas.maud_schema": {
+      "decision": "keep",
+      "lines": 1139,
+      "reason": "consumer import: SBX, consumer_surface"
+    },
+    "schemas.schema_contract": {
+      "decision": "keep",
+      "lines": 106,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "schemas.scored_enums": {
+      "decision": "keep",
+      "lines": 267,
+      "reason": "imported by kept schemas.extraction_schemas"
+    },
+    "schemas.sorter_guide": {
+      "decision": "keep",
+      "lines": 235,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "schemas.v10_rows": {
+      "decision": "hold",
+      "lines": 243,
+      "reason": "v10 dataset row loaders, mailroom #174"
+    },
+    "scoring": {
+      "decision": "keep",
+      "lines": 1,
+      "reason": "package of kept scoring._paired"
+    },
+    "scoring._paired": {
+      "decision": "keep",
+      "lines": 9,
+      "reason": "imported by kept pipeline.intake"
+    },
+    "scoring.agent_rubrics": {
+      "decision": "keep",
+      "lines": 70,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "scoring.asr": {
+      "decision": "keep",
+      "lines": 125,
+      "reason": "imported by kept scoring.suites"
+    },
+    "scoring.claims_consistency": {
+      "decision": "keep",
+      "lines": 106,
+      "reason": "imported by kept scoring.suites"
+    },
+    "scoring.classification": {
+      "decision": "keep",
+      "lines": 321,
+      "reason": "consumer import: SBX, consumer_surface"
+    },
+    "scoring.content_scoring": {
+      "decision": "keep",
+      "lines": 788,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface"
+    },
+    "scoring.doc_scorers": {
+      "decision": "keep",
+      "lines": 44,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface, contract_surface"
+    },
+    "scoring.doc_scorers.base": {
+      "decision": "keep",
+      "lines": 73,
+      "reason": "imported by kept scoring.doc_scorers"
+    },
+    "scoring.doc_scorers.common": {
+      "decision": "keep",
+      "lines": 133,
+      "reason": "imported by kept pipeline.archive"
+    },
+    "scoring.doc_scorers.contract": {
+      "decision": "keep",
+      "lines": 43,
+      "reason": "imported by kept scoring.doc_scorers"
+    },
+    "scoring.doc_scorers.corporate_record": {
+      "decision": "keep",
+      "lines": 17,
+      "reason": "imported by kept scoring.doc_scorers"
+    },
+    "scoring.doc_scorers.correspondence": {
+      "decision": "keep",
+      "lines": 54,
+      "reason": "imported by kept scoring.doc_scorers"
+    },
+    "scoring.doc_scorers.dispatch": {
+      "decision": "keep",
+      "lines": 122,
+      "reason": "consumer import: contract_surface"
+    },
+    "scoring.doc_scorers.generic": {
+      "decision": "keep",
+      "lines": 11,
+      "reason": "imported by kept scoring.doc_scorers"
+    },
+    "scoring.doc_scorers.insurance_claim": {
+      "decision": "keep",
+      "lines": 43,
+      "reason": "imported by kept scoring.doc_scorers"
+    },
+    "scoring.doc_scorers.merger_agreement": {
+      "decision": "keep",
+      "lines": 43,
+      "reason": "imported by kept scoring.doc_scorers"
+    },
+    "scoring.extraction_metrics": {
+      "decision": "keep",
+      "lines": 218,
+      "reason": "consumer import: SBX, consumer_surface"
+    },
+    "scoring.extraction_scope": {
+      "decision": "keep",
+      "lines": 267,
+      "reason": "imported by kept scoring.doc_scorers.dispatch"
+    },
+    "scoring.field_scoring": {
+      "decision": "keep",
+      "lines": 1868,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "scoring.field_support": {
+      "decision": "keep",
+      "lines": 48,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "scoring.legalbench_scoring": {
+      "decision": "keep",
+      "lines": 168,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "scoring.rescore": {
+      "decision": "delete",
+      "lines": 567,
+      "reason": "no consumer reaches it; imported only by cli, the root __init__"
+    },
+    "scoring.reviewer": {
+      "decision": "keep",
+      "lines": 1030,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface"
+    },
+    "scoring.suites": {
+      "decision": "keep",
+      "lines": 1770,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "scoring.tasks": {
+      "decision": "keep",
+      "lines": 707,
+      "reason": "consumer import: SBX, consumer_surface"
+    },
+    "scoring.trace_knobs": {
+      "decision": "keep",
+      "lines": 239,
+      "reason": "imported by kept pipeline.archive"
+    }
+  },
+  "roots": {
+    "MAIL": [
+      "analysis",
+      "analysis.bootstrap",
+      "analysis.calibration",
+      "analysis.cost",
+      "analysis.diagnostics",
+      "analysis.serving",
+      "config",
+      "metrics.pruning",
+      "metrics.registry",
+      "metrics.scorecard_honesty",
+      "pipeline.archive",
+      "pipeline.intake",
+      "pipeline.mailroom",
+      "pipeline.pilot_labels",
+      "pipeline.pilot_summary",
+      "pipeline.pipeline_scoring",
+      "pipeline.pipeline_verdict",
+      "prompts",
+      "schemas.corpus",
+      "schemas.intents",
+      "schemas.schema_contract",
+      "schemas.sorter_guide",
+      "scoring.agent_rubrics",
+      "scoring.content_scoring",
+      "scoring.doc_scorers",
+      "scoring.field_scoring",
+      "scoring.field_support",
+      "scoring.legalbench_scoring",
+      "scoring.reviewer",
+      "scoring.suites"
+    ],
+    "MAIL@origin/claude/howdy-n8vcc1": [
+      "analysis",
+      "analysis.bootstrap",
+      "analysis.calibration",
+      "analysis.cost",
+      "analysis.diagnostics",
+      "analysis.serving",
+      "config",
+      "metrics.pruning",
+      "metrics.registry",
+      "metrics.scorecard_honesty",
+      "pipeline.archive",
+      "pipeline.intake",
+      "pipeline.mailroom",
+      "pipeline.pilot_labels",
+      "pipeline.pilot_summary",
+      "pipeline.pipeline_scoring",
+      "pipeline.pipeline_verdict",
+      "prompts",
+      "schemas.corporate_record_schema",
+      "schemas.corpus",
+      "schemas.cuad_schema",
+      "schemas.extraction_schemas",
+      "schemas.intents",
+      "schemas.schema_contract",
+      "schemas.sorter_guide",
+      "scoring.agent_rubrics",
+      "scoring.content_scoring",
+      "scoring.doc_scorers",
+      "scoring.field_scoring",
+      "scoring.field_support",
+      "scoring.legalbench_scoring",
+      "scoring.reviewer",
+      "scoring.suites"
+    ],
+    "MAIL@origin/stack/01-audit-storage": [
+      "analysis",
+      "analysis.bootstrap",
+      "analysis.calibration",
+      "analysis.cost",
+      "analysis.diagnostics",
+      "analysis.serving",
+      "config",
+      "metrics.pruning",
+      "metrics.registry",
+      "metrics.scorecard_honesty",
+      "pipeline.archive",
+      "pipeline.intake",
+      "pipeline.mailroom",
+      "pipeline.pilot_labels",
+      "pipeline.pilot_summary",
+      "pipeline.pipeline_scoring",
+      "pipeline.pipeline_verdict",
+      "prompts",
+      "schemas.corpus",
+      "schemas.intents",
+      "schemas.schema_contract",
+      "schemas.sorter_guide",
+      "scoring.agent_rubrics",
+      "scoring.content_scoring",
+      "scoring.doc_scorers",
+      "scoring.field_scoring",
+      "scoring.field_support",
+      "scoring.legalbench_scoring",
+      "scoring.reviewer",
+      "scoring.suites"
+    ],
+    "MAIL@origin/stack/02-diagnostics-workbench": [
+      "analysis",
+      "analysis.bootstrap",
+      "analysis.calibration",
+      "analysis.cost",
+      "analysis.diagnostics",
+      "analysis.serving",
+      "config",
+      "metrics.pruning",
+      "metrics.registry",
+      "metrics.scorecard_honesty",
+      "pipeline.archive",
+      "pipeline.intake",
+      "pipeline.mailroom",
+      "pipeline.pilot_labels",
+      "pipeline.pilot_summary",
+      "pipeline.pipeline_scoring",
+      "pipeline.pipeline_verdict",
+      "prompts",
+      "schemas.corpus",
+      "schemas.intents",
+      "schemas.schema_contract",
+      "schemas.sorter_guide",
+      "scoring.agent_rubrics",
+      "scoring.content_scoring",
+      "scoring.doc_scorers",
+      "scoring.field_scoring",
+      "scoring.field_support",
+      "scoring.legalbench_scoring",
+      "scoring.reviewer",
+      "scoring.suites"
+    ],
+    "MAIL@origin/stack/03-audit-live-row": [
+      "analysis",
+      "analysis.bootstrap",
+      "analysis.calibration",
+      "analysis.cost",
+      "analysis.diagnostics",
+      "analysis.serving",
+      "config",
+      "metrics.pruning",
+      "metrics.registry",
+      "metrics.scorecard_honesty",
+      "pipeline.archive",
+      "pipeline.intake",
+      "pipeline.mailroom",
+      "pipeline.pilot_labels",
+      "pipeline.pilot_summary",
+      "pipeline.pipeline_scoring",
+      "pipeline.pipeline_verdict",
+      "pipeline.sandbox_schema_adherence",
+      "prompts",
+      "schemas.corpus",
+      "schemas.intents",
+      "schemas.schema_contract",
+      "schemas.sorter_guide",
+      "scoring.agent_rubrics",
+      "scoring.content_scoring",
+      "scoring.doc_scorers",
+      "scoring.field_scoring",
+      "scoring.field_support",
+      "scoring.legalbench_scoring",
+      "scoring.reviewer",
+      "scoring.suites"
+    ],
+    "SBX": [
+      "analysis.bootstrap",
+      "analysis.cost",
+      "analysis.diagnostics",
+      "analysis.experiment",
+      "analysis.serving",
+      "config",
+      "metrics.emitter",
+      "metrics.pruning",
+      "metrics.registry",
+      "metrics.scorecard_honesty",
+      "pipeline.intake",
+      "pipeline.mailroom",
+      "pipeline.pilot_labels",
+      "pipeline.pilot_summary",
+      "pipeline.pipeline_scoring",
+      "pipeline.pipeline_verdict",
+      "pipeline.sandbox_scoring",
+      "prompts",
+      "schemas.corporate_record_schema",
+      "schemas.corpus",
+      "schemas.equivalences",
+      "schemas.intents",
+      "schemas.maud_schema",
+      "schemas.schema_contract",
+      "schemas.sorter_guide",
+      "scoring.agent_rubrics",
+      "scoring.classification",
+      "scoring.extraction_metrics",
+      "scoring.field_scoring",
+      "scoring.field_support",
+      "scoring.legalbench_scoring",
+      "scoring.suites",
+      "scoring.tasks"
+    ],
+    "consumer_surface": [
+      "analysis",
+      "analysis.bootstrap",
+      "analysis.calibration",
+      "analysis.cost",
+      "analysis.diagnostics",
+      "analysis.experiment",
+      "analysis.serving",
+      "config",
+      "metrics.emitter",
+      "metrics.pruning",
+      "metrics.registry",
+      "metrics.scorecard_honesty",
+      "pipeline.archive",
+      "pipeline.intake",
+      "pipeline.mailroom",
+      "pipeline.pilot_labels",
+      "pipeline.pilot_summary",
+      "pipeline.pipeline_scoring",
+      "pipeline.pipeline_verdict",
+      "pipeline.sandbox_scoring",
+      "prompts",
+      "schemas.corporate_record_relabel",
+      "schemas.corporate_record_schema",
+      "schemas.corpus",
+      "schemas.equivalences",
+      "schemas.gt_metadata",
+      "schemas.intents",
+      "schemas.maud_schema",
+      "schemas.schema_contract",
+      "schemas.sorter_guide",
+      "scoring.agent_rubrics",
+      "scoring.classification",
+      "scoring.content_scoring",
+      "scoring.doc_scorers",
+      "scoring.extraction_metrics",
+      "scoring.field_scoring",
+      "scoring.field_support",
+      "scoring.legalbench_scoring",
+      "scoring.reviewer",
+      "scoring.suites",
+      "scoring.tasks"
+    ],
+    "contract_surface": [
+      "pipeline.archive",
+      "pipeline.sandbox_schema_adherence",
+      "scoring.doc_scorers",
+      "scoring.doc_scorers.dispatch"
+    ]
+  },
+  "schema_version": 1,
+  "sources": {
+    "MAIL": {
+      "commit": "5bcfe44584e468d8fc9d5d30e28abd5cc52cadfc",
+      "files_scanned": 374
+    },
+    "MAIL@origin/claude/howdy-n8vcc1": {
+      "commit": "1f06ff19924ad9b0a60bbf8db3bbc58ca13ae79f",
+      "files_scanned": 376
+    },
+    "MAIL@origin/stack/01-audit-storage": {
+      "commit": "a6863c0b22288e56590af95bafb1a6fd27e3e316",
+      "files_scanned": 383
+    },
+    "MAIL@origin/stack/02-diagnostics-workbench": {
+      "commit": "4ee01d678a75a0d733e4d57813525b6a4d2094a0",
+      "files_scanned": 386
+    },
+    "MAIL@origin/stack/03-audit-live-row": {
+      "commit": "598cdc4460897fd6126ba02ec174f5444d4e0486",
+      "files_scanned": 414
+    },
+    "SBX": {
+      "commit": "c81a79aecaebfb2c05a124bbf93f7d4d63774e02",
+      "files_scanned": 505
+    },
+    "consumer_surface": {
+      "file": "tests/fixtures/consumer_surface.json"
+    },
+    "contract_surface": {
+      "file": "tests/fixtures/contract_surface.json"
+    }
+  }
+}
