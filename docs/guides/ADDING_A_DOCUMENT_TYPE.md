@@ -111,10 +111,7 @@ pinned dataset actually populates, frozen in `schemas/data/extraction_status.jso
 
 - [ ] `tests/test_doc_classes.py`, `tests/test_extraction_schemas.py` (`registry_violations`),
       `test_doc_bundles`, the suite and profile tests: add `<type>` wherever they parametrise over
-      classes. `test_table_equals_pre_refactor_snapshot` pins the tables as they were before the
-      registry existed (it proved the registry refactor changed nothing); the first intended
-      registry edit makes it fail, and that is the cue to delete that test and
-      `tests/fixtures/doc_class_tables_before.json`, not to edit the fixture.
+      classes.
 - [ ] Add a scoring smoke test:
       `get_suite("<type>").score([gt, gt], [gt, {}])` returns `headline_scope` and a
       non-null `quality_mean`.

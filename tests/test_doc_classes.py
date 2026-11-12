@@ -1,11 +1,10 @@
 """The document-class registry: one hand-edited table, every other table derived.
 
-Pins (1) that the refactor reproduced every pre-refactor class/field table
-value-for-value and in order (``tests/fixtures/doc_class_tables_before.json``),
-(2) that each derived table still agrees with ``schemas/doc_classes.py`` when
-recomputed from it, (3) that a registry edit reaches every derived table or
-fails the import loudly (subprocess mutation tests), and (4) the layering rule
-that ``schemas/`` never imports ``scoring/``.
+Pins (1) that each derived table still agrees with ``schemas/doc_classes.py`` when
+recomputed from it, (2) that a registry edit reaches every derived table or fails the
+import loudly (subprocess mutation tests), and (3) the layering rule that ``schemas/``
+never imports ``scoring/``. (The one-off snapshot that proved the refactor changed no
+table was retired once the refactor landed; see the PR that introduced the registry.)
 """
 
 from __future__ import annotations
@@ -44,7 +43,6 @@ from llm_dojo_scoring.schemas.extraction_schemas import (
 
 _ROOT = Path(__file__).resolve().parents[1]
 _PACKAGE = _ROOT / "llm_dojo_scoring"
-_SNAPSHOT = json.loads((_ROOT / "tests" / "fixtures" / "doc_class_tables_before.json").read_text("utf-8"))
 
 #: The eight classes in registry (taxonomy) order, as the snapshot recorded them.
 _EIGHT = (
@@ -58,118 +56,6 @@ _EIGHT = (
     "merger_agreement",
 )
 _FIVE = ("contract", "merger_agreement", "corporate_record", "correspondence", "insurance_claim")
-
-
-def _ser(obj: Any) -> Any:
-    """Typed, order-preserving JSON form of a table (the snapshot's format)."""
-    if isinstance(obj, dict):
-        return {"type": "dict", "value": [[k, _ser(v)] for k, v in obj.items()]}
-    if isinstance(obj, (set, frozenset)):
-        return {"type": type(obj).__name__, "value": sorted(obj)}
-    if isinstance(obj, tuple):
-        return {"type": "tuple", "value": [_ser(v) for v in obj]}
-    if isinstance(obj, list):
-        return {"type": "list", "value": [_ser(v) for v in obj]}
-    return obj
-
-
-def _attr(module: str, name: str) -> Any:
-    """``llm_dojo_scoring.<module>.<name>``, imported fresh from ``sys.modules``."""
-    return getattr(importlib.import_module(f"llm_dojo_scoring.{module}"), name)
-
-
-_PLAIN_TABLES: dict[str, list[str]] = {
-    "scoring.suites": ["DEFAULT_FIELD_TYPES", "SPECIALIST_DOC_TYPES", "DOC_TYPE_ALIASES"],
-    "schemas.corpus": ["CORPUS_EXTRACTION_FIELDS", "CORPUS_DOC_TYPES", "CORPUS_ABSENT_DOC_TYPES", "NATIVE_DOC_TYPES"],
-    "schemas.extraction_schemas": ["MAILROOM_DOC_TYPES"],
-    "pipeline.mailroom": [
-        "LIVE_DOC_TYPES",
-        "RETIRED_DOC_TYPES",
-        "SORTER_LABEL_SET",
-        "LIVE_SPECIALISTS",
-        "RETIRED_SPECIALISTS",
-        "RETIRED_AUDITORS",
-    ],
-    "config": ["DOC_CLASS_KEYS", "LIVE_DOC_CLASS_KEYS", "RETIRED_DOC_CLASS_KEYS"],
-    "metrics.doc_bundles": ["DOC_TYPES"],
-    "pipeline.archive": ["LIVE_ARCHIVE_DOC_TYPES"],
-    "metrics.registry": ["SPECIALIST_AGENTS", "LIVE_SPECIALIST_AGENTS"],
-    "metrics.scorecard_honesty": ["SCHEMA_PROMOTION_GATES"],
-    "schemas.v10_rows": ["V10_GT_CONFIGS"],
-    "scoring.extraction_scope": ["LIVE_SCHEMA_FIELDS"],
-    "pipeline.sandbox_schema_adherence": ["_FALLBACK_SCHEMA_KEYS", "_MODEL_CLASSES", "_PARSE_COMPAT_KEYS"],
-    "schemas.cuad_schema": ["CONTRACT_FIELD_TYPES"],
-    "schemas.corporate_record_schema": ["CORE_FIELDS"],
-    "schemas.schema_contract": ["EMPTY_OVERRIDES"],
-}
-
-
-def _collect() -> dict[str, Any]:
-    """Every table the snapshot recorded, serialized from the live package."""
-    out: dict[str, Any] = {}
-    for module, names in _PLAIN_TABLES.items():
-        for name in names:
-            out[f"{module}.{name}"] = _ser(_attr(module, name))
-    out["metrics.doc_bundles.DOC_TYPE_BUNDLES.keys"] = _ser(list(_attr("metrics.doc_bundles", "DOC_TYPE_BUNDLES")))
-    cuad = importlib.import_module("llm_dojo_scoring.schemas.cuad_schema")
-    out["schemas.cuad_schema.CONTRACT_EXTRACTION_FIELDS"] = _ser(
-        [[f.name, f.scoring_type, f.empty_kind, f.description] for f in cuad.CONTRACT_EXTRACTION_FIELDS]
-    )
-    out["schemas.cuad_schema.CONTRACT_PARSE_COMPAT_FIELDS"] = _ser(
-        [[f.name, f.scoring_type, f.empty_kind, f.description] for f in cuad.CONTRACT_PARSE_COMPAT_FIELDS]
-    )
-    maud = importlib.import_module("llm_dojo_scoring.schemas.maud_schema")
-    out["schemas.maud_schema.MergerAgreementExtraction.field_types"] = _ser(maud.MergerAgreementExtraction.field_types)
-    out["schemas.maud_schema.MergerAgreementExtraction.fields"] = _ser(
-        [[f.name, f.type, f.empty, f.description] for f in maud.MergerAgreementExtraction.fields]
-    )
-    schemas = importlib.import_module("llm_dojo_scoring.schemas.extraction_schemas")
-    suites = importlib.import_module("llm_dojo_scoring.scoring.suites")
-    out["schemas.extraction_schemas._live_types"] = _ser({c: schemas._live_types(c) for c in suites.DEFAULT_FIELD_TYPES})
-    out["schemas.extraction_schemas.extraction_schema.as_dict"] = _ser(
-        {c: schemas.extraction_schema(c).as_dict() for c in schemas.MAILROOM_DOC_TYPES}
-    )
-    corporate = importlib.import_module("llm_dojo_scoring.schemas.corporate_record_schema")
-    out["schemas.corporate_record_schema.scored_field_types"] = _ser(
-        {s: corporate.scored_field_types(s) for s in corporate.SUBCLASS_SCHEMAS}
-    )
-    contract = importlib.import_module("llm_dojo_scoring.schemas.schema_contract")
-    out["schemas.schema_contract.contract_empty_payload"] = _ser(
-        {c: contract.contract_empty_payload(c) for c in suites.DEFAULT_FIELD_TYPES}
-    )
-    audit = importlib.import_module("llm_dojo_scoring.schemas.correspondence_gt_audit")
-    out["schemas.correspondence_gt_audit.populated_fields(all-populated)"] = _ser(
-        audit.correspondence_populated_fields({k: "x" for k in suites.DEFAULT_FIELD_TYPES["correspondence"]})
-    )
-    out["scripts.build_extraction_status.FIVE"] = _ser(load_script("build_extraction_status").FIVE)
-    return out
-
-
-_COLLECTED = _collect()
-
-
-# ---------------------------------------------------------------------------
-# 1. The refactor changed nothing: values, types and order
-# ---------------------------------------------------------------------------
-
-
-def test_snapshot_and_collector_cover_the_same_tables() -> None:
-    """The collector reads exactly the tables the snapshot recorded."""
-    assert list(_COLLECTED) == list(_SNAPSHOT)
-
-
-@pytest.mark.parametrize("table", list(_SNAPSHOT))
-def test_table_equals_pre_refactor_snapshot(table: str) -> None:
-    """Each derived table equals its pre-refactor value, container type and order.
-
-    This guards the registry refactor only. After an intended registry edit it fails by
-    design; then delete this test and ``doc_class_tables_before.json`` (the other tests in
-    this file keep the derived tables tied to the registry).
-    """
-    assert _COLLECTED[table] == _SNAPSHOT[table], (
-        f"{table} differs from the pre-refactor snapshot. If the registry was edited on purpose, "
-        "retire this test and tests/fixtures/doc_class_tables_before.json."
-    )
 
 
 # ---------------------------------------------------------------------------
