@@ -227,7 +227,7 @@
     },
     "schemas.doc_classes": {
       "decision": "keep",
-      "lines": 334,
+      "lines": 335,
       "reason": "imported by kept config"
     },
     "schemas.equivalences": {
@@ -237,7 +237,7 @@
     },
     "schemas.extraction_schemas": {
       "decision": "keep",
-      "lines": 575,
+      "lines": 572,
       "reason": "consumer import: MAIL@origin/claude/howdy-n8vcc1"
     },
     "schemas.gt_metadata": {
