@@ -27,58 +27,94 @@ and `<Schema>` is its Pydantic model (e.g. `InsuranceClaimExtraction`).
 - [ ] **Field map**: each field and its scorer type: `name`, `date`, `money`, `id`,
       `free_text`, `entity_list:<inner>`, or `label` for a closed enum (0.28.0: every
       `label` field needs its vocabulary in `schemas/scored_enums.py`, and the scorer folds
-      aliases through `canonical_label` before the exact match). This map is the scoring contract;
-      the Pydantic model and the taxonomy must match it exactly.
+      aliases through `canonical_label` before the exact match). This map is the scoring contract and
+      lives in one place, `schemas/doc_classes.py`; the Pydantic model and the taxonomy must match it
+      exactly. Take the fields from the dataset's labelled columns (`docs/schemas/GT_COVERAGE.md`
+      lists what each class's ground truth populates today); a field the dataset does not label yet
+      can still go in the map and is reported `pending_annotation`, never scored.
 - [ ] **Live or scored-later**:
       - A: rows already in mailroom-dataset → live class (all steps).
-      - B: rows still pending → register scoring only (steps 1 and 3), leave it out of
-        `LIVE_*`, `MAILROOM_DOC_TYPES` and the taxonomy, and record an `_HONEST_GAPS` note.
-        The per-subtype schema registry (step 2) covers live classes only:
-        `extraction_schema()` accepts `MAILROOM_DOC_TYPES`, which must equal
-        `LIVE_DOC_TYPES`, so a scored-later type gets its registry entry when it goes live.
+      - B: rows still pending → register scoring only (steps 1 and 3) with `live=False` and
+        `in_corpus=False`, leave it out of the taxonomy, and record an `_HONEST_GAPS` note.
+        The registry has no third state: a `live=False` class is listed with the retired ones
+        (`RETIRED_DOC_TYPES`, `RETIRED_DOC_CLASS_KEYS`) until it goes live, so the classifier
+        treats it as not live. The per-subtype schema registry (step 2) covers live classes only:
+        `extraction_schema()` accepts `MAILROOM_DOC_TYPES`, which is `doc_classes.LIVE_DOC_TYPES`,
+        so a scored-later type gets its schemas when you flip `live=True`.
 - [ ] **Swap instead of add?** If a type is replacing another, do this checklist for the new
       one and the **Retire** section for the old one in the same release.
 
-## 1. Dojo: registries (`llm_dojo_scoring/`)
+## 1. Dojo: the registry (`llm_dojo_scoring/`)
 
-Every list below is checked by a drift test. Add `<type>` to all of them in one commit,
-except the rows marked **live only**, which a scored-later type (Option B) skips until it
-goes live.
+One table is edited by hand for the class and its fields: **`schemas/doc_classes.py`**. Append a
+`DocClass` to `DOC_CLASSES`:
+
+```python
+DocClass(
+    key="<type>",
+    live=True,                      # False for a scored-later type (step 0, option B)
+    specialist="<agent>",
+    in_corpus=True,                 # the pinned dataset has ground-truth rows for it
+    fields={"<field>": "<scorer type>", ...},   # in scoring order
+)
+```
+
+Everything below derives from that entry, so it needs no edit (`tests/test_doc_classes.py`
+fails when one of these tables disagrees with the registry): `scoring.suites`
+`DEFAULT_FIELD_TYPES` / `SPECIALIST_DOC_TYPES` / `DOC_TYPE_ALIASES`, `schemas.corpus`
+`CORPUS_EXTRACTION_FIELDS` / `CORPUS_DOC_TYPES` / `CORPUS_ABSENT_DOC_TYPES`,
+`schemas.extraction_schemas.MAILROOM_DOC_TYPES`, `pipeline.mailroom` `LIVE_*` / `RETIRED_*`,
+`config` `*_DOC_CLASS_KEYS`, `metrics.doc_bundles.DOC_TYPES`, `metrics.registry` specialist
+rosters, `pipeline.archive.LIVE_ARCHIVE_DOC_TYPES`, the promotion gates, extraction scope and
+adherence field sets, the v10 row configs and `scripts/build_extraction_status.py:FIVE`. A new
+class is appended last in every table that keeps a legacy order.
+
+Still edited by hand (they carry content the registry does not):
 
 | Where | What to add |
 |---|---|
-| `config.py` | `DOC_CLASS_KEYS`; also `LIVE_DOC_CLASS_KEYS` (**live only**) |
-| `pipeline/mailroom.py` | `LIVE_DOC_TYPES` and `LIVE_SPECIALISTS` (**live only**), or `RETIRED_*` |
-| `schemas/extraction_schemas.py` | `MAILROOM_DOC_TYPES` (**live only**; must equal `LIVE_DOC_TYPES`) |
+| `schemas/cuad_schema.py` / `schemas/maud_schema.py` | **only for a new field on `contract` or `merger_agreement`**: its prompt descriptor (empty value and description). The import fails naming the field until it exists |
 | `schemas/corpus.py` | `DOC_TYPE_SUBCLASSES[<type>]`, the raw surfaces in `_RAW_SUBCLASS_SURFACES[<type>]` (`CORPUS_SUBCLASS_SURFACES` adds the canonical keys itself, for the v10 `subclass` column), and the per-type tables lower in the file that every class has an entry in |
-| `scoring/suites.py` | `SPECIALIST_DOC_TYPES[<agent>] = <type>` (this drives `DOC_TYPE_ALIASES`); `DEFAULT_FIELD_TYPES[<type>]` (the field map); `_AGENT_EXTRAS[<agent>]` for class extras; `_HONEST_GAPS[<agent>]` for any known gap |
+| `scoring/suites.py` | `_AGENT_EXTRAS[<agent>]` for class extras; `_HONEST_GAPS[<agent>]` for any known gap |
 | `metrics/profiles.py` | a `DEFAULT_PROFILES` entry: `_p("<agent>", "<Title> Extraction", ("extract",), "extraction", doc_bundle="<type>")`. `DEFAULT_SUITES` is built from this, so `get_suite("<type>")` works once it exists |
-| `metrics/doc_bundles.py` | `DOC_TYPES` and `DOC_TYPE_BUNDLES[<type>]` (headline metrics) |
+| `metrics/doc_bundles.py` | `DOC_TYPE_BUNDLES[<type>]` (headline metrics) |
 | `metrics/bundles.py` | the `<agent>` entry in the extraction bundle |
 | `schemas/intents.py` | `INTENT_LABELS[<type>]` and `INTENT_DESCRIPTIONS[<type>]` |
 | `schemas/scored_enums.py` | only if a field is a closed enum |
 | `prompts/catalog.yaml` + `prompts/templates/` | `<agent>.docclass.md`, `<agent>.production.md`, `<agent>.production_prompts.md`; add `<type>` to the shared templates that list every class (`sorter_reviewer`, `judge*`, `arbiter`, `boss`) |
 
-## 2. Dojo: extraction schema per subtype
+## 2. Dojo: which fields are scored (from the dataset)
 
-- [ ] Add `<type>` to the `FIVE` tuple in `scripts/build_extraction_status.py`; the
-      script only reads and writes the classes listed there.
-- [ ] Run it against the pinned Hub revision (pyarrow is not a Dojo dependency):
+Whether a field counts toward the score is not set in the registry: it comes from the labels the
+pinned dataset actually populates, frozen in `schemas/data/extraction_status.json`.
+
+- [ ] When the dataset has (new) labels for the class, re-freeze the status from the pinned Hub
+      revision (pyarrow is not a Dojo dependency):
       `uv run --extra dev --with pyarrow python scripts/build_extraction_status.py
       --from-hub --commit <40-hex sha> --revision <tag>`. It downloads the
-      mailroom-dataset `ground_truth` parquet of that commit and freezes per-subtype field status into
-      `schemas/data/extraction_status.json`, with the revision recorded. Do not
-      hand-edit the JSON; `--check` reports drift.
+      mailroom-dataset `ground_truth` parquet of that commit and writes per-subtype field status,
+      with the revision recorded, for every live class in the registry. Do not
+      hand-edit the JSON; add `--check` to report drift.
+- [ ] Regenerate the coverage page: `uv run python scripts/render_gt_coverage.py --write`
+      (`--check` is the CI gate). Commit it with the JSON.
 - [ ] Subtype-only fields and salient guidance go in `_build()` in
       `schemas/extraction_schemas.py` (see the CMS `cms_source_table` and the corporate-record
       subclass entities for examples).
 - [ ] Check: `extraction_schema("<type>")` and `extraction_schema("<type>", "<subtype>")`
-      both build, and `registry_violations() == []`.
+      both build, `scoreable_fields("<type>")` lists what you expect, and
+      `registry_violations() == []`.
+- [ ] If a score moves (a field became scored, a type changed), run
+      `uv run --locked python scripts/freeze_goldens.py --check`; when the change is intended,
+      `--write --reason "…"`, then add a `CHANGELOG.md` entry and a before/after table.
 
 ## 3. Dojo: tests, release
 
-- [ ] `tests/test_extraction_schemas.py` (`registry_violations`), `test_doc_bundles`, the
-      suite and profile tests: add `<type>` wherever they parametrise over classes.
+- [ ] `tests/test_doc_classes.py`, `tests/test_extraction_schemas.py` (`registry_violations`),
+      `test_doc_bundles`, the suite and profile tests: add `<type>` wherever they parametrise over
+      classes. `test_table_equals_pre_refactor_snapshot` pins the tables as they were before the
+      registry existed (it proved the registry refactor changed nothing); the first intended
+      registry edit makes it fail, and that is the cue to delete that test and
+      `tests/fixtures/doc_class_tables_before.json`, not to edit the fixture.
 - [ ] Add a scoring smoke test:
       `get_suite("<type>").score([gt, gt], [gt, {}])` returns `headline_scope` and a
       non-null `quality_mean`.
@@ -128,11 +164,12 @@ goes live.
 
 Keep the scorer so historical traces still score. Remove the class from the live surface only.
 
-- [ ] Dojo: move it from `LIVE_DOC_CLASS_KEYS` / `LIVE_DOC_TYPES` / `LIVE_SPECIALISTS` to the
-      matching `RETIRED_*` lists, and drop it from `MAILROOM_DOC_TYPES`. Add an
-      `_HONEST_GAPS` note saying when and why (see `court_opinions_specialist`). Remove it
-      from `FIVE` in `scripts/build_extraction_status.py`, then rebuild
-      `extraction_status.json`, so the status file and `MAILROOM_DOC_TYPES` still agree.
+- [ ] Dojo: set `live=False` (and `in_corpus=False` once the dataset has no rows for it) on its
+      `DocClass`. That moves it from the `LIVE_*` tables to the matching `RETIRED_*` ones and drops
+      it from `MAILROOM_DOC_TYPES` and the status script's class list. Add an `_HONEST_GAPS` note
+      saying when and why (see `court_opinions_specialist`). Then rebuild
+      `extraction_status.json` and re-render `GT_COVERAGE.md` (step 2), so the status file and
+      `MAILROOM_DOC_TYPES` still agree.
 - [ ] llm-mailroom: remove the `taxonomy.yaml` class and the graph dispatch entry, so the
       sorter's label set no longer offers it and those documents fall to `unknown` and human
       review. Check that nothing still routes the old label (a sorter prompt or cached

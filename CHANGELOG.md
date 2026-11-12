@@ -6,6 +6,22 @@ Format based on Keep a Changelog; versioning is SemVer.
 ## [Unreleased]
 ### Added
 
+- `schemas/doc_classes.py`: one hand-edited registry (`DOC_CLASSES`, `DocClass`, `field_types()`,
+  `field_names()`, `LIVE_DOC_TYPES`, `RETIRED_DOC_TYPES`) for the eight document classes, their
+  specialists and their extraction fields. Every other class list and per-class field table now
+  derives from it: `scoring.suites` (`DEFAULT_FIELD_TYPES`, `SPECIALIST_DOC_TYPES`), `schemas.corpus`
+  (`CORPUS_EXTRACTION_FIELDS`, `CORPUS_DOC_TYPES`, `CORPUS_ABSENT_DOC_TYPES`),
+  `schemas.extraction_schemas.MAILROOM_DOC_TYPES`, the `pipeline.mailroom` live/retired rosters,
+  `config` `*_DOC_CLASS_KEYS`, `metrics.doc_bundles.DOC_TYPES`, the `metrics.registry` specialist
+  rosters, `pipeline.archive.LIVE_ARCHIVE_DOC_TYPES`, the extraction-scope and adherence field sets,
+  the promotion gates, the v10 row configs and the CUAD / MAUD / corporate-record / schema-contract
+  helpers. A field added to the registry reaches all of them; a contract or merger field without a
+  prompt descriptor fails the import. **No behaviour change**: every table keeps its public name,
+  type, value and order (`tests/test_doc_classes.py` pins them against
+  `tests/fixtures/doc_class_tables_before.json`, captured before the refactor).
+- `schemas.extraction_schemas.scoreable_fields(doc_type, subtype=None)`: the fields whose dataset
+  status counts toward the score (`scored`, `partial`, `derived`, `documented_absent`), the rule
+  `schema_coverage` applies row by row. Not exported from the package root.
 - `scripts/build_extraction_status.py --from-hub --commit <40-hex> --revision <tag>` rebuilds
   `schemas/data/extraction_status.json` from the pinned live dataset in one command: it lists
   and downloads the `ground_truth` shards of that exact commit (sha256-checked against the
@@ -21,6 +37,12 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Changed
 
+- `schemas/` no longer imports class or field tables from `scoring/` (it read
+  `scoring.suites.DEFAULT_FIELD_TYPES`); the only remaining upward import is
+  `scoring.field_scoring.CMS_ROW_FIELD_TYPES`, a scorer-side type override.
+- `docs/guides/ADDING_A_DOCUMENT_TYPE.md` describes the registry path (edit `doc_classes.py`, then
+  re-freeze the status from the dataset), and `docs/schemas/EXTRACTION_SCHEMAS.md` corrects its
+  package version, dataset tag, taxonomy blob and field-slot count (75, not 58).
 - The extraction status file is re-pinned from `v9.2.1` (`0a2f8292`) to the dataset tag `v9.3`
   (`ccd040f6`, the revision llm-mailroom pins). Every per-field status is unchanged (the
   `doc_types` data is identical). `ExtractionSchema.schema_id` and `schema_coverage()["schema_id"]`

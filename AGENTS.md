@@ -84,7 +84,7 @@ Modules are grouped into subpackages; only entry points sit at the root. The ful
 | Subpackage | Owns |
 |:---|:---|
 | `scoring/` | Deterministic scorers: `field_scoring` (field types), `classification`, `tasks` (`score_task`), `suites` (one per pipeline agent — the API consumers call), `extraction_metrics`, `content_scoring`, `claims_consistency`, `legalbench_scoring`, `asr`, `reviewer`, `rescore` |
-| `schemas/` | What dataset rows mean: `corpus`, `gt_metadata`, `intents`, `equivalences`, CUAD / MAUD / corporate-record schemas, `schema_contract` |
+| `schemas/` | What dataset rows mean: `doc_classes` (the one hand-edited registry of classes, fields and field types; every other class/field table derives from it), `corpus`, `gt_metadata`, `intents`, `equivalences`, CUAD / MAUD / corporate-record schemas, `schema_contract` |
 | `pipeline/` | The llm-mailroom pipeline contract (`mailroom`), intake clerk, pilot labels, verdicts, `archive` (audit-row hash, byte-identical to llm-mailroom's), sandbox rubrics |
 | `metrics/` | `registry` (every score name → tier T0–T3), `profiles`, `bundles`, `emitter` (`ScoreRecord`, JSONL / Langfuse routing), `scorecard_honesty`, `score_changelog` |
 | `analysis/` | `bootstrap`, `calibration`, `diagnostics`, `error_analysis`, `failure_modes`, `report`, `visualize`, `grid`, `serving`, `cost` |
