@@ -22,8 +22,7 @@ from .schemas import corpus, equivalences  # noqa: E402
 from .scoring import asr, claims_consistency, classification, content_scoring, extraction_metrics, field_scoring, suites, tasks, trace_knobs  # noqa: E402
 from .pipeline import archive, intake, mailroom  # noqa: E402
 from .metrics import bundles, doc_bundles, emitter, profiles, pruning, registry, score_changelog  # noqa: E402
-from .analysis import bootstrap, cost, diagnostics, error_analysis, experiment, export, failure_modes, grid, interpret, io, report, serving, visualize  # noqa: E402
-from .integrations import langfuse_sync, phoenix_sync  # noqa: E402
+from .analysis import bootstrap, cost, diagnostics, experiment, failure_modes, serving  # noqa: E402
 
 # Convenience re-exports (the most common entry points).
 from .analysis.bootstrap import bootstrap_ci, delta_significance, wilson_ci
@@ -130,13 +129,6 @@ from .scoring.reviewer import (
     ReviewRecord,
     review_record_from_run_item,
     score_review_lane,
-)
-from .scoring.rescore import (
-    RescoreError,
-    diff_scorecards,
-    rescore_file,
-    rescore_record,
-    rescore_records,
 )
 from .analysis.calibration import (
     auroc,
@@ -301,7 +293,6 @@ from .scoring.suites import (
     DEFAULT_FIELD_TYPES,
     DEFAULT_SUITES,
     DOC_TYPE_ALIASES,
-    LEGACY_FULL_EXTRACTION_FIELD_TYPES,
     SPECIALIST_DOC_TYPES,
     ScoringSuite,
     get_suite,
@@ -336,24 +327,14 @@ from .analysis.serving import (
     serving_table_rows,
     split_local_api,
 )
-from .analysis.grid import (
-    GridDocument,
-    GridExperiment,
-    build_grid_report,
-    grid_scorecard,
-    serving_efficiency_rows,
-    session_cost_rows,
-    specialist_grid_rows,
-)
 
 __all__ = [
     "__version__",
     "archive",
     "bootstrap", "classification", "claims_consistency", "config", "content_scoring", "cost", "diagnostics",
-    "equivalences", "error_analysis", "experiment", "export", "extraction_metrics", "failure_modes",
-    "field_scoring", "io", "interpret", "langfuse_sync", "phoenix_sync",
-    "report", "asr", "corpus", "intake", "mailroom", "prompts", "serving",
-    "suites", "tasks", "trace_knobs", "visualize", "grid",
+    "equivalences", "experiment", "extraction_metrics", "failure_modes",
+    "field_scoring", "asr", "corpus", "intake", "mailroom", "prompts", "serving",
+    "suites", "tasks", "trace_knobs",
     "ARCHIVE_HASH_VERSION", "ARCHIVE_SCORING_METHOD",
     "archive_entry_hash", "archivist_sign_off", "format_audit_entry",
     "prepare_archivist_handoff", "score_archive_block", "upsert_archive_scoring",
@@ -384,7 +365,6 @@ __all__ = [
     "multiclass_score", "normalize_task_answer", "score_task", "task_kind",
     "CONTINUE_VERDICTS", "DECISION_VERDICTS", "HUMAN_VERDICTS",
     "ReviewRecord", "review_record_from_run_item", "score_review_lane",
-    "RescoreError", "diff_scorecards", "rescore_file", "rescore_record", "rescore_records",
     "auroc", "brier_score", "clopper_pearson_upper", "cross_fit_cutoffs",
     "cutoff_at_target", "cutoff_for_precision", "expected_calibration_error",
     "reliability_bins", "required_samples", "spearman",
@@ -400,7 +380,7 @@ __all__ = [
     "MetricTier", "Registry", "ALLOWED_GROUND_TRUTH",
     "PromptRecord", "get_prompt", "list_prompts",
     "ScoringSuite", "DEFAULT_SUITES", "DEFAULT_FIELD_TYPES",
-    "LEGACY_FULL_EXTRACTION_FIELD_TYPES",
+    
     "DOC_TYPE_ALIASES", "SPECIALIST_DOC_TYPES",
     "get_suite", "list_suites", "score_suite", "suite_for_doc_type",
     "CORPUS_DOC_TYPES", "DOC_TYPE_SUBCLASSES",
@@ -450,8 +430,6 @@ __all__ = [
     "emit_serving_scorecard", "pair_comparable_runs", "score_serving_run",
     "serving_card_markdown", "serving_cost_card", "serving_scorecard",
     "serving_table_markdown", "serving_table_rows", "split_local_api",
-    "GridDocument", "GridExperiment", "build_grid_report", "grid_scorecard",
-    "serving_efficiency_rows", "session_cost_rows", "specialist_grid_rows",
 ]
 
 # Additive sandbox benchmark API; existing task/suite entry points keep their rubrics.

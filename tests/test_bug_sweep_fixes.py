@@ -10,7 +10,6 @@ import numpy as np
 import pytest
 
 from llm_dojo_scoring import get_suite
-from llm_dojo_scoring.analysis.grid import _cell, _scope_footnotes
 from llm_dojo_scoring.pipeline.archive import (
     ARCHIVE_SCORING_METHOD,
     ARCHIVE_SCORING_METHOD_CMS,
@@ -23,7 +22,6 @@ from llm_dojo_scoring.scoring.field_scoring import (
     expected_cms_source_table,
     score_extraction,
 )
-from llm_dojo_scoring.scoring.rescore import rescore_record
 
 _CMS = {
     "claim_type": "health",
@@ -73,15 +71,6 @@ def test_cms_archive_block_names_its_rubric():
     assert plain["method"] == ARCHIVE_SCORING_METHOD
 
 
-def test_rescore_reads_doc_subclass_for_cms_rows():
-    """A stored record keyed ``doc_subclass`` stays a CMS row on rescore."""
-    out = rescore_record(
-        {"task": "extraction", "doc_class": "insurance_claim", "expected": dict(_CMS),
-         "predicted": dict(_CMS), "doc_subclass": "pde"}
-    )
-    assert out["payload"]["method"] == ARCHIVE_SCORING_METHOD_CMS
-
-
 def test_numpy_subclass_array_is_per_row():
     """A NumPy subclass array is read per row, not stringified or truth-tested."""
     suite = get_suite("insurance_claims_specialist")
@@ -121,15 +110,6 @@ def test_nan_is_empty(value):
     assert not math.isnan(0.0) and not is_empty_value(0.0)
 
 
-def test_grid_cells_escape_markdown():
-    """Names with ``|``, ``*`` or newlines cannot break the grid table."""
-    assert _cell("a|b*c`d\ne") == "a\\|b\\*c\\`d e"
-    notes = _scope_footnotes(
-        [{"specialist": "x|y", "headline_scope": "maud_only", "headline_label": "**z**", "experiment": "e"}]
-    )
-    assert notes and "x\\|y" in notes[0] and "\\*\\*z\\*\\*" in notes[0]
-
-
 @pytest.mark.parametrize("nullable", [True, False])
 def test_enum_fragment_has_a_type(nullable):
     """Strict structured-output decoders need ``type`` beside ``enum``."""
@@ -138,73 +118,3 @@ def test_enum_fragment_has_a_type(nullable):
     assert json.loads(json.dumps(fragment)) == fragment
 
 
-def test_partial_notes_with_different_unscored_fields_stay_separate():
-    """Same specialist and label, different classes: one note per unscored list."""
-    rows = [
-        {"specialist": "s", "experiment": "e1", "headline_scope": "partial",
-         "headline_label": "parties only", "unscored_fields": ["a"]},
-        {"specialist": "s", "experiment": "e2", "headline_scope": "partial",
-         "headline_label": "parties only", "unscored_fields": ["b"]},
-    ]
-    notes = _scope_footnotes(rows)
-    assert len(notes) == 2
-    assert any("unscored: a" in n and "e1" in n for n in notes)
-    assert any("unscored: b" in n and "e2" in n for n in notes)
-
-
-def test_rescore_drops_non_finite_stored_values(tmp_path):
-    """Stored NaN / Infinity never reach the headline, the moves or the JSONL."""
-    from llm_dojo_scoring.metrics.scorecard_honesty import SCORER_VERSION
-    from llm_dojo_scoring.scoring.rescore import diff_scorecards, rescore_file
-
-    stored = {"task": "extraction", "doc_id": "d1", "score": float("nan"),
-              "payload": {"overall_score": float("nan"), "parts": [float("inf"), 1.0]},
-              "provenance": {"scorer_version": SCORER_VERSION}}
-    out = rescore_record(stored)
-    assert out["score"] is None
-    assert out["payload"] == {"overall_score": None, "parts": [None, 1.0]}
-    moves = diff_scorecards([{"doc_id": "d1", "score": float("nan")}], [{"doc_id": "d1", "score": 0.5}])
-    assert moves["n"] == 0 and moves["delta"] is None
-    items = tmp_path / "items.jsonl"
-    items.write_text(json.dumps(stored) + "\n", encoding="utf-8")
-    result = rescore_file(items)
-    text = pathlib.Path(result["output"]).read_text(encoding="utf-8")
-    assert "NaN" not in text and "Infinity" not in text
-    json.loads(text, parse_constant=lambda c: pytest.fail(c))
-
-
-def test_grid_cost_table_escapes_session_names():
-    """A ``|`` in an experiment name cannot split the cost row into extra columns."""
-    from llm_dojo_scoring.analysis.grid import build_grid_report
-
-    md = build_grid_report(
-        documents=[{"experiment": "gpu|baseline", "specialist": "contract", "status": "ok"}],
-        experiments=[{"name": "gpu|baseline"}],
-    )
-    assert "gpu|baseline" not in md.replace("gpu\\|baseline", "")
-
-
-def test_rescore_records_returns_finite_values():
-    """Batch results are sanitized, not only the JSONL copy."""
-    from llm_dojo_scoring.metrics.scorecard_honesty import SCORER_VERSION
-    from llm_dojo_scoring.scoring.rescore import rescore_records
-
-    stored = {"task": "extraction", "doc_id": "d1", "rescored_from": {"score": float("nan")},
-              "payload": {"overall_score": 0.5, "x": float("-inf")},
-              "provenance": {"scorer_version": SCORER_VERSION}}
-    out = rescore_records([stored])["records"][0]
-    assert out["payload"]["x"] is None and out["rescored_from"]["score"] is None
-    json.dumps(out, allow_nan=False)
-
-
-def test_dataset_join_bypasses_the_already_current_shortcut():
-    """With force_rescore, a current-release record is scored against its GT again."""
-    from llm_dojo_scoring.metrics.scorecard_honesty import SCORER_VERSION
-
-    record = {"task": "extraction", "doc_class": "insurance_claim", "doc_id": "d1",
-              "expected": dict(_CMS), "predicted": dict(_CMS), "doc_subclass": "pde",
-              "payload": {"overall_score": 0.0}, "provenance": {"scorer_version": SCORER_VERSION}}
-    assert rescore_record(record)["already_current"] is True
-    fresh = rescore_record(record, force_rescore=True)
-    assert not fresh.get("already_current")
-    assert fresh["score"] != 0.0

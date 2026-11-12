@@ -22,12 +22,12 @@
   "modules": {
     "__init__": {
       "decision": "keep",
-      "lines": 467,
+      "lines": 445,
       "reason": "package root (its eager imports are ignored; Task 5 makes it lazy)"
     },
     "_layout": {
       "decision": "keep",
-      "lines": 124,
+      "lines": 113,
       "reason": "legacy flat-path alias installer, imported by the package root"
     },
     "analysis": {
@@ -55,60 +55,20 @@
       "lines": 326,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
-    "analysis.error_analysis": {
-      "decision": "delete",
-      "lines": 272,
-      "reason": "no consumer reaches it; imported only by analysis.interpret, analysis.report, analysis.visualize, cli, ..."
-    },
     "analysis.experiment": {
       "decision": "keep",
       "lines": 109,
       "reason": "consumer import: SBX, consumer_surface"
     },
-    "analysis.export": {
-      "decision": "delete",
-      "lines": 700,
-      "reason": "no consumer reaches it; imported only by cli, integrations.langfuse_sync, the root __init__"
-    },
     "analysis.failure_modes": {
-      "decision": "delete",
+      "decision": "hold",
       "lines": 184,
-      "reason": "no consumer reaches it; imported only by integrations.langfuse_sync, the root __init__"
-    },
-    "analysis.grid": {
-      "decision": "delete",
-      "lines": 949,
-      "reason": "no consumer reaches it; imported only by the root __init__"
-    },
-    "analysis.interpret": {
-      "decision": "delete",
-      "lines": 321,
-      "reason": "no consumer reaches it; imported only by analysis.report, the root __init__"
-    },
-    "analysis.io": {
-      "decision": "delete",
-      "lines": 233,
-      "reason": "no consumer reaches it; imported only by cli, the root __init__"
-    },
-    "analysis.report": {
-      "decision": "delete",
-      "lines": 183,
-      "reason": "no consumer reaches it; imported only by cli, the root __init__"
+      "reason": "source of registry metric failure_mode_breakdown (sorter bundle), Dojo #66"
     },
     "analysis.serving": {
       "decision": "keep",
       "lines": 1557,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
-    },
-    "analysis.visualize": {
-      "decision": "delete",
-      "lines": 314,
-      "reason": "no consumer reaches it; imported only by cli, the root __init__"
-    },
-    "cli": {
-      "decision": "delete",
-      "lines": 335,
-      "reason": "no consumer reaches it; nothing imports it"
     },
     "config": {
       "decision": "keep",
@@ -119,16 +79,6 @@
       "decision": "hold",
       "lines": 1,
       "reason": "package of held integrations.update_awareness"
-    },
-    "integrations.langfuse_sync": {
-      "decision": "delete",
-      "lines": 720,
-      "reason": "no consumer reaches it; imported only by cli, the root __init__"
-    },
-    "integrations.phoenix_sync": {
-      "decision": "delete",
-      "lines": 150,
-      "reason": "no consumer reaches it; imported only by cli, the root __init__"
     },
     "integrations.update_awareness": {
       "decision": "hold",
@@ -224,16 +174,6 @@
       "decision": "keep",
       "lines": 35,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
-    },
-    "pipeline.sandbox_agent_scoring": {
-      "decision": "delete",
-      "lines": 33,
-      "reason": "no consumer reaches it; nothing imports it"
-    },
-    "pipeline.sandbox_composite": {
-      "decision": "delete",
-      "lines": 13,
-      "reason": "no consumer reaches it; nothing imports it"
     },
     "pipeline.sandbox_schema_adherence": {
       "decision": "keep",
@@ -450,11 +390,6 @@
       "lines": 168,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
-    "scoring.rescore": {
-      "decision": "delete",
-      "lines": 567,
-      "reason": "no consumer reaches it; imported only by cli, the root __init__"
-    },
     "scoring.reviewer": {
       "decision": "keep",
       "lines": 1030,
@@ -462,12 +397,12 @@
     },
     "scoring.suites": {
       "decision": "keep",
-      "lines": 1646,
+      "lines": 1588,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "scoring.tasks": {
       "decision": "keep",
-      "lines": 707,
+      "lines": 714,
       "reason": "consumer import: SBX, consumer_surface"
     },
     "scoring.trace_knobs": {
