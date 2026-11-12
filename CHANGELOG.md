@@ -56,6 +56,35 @@ Format based on Keep a Changelog; versioning is SemVer.
   moves. `tests/test_prompt_lineage.py` keeps the historical `sorter_v4` → `sorter_v14`
   check by pinning the v14 body's sha256, and pins production to `sorter_condensed_v5`.
 
+### Removed
+
+Production slim-down (#66). `scripts/consumer_closure.py` computes everything llm-mailroom,
+local-mailroom-sandbox, the recorded consumer surface and the open mailroom audit-row branches
+import; these modules were outside that closure (13 modules, about 4,800 lines):
+
+- The `dojo-analyze`, `dojo-export`, `dojo-rescore` and `dojo-sync` CLIs (`llm_dojo_scoring/cli.py`).
+  `dojo-version` stays. Re-score a stored run with `get_suite(...).score(...)`.
+- `analysis.export`, `analysis.io`, `analysis.report`, `analysis.interpret`, `analysis.visualize`,
+  `analysis.error_analysis`, `analysis.grid` (workbook export, report and plot generation, grid
+  reports) and `docs/guides/GRID_REPORTS.md`; `examples/analyze_sorter_results.py`.
+- `integrations.langfuse_sync` and `integrations.phoenix_sync` (trace pulls). `LangfuseSink` in
+  `metrics.emitter` is unchanged.
+- `scoring.rescore` (`rescore_file`, `rescore_record`, `rescore_records`, `diff_scorecards`,
+  `RescoreError`).
+- `pipeline.sandbox_agent_scoring` and `pipeline.sandbox_composite`. `tasks.chained_composite`
+  is now the only `chained_composite` (#78) and, like the sandbox copy did, raises
+  `RuntimeError` when either half is `None` instead of a `TypeError`.
+- `suites.LEGACY_FULL_EXTRACTION_FIELD_TYPES` (pre-v0.6.0 free-text maps, #79).
+- The `[jellyfish]` alias extra (jellyfish is core), and `arize-phoenix`, `python-dotenv` and the
+  OpenTelemetry packages from `[tracing]` (now `langfuse` only).
+- Root re-exports of the names above and the legacy flat aliases `llm_dojo_scoring.export`, `.io`,
+  `.report`, `.interpret`, `.visualize`, `.error_analysis`, `.grid`, `.langfuse_sync`,
+  `.phoenix_sync`, `.sandbox_agent_scoring`, `.sandbox_composite`.
+
+`analysis.failure_modes` is kept: it is the source of the registry metric
+`failure_mode_breakdown`. `pandas`, `openpyxl` and `matplotlib` stay core dependencies although
+no Dojo module imports them any more: llm-mailroom imports pandas without declaring it.
+
 ### Fixed
 
 - Date scoring no longer reads the clock (#134, split from llm-mailroom#195).

@@ -102,8 +102,7 @@ pip install -e .                # from a local checkout
 
 ```bash
 pip install -e ".[embeddings]"   # sentence-transformers + openai (embedding rescue)
-pip install -e ".[tracing]"      # langfuse + phoenix + dotenv + OTLP
-pip install -e ".[jellyfish]"    # no-op alias; jellyfish is already core
+pip install -e ".[tracing]"      # langfuse (LangfuseSink)
 pip install -e ".[dev]"          # pytest
 pip install -e ".[all]"          # embeddings + tracing + dev
 ```
@@ -168,7 +167,7 @@ are separate integrations; the deterministic core does not require them.
 | Task suite | Agent-specific scoring contract | `get_suite(...)` |
 | Comparison | Typed fields or task labels | `score_extraction(...)`, `score_task(...)` |
 | Uncertainty | Confidence intervals and comparisons | `bootstrap_ci(...)` |
-| Explanation | Failure modes, field diagnostics, reports | `dojo-analyze`, `dojo-export` |
+| Explanation | Failure modes, field diagnostics | `summarize_failures(...)`, `extraction_diagnostics(...)` |
 
 <a id="at-a-glance"></a>
 
@@ -199,34 +198,6 @@ are separate integrations; the deterministic core does not require them.
 <a id="workflows"></a>
 
 ## 🔧 Workflows
-
-### Analyze a workbook
-
-```bash
-dojo-analyze Sorter_Experiment_Results.xlsx --target 0.94 --min-n 100
-# -> Sorter_Experiment_Results.xlsx.report.md  (+ *_plots/*.png)
-```
-
-### Regenerate workbooks from experiment log
-
-```bash
-dojo-export --task sorter --log reports/experiment_log.jsonl --outdir .
-dojo-export --task all --sweep --log reports/experiment_log.jsonl
-```
-
-### Live sync from Langfuse / Phoenix
-
-```bash
-# Sync ALL subtype-classification runs
-dojo-sync --task subtype_classification --outdir reports/live
-
-# Sync one experiment (session) — fast, rate-limit friendly
-dojo-sync --task subtype_classification \
-          --session qwen3.7-flash_sorter_v13_subtype_langfuse --outdir reports/live
-
-# Probe the local Phoenix/OTLP sink too
-dojo-sync --check-phoenix
-```
 
 ### Check the loaded Dojo version and available releases
 
@@ -367,11 +338,6 @@ repository-wide coverage gate with
 
 ```
 dojo-version [--check [--force|--offline]] [--json]
-dojo-analyze INPUT [-o REPORT.md] [--plots DIR] [--metric COL] [--target 0.94]
-                  [--min-n N] [--cost-column COL] [--task T] [--max-items N]
-dojo-export  [--task sorter|extraction|all] [--sweep] [--log LOG] [--outdir DIR]
-dojo-sync    [--task TRACE_NAME] [--session NAME] [--max-items N]
-             [--env-file FILE] [--outdir DIR] [--no-workbook] [--check-phoenix]
 ```
 
 </div>
@@ -461,11 +427,11 @@ The deterministic core stands on a small, boring stack:
 
 | Project | What it does here |
 | :--- | :--- |
-| [pandas](https://pandas.pydata.org/) · [SciPy](https://scipy.org/) | Score tables, and the Hungarian matcher (`linear_sum_assignment`) for entity lists. Bootstrap CIs use only the standard library |
+| [SciPy](https://scipy.org/) | The Hungarian matcher (`linear_sum_assignment`) for entity lists. Bootstrap CIs use only the standard library |
 | [jellyfish](https://github.com/jamesturk/jellyfish) | Jaro-Winkler similarity for name fields |
 | [python-dateutil](https://github.com/dateutil/dateutil) | Date parsing before comparison |
-| [Matplotlib](https://matplotlib.org/) · [openpyxl](https://openpyxl.readthedocs.io/) | `dojo-analyze` plots and the Excel workbooks |
-| [Langfuse](https://langfuse.com/) · [Arize Phoenix](https://phoenix.arize.com/) (optional) | `dojo-sync` and the tracing sinks, behind the `[tracing]` extra |
+| [pandas](https://pandas.pydata.org/) · [Matplotlib](https://matplotlib.org/) · [openpyxl](https://openpyxl.readthedocs.io/) | Still core dependencies (llm-mailroom relies on them transitively); no Dojo module imports them |
+| [Langfuse](https://langfuse.com/) (optional) | `LangfuseSink`, behind the `[tracing]` extra |
 
 <a id="contributing-security-and-license"></a>
 

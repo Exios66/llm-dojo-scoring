@@ -1,8 +1,7 @@
 # CLAUDE.md — llm-dojo-scoring
 
 The Dojo is the **scoring engine** of the Mailroom constellation: the one place that
-defines what "correct" means. A library plus CLIs (`dojo-analyze`, `dojo-export`,
-`dojo-rescore`, `dojo-sync`, `dojo-version`) that scores classification and field-type-aware
+defines what "correct" means. A library plus one CLI (`dojo-version`) that scores classification and field-type-aware
 extraction, quantifies uncertainty and reports failures. Python 3.11+. **Every change here
 is a cross-package event**: a wrong number here becomes a wrong number everywhere.
 
@@ -38,15 +37,15 @@ The surface consumers rely on is listed in `docs/guides/PUBLIC_API.md` (written 
 | `llm_dojo_scoring/__init__.py` | public API re-exports — consumers import from here |
 | `llm_dojo_scoring/_layout.py` | legacy flat import paths → subpackage modules (keep them working) |
 | `llm_dojo_scoring/scoring/` | deterministic scorers: `field_scoring`, `classification`, `tasks`, `suites` (per-agent API), … |
-| `llm_dojo_scoring/schemas/` | what dataset rows mean: corpus, GT metadata, CUAD/MAUD, equivalences |
+| `llm_dojo_scoring/schemas/` | `doc_classes.py` (the one class/field registry), corpus, GT metadata, CUAD/MAUD, equivalences |
 | `llm_dojo_scoring/pipeline/` | llm-mailroom pipeline and sandbox scoring contracts, archive audit row |
 | `llm_dojo_scoring/metrics/` | metric registry and tiers, bundles, profiles, emitter, scorecard honesty |
-| `llm_dojo_scoring/analysis/` | bootstrap, calibration, diagnostics, reports, grid, cost |
-| `llm_dojo_scoring/integrations/` | Langfuse / Phoenix sync, `dojo-version` release awareness |
+| `llm_dojo_scoring/analysis/` | bootstrap, calibration, diagnostics, failure modes, serving, cost |
+| `llm_dojo_scoring/integrations/` | `dojo-version` release awareness |
 | `llm_dojo_scoring/prompts/` | importable prompt catalog and frozen lineage |
-| `llm_dojo_scoring/config.py`, `cli.py` | `Settings` (`LLM_DOJO_SCORING_CONFIG`), the CLIs |
+| `llm_dojo_scoring/config.py` | `Settings` (`LLM_DOJO_SCORING_CONFIG`) |
 | `tests/` | ~3,500 tests, network-free but one release test; `tests/fixtures/golden/` is the golden score baseline |
-| `scripts/` | `release.py`, `freeze_goldens.py`, `audit_consumer_surface.py`, GT audits |
+| `scripts/` | `release.py`, `freeze_goldens.py`, `audit_consumer_surface.py`, `consumer_closure.py`, `build_extraction_status.py`, `render_gt_coverage.py`, GT audits |
 | `docs/guides/`, `docs/contracts/`, `docs/schemas/` | scoring guides, metric ids and contracts, schema docs |
 
 Full module table: `llm_dojo_scoring/README.md`.
@@ -55,7 +54,7 @@ Full module table: `llm_dojo_scoring/README.md`.
 
 ```bash
 uv run --locked --extra dev pytest tests -q      # full suite (under a minute; one release test uses the network)
-uv run --extra dev pytest tests/test_cli.py -q   # one file
+uv run --extra dev pytest tests/test_field_scoring.py -q   # one file
 uvx ruff@0.17.3 check llm_dojo_scoring tests scripts examples   # lint gate, same version as CI
 uv run --locked python scripts/freeze_goldens.py --check   # golden scores unchanged (exit 1 + diff on drift)
 python scripts/release.py status                 # read-only: version / changelog / pin chain
@@ -111,7 +110,7 @@ Report exactly that; never claim "type-safe" or "fully linted".
 - Embedding similarity only rescues an ambiguous string score and never a blank
   prediction or expectation (`llm_dojo_scoring/scoring/field_scoring.py:_with_embedding_rescue`).
 - Secrets: `.env` is git-ignored; only `.env.example` is tracked. Never print or commit
-  Langfuse keys. Never run `dojo-sync` against hosted services unless the user asks.
+  Langfuse keys. Never write to hosted services (Langfuse, Hugging Face) unless the user asks.
 
 ## Subagents and skills
 

@@ -8,11 +8,10 @@ The docs are grouped by purpose. The package layout itself is described in
 | Doc | Read it for |
 |:---|:---|
 | [`guides/SCORING.md`](guides/SCORING.md) | How every score is computed: field types, entity lists, classification, factuality audit, task keys |
-| [`guides/COMPARABILITY.md`](guides/COMPARABILITY.md) | Scorer-release guards, the release ledger, and `dojo-rescore` |
+| [`guides/COMPARABILITY.md`](guides/COMPARABILITY.md) | Scorer-release guards and the release ledger |
 | [`guides/PUBLIC_API.md`](guides/PUBLIC_API.md) | The supported surface other repos rely on, from the consumer scan |
 | [`guides/MIGRATION.md`](guides/MIGRATION.md) | Moving a pipeline project onto the Dojo; the v0.26.0 subpackage layout |
 | [`guides/PROMPTS.md`](guides/PROMPTS.md) | The importable prompt catalog and frozen eval-environment lineage |
-| [`guides/GRID_REPORTS.md`](guides/GRID_REPORTS.md) | Specialist grid reports for local → Modal GPU studies |
 | [`guides/UPDATE_AWARENESS.md`](guides/UPDATE_AWARENESS.md) | Opt-in release discovery and `dojo-version` |
 | [`guides/RELEASES.md`](guides/RELEASES.md) | Cutting and publishing a release with `scripts/release.py` |
 
