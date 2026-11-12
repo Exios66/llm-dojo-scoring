@@ -4,8 +4,29 @@ All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
+### Added
+
+- `scripts/build_extraction_status.py --from-hub --commit <40-hex> --revision <tag>` rebuilds
+  `schemas/data/extraction_status.json` from the pinned live dataset in one command: it lists
+  and downloads the `ground_truth` shards of that exact commit (sha256-checked against the
+  Hub's LFS digest) and refuses a branch name or short SHA. The file also gains a
+  `vocabulary` section: per class, the GT row count of every value of each closed-vocabulary
+  field (`intent`, `claim_type`, `coverage_determination`, `record_type`, `content_topic`,
+  `sentiment_label`), zero-count values included.
+- `scripts/render_gt_coverage.py --write|--check` renders `docs/schemas/GT_COVERAGE.md`: per
+  class, every extraction-schema field with its status and populated rows out of the class's
+  rows, and the vocabulary values the ground truth never uses (for example insurance
+  `loss_report`). CircleCI runs `--check`, so the page cannot go stale. A field becomes scored
+  by rebuilding the status file; no code edit is needed.
+
 ### Changed
 
+- The extraction status file is re-pinned from `v9.2.1` (`0a2f8292`) to the dataset tag `v9.3`
+  (`ccd040f6`, the revision llm-mailroom pins). Every per-field status is unchanged (the
+  `doc_types` data is identical). `ExtractionSchema.schema_id` and `schema_coverage()["schema_id"]`
+  embed the revision, so their values change from `<class>@v9.2.1` to `<class>@v9.3`. The golden
+  baseline `tests/fixtures/golden/scores.json` was rewritten for those five labels only; no score
+  value moved.
 - Production prompts re-vendored from llm-mailroom `19203eac` (#179's merge commit) with
   `scripts/sync_production_prompts.py`. `get_prompt("sorter")` is now `sorter_condensed_v5`
   (a bylaw amendment is `bylaws`, agreeing with the 0.28.1 sorter guide), replacing

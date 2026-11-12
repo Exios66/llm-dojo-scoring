@@ -83,6 +83,9 @@ jobs:
             else
               echo "scripts/freeze_goldens.py not present; skipping golden check"
             fi
+      - run:
+          name: GT coverage page current (scripts/render_gt_coverage.py --check)
+          command: uv run --frozen --no-sync python scripts/render_gt_coverage.py --check
       - store_test_results:
           path: test-results
       - run:

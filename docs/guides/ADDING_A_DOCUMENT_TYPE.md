@@ -65,8 +65,8 @@ goes live.
       script only reads and writes the classes listed there.
 - [ ] Run it against the pinned Hub revision (pyarrow is not a Dojo dependency):
       `uv run --extra dev --with pyarrow python scripts/build_extraction_status.py
-      --parquet-dir <path>/ground_truth --revision <tag> --commit <sha>`. It reads the
-      mailroom-dataset `ground_truth` parquet and freezes per-subtype field status into
+      --from-hub --commit <40-hex sha> --revision <tag>`. It downloads the
+      mailroom-dataset `ground_truth` parquet of that commit and freezes per-subtype field status into
       `schemas/data/extraction_status.json`, with the revision recorded. Do not
       hand-edit the JSON; `--check` reports drift.
 - [ ] Subtype-only fields and salient guidance go in `_build()` in
