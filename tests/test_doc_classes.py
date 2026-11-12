@@ -44,7 +44,7 @@ from llm_dojo_scoring.schemas.extraction_schemas import (
 _ROOT = Path(__file__).resolve().parents[1]
 _PACKAGE = _ROOT / "llm_dojo_scoring"
 
-#: The eight classes in registry (taxonomy) order, as the snapshot recorded them.
+#: The eight classes in registry (taxonomy) order.
 _EIGHT = (
     "contract",
     "corporate_record",
@@ -464,4 +464,3 @@ def test_auditor_names_match_the_registered_profiles() -> None:
         if key == "merger_agreement":
             continue  # the merger specialist has no auditor agent
         assert cls.auditor in DEFAULT_PROFILES, f"{key}: {cls.auditor} has no profile"
-
