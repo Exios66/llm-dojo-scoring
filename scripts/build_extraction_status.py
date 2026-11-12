@@ -39,6 +39,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from llm_dojo_scoring.schemas import doc_classes
 from llm_dojo_scoring.schemas.corpus import normalize_corpus_subclass
 from llm_dojo_scoring.schemas.gt_metadata import (
     ANNOTATION_KEYS,
@@ -49,7 +50,8 @@ from llm_dojo_scoring.schemas.gt_metadata import (
 
 OUT_PATH = Path(__file__).resolve().parents[1] / "llm_dojo_scoring/schemas/data/extraction_status.json"
 DATASET = "Lucius-Morningstar/mailroom-dataset"
-FIVE = ("contract", "merger_agreement", "corporate_record", "correspondence", "insurance_claim")
+#: The live classes of ``llm_dojo_scoring/schemas/doc_classes.py`` (the registry), in pipeline order.
+FIVE = doc_classes.LIVE_DOC_TYPES
 #: Label sources the derived fields read; their coverage is recorded per subtype.
 LABEL_SOURCES = ("cuad_clause_labels", "maud_clause_labels")
 #: Closed-vocabulary fields whose GT value counts are recorded per class.
@@ -218,10 +220,8 @@ def build(rows: list[dict[str, Any]], revision: str, commit: str) -> dict[str, A
         "doc_types": {},
         "vocabulary": _vocabulary_counts(rows),
     }
-    from llm_dojo_scoring.scoring.suites import DEFAULT_FIELD_TYPES
-
     for doc_type in FIVE:
-        live_fields = set(DEFAULT_FIELD_TYPES[doc_type])
+        live_fields = set(doc_classes.field_names(doc_type))
         subtypes = {}
         for (dt, subtype), n in sorted(counts.items()):
             if dt != doc_type:

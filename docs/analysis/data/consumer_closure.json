@@ -112,7 +112,7 @@
     },
     "config": {
       "decision": "keep",
-      "lines": 632,
+      "lines": 626,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "integrations": {
@@ -147,7 +147,7 @@
     },
     "metrics.doc_bundles": {
       "decision": "keep",
-      "lines": 289,
+      "lines": 282,
       "reason": "imported by kept metrics.profiles"
     },
     "metrics.emitter": {
@@ -172,7 +172,7 @@
     },
     "metrics.registry": {
       "decision": "keep",
-      "lines": 1389,
+      "lines": 1380,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "metrics.score_changelog": {
@@ -182,17 +182,17 @@
     },
     "metrics.scorecard_honesty": {
       "decision": "keep",
-      "lines": 1156,
+      "lines": 1151,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "pipeline": {
       "decision": "keep",
       "lines": 1,
-      "reason": "package of kept pipeline.archive"
+      "reason": "imported by kept schemas.extraction_schemas"
     },
     "pipeline.archive": {
       "decision": "keep",
-      "lines": 1125,
+      "lines": 1120,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface, contract_surface"
     },
     "pipeline.intake": {
@@ -202,7 +202,7 @@
     },
     "pipeline.mailroom": {
       "decision": "keep",
-      "lines": 339,
+      "lines": 318,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "pipeline.pilot_labels": {
@@ -237,7 +237,7 @@
     },
     "pipeline.sandbox_schema_adherence": {
       "decision": "keep",
-      "lines": 479,
+      "lines": 447,
       "reason": "consumer import: MAIL@origin/stack/03-audit-live-row, contract_surface"
     },
     "pipeline.sandbox_scoring": {
@@ -258,7 +258,7 @@
     "schemas": {
       "decision": "keep",
       "lines": 1,
-      "reason": "imported by kept scoring.suites"
+      "reason": "imported by kept metrics.registry"
     },
     "schemas.corporate_record_relabel": {
       "decision": "keep",
@@ -267,23 +267,28 @@
     },
     "schemas.corporate_record_schema": {
       "decision": "keep",
-      "lines": 732,
+      "lines": 734,
       "reason": "consumer import: MAIL@origin/claude/howdy-n8vcc1, SBX, consumer_surface"
     },
     "schemas.corpus": {
       "decision": "keep",
-      "lines": 637,
+      "lines": 525,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "schemas.correspondence_gt_audit": {
       "decision": "hold",
-      "lines": 349,
+      "lines": 346,
       "reason": "correspondence ground-truth audit, Dojo #94"
     },
     "schemas.cuad_schema": {
       "decision": "keep",
-      "lines": 1122,
+      "lines": 1138,
       "reason": "consumer import: MAIL@origin/claude/howdy-n8vcc1"
+    },
+    "schemas.doc_classes": {
+      "decision": "keep",
+      "lines": 323,
+      "reason": "imported by kept config"
     },
     "schemas.equivalences": {
       "decision": "keep",
@@ -292,7 +297,7 @@
     },
     "schemas.extraction_schemas": {
       "decision": "keep",
-      "lines": 560,
+      "lines": 567,
       "reason": "consumer import: MAIL@origin/claude/howdy-n8vcc1"
     },
     "schemas.gt_metadata": {
@@ -332,7 +337,7 @@
     },
     "schemas.v10_rows": {
       "decision": "hold",
-      "lines": 243,
+      "lines": 246,
       "reason": "v10 dataset row loaders, mailroom #174"
     },
     "scoring": {
@@ -427,7 +432,7 @@
     },
     "scoring.extraction_scope": {
       "decision": "keep",
-      "lines": 267,
+      "lines": 175,
       "reason": "imported by kept scoring.doc_scorers.dispatch"
     },
     "scoring.field_scoring": {
@@ -457,7 +462,7 @@
     },
     "scoring.suites": {
       "decision": "keep",
-      "lines": 1770,
+      "lines": 1646,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "scoring.tasks": {

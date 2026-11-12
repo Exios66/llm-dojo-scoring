@@ -56,6 +56,7 @@ from types import MappingProxyType
 from typing import Any
 
 from .corpus import DOC_TYPE_SUBCLASSES, normalize_corpus_subclass
+from . import doc_classes
 
 __all__ = [
     "MAILROOM_DOC_TYPES",
@@ -68,20 +69,13 @@ __all__ = [
     "extraction_subtypes",
     "iter_extraction_schemas",
     "schema_coverage",
+    "scoreable_fields",
     "registry_violations",
 ]
 
-#: The five classes the mailroom routes and scores (mailroom-dataset v9+).
-#: Equal to ``pipeline.mailroom.LIVE_DOC_TYPES`` (checked by
-#: :func:`registry_violations`; not imported here to keep ``schemas`` below
-#: ``pipeline``).
-MAILROOM_DOC_TYPES: tuple[str, ...] = (
-    "contract",
-    "merger_agreement",
-    "corporate_record",
-    "correspondence",
-    "insurance_claim",
-)
+#: The five classes the mailroom routes and scores (mailroom-dataset v9+): the live
+#: classes of the document-class registry (``schemas/doc_classes.py``).
+MAILROOM_DOC_TYPES: tuple[str, ...] = doc_classes.LIVE_DOC_TYPES
 
 FIELD_STATUSES: tuple[str, ...] = (
     "scored",
@@ -328,10 +322,8 @@ def _label_status(counts: Mapping[str, int] | None, rows: int) -> tuple[str, flo
 
 
 def _live_types(doc_type: str) -> dict[str, str]:
-    """The class's live field map (``DEFAULT_FIELD_TYPES``)."""
-    from ..scoring.suites import DEFAULT_FIELD_TYPES
-
-    return dict(DEFAULT_FIELD_TYPES[doc_type])
+    """The class's live field map (the document-class registry's ``field_types``)."""
+    return doc_classes.field_types(doc_type)
 
 
 def _subtype_overlay(doc_type: str, subtype: str | None) -> tuple[dict[str, str], tuple[str, ...], tuple[str, ...]]:
@@ -467,6 +459,19 @@ def extraction_schema(doc_type: str, subtype: Any = None) -> ExtractionSchema:
     return _cached(doc_type, key)
 
 
+def scoreable_fields(doc_type: str, subtype: Any = None) -> tuple[str, ...]:
+    """The fields that count toward the extraction score for a class, or one subtype.
+
+    Every field whose status is in :data:`SCORED_STATUSES` (``scored``, ``partial``,
+    ``derived``, ``documented_absent``), in schema order: the dataset's ground
+    truth decides, there are no quality tiers. This is the rule
+    :func:`schema_coverage` applies row by row, so the two cannot disagree. A
+    class-level schema also lists derived and label-task fields the registry does
+    not (``cms_source_table``, ``content_topic``); they follow the same status rule.
+    """
+    return extraction_schema(doc_type, subtype).scored_fields
+
+
 def iter_extraction_schemas(*, include_doc_types: bool = True) -> Iterator[ExtractionSchema]:
     """Every schema: each class's document-type schema, then each subtype."""
     for doc_type in MAILROOM_DOC_TYPES:
@@ -532,11 +537,13 @@ def schema_coverage(
 
 def registry_violations() -> list[str]:
     """Drift between the registry, the taxonomy and the live field maps (empty = OK)."""
-    from ..pipeline.mailroom import LIVE_DOC_TYPES
+    from ..pipeline import mailroom
 
     problems: list[str] = []
-    if tuple(LIVE_DOC_TYPES) != MAILROOM_DOC_TYPES:
-        problems.append(f"MAILROOM_DOC_TYPES {MAILROOM_DOC_TYPES} != LIVE_DOC_TYPES {tuple(LIVE_DOC_TYPES)}")
+    if tuple(mailroom.LIVE_DOC_TYPES) != MAILROOM_DOC_TYPES:
+        problems.append(
+            f"MAILROOM_DOC_TYPES {MAILROOM_DOC_TYPES} != pipeline LIVE_DOC_TYPES {tuple(mailroom.LIVE_DOC_TYPES)}"
+        )
     data = _status_data()
     if set(data["doc_types"]) != set(MAILROOM_DOC_TYPES):
         problems.append(f"status data classes {sorted(data['doc_types'])} != the five mailroom classes")
