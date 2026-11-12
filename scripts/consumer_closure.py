@@ -54,8 +54,9 @@ Usage::
         [--extra-ref GITREF ...] --check
 
 ``--check`` exits 1 and prints a diff when the committed JSON drifts, and 2 when a
-requested checkout or ref is missing or a consumer file does not parse (its imports
-would be invisible, so nothing is written or accepted).  A consumer ``import *`` is
+requested checkout or ref is missing, a checkout has no Python files, a consumer file
+does not parse (its imports would be invisible), or a consumer imports a name or module
+path the package does not have; in every exit-2 case nothing is written or accepted.  A consumer ``import *`` is
 expanded: the root's ``__all__`` roots each exported name's module, a module or package
 roots itself.  Standard library only.
 """
