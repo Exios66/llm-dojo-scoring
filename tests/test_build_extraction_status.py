@@ -181,3 +181,14 @@ def test_build_counts_every_vocabulary_value_including_zero_rows(mod):
     assert corr["sentiment_label"]["values"] == {"negative": 0, "neutral": 0, "positive": 1}
     assert "record_type" in out["vocabulary"]["corporate_record"]
     assert "contract" not in out["vocabulary"]
+
+
+def test_committed_status_file_carries_vocabulary_and_still_loads():
+    """The vocabulary section is additive: the registry reads the same file unchanged."""
+    from llm_dojo_scoring.schemas import extraction_schemas as es
+
+    data = json.loads(es._DATA_PATH.read_text(encoding="utf-8"))
+    assert set(data["vocabulary"]) <= set(es.MAILROOM_DOC_TYPES)
+    assert es.extraction_schema("insurance_claim").rows == sum(
+        part["rows"] for part in data["doc_types"]["insurance_claim"].values()
+    )
