@@ -132,6 +132,14 @@ def test_score_changelog_can_filter_one_metric():
     assert changes[0]["version"] == "0.26.0"
 
 
+def test_score_changelog_0_29_0_moves_field_micro_precision():
+    """The #133 money fix can turn a FP+FN into a TP, so precision moves too."""
+    changes = score_changes_for_metric(
+        "pipeline.extraction.field_micro_precision", "0.28.0", "0.29.0"
+    )
+    assert [entry["version"] for entry in changes] == ["0.29.0"]
+
+
 def test_score_changelog_handles_reversed_and_invalid_versions():
     """Reversing the pair is harmless; missing or junk releases yield nothing."""
     assert score_changes_between("0.26.0", "0.24.0") == score_changes_between(
