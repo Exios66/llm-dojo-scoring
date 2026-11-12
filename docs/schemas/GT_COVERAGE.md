@@ -17,17 +17,17 @@ Every field the dataset populates is scored; there are no label-quality tiers. S
 
 | Field | Field type | Status | Populated / class rows | Share | Truth from | Note |
 |:---|:---|:---|---:|---:|:---|:---|
-| `document_name` | name | derived | 509 / 600 | 84.8% | cuad_clause_labels | Document Name |
-| `parties` | entity_list:name | derived | 509 / 600 | 84.8% | cuad_clause_labels | Parties |
+| `document_name` | name | derived | 509 / 600 | 84.8% | cuad_clause_labels | Document Name; 509 labelled, 0 with no span (truth: absent) |
+| `parties` | entity_list:name | derived | 508 / 600 | 84.7% | cuad_clause_labels | Parties; 509 labelled, 1 with no span (truth: absent) |
 | `party_roles` | entity_list:free_text | pending_annotation | 0 / 600 | 0.0% | gt_fields |  |
 | `signatories` | entity_list:name | pending_annotation | 0 / 600 | 0.0% | gt_fields |  |
 | `agreement_date` | date | pending_annotation | 0 / 600 | 0.0% | gt_fields |  |
-| `effective_date` | date | derived | 509 / 600 | 84.8% | cuad_clause_labels | Effective Date |
+| `effective_date` | date | derived | 389 / 600 | 64.8% | cuad_clause_labels | Effective Date; 509 labelled, 120 with no span (truth: absent) |
 | `expiration_date` | date | pending_annotation | 0 / 600 | 0.0% | gt_fields |  |
-| `term_length` | free_text | derived | 509 / 600 | 84.8% | cuad_clause_labels | Expiration Date |
-| `renewal_terms` | free_text | derived | 509 / 600 | 84.8% | cuad_clause_labels | Renewal Term |
+| `term_length` | free_text | derived | 412 / 600 | 68.7% | cuad_clause_labels | Expiration Date; 509 labelled, 97 with no span (truth: absent) |
+| `renewal_terms` | free_text | derived | 176 / 600 | 29.3% | cuad_clause_labels | Renewal Term; 509 labelled, 333 with no span (truth: absent) |
 | `termination_notice_period` | free_text | pending_annotation | 0 / 600 | 0.0% | gt_fields |  |
-| `governing_law` | name | derived | 509 / 600 | 84.8% | cuad_clause_labels | Governing Law |
+| `governing_law` | name | derived | 436 / 600 | 72.7% | cuad_clause_labels | Governing Law; 509 labelled, 73 with no span (truth: absent) |
 | `dispute_forum` | name | pending_annotation | 0 / 600 | 0.0% | gt_fields |  |
 | `contract_value` | money | pending_annotation | 0 / 600 | 0.0% | gt_fields |  |
 | `payment_terms` | free_text | pending_annotation | 0 / 600 | 0.0% | gt_fields |  |
@@ -35,7 +35,7 @@ Every field the dataset populates is scored; there are no label-quality tiers. S
 | `cuad_family` | label | derived | 600 / 600 | 100.0% | subtype | truth is the row's subtype |
 | `cuad_clauses` | entity_list:free_text | derived | 509 / 600 | 84.8% | cuad_clause_labels | all CUAD categories |
 
-Fields whose truth comes from `cuad_clause_labels` show source-container coverage: the count is the rows whose label container is populated, not the rows that answer that field's own category.
+Fields whose truth comes from `cuad_clause_labels` show category coverage: the count is the rows whose CUAD label for that field's own category has a span. A row that labels the category with no span is scored as an absent value; the Note gives both counts. `cuad_clauses` reads every category, so it counts the rows with any CUAD label.
 
 ## merger_agreement
 

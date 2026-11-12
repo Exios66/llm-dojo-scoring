@@ -35,6 +35,11 @@ Format based on Keep a Changelog; versioning is SemVer.
   rows, and the vocabulary values the ground truth never uses (for example insurance
   `loss_report`). CircleCI runs `--check`, so the page cannot go stale. A field becomes scored
   by rebuilding the status file; no code edit is needed.
+- `extraction_status.json` records, per CUAD category, the contract rows whose labels carry it
+  and how many of those give a span (`label_categories`). `GT_COVERAGE.md` uses it: each
+  single-category CUAD field now shows the rows whose span answers its own category, for
+  example `renewal_terms` 176 of 600 rows (was the container count, 509), with the
+  labelled-but-empty rows in the Note. Status classification and scores are unchanged.
 
 ### Changed
 

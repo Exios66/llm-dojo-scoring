@@ -199,3 +199,25 @@ def test_build_writes_no_doc_types_entry_for_a_class_without_rows(mod):
     rows = [_row("insurance_claim", "auto", {"intent": "claim_filing"})]
     out = mod.build(rows, "vtest", COMMIT)
     assert set(out["doc_types"]) == {"insurance_claim"}
+
+
+def test_build_counts_rows_per_cuad_category(mod):
+    """Per CUAD category: rows whose labels carry it, and how many of those hold a span."""
+    labels_a = {"Parties": [{"text": "ACME"}], "Governing Law": []}
+    labels_b = {"Parties": [], "Renewal Term": [{"text": "1 year"}]}
+    rows = [
+        _row("contract", "license", {"cuad_clause_labels": labels_a}),
+        _row("contract", "license", {"cuad_clause_labels": json.dumps(labels_b)}),
+        _row("contract", "license", {}),
+        _row("insurance_claim", "auto", {"intent": "claim_filing"}),
+    ]
+    out = mod.build(rows, "vtest", COMMIT)
+    assert out["label_categories"] == {
+        "contract": {
+            "cuad_clause_labels": {
+                "Governing Law": {"labeled": 1, "with_spans": 0},
+                "Parties": {"labeled": 2, "with_spans": 1},
+                "Renewal Term": {"labeled": 1, "with_spans": 1},
+            }
+        }
+    }

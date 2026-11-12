@@ -42,18 +42,49 @@ _CONTAINER_NOTE = (
     "category."
 )
 
+#: Shown under the contract table when the status carries per-category CUAD counts.
+_CATEGORY_NOTE = (
+    "Fields whose truth comes from `cuad_clause_labels` show category coverage: the count is "
+    "the rows whose CUAD label for that field's own category has a span. A row that labels the "
+    "category with no span is scored as an absent value; the Note gives both counts. "
+    "`cuad_clauses` reads every category, so it counts the rows with any CUAD label."
+)
+
 
 def _n(value: int) -> str:
     """An integer with thousands separators."""
     return f"{value:,}"
 
 
+def _category_counts(status: Mapping[str, Any], doc_type: str) -> Mapping[str, Any] | None:
+    """Per-category CUAD counts of ``doc_type``, when the status records them."""
+    return status.get("label_categories", {}).get(doc_type, {}).get("cuad_clause_labels")
+
+
+def _cuad_category(status: Mapping[str, Any], doc_type: str, spec: Any) -> Mapping[str, Any] | None:
+    """The per-category counts of a single-category CUAD field (``{}`` when no row labels it).
+
+    ``with_spans`` is the field's populated count (rows whose span answers the category);
+    ``labeled`` adds the rows that label it with no span (truth: absent).
+
+    ``None`` when the field is not a single-category CUAD field or the status has no
+    per-category counts (an older status file): the container count applies then.
+    """
+    counts = _category_counts(status, doc_type)
+    category = _schemas._CUAD_DERIVED.get(spec.name) if spec.source == "cuad_clause_labels" else None
+    if counts is None or category is None or spec.name == "cuad_clauses":
+        return None
+    return counts.get(category, {})
+
+
 def _populated(status: Mapping[str, Any], doc_type: str, spec: Any) -> int:
     """Rows of ``doc_type`` whose ground truth labels the field, summed over its subtypes.
 
     ``cms_source_table`` is derived on the CMS tables only, so it counts just those
-    subtypes.  A CUAD/MAUD-derived field counts rows whose label *container* is populated
-    (see :data:`_CONTAINER_NOTE`), not rows that answer its own category.
+    subtypes.  A single-category CUAD field counts the rows whose label for its category
+    has a span when the status records per-category counts (:data:`_CATEGORY_NOTE`); otherwise, and
+    for ``cuad_clauses`` and MAUD fields, the rows whose label *container* is populated
+    (:data:`_CONTAINER_NOTE`).
     """
     by_subtype = status.get("doc_types", {}).get(doc_type, {})
     parts = by_subtype.values()
@@ -63,6 +94,9 @@ def _populated(status: Mapping[str, Any], doc_type: str, spec: Any) -> int:
         return sum(int(part["rows"]) for part in parts)
     if spec.source == "other class":
         return 0
+    category = _cuad_category(status, doc_type, spec)
+    if category is not None:
+        return int(category.get("with_spans", 0))
     key = spec.name if spec.source == "gt_fields" else spec.source
     return sum(int(part["fields"].get(key, {}).get("populated", 0)) for part in parts)
 
@@ -83,11 +117,19 @@ def _class_section(status: Mapping[str, Any], doc_type: str) -> list[str]:
     for name, spec in schema.fields.items():
         populated = _populated(status, doc_type, spec)
         share = f"{100 * populated / schema.rows:.1f}%"
+        note = spec.note
+        category = _cuad_category(status, doc_type, spec)
+        if category is not None:
+            labeled = int(category.get("labeled", 0))
+            note += f"; {_n(labeled)} labelled, {_n(labeled - populated)} with no span (truth: absent)"
         lines.append(
             f"| `{name}` | {spec.field_type} | {spec.status} | {_n(populated)} / {_n(schema.rows)} "
-            f"| {share} | {spec.source} | {spec.note} |"
+            f"| {share} | {spec.source} | {note} |"
         )
     containers = sorted({s.source for s in schema.fields.values() if s.source in _schemas._LABEL_SOURCES})
+    if "cuad_clause_labels" in containers and _category_counts(status, doc_type) is not None:
+        containers.remove("cuad_clause_labels")
+        lines += ["", _CATEGORY_NOTE]
     if containers:
         sources = " and ".join(f"`{name}`" for name in containers)
         lines += ["", _CONTAINER_NOTE.format(sources=sources)]
