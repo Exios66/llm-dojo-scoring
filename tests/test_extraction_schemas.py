@@ -26,6 +26,29 @@ def test_registry_has_no_drift():
     assert registry_violations() == []
 
 
+def test_a_live_class_without_dataset_rows_is_not_status_drift(monkeypatch):
+    """A live class with ``in_corpus=False`` has no status rows, and that is not registry drift."""
+    from dataclasses import replace
+    from types import MappingProxyType
+
+    from llm_dojo_scoring.schemas import doc_classes, extraction_schemas
+
+    data = json.loads(json.dumps(extraction_schemas._status_data()))
+    del data["doc_types"]["correspondence"]
+    registry = {**doc_classes.DOC_CLASSES, "correspondence": replace(doc_classes.DOC_CLASSES["correspondence"], in_corpus=False)}
+    monkeypatch.setattr(doc_classes, "DOC_CLASSES", MappingProxyType(registry))
+    monkeypatch.setattr(extraction_schemas, "_status_data", lambda: data)
+    extraction_schemas._cached.cache_clear()
+    try:
+        assert not [p for p in registry_violations() if p.startswith("status data classes")]
+        # the other direction still reports: a corpus class missing from the status file is drift
+        del data["doc_types"]["contract"]
+        assert [p for p in registry_violations() if p.startswith("status data classes")]
+    finally:
+        monkeypatch.undo()
+        extraction_schemas._cached.cache_clear()
+
+
 def test_five_classes_from_the_v9_lineage():
     """All five mailroom classes, frozen from a v9.x Hub revision."""
     assert MAILROOM_DOC_TYPES == tuple(dojo.LIVE_DOC_TYPES) == (

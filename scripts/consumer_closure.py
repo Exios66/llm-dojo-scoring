@@ -530,6 +530,13 @@ def _attribute_chain(node: ast.AST) -> tuple[str | None, list[str]]:
     return None, []
 
 
+def root_star_names(pkg: Package) -> list[str]:
+    """Names ``from <package> import *`` binds: the root ``__all__``, else every public root name."""
+    if pkg.root_all is not None:
+        return list(pkg.root_all)
+    return [n for n in pkg.root_names if not n.startswith("_")]
+
+
 def star_import_modules(pkg: Package, target: str) -> set[str]:
     """Modules a consumer's ``from <package>[.<target>] import *`` binds names from.
 
@@ -540,10 +547,7 @@ def star_import_modules(pkg: Package, target: str) -> set[str]:
     """
     reached: set[str] = set()
     if target == "":
-        names = pkg.root_all if pkg.root_all is not None else [
-            n for n in pkg.root_names if not n.startswith("_")
-        ]
-        for name in names:
+        for name in root_star_names(pkg):
             module = pkg.root_module(name)
             if module:
                 reached.add(module)
@@ -598,6 +602,11 @@ def scan_source(pkg: Package, text: str, homes: Mapping[str, str] | None = None)
                 bound = alias.asname or alias.name
                 if alias.name == "*":
                     scan.modules |= star_import_modules(pkg, target)
+                    star_module = resolve_modules(pkg, target)[0] if target else None
+                    exported = set(root_star_names(pkg)) if target == "" else set()
+                    for func in DISPATCH_FUNCS:
+                        if func in exported or (star_module is not None and homes.get(func) == star_module):
+                            func_aliases[func] = func
                     continue
                 if alias.name in DISPATCH_FUNCS:
                     func_aliases[bound] = alias.name
@@ -727,13 +736,14 @@ def scan_contract_surface(pkg: Package, data: Mapping[str, Any]) -> Scan:
     for entry in data.get("names", {}):
         module_path, _, name = entry.partition(":")
         below = module_path[len(pkg.name) + 1 :] if module_path.startswith(pkg.name + ".") else ""
-        if module_path == pkg.name or not below:
+        at_root = module_path == pkg.name or not below
+        if at_root:
             module = pkg.root_module(name)
         else:
             module, _ = resolve_modules(pkg, below)
         if module:
             scan.modules.add(module)
-        else:
+        elif not (at_root and name in pkg.root_names):  # a name the root itself defines is resolved
             scan.unresolved.add(entry)
     return scan
 
@@ -1083,7 +1093,13 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if scan.unresolved:
-        print("note: names that resolve to no module: " + ", ".join(sorted(scan.unresolved)), file=sys.stderr)
+        print(
+            "cannot build the closure: consumers import names or modules the package no longer "
+            "has, so their former modules cannot be rooted (update the consumer or restore the "
+            "name): " + ", ".join(sorted(scan.unresolved)),
+            file=sys.stderr,
+        )
+        return 2
     if scan.parse_failures:
         print(
             "cannot build the closure: consumer files did not parse, so their imports are "

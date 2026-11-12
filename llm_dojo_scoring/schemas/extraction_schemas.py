@@ -460,12 +460,14 @@ def extraction_schema(doc_type: str, subtype: Any = None) -> ExtractionSchema:
 
 
 def scoreable_fields(doc_type: str, subtype: Any = None) -> tuple[str, ...]:
-    """The fields that count toward the extraction score for a class, or one subtype.
+    """The fields whose frozen dataset status makes them eligible to score, for a class or subtype.
 
-    Every field whose status is in :data:`SCORED_STATUSES` (``scored``, ``partial``,
-    ``derived``, ``documented_absent``), in schema order: the dataset's ground
-    truth decides, there are no quality tiers. This is the rule
-    :func:`schema_coverage` applies row by row, so the two cannot disagree. A
+    This is status reporting, not a scoring gate: ``score_extraction`` does not consult
+    it and scores whatever ``expected`` carries. Eligible means a status in
+    :data:`SCORED_STATUSES` (``scored``, ``partial``, ``derived``, ``documented_absent``),
+    in schema order: the dataset's ground truth decides, there are no quality tiers.
+    This is the rule :func:`schema_coverage` applies row by row, so the two cannot
+    disagree. A
     class-level schema also lists derived and label-task fields the registry does
     not (``cms_source_table``, ``content_topic``); they follow the same status rule.
     """
@@ -545,8 +547,11 @@ def registry_violations() -> list[str]:
             f"MAILROOM_DOC_TYPES {MAILROOM_DOC_TYPES} != pipeline LIVE_DOC_TYPES {tuple(mailroom.LIVE_DOC_TYPES)}"
         )
     data = _status_data()
-    if set(data["doc_types"]) != set(MAILROOM_DOC_TYPES):
-        problems.append(f"status data classes {sorted(data['doc_types'])} != the five mailroom classes")
+    with_rows = {t for t in MAILROOM_DOC_TYPES if doc_classes.DOC_CLASSES[t].in_corpus}
+    if set(data["doc_types"]) != with_rows:
+        problems.append(
+            f"status data classes {sorted(data['doc_types'])} != the live classes with dataset rows {sorted(with_rows)}"
+        )
     for doc_type in MAILROOM_DOC_TYPES:
         live = _live_types(doc_type)
         base = extraction_schema(doc_type)

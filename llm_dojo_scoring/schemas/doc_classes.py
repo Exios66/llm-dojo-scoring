@@ -9,13 +9,17 @@ scope and adherence field sets, the prompt descriptors). To change the schema:
    scoring order). Types: ``name``, ``label``, ``date``, ``money``, ``id``,
    ``free_text``, ``entity_list`` or ``entity_list:<name|free_text|id>``.
 2. **Add a class**: append one ``DocClass`` (``live``, ``specialist``, ``in_corpus``,
-   ``fields``). Derived tables append it; no other list needs a line.
+   ``fields``). The derived tables append it. A live class also needs a
+   ``DEFAULT_PROFILES`` entry in ``metrics/profiles.py``: ``DEFAULT_SUITES`` is built from
+   it, so ``get_suite(<class>)`` raises ``KeyError`` without one (see
+   ``docs/guides/ADDING_A_DOCUMENT_TYPE.md``).
 3. **Contract and merger fields** also need a prompt descriptor in
    ``schemas/cuad_schema.py`` / ``schemas/maud_schema.py``; the import fails naming the
    missing field until it exists.
 4. **When the dataset labels the field**, re-run ``scripts/build_extraction_status.py
    --from-hub …`` and ``scripts/render_gt_coverage.py --write``; whether a field is
-   scored comes from that file (``extraction_schemas.scoreable_fields``), not from here.
+   reported as scoreable comes from that file (``extraction_schemas.scoreable_fields``,
+   a status report, not a scoring gate), not from here.
 5. A score that moves needs ``scripts/freeze_goldens.py --write --reason …`` and a
    ``CHANGELOG.md`` entry.
 
