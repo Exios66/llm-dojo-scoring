@@ -109,17 +109,21 @@ def _publish_dry_run(tmp_path, timeout, real_gh=None):
     hang in local processing still fails the test.
     """
     marker = tmp_path / "gh-called"
-    shim_dir = tmp_path / "bin"
-    shim_dir.mkdir()
-    shim = shim_dir / "gh"
-    shim.write_text('#!/bin/sh\n: > "$GH_MARKER"\nexec "$REAL_GH" "$@"\n')
-    shim.chmod(0o755)
-    env = {
-        **os.environ,
-        "PATH": f"{shim_dir}{os.pathsep}{os.environ.get('PATH', '')}",
-        "GH_MARKER": str(marker),
-        "REAL_GH": real_gh or shutil.which("gh") or "gh-not-installed",
-    }
+    env = dict(os.environ)
+    real_gh = real_gh or shutil.which("gh")
+    if real_gh:
+        # No shim without a real gh: a missing CLI must stay a missing binary
+        # ("No such file or directory"), which _payload_or_skip classifies.
+        shim_dir = tmp_path / "bin"
+        shim_dir.mkdir()
+        shim = shim_dir / "gh"
+        shim.write_text('#!/bin/sh\n: > "$GH_MARKER"\nexec "$REAL_GH" "$@"\n')
+        shim.chmod(0o755)
+        env.update(
+            PATH=f"{shim_dir}{os.pathsep}{os.environ.get('PATH', '')}",
+            GH_MARKER=str(marker),
+            REAL_GH=real_gh,
+        )
     try:
         return subprocess.run(
             [sys.executable, str(SCRIPT), "publish", "0.25.0", "--commit", "HEAD", "--json"],
@@ -135,17 +139,24 @@ def _publish_dry_run(tmp_path, timeout, real_gh=None):
         raise
 
 
-def test_cli_publish_dry_run_json(tmp_path):
-    # v0.25.0 is now published; a dry-run publish must refuse (idempotent)
-    # rather than silently re-tag/re-release.
-    """A dry-run publish of a published version refuses (idempotent)."""
-    proc = _publish_dry_run(tmp_path, timeout=20)
-    # main() writes a ReleaseError payload to stderr; a gh/network failure is
-    # an environment limit, not a release-tool regression.
+def _payload_or_skip(proc):
+    """The publish JSON payload, or a skip when ``gh`` itself cannot be reached here.
+
+    ``main()`` writes a ReleaseError payload to stderr; a gh/network failure is an
+    environment limit, not a release-tool regression.
+    """
     payload = json.loads(proc.stdout or proc.stderr)
     error = str(payload.get("error", ""))
     if "action" not in payload and error.startswith("gh ") and _GH_UNAVAILABLE.search(error):
         pytest.skip(f"GitHub CLI unavailable here: {error[:120]}")
+    return payload
+
+
+def test_cli_publish_dry_run_json(tmp_path):
+    # v0.25.0 is now published; a dry-run publish must refuse (idempotent)
+    # rather than silently re-tag/re-release.
+    """A dry-run publish of a published version refuses (idempotent)."""
+    payload = _payload_or_skip(_publish_dry_run(tmp_path, timeout=20))
     assert payload["action"] == "publish"
     assert payload["version"] == "0.25.0"
     assert payload["dry_run"] is True
@@ -516,3 +527,13 @@ def test_publish_keeps_its_result_when_consumer_lookup_fails(monkeypatch):
     steps = release.publish_next_steps("0.28.0", "v0.28.0", {"url": "u"})
     assert steps[0] == "verify u"
     assert any("could not read the consumer pins" in s for s in steps), steps
+
+
+def test_publish_dry_run_without_gh_installed_is_a_skip(tmp_path, monkeypatch):
+    """With no ``gh`` on PATH (CI images), the dry run skips as unavailable instead of failing."""
+    bin_dir = tmp_path / "path-without-gh"
+    bin_dir.mkdir()
+    (bin_dir / "git").symlink_to(shutil.which("git"))
+    monkeypatch.setenv("PATH", str(bin_dir))
+    with pytest.raises(pytest.skip.Exception, match="GitHub CLI unavailable"):
+        _payload_or_skip(_publish_dry_run(tmp_path, timeout=20))
