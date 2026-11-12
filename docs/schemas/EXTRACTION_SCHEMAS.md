@@ -1,16 +1,23 @@
-# Entity extraction schemas — mailroom-dataset (Dojo v0.20.0; registry v0.26.0)
+# Entity extraction schemas — mailroom-dataset (Dojo v0.28.1)
 
 Pared live field maps for the **five primary document types** in
 [`Lucius-Morningstar/mailroom-dataset`](https://huggingface.co/datasets/Lucius-Morningstar/mailroom-dataset)
-(`ground_truth` config, Hub tag **v9.2** — same 3,302 rows as the v9 GT-closure pin `46a4d3c2` and v9.1; most experiments ran on v9.1, **3,302** rows:
+(`ground_truth` config, Hub tag **v9.3** = commit `ccd040f6`, the revision `schemas/data/extraction_status.json`
+is frozen from and llm-mailroom pins; the same **3,302** rows as v9.2, v9.1 and the v9 GT-closure pin `46a4d3c2`:
 2,979 train / 323 test). Authority is the dojo live roster, not the
 retired specialists.
 
+**Where the field lists live.** One hand-edited table, `llm_dojo_scoring/schemas/doc_classes.py`
+(`DOC_CLASSES`), holds each class's fields and scorer types; `DEFAULT_FIELD_TYPES`,
+`CORPUS_EXTRACTION_FIELDS`, the rosters and the other field sets derive from it. Which of those
+fields the dataset actually labels (and so scores today) is generated from the pinned dataset:
+[`GT_COVERAGE.md`](GT_COVERAGE.md), `extraction_schemas.scoreable_fields(<class>)`.
+
 | Pin | Value |
 |---|---|
-| Package | `llm-dojo-scoring` **v0.20.0** |
-| Field maps | `DEFAULT_FIELD_TYPES` ≡ `CORPUS_EXTRACTION_FIELDS` ≡ taxonomy fixture `tests/fixtures/taxonomy_field_types.json` |
-| Taxonomy blob | llm-mailroom `src/config/taxonomy.yaml` SHA-1 `911ca16469045dc6dd16aed81671f6e8d8769223` |
+| Package | `llm-dojo-scoring` **v0.28.1** |
+| Field maps | `schemas/doc_classes.py` → `DEFAULT_FIELD_TYPES` ≡ `CORPUS_EXTRACTION_FIELDS` ≡ taxonomy fixture `tests/fixtures/taxonomy_field_types.json` |
+| Taxonomy blob | llm-mailroom `src/config/taxonomy.yaml` blob SHA-1 `44e0ab59b6b705aed4c1939b5e85ed8499e38d0a` (the fixture's `authority_blob_sha1`) |
 | Frozen prompts | `get_prompt(<agent>, family="production_prompts")` — eval-environment v1, frozen 2026-09-26T05:09:29+00:00 |
 | Live classes | `contract` · `merger_agreement` · `corporate_record` · `correspondence` · `insurance_claim` |
 | Not live | `unknown` (routing only) · `court_opinion` / `due_diligence` / `compliance_filing` (retired; zero corpus rows) |
@@ -38,7 +45,7 @@ get_prompt("contracts_specialist", family="production_prompts").text
 | `corporate_record` | 450 | 13.6% | SEC EDGAR S-1/8-K exhibits | `CorporateRecordExtraction` / `corporate_records_specialist` |
 | `correspondence` | 1,000 | 30.3% | Enron (dedup pool) | `CorrespondenceExtraction` / `correspondence_specialist` |
 | `insurance_claim` | 1,100 | 33.3% | CMS DE-SynPUF + GNOTHEIA + BDR + INSURBIAS | `InsuranceClaimExtraction` / `insurance_claims_specialist` |
-| **total** | **3,302** | 100% | | **58 field slots** across the five maps |
+| **total** | **3,302** | 100% | | **75 field slots** across the five maps (17 + 21 + 9 + 11 + 17) |
 
 91 EX-10 contracts are triage-only (`cuad_clause_labels` =
 `pending_annotation`) and stay **unscorable** until clause backfill.
@@ -384,7 +391,7 @@ consistency is degenerate on GT-shaped predictions.
 
 ---
 
-## Cross-class rules (v0.20.0)
+## Cross-class rules
 
 1. **One schema per document.** Fill only that class's keys. Foreign keys
    (`claim_number` on a letter, `sender` on a claim) are out of schema.

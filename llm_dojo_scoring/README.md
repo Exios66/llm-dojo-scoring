@@ -22,7 +22,8 @@ llm_dojo_scoring/
 
 | Subpackage | Module | What it does |
 |:---|:---|:---|
-| **`schemas/`** | `corpus` | mailroom-dataset alignment: doc types, subclasses, extraction fields, the CMS source-table mapping |
+| **`schemas/`** | `doc_classes` | The one hand-edited registry of document classes, their extraction fields and field types; every other class/field table derives from it. Stdlib-only leaf |
+| | `corpus` | mailroom-dataset alignment: doc types, subclasses, extraction fields, the CMS source-table mapping |
 | | `gt_metadata` | Hub `gt_fields` / `gt_presence` parsing into scoring-ready fields |
 | | `intents` | Controlled `intent` vocabularies for the classes that carry one |
 | | `equivalences` | Subtype and doc-subclass normalization and equivalence |
