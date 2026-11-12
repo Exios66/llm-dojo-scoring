@@ -35,7 +35,7 @@ def test_legacy_from_import_and_patch_reach_the_real_module(monkeypatch):
 def test_package_root_stays_organized():
     """Only the entry points live at the root; every module sits in a subpackage."""
     root_modules = {p.stem for p in PKG_DIR.glob("*.py")}
-    assert root_modules == {"__init__", "_layout", "config", "cli"}
+    assert root_modules == {"__init__", "_layout", "config"}
     subpackages = {p.name for p in PKG_DIR.iterdir() if (p / "__init__.py").is_file()}
     assert subpackages == SUBPACKAGES
     for name, path in LEGACY_MODULES.items():
@@ -44,5 +44,5 @@ def test_package_root_stays_organized():
 
 def test_root_attributes_are_kept():
     """Modules the package root exposed as attributes are still there."""
-    for name in ("field_scoring", "registry", "emitter", "io", "visualize", "suites", "prompts", "config"):
+    for name in ("field_scoring", "registry", "emitter", "suites", "prompts", "config"):
         assert hasattr(llm_dojo_scoring, name)

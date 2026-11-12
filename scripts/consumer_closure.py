@@ -100,6 +100,7 @@ HOLD: dict[str, str] = {
     "schemas.correspondence_gt_audit": "correspondence ground-truth audit, Dojo #94",
     "schemas.corporate_record_relabel": "corporate record relabelling, Dojo #52",
     "integrations.update_awareness": "release tooling behind the dojo-version CLI, Dojo #66",
+    "analysis.failure_modes": "source of registry metric failure_mode_breakdown (sorter bundle), Dojo #66",
 }
 
 #: Dispatch functions whose first (or named) argument selects what runs.

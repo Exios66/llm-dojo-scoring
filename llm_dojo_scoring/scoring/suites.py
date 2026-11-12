@@ -44,7 +44,6 @@ __all__ = [
     "ScoringSuite",
     "DEFAULT_SUITES",
     "DEFAULT_FIELD_TYPES",
-    "LEGACY_FULL_EXTRACTION_FIELD_TYPES",
     "SPECIALIST_DOC_TYPES",
     "DOC_TYPE_ALIASES",
     "get_suite",
@@ -73,68 +72,11 @@ DOC_TYPE_ALIASES: dict[str, str] = {
 #: field there, not here). Open-ended ``key_obligations`` / ``termination_clauses``
 #: / ``key_provisions`` / long ``key_points`` are retired from the live board — score
 #: CUAD/MAUD/insurance checklists + the semantic trio instead. Override with
-#: ``field_types=`` on ``score()``, or use :data:`LEGACY_FULL_EXTRACTION_FIELD_TYPES`
-#: for historical free-text dumps.
+#: ``field_types=`` on ``score()``.
 DEFAULT_FIELD_TYPES: dict[str, dict[str, str]] = {
     key: doc_classes.field_types(key) for key in doc_classes.DOC_CLASSES
 }
 
-#: Pre-v0.6.0 mailroom field maps that still score open-ended free-text
-#: obligation dumps. Use only for historical rescoring — live board numbers
-#: should use :data:`DEFAULT_FIELD_TYPES`.
-LEGACY_FULL_EXTRACTION_FIELD_TYPES: dict[str, dict[str, str]] = {
-    "contract": {
-        "document_name": "name",
-        "parties": "entity_list:name",
-        "effective_date": "date",
-        "term_length": "free_text",
-        "termination_clauses": "entity_list:free_text",
-        "governing_law": "name",
-        "key_obligations": "entity_list:free_text",
-        "contract_value": "money",
-        "renewal_terms": "free_text",
-        "cuad_family": "name",
-        "merger_consideration": "name",
-        "cuad_clauses": "entity_list:free_text",
-        "maud_clauses": "entity_list:free_text",
-    },
-    "merger_agreement": {
-        "document_name": "name",
-        "parties": "entity_list:name",
-        "effective_date": "date",
-        "term_length": "free_text",
-        "termination_clauses": "entity_list:free_text",
-        "governing_law": "name",
-        "key_obligations": "entity_list:free_text",
-        "contract_value": "money",
-        "renewal_terms": "free_text",
-        "cuad_family": "name",
-        "merger_consideration": "name",
-        "cuad_clauses": "entity_list:free_text",
-        "maud_clauses": "entity_list:free_text",
-    },
-    "corporate_record": {
-        "entity_name": "name",
-        "record_type": "name",
-        "effective_date": "date",
-        "key_provisions": "entity_list:free_text",
-        "signatories": "entity_list:name",
-        "jurisdiction": "name",
-        "filing_number": "id",
-    },
-    "correspondence": {
-        "sender": "name",
-        "recipient": "name",
-        "additional_recipients": "entity_list",
-        "communication_type": "name",
-        "communication_date": "date",
-        "key_points": "entity_list",
-        "demand_amount": "money",
-        "action_items": "entity_list",
-        "urgency": "name",
-        "referenced_communications": "entity_list",
-    },
-}
 
 #: Per-agent extras on top of the task-bundle surface. Only names that
 #: already resolve in the registry (no invented KPIs).
