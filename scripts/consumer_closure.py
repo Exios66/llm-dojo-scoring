@@ -180,7 +180,10 @@ def _module_name(rel: Path) -> tuple[str, bool]:
 
 
 def _assigned_dict(tree: ast.Module, name: str) -> dict[str, str]:
-    """The literal ``str -> str`` dict assigned to module-level ``name``, else empty."""
+    """The literal dict assigned to module-level ``name``, else empty.
+
+    Values are strings; a tuple or list value (``(module, attr)``) contributes its first item.
+    """
     for node in tree.body:
         if isinstance(node, ast.AnnAssign) and node.value is not None:
             targets, value = [node.target], node.value
@@ -194,7 +197,10 @@ def _assigned_dict(tree: ast.Module, name: str) -> dict[str, str]:
             except (ValueError, SyntaxError):
                 return {}
             if isinstance(literal, dict):
-                return {str(k): str(v) for k, v in literal.items()}
+                return {
+                    str(k): str(v[0] if isinstance(v, (tuple, list)) and v else v)
+                    for k, v in literal.items()
+                }
     return {}
 
 
@@ -223,8 +229,8 @@ def _normalize_lazy_target(pkg_name: str, value: str) -> str:
 def _root_names(pkg: Package, tree: ast.Module) -> dict[str, str | None]:
     """Map each name bound by the root ``__init__`` to the module that defines it.
 
-    ``None`` marks a name the root defines itself.  A ``_LAZY`` name -> module table
-    (the planned lazy root) is read as well.
+    ``None`` marks a name the root defines itself.  The lazy root's ``_LAZY`` (name ->
+    (module, attr)) and ``_SUBMODULES`` (name -> module) tables are read as well.
     """
     names: dict[str, str | None] = {}
     for node in _toplevel_statements(tree.body):
@@ -250,7 +256,8 @@ def _root_names(pkg: Package, tree: ast.Module) -> dict[str, str | None]:
             for target in targets:
                 if isinstance(target, ast.Name):
                     names.setdefault(target.id, None)
-    for key, value in _assigned_dict(tree, "_LAZY").items():
+    lazy = {**_assigned_dict(tree, "_SUBMODULES"), **_assigned_dict(tree, "_LAZY")}
+    for key, value in lazy.items():
         target = _normalize_lazy_target(pkg.name, value)
         module, _ = resolve_modules(pkg, target)
         names[key] = module

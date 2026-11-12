@@ -22,7 +22,7 @@
   "modules": {
     "__init__": {
       "decision": "keep",
-      "lines": 445,
+      "lines": 684,
       "reason": "package root (its eager imports are ignored; Task 5 makes it lazy)"
     },
     "_layout": {
