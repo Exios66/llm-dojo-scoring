@@ -47,8 +47,13 @@ identical does not need an entry; a release that moves a number does.
 1. Check `scorer_version` on both legs. If they differ, do not compare the
    quality delta.
 2. Read `score_changes` or the ledger for the interval.
-3. For a quality record (extraction, label tasks, reviewer), re-score the
-   older run's stored predictions with the current suite (`get_suite(...).score`) before comparing.
+3. For a quality record (extraction, label tasks, reviewer), re-score the stored predictions of every
+   leg whose `scorer_version` is not the current release with the current suite (`get_suite(...).score`)
+   before comparing. When neither leg is on the current release, re-score both: re-scoring one leaves two
+   releases, and `compare_serving` then reports `scorer_version_mismatch` and `comparable: False`.
+   For a single extraction document, call `get_suite(...).score_document(...)` (or `score(..., detailed=True)`):
+   the default `score` result omits the field-micro metrics, `metric_id` and `provenance` that a comparison
+   record needs.
 4. A serving card cannot be re-scored, because timings and hardware counters are not reproducible. Compare its
    timing and cost metrics as recorded, and treat its quality delta across a
    release mismatch as incomparable.

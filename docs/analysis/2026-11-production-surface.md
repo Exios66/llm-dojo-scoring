@@ -315,10 +315,9 @@ From the plan. Each needs consumer PRs or labels, so none belongs in this PR.
 
 ## 10. Findings outside this change
 
-- `tests/test_audit_consumer_surface.py::test_default_checkout_locations_are_siblings_not_developer_paths` asserts
-  that no default consumer path contains `/tmp/`. It fails when the Dojo itself is checked out under `/tmp` (seen
-  once in this session in a scratch worktree; it passed in a checkout under the home directory). A location-dependent
-  assertion; not fixed here.
+- `tests/test_audit_consumer_surface.py::test_default_checkout_locations_are_siblings_not_developer_paths` once
+  failed when the Dojo was checked out under `/tmp`. It now checks each default path against
+  `audit.REPO_ROOT.parent` and no longer depends on the checkout location.
 - Core dependencies `pandas`, `openpyxl`, `matplotlib` have no import left in `llm_dojo_scoring` (`grep` finds
   none). They stay core for llm-mailroom's undeclared `pandas` import; see roadmap item 13.
 
