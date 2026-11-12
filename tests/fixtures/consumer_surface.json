@@ -29,13 +29,13 @@
         {
           "expression": "retired",
           "file": "src/scripts/run_hf_pilot.py",
-          "line": 1305,
+          "line": 1337,
           "repo": "MAIL"
         },
         {
           "expression": "kind",
           "file": "src/scripts/run_hf_pilot.py",
-          "line": 1366,
+          "line": 1398,
           "repo": "MAIL"
         }
       ],
@@ -93,7 +93,7 @@
           },
           {
             "file": "src/scripts/run_hf_pilot.py",
-            "line": 1291,
+            "line": 1323,
             "repo": "MAIL"
           },
           {
@@ -103,7 +103,7 @@
           },
           {
             "file": "src/tests/test_intake.py",
-            "line": 98,
+            "line": 100,
             "repo": "MAIL"
           }
         ],
@@ -125,7 +125,7 @@
           },
           {
             "file": "tests/test_eval.py",
-            "line": 339,
+            "line": 344,
             "repo": "SBX"
           },
           {
@@ -272,7 +272,6 @@
       "commit": "8d730fc11bb04ff12f27a3379fd77d5d7093f665",
       "files_scanned": 68,
       "label": "EDA",
-      "path": "/Users/morningstar/.t3/worktrees/constellation-readmes/Mailroom-Corpus-EDA",
       "reason": null,
       "ref": "docs/constellation-readme",
       "scanned": true
@@ -281,34 +280,30 @@
       "commit": null,
       "files_scanned": 0,
       "label": "EE",
-      "path": "/Users/morningstar/Digital-Mailroom/packages/eval-environment",
       "reason": "path does not exist",
       "ref": null,
       "scanned": false
     },
     "MAIL": {
-      "commit": "a7d7bf0b1c1b2e93b0f185b49d83e1df61a5f7a1",
-      "files_scanned": 310,
+      "commit": "5bcfe44584e468d8fc9d5d30e28abd5cc52cadfc",
+      "files_scanned": 387,
       "label": "MAIL",
-      "path": "/tmp/llm-mailroom-check",
       "reason": null,
-      "ref": "main",
+      "ref": "HEAD",
       "scanned": true
     },
     "ML": {
       "commit": "bd8557a8473c6a995d0964f557c232ee7c627d77",
       "files_scanned": 84,
       "label": "ML",
-      "path": "/Users/morningstar/.t3/worktrees/constellation-readmes/mailroom-ml",
       "reason": null,
       "ref": "docs/constellation-readme",
       "scanned": true
     },
     "SBX": {
-      "commit": "93b76d42367d1758728c46d26bd25c50c8ca895e",
-      "files_scanned": 331,
+      "commit": "c81a79aecaebfb2c05a124bbf93f7d4d63774e02",
+      "files_scanned": 360,
       "label": "SBX",
-      "path": "/Users/morningstar/.t3/worktrees/local-mailroom-sandbox/t3-65a57387",
       "reason": null,
       "ref": "origin/main",
       "scanned": true
@@ -317,13 +312,16 @@
       "commit": "8b0bee5b0c82af6f69035922a9df04c9962d79ee",
       "files_scanned": 107,
       "label": "TMR",
-      "path": "/Users/morningstar/Digital-Mailroom/packages/The-Mailroom",
       "reason": null,
       "ref": "main",
       "scanned": true
     }
   },
   "modules": {
+    "analysis": {
+      "attrs": {},
+      "legacy": false
+    },
     "analysis.bootstrap": {
       "attrs": {
         "DEFAULT_ALPHA": {
@@ -376,6 +374,11 @@
               "file": "src/observability/bootstrap.py",
               "line": 3,
               "repo": "MAIL"
+            },
+            {
+              "file": "src/pipeline/policy_replay.py",
+              "line": 1055,
+              "repo": "MAIL"
             }
           ],
           "defined_in": "analysis.bootstrap",
@@ -383,6 +386,139 @@
         }
       },
       "legacy": true
+    },
+    "analysis.calibration": {
+      "attrs": {
+        "auroc": {
+          "consumers": [
+            {
+              "file": "src/pipeline/policy_replay.py",
+              "line": 832,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/scripts/calibrate_thresholds.py",
+              "line": 239,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "analysis.calibration",
+          "private": false
+        },
+        "brier_score": {
+          "consumers": [
+            {
+              "file": "src/pipeline/policy_replay.py",
+              "line": 832,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/scripts/calibrate_thresholds.py",
+              "line": 239,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "analysis.calibration",
+          "private": false
+        },
+        "clopper_pearson_upper": {
+          "consumers": [
+            {
+              "file": "src/pipeline/policy_replay.py",
+              "line": 825,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "analysis.calibration",
+          "private": false
+        },
+        "cross_fit_cutoffs": {
+          "consumers": [
+            {
+              "file": "src/scripts/calibrate_thresholds.py",
+              "line": 239,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/tests/test_calibrate_thresholds_review.py",
+              "line": 52,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/tests/test_calibrate_thresholds_review.py",
+              "line": 78,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "analysis.calibration",
+          "private": false
+        },
+        "cutoff_at_target": {
+          "consumers": [
+            {
+              "file": "src/scripts/calibrate_thresholds.py",
+              "line": 115,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/scripts/calibrate_thresholds.py",
+              "line": 239,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/tests/test_calibrate_thresholds_review.py",
+              "line": 52,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/tests/test_calibrate_thresholds_review.py",
+              "line": 69,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "analysis.calibration",
+          "private": false
+        },
+        "expected_calibration_error": {
+          "consumers": [
+            {
+              "file": "src/pipeline/policy_replay.py",
+              "line": 832,
+              "repo": "MAIL"
+            },
+            {
+              "file": "src/scripts/calibrate_thresholds.py",
+              "line": 239,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "analysis.calibration",
+          "private": false
+        },
+        "required_samples": {
+          "consumers": [
+            {
+              "file": "src/scripts/calibrate_thresholds.py",
+              "line": 239,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "analysis.calibration",
+          "private": false
+        },
+        "wilson_ci": {
+          "consumers": [
+            {
+              "file": "src/scripts/calibrate_thresholds.py",
+              "line": 115,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "analysis.bootstrap",
+          "private": false
+        }
+      },
+      "legacy": false
     },
     "analysis.cost": {
       "attrs": {
@@ -671,11 +807,22 @@
     },
     "config": {
       "attrs": {
+        "clear_settings_cache": {
+          "consumers": [
+            {
+              "file": "tests/test_scoring_outputs_golden.py",
+              "line": 42,
+              "repo": "SBX"
+            }
+          ],
+          "defined_in": "config",
+          "private": false
+        },
         "get_settings": {
           "consumers": [
             {
               "file": "src/tests/test_consumer_policy_compat.py",
-              "line": 27,
+              "line": 34,
               "repo": "MAIL"
             },
             {
@@ -685,7 +832,7 @@
             },
             {
               "file": "src/tests/test_final_quality_delegation.py",
-              "line": 111,
+              "line": 118,
               "repo": "MAIL"
             }
           ],
@@ -765,7 +912,7 @@
           "consumers": [
             {
               "file": "src/mailroom_sandbox/cli.py",
-              "line": 184,
+              "line": 205,
               "repo": "SBX"
             },
             {
@@ -867,7 +1014,7 @@
             },
             {
               "file": "src/tests/test_intake.py",
-              "line": 73,
+              "line": 75,
               "repo": "MAIL"
             }
           ],
@@ -899,7 +1046,7 @@
             },
             {
               "file": "src/tests/test_intake.py",
-              "line": 73,
+              "line": 75,
               "repo": "MAIL"
             },
             {
@@ -931,7 +1078,7 @@
             },
             {
               "file": "src/graph/build_graph.py",
-              "line": 662,
+              "line": 682,
               "repo": "MAIL"
             }
           ],
@@ -1034,7 +1181,7 @@
             },
             {
               "file": "src/tests/test_run_hf_pilot.py",
-              "line": 469,
+              "line": 470,
               "repo": "MAIL"
             }
           ],
@@ -1066,7 +1213,7 @@
             },
             {
               "file": "src/scripts/run_hf_pilot.py",
-              "line": 319,
+              "line": 322,
               "repo": "MAIL"
             }
           ],
@@ -1077,7 +1224,7 @@
           "consumers": [
             {
               "file": "src/scripts/run_hf_pilot.py",
-              "line": 326,
+              "line": 329,
               "repo": "MAIL"
             }
           ],
@@ -1132,7 +1279,7 @@
           "consumers": [
             {
               "file": "src/scripts/run_hf_pilot.py",
-              "line": 335,
+              "line": 338,
               "repo": "MAIL"
             }
           ],
@@ -1148,7 +1295,7 @@
           "consumers": [
             {
               "file": "src/scripts/run_pilot.py",
-              "line": 609,
+              "line": 793,
               "repo": "MAIL"
             }
           ],
@@ -1159,7 +1306,7 @@
           "consumers": [
             {
               "file": "src/scripts/run_hf_pilot.py",
-              "line": 401,
+              "line": 404,
               "repo": "MAIL"
             }
           ],
@@ -1224,7 +1371,7 @@
           "consumers": [
             {
               "file": "src/observability/scores.py",
-              "line": 378,
+              "line": 394,
               "repo": "MAIL"
             }
           ],
@@ -1472,7 +1619,7 @@
             },
             {
               "file": "src/tests/test_dojo_parity.py",
-              "line": 8,
+              "line": 10,
               "repo": "MAIL"
             },
             {
@@ -1482,17 +1629,17 @@
             },
             {
               "file": "src/tests/test_frozen_v1_prompts.py",
-              "line": 41,
+              "line": 42,
               "repo": "MAIL"
             },
             {
               "file": "src/tests/test_frozen_v1_prompts.py",
-              "line": 49,
+              "line": 50,
               "repo": "MAIL"
             },
             {
               "file": "scripts/sync_specialist_prompts.py",
-              "line": 75,
+              "line": 82,
               "repo": "SBX"
             },
             {
@@ -1513,7 +1660,7 @@
             },
             {
               "file": "src/tests/test_frozen_v1_prompts.py",
-              "line": 49,
+              "line": 50,
               "repo": "MAIL"
             },
             {
@@ -1651,7 +1798,7 @@
             },
             {
               "file": "src/mailroom_sandbox/eval/extraction_scope.py",
-              "line": 178,
+              "line": 199,
               "repo": "SBX"
             }
           ],
@@ -1737,7 +1884,7 @@
           "consumers": [
             {
               "file": "src/mailroom_sandbox/corpus.py",
-              "line": 287,
+              "line": 298,
               "repo": "SBX"
             }
           ],
@@ -1758,7 +1905,7 @@
             },
             {
               "file": "scripts/compare_sorter_prompt.py",
-              "line": 47,
+              "line": 72,
               "repo": "SBX"
             }
           ],
@@ -1892,7 +2039,7 @@
           "consumers": [
             {
               "file": "src/observability/agent_eval.py",
-              "line": 350,
+              "line": 351,
               "repo": "MAIL"
             }
           ],
@@ -1936,7 +2083,7 @@
           "consumers": [
             {
               "file": "src/observability/agent_eval.py",
-              "line": 342,
+              "line": 343,
               "repo": "MAIL"
             }
           ],
@@ -1972,6 +2119,22 @@
         }
       },
       "legacy": true
+    },
+    "scoring.doc_scorers": {
+      "attrs": {
+        "DOC_SCORERS": {
+          "consumers": [
+            {
+              "file": "src/tests/test_dojo_parity.py",
+              "line": 9,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.doc_scorers",
+          "private": false
+        }
+      },
+      "legacy": false
     },
     "scoring.extraction_metrics": {
       "attrs": {
@@ -2217,7 +2380,7 @@
           "consumers": [
             {
               "file": "src/scripts/run_pilot.py",
-              "line": 502,
+              "line": 672,
               "repo": "MAIL"
             }
           ],
@@ -2309,13 +2472,40 @@
       },
       "legacy": true
     },
+    "scoring.reviewer": {
+      "attrs": {
+        "ReviewRecord": {
+          "consumers": [
+            {
+              "file": "src/tests/test_review_labels_and_priority.py",
+              "line": 214,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.reviewer",
+          "private": false
+        },
+        "score_review_lane": {
+          "consumers": [
+            {
+              "file": "src/scripts/calibrate_thresholds.py",
+              "line": 326,
+              "repo": "MAIL"
+            }
+          ],
+          "defined_in": "scoring.reviewer",
+          "private": false
+        }
+      },
+      "legacy": false
+    },
     "scoring.suites": {
       "attrs": {
         "DEFAULT_FIELD_TYPES": {
           "consumers": [
             {
               "file": "src/tests/test_dojo_parity.py",
-              "line": 9,
+              "line": 11,
               "repo": "MAIL"
             },
             {
@@ -2663,6 +2853,11 @@
           "file": "src/mailroom_sandbox/eval/scoring.py",
           "line": 10,
           "repo": "SBX"
+        },
+        {
+          "file": "tests/test_scoring_outputs_golden.py",
+          "line": 41,
+          "repo": "SBX"
         }
       ],
       "defined_in": "metrics.emitter",
@@ -2672,13 +2867,18 @@
     "__version__": {
       "consumers": [
         {
+          "file": "src/scripts/run_calibration_sweep.py",
+          "line": 1360,
+          "repo": "MAIL"
+        },
+        {
           "file": "src/scripts/run_hf_pilot.py",
           "line": 61,
           "repo": "MAIL"
         },
         {
           "file": "src/tests/test_run_hf_pilot.py",
-          "line": 7,
+          "line": 8,
           "repo": "MAIL"
         }
       ],
@@ -2702,12 +2902,12 @@
       "consumers": [
         {
           "file": "src/tests/test_core_engine_delegation.py",
-          "line": 84,
+          "line": 91,
           "repo": "MAIL"
         },
         {
           "file": "src/tests/test_core_engine_delegation.py",
-          "line": 100,
+          "line": 107,
           "repo": "MAIL"
         }
       ],
@@ -2771,8 +2971,13 @@
     "configure": {
       "consumers": [
         {
+          "file": "src/scripts/run_calibration_sweep.py",
+          "line": 1280,
+          "repo": "MAIL"
+        },
+        {
           "file": "src/scripts/run_hf_pilot.py",
-          "line": 1658,
+          "line": 1690,
           "repo": "MAIL"
         }
       ],
@@ -2825,7 +3030,7 @@
         },
         {
           "file": "src/tests/test_consumer_policy_compat.py",
-          "line": 66,
+          "line": 73,
           "repo": "MAIL"
         },
         {
@@ -2892,6 +3097,11 @@
     "field_scoring": {
       "consumers": [
         {
+          "file": "src/tests/test_agents/test_specialists.py",
+          "line": 47,
+          "repo": "MAIL"
+        },
+        {
           "file": "src/tests/test_field_scoring.py",
           "line": 17,
           "repo": "MAIL"
@@ -2918,11 +3128,23 @@
       "in_all": true,
       "kind": "function"
     },
+    "get_doc_scorer": {
+      "consumers": [
+        {
+          "file": "src/tests/test_dojo_parity.py",
+          "line": 8,
+          "repo": "MAIL"
+        }
+      ],
+      "defined_in": "scoring.doc_scorers",
+      "in_all": true,
+      "kind": "function"
+    },
     "get_field_types": {
       "consumers": [
         {
           "file": "src/graph/build_graph.py",
-          "line": 3799,
+          "line": 4258,
           "repo": "MAIL"
         },
         {
@@ -2932,7 +3154,7 @@
         },
         {
           "file": "src/observability/agent_eval.py",
-          "line": 193,
+          "line": 194,
           "repo": "MAIL"
         },
         {
@@ -2946,13 +3168,18 @@
           "repo": "MAIL"
         },
         {
+          "file": "src/scripts/run_calibration_sweep.py",
+          "line": 497,
+          "repo": "MAIL"
+        },
+        {
           "file": "src/scripts/run_hf_pilot.py",
-          "line": 603,
+          "line": 606,
           "repo": "MAIL"
         },
         {
           "file": "src/scripts/run_pilot.py",
-          "line": 546,
+          "line": 716,
           "repo": "MAIL"
         },
         {
@@ -2994,7 +3221,7 @@
         },
         {
           "file": "src/scripts/run_hf_pilot.py",
-          "line": 1284,
+          "line": 1316,
           "repo": "MAIL"
         },
         {
@@ -3034,7 +3261,7 @@
         },
         {
           "file": "src/tests/test_intake.py",
-          "line": 88,
+          "line": 90,
           "repo": "MAIL"
         },
         {
@@ -3090,7 +3317,7 @@
       "consumers": [
         {
           "file": "src/tests/test_core_engine_delegation.py",
-          "line": 43,
+          "line": 50,
           "repo": "MAIL"
         }
       ],
@@ -3146,7 +3373,7 @@
       "consumers": [
         {
           "file": "src/graph/build_graph.py",
-          "line": 1724,
+          "line": 1853,
           "repo": "MAIL"
         }
       ],
@@ -3158,7 +3385,7 @@
       "consumers": [
         {
           "file": "src/tests/test_core_engine_delegation.py",
-          "line": 27,
+          "line": 34,
           "repo": "MAIL"
         },
         {
@@ -3187,7 +3414,7 @@
       "consumers": [
         {
           "file": "src/graph/build_graph.py",
-          "line": 3799,
+          "line": 4258,
           "repo": "MAIL"
         },
         {
@@ -3197,7 +3424,7 @@
         },
         {
           "file": "src/scripts/run_pilot.py",
-          "line": 546,
+          "line": 716,
           "repo": "MAIL"
         },
         {
@@ -3265,7 +3492,7 @@
       "consumers": [
         {
           "file": "src/api/main.py",
-          "line": 31,
+          "line": 33,
           "repo": "MAIL"
         },
         {
@@ -3275,7 +3502,7 @@
         },
         {
           "file": "src/pipeline/watcher.py",
-          "line": 32,
+          "line": 34,
           "repo": "MAIL"
         }
       ],
