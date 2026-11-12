@@ -17,8 +17,9 @@ Format based on Keep a Changelog; versioning is SemVer.
   the promotion gates, the v10 row configs and the CUAD / MAUD / corporate-record / schema-contract
   helpers. A field added to the registry reaches all of them; a contract or merger field without a
   prompt descriptor fails the import. **No behaviour change**: every table keeps its public name,
-  type, value and order (`tests/test_doc_classes.py` pins them against
-  `tests/fixtures/doc_class_tables_before.json`, captured before the refactor).
+  type, value and order (checked against a snapshot of all 41 tables captured before the
+  refactor; the snapshot was retired once it passed, and `tests/test_doc_classes.py` now ties
+  every derived table to the registry).
 - `schemas.extraction_schemas.scoreable_fields(doc_type, subtype=None)`: the fields whose dataset
   status counts toward the score (`scored`, `partial`, `derived`, `documented_absent`), the rule
   `schema_coverage` applies row by row. Not exported from the package root.
