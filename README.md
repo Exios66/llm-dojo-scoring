@@ -66,7 +66,7 @@ key or tracing service.
 <div align="center">
 <picture>
   <source media="(max-width: 640px)" srcset="docs/assets/readme/stats-mobile.svg"/>
-  <img src="docs/assets/readme/stats.svg" alt="By the numbers: 27 agent profiles, 11 task bundles, metric tiers T0 to T3, four command-line tools, bootstrap and Wilson confidence intervals, and an offline core that needs no API key" width="100%"/>
+  <img src="docs/assets/readme/stats.svg" alt="By the numbers: 27 agent profiles, 11 task bundles, metric tiers T0 to T3, one command-line tool, bootstrap and Wilson confidence intervals, and an offline core that needs no API key" width="100%"/>
 </picture>
 </div>
 
@@ -85,7 +85,7 @@ key or tracing service.
 ## 📦 Install
 
 <div align="center">
-<img src="docs/assets/readme/terminal.svg" alt="Animated terminal: clone, install, check the Dojo version offline, analyze a workbook and run the tests" width="90%"/>
+<img src="docs/assets/readme/terminal.svg" alt="Animated terminal: clone, install, check the Dojo version offline and run the tests" width="90%"/>
 </div>
 
 <div align="center">
@@ -153,7 +153,7 @@ For extraction, use the field-type-aware API in [Library Usage](#library-usage).
 <div align="center">
 <picture>
   <source media="(max-width: 640px)" srcset="docs/assets/readme/flow-mobile.svg"/>
-  <img src="docs/assets/readme/flow.svg" alt="Predictions flow through a task suite, normalization, comparison, metrics, uncertainty and explanation; the pipeline, sandbox, Langfuse, Phoenix and workbooks plug into it" width="100%"/>
+  <img src="docs/assets/readme/flow.svg" alt="Predictions flow through a task suite, normalization, comparison, metrics, uncertainty and explanation; the pipeline, sandbox, Langfuse sink and release check plug into it" width="100%"/>
 </picture>
 </div>
 
@@ -174,7 +174,7 @@ are separate integrations; the deterministic core does not require them.
 ## 📟 At a glance
 
 <div align="center">
-<img src="docs/assets/readme/tui.svg" alt="Terminal dashboard: the registry (27 agent profiles, 11 task bundles, tiers T0 to T3, four command-line tools) and a sample dojo-analyze run with its Wilson interval" width="90%"/>
+<img src="docs/assets/readme/tui.svg" alt="Terminal dashboard: the registry (27 agent profiles, 11 task bundles, tiers T0 to T3, one command-line tool) and a sample score_task run with its Wilson interval" width="90%"/>
 </div>
 
 <a id="where-it-fits"></a>
@@ -230,8 +230,8 @@ Modules are grouped into subpackages by what they are about. The full module tab
 | `scoring/` | `field_scoring`, classification, extraction metrics, content, claims, LegalBench, `tasks`, `suites` |
 | `pipeline/` | Mailroom pipeline contract, intake, pilot labels, verdicts, archive, sandbox rubrics |
 | `metrics/` | Registry, metric metadata, bundles, profiles, emitter, scorecard honesty |
-| `analysis/` | Bootstrap, diagnostics, failure modes, interpretation, reports, plots, export, grid, serving, cost |
-| `integrations/` | Langfuse and Phoenix sync, update awareness |
+| `analysis/` | Bootstrap, calibration, diagnostics, failure modes, experiment, serving, cost |
+| `integrations/` | `dojo-version` update awareness (the Langfuse sink is `LangfuseSink` in `metrics/`) |
 | root | `config`, `cli`, `prompts/`, and the public API in `__init__` |
 
 </div>
@@ -387,7 +387,7 @@ events.
 <details>
 <summary><b>Does scoring need an API key or a network connection?</b></summary>
 
-No. The deterministic core needs no model, API key or tracing service. Embedding rescue (`[embeddings]`) and the Langfuse/Phoenix sinks (`[tracing]`) are opt-in extras, and release checks only run through the opt-in `UpdateChecker`; `LLM_DOJO_UPDATE_CHECK=0` turns them off entirely.
+No. The deterministic core needs no model, API key or tracing service. Embedding rescue (`[embeddings]`) and the Langfuse sink (`[tracing]`) are opt-in extras, and release checks only run through the opt-in `UpdateChecker`; `LLM_DOJO_UPDATE_CHECK=0` turns them off entirely.
 
 </details>
 

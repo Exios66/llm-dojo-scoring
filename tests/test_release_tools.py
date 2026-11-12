@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -99,20 +101,45 @@ _GH_UNAVAILABLE = re.compile(
 )
 
 
-def test_cli_publish_dry_run_json():
-    # v0.25.0 is now published; a dry-run publish must refuse (idempotent)
-    # rather than silently re-tag/re-release.
-    """A dry-run publish of a published version refuses (idempotent)."""
+def _publish_dry_run(tmp_path, timeout, real_gh=None):
+    """Run ``release.py publish --json`` with a ``gh`` shim that records its first call.
+
+    A timeout is only a network-unavailability skip when the shim shows the
+    process stalled inside ``gh``; a timeout anywhere else is re-raised so a
+    hang in local processing still fails the test.
+    """
+    marker = tmp_path / "gh-called"
+    shim_dir = tmp_path / "bin"
+    shim_dir.mkdir()
+    shim = shim_dir / "gh"
+    shim.write_text('#!/bin/sh\n: > "$GH_MARKER"\nexec "$REAL_GH" "$@"\n')
+    shim.chmod(0o755)
+    env = {
+        **os.environ,
+        "PATH": f"{shim_dir}{os.pathsep}{os.environ.get('PATH', '')}",
+        "GH_MARKER": str(marker),
+        "REAL_GH": real_gh or shutil.which("gh") or "gh-not-installed",
+    }
     try:
-        proc = subprocess.run(
+        return subprocess.run(
             [sys.executable, str(SCRIPT), "publish", "0.25.0", "--commit", "HEAD", "--json"],
             cwd=ROOT,
             capture_output=True,
             text=True,
-            timeout=20,
+            timeout=timeout,
+            env=env,
         )
     except subprocess.TimeoutExpired:
-        pytest.skip("release publish dry run timed out after 20 s (network unavailable)")
+        if marker.exists():
+            pytest.skip(f"gh stalled for {timeout} s (network unavailable)")
+        raise
+
+
+def test_cli_publish_dry_run_json(tmp_path):
+    # v0.25.0 is now published; a dry-run publish must refuse (idempotent)
+    # rather than silently re-tag/re-release.
+    """A dry-run publish of a published version refuses (idempotent)."""
+    proc = _publish_dry_run(tmp_path, timeout=20)
     # main() writes a ReleaseError payload to stderr; a gh/network failure is
     # an environment limit, not a release-tool regression.
     payload = json.loads(proc.stdout or proc.stderr)
@@ -125,6 +152,21 @@ def test_cli_publish_dry_run_json():
     assert payload["tag"] == "v0.25.0"
     assert payload["errors"]
     assert any("already published" in e for e in payload["errors"])
+
+
+def test_publish_dry_run_timeout_outside_gh_is_not_skipped(tmp_path):
+    """A timeout before any ``gh`` call is a failure, not a network skip."""
+    with pytest.raises(subprocess.TimeoutExpired):
+        _publish_dry_run(tmp_path, timeout=0.05)
+
+
+def test_publish_dry_run_gh_stall_is_a_skip(tmp_path):
+    """A timeout while ``gh`` is hanging is the one classified as network unavailability."""
+    slow = tmp_path / "slow-gh"
+    slow.write_text("#!/bin/sh\nsleep 30\n")
+    slow.chmod(0o755)
+    with pytest.raises(pytest.skip.Exception, match="gh stalled"):
+        _publish_dry_run(tmp_path, timeout=6, real_gh=str(slow))
 
 
 def test_missing_executable_is_a_release_error(release):

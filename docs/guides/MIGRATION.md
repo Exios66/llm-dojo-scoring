@@ -8,7 +8,9 @@
 > **Removed in the production slim-down (Unreleased):** the `dojo-analyze`, `dojo-export`,
 > `dojo-rescore` and `dojo-sync` CLIs, `LEGACY_FULL_EXTRACTION_FIELD_TYPES`, and the
 > analysis/export/grid/sync modules behind them. Sections below that use them are
-> historical; see `CHANGELOG.md` for what replaced each one.
+> historical. Only `dojo-rescore` has an alternative (re-score a stored run with
+> `get_suite(...).score(...)`; see `CHANGELOG.md`). The analysis, export, grid and sync modules and
+> `LEGACY_FULL_EXTRACTION_FIELD_TYPES` were removed without a replacement.
 
 The scoring code that lives in the pipeline projects is now consolidated in
 `llm-dojo-scoring`. Migrating is a drop-in import swap — every public name is

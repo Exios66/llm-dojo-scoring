@@ -12,8 +12,8 @@
 
 ```bash
 uv run --locked --extra dev pytest tests -q -rs     # the full suite, from the repository root
-uv run --locked python scripts/ci.py --tier full    # every CI gate, in CI's order
-uv run --locked python scripts/ci.py --tier smoke   # ruff + the contract tests, seconds
+uv run --locked --extra dev python scripts/ci.py --tier full    # every CI gate, in CI's order
+uv run --locked --extra dev python scripts/ci.py --tier smoke   # ruff + the contract tests, seconds
 ```
 
 > `tests/test_release_tools.py::test_notes_render_contains_changelog_and_commit` runs
