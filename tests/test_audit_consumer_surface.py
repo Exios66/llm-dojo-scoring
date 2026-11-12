@@ -349,6 +349,8 @@ def test_only_write_refreshes_requested_codes_and_keeps_the_others(monkeypatch, 
     fresh["generated_from"] = {"MAIL": pinned["generated_from"]["MAIL"]}
     fixture = _redirect_fixture(monkeypatch, tmp_path, pinned, fresh)
     monkeypatch.setattr(audit, "build_fixture", lambda *a, **k: json.loads(json.dumps(fresh)))
+    # ``keep`` is synthetic: classify it as the record says, as the real package would a live name.
+    monkeypatch.setattr(audit, "_classify_top_level", lambda name, index: ("function", "m"))
 
     assert audit.main(["--only", "MAIL", "--write"]) == 0
 
@@ -397,3 +399,35 @@ def test_committed_fixture_records_no_local_paths():
     assert "/Users/" not in fixture
     for label, meta in json.loads(fixture)["generated_from"].items():
         assert "path" not in meta, label
+
+
+def test_partial_merge_keeps_a_module_the_rescanned_consumer_dropped():
+    """Direct ``import llm_dojo_scoring.<m>`` sites are not recorded, so a partial rescan never drops a module (#136 review)."""
+    existing = _surface({}, mail_sites=[_site("MAIL", "old.py")])
+    fresh = _surface({}, mail_sites=[])
+    fresh["modules"] = {}
+    fresh["generated_from"] = {"MAIL": _meta("MAIL", commit="d" * 40)}
+    merged = audit.merge_fixture(existing, fresh, {"MAIL"})
+    assert merged["modules"]["scoring.suites"]["attrs"] == {}
+
+
+def test_partial_merge_reclassifies_retained_root_names():
+    """A name kept for an unrescanned consumer gets its kind and home from the current package."""
+    existing = _surface({"eda_only": [_site("EDA", "eda.py")]}, mail_sites=[_site("MAIL")])
+    fresh = _surface({}, mail_sites=[_site("MAIL")])
+    fresh["generated_from"] = {"MAIL": existing["generated_from"]["MAIL"]}
+    merged = audit.merge_fixture(existing, fresh, {"MAIL"}, classify=lambda name: ("missing", None))
+    assert merged["top_level"]["eda_only"]["kind"] == "missing"
+    assert merged["top_level"]["eda_only"]["defined_in"] is None
+
+
+def test_only_check_rejects_a_retained_name_the_package_no_longer_exports(monkeypatch, tmp_path, capsys):
+    """``--only MAIL --check`` fails when an unrescanned consumer's root import no longer resolves."""
+    pinned = _surface({"x": [_site("EDA"), _site("MAIL")]}, mail_sites=[_site("MAIL")])
+    fresh = _surface({}, mail_sites=[_site("MAIL")])
+    fresh["generated_from"] = {"MAIL": pinned["generated_from"]["MAIL"]}
+    _redirect_fixture(monkeypatch, tmp_path, pinned, fresh)
+    monkeypatch.setattr(audit, "build_fixture", lambda *a, **k: json.loads(json.dumps(fresh)))
+    monkeypatch.setattr(audit, "_classify_top_level", lambda name, index: ("missing", None))
+    assert audit.main(["--only", "MAIL", "--check"]) == 2
+    assert "x" in capsys.readouterr().err

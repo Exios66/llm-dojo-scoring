@@ -36,6 +36,7 @@ import os
 import subprocess
 import sys
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
@@ -871,8 +872,9 @@ def _merge_modules(
         attrs = _merge_named(
             (old or {}).get("attrs", {}), (new or {}).get("attrs", {}), only, "consumers"
         )
-        if old is not None and new is None and old["attrs"] and not attrs:
-            continue  # every consumer of this module was rescanned and dropped it
+        # A module the rescanned consumers stopped using is kept with what remains: direct
+        # ``import llm_dojo_scoring.<module>`` sites are not recorded, so an unrescanned
+        # consumer may still import it. A full rescan (no ``--only``) drops it.
         kept_attrs = any(
             site["repo"] not in only
             for attr in (old or {}).get("attrs", {}).values()
@@ -883,14 +885,33 @@ def _merge_modules(
     return merged
 
 
+def _reclassified(
+    merged: dict[str, Any],
+    fresh: dict[str, Any],
+    classify: Callable[[str], tuple[str, str | None]] | None,
+) -> dict[str, Any]:
+    """Re-read ``kind`` / ``defined_in`` of root names kept only for unrescanned consumers."""
+    if classify is None:
+        return merged
+    for name, entry in merged.items():
+        if name not in fresh:
+            entry["kind"], entry["defined_in"] = classify(name)
+    return merged
+
+
 def merge_fixture(
-    existing: dict[str, Any], fresh: dict[str, Any], only: set[str]
+    existing: dict[str, Any],
+    fresh: dict[str, Any],
+    only: set[str],
+    classify: Callable[[str], tuple[str, str | None]] | None = None,
 ) -> dict[str, Any]:
     """Combine a fresh scan of the ``only`` codes with the recorded fixture.
 
     Every consumer outside ``only`` keeps its recorded sites; the requested ones
     are replaced by the rescan.  Package-derived facts (``supported``, aliases)
-    come from the fresh scan.
+    come from the fresh scan.  ``classify(name) -> (kind, defined_in)`` re-reads a
+    retained root name against the current package, so a removed export shows up
+    as ``kind == "missing"`` instead of keeping its stale record.
     """
     generated_from = {
         label: {key: value for key, value in meta.items() if key != "path"}
@@ -929,7 +950,11 @@ def merge_fixture(
         "schema_version": fresh["schema_version"],
         "generated_by": fresh["generated_by"],
         "generated_from": dict(sorted(generated_from.items())),
-        "top_level": _merge_named(existing.get("top_level", {}), fresh["top_level"], only, "consumers"),
+        "top_level": _reclassified(
+            _merge_named(existing.get("top_level", {}), fresh["top_level"], only, "consumers"),
+            fresh["top_level"],
+            classify,
+        ),
         "modules": _merge_modules(existing.get("modules", {}), fresh["modules"], only),
         "dispatch": dispatch,
         "scores": scores,
@@ -1073,7 +1098,18 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 2
         _print_coverage(data)
-        data = merge_fixture(existing or _EMPTY_FIXTURE, data, only)
+        index = PackageIndex()
+        data = merge_fixture(
+            existing or _EMPTY_FIXTURE, data, only, classify=lambda name: _classify_top_level(name, index)
+        )
+        gone = sorted(name for name, entry in data["top_level"].items() if entry["kind"] == "missing")
+        if gone:
+            print(
+                "consumers that were not rescanned import root names the package no longer has: "
+                + ", ".join(gone),
+                file=sys.stderr,
+            )
+            return 2
         lost: list[str] = []
     else:
         _print_coverage(data)

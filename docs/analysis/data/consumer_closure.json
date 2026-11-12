@@ -127,7 +127,7 @@
     },
     "metrics.score_changelog": {
       "decision": "keep",
-      "lines": 123,
+      "lines": 128,
       "reason": "imported by kept analysis.serving"
     },
     "metrics.scorecard_honesty": {
@@ -227,7 +227,7 @@
     },
     "schemas.doc_classes": {
       "decision": "keep",
-      "lines": 323,
+      "lines": 334,
       "reason": "imported by kept config"
     },
     "schemas.equivalences": {
@@ -237,7 +237,7 @@
     },
     "schemas.extraction_schemas": {
       "decision": "keep",
-      "lines": 567,
+      "lines": 575,
       "reason": "consumer import: MAIL@origin/claude/howdy-n8vcc1"
     },
     "schemas.gt_metadata": {
