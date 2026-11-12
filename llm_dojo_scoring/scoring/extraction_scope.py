@@ -104,6 +104,10 @@ def _allowed_fields(doc_type: str) -> frozenset[str] | None:
 
         extensions = {e.key for schema in SUBCLASS_SCHEMAS.values() for e in schema.entities}
         return frozenset(allowed or ()) | extensions
+    if resolved == "insurance_claim" and allowed is not None:
+        # The CMS-row marker is not a registry field, but a prediction that states a
+        # table must reach the scorer, which scores it against the subclass (#132).
+        return allowed | {"cms_source_table"}
     return allowed
 
 
