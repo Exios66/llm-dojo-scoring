@@ -1040,6 +1040,14 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 2
     overrides = _parse_roots(args.root)
+    bad_roots = sorted(set(overrides) - set(known))
+    if bad_roots:
+        print(
+            f"unknown consumer code(s) in --root: {', '.join(bad_roots)}; "
+            f"known: {', '.join(sorted(known))}",
+            file=sys.stderr,
+        )
+        return 2
 
     kwargs: dict[str, Any] = {}
     if only is not None:

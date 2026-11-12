@@ -107,6 +107,67 @@ def test_render_lists_each_field_once_with_status_and_populated_count(mod, injec
     assert "scored now: 3 of 18 fields" in text.split("## insurance_claim", 1)[1]
 
 
+def _cms_mixed_status() -> dict:
+    """A status with one non-CMS (``auto``, 300 rows) and one CMS (``pde``, 150 rows) subtype."""
+    status = _status(0, rows=300)
+    insurance = status["doc_types"]["insurance_claim"]
+    insurance["pde"] = {
+        "rows": 150,
+        "surfaces": {"pde": 150},
+        "fields": {"claim_number": {"populated": 150}},
+    }
+    return status
+
+
+def test_cms_source_table_counts_only_cms_subtypes(mod, inject_status):
+    """``cms_source_table`` is derived on CMS tables only, so auto/property rows are not populated."""
+    status = _cms_mixed_status()
+    inject_status(status)
+    cells = _insurance_table_rows(mod.render(status))["cms_source_table"]
+    assert cells[3:5] == ["150 / 450", "33.3%"]
+
+
+def test_other_subtype_derived_fields_still_count_every_subtype(mod, inject_status):
+    """A class whose subtype *is* the truth (contract ``cuad_family``) is populated on every row."""
+    status = _status(150)
+    status["doc_types"]["contract"] = {
+        "license": {"rows": 10, "surfaces": {"License": 10}, "fields": {}},
+        "supply": {"rows": 5, "surfaces": {"Supply": 5}, "fields": {}},
+    }
+    inject_status(status)
+    section = mod.render(status).split("## contract", 1)[1].split("\n## ", 1)[0]
+    row = next(line for line in section.splitlines() if line.startswith("| `cuad_family` |"))
+    assert "| 15 / 15 | 100.0% |" in row
+
+
+def _contract_status() -> dict:
+    """A status whose contract rows carry a populated ``cuad_clause_labels`` container."""
+    status = _status(150)
+    status["doc_types"]["contract"] = {
+        "license": {
+            "rows": 10,
+            "surfaces": {"License": 10},
+            "fields": {"cuad_clause_labels": {"populated": 8}},
+        }
+    }
+    return status
+
+
+def test_label_container_counts_are_labelled_as_source_container_coverage(mod, inject_status):
+    """CUAD/MAUD-derived counts are rows with a label container, not per-category answers: say so."""
+    status = _contract_status()
+    inject_status(status)
+    text = mod.render(status)
+    contract = text.split("## contract", 1)[1].split("\n## ", 1)[0]
+    assert "source-container coverage" in contract
+    note = next(line for line in contract.splitlines() if "source-container coverage" in line)
+    assert "`cuad_clause_labels`" in note and "`maud_clause_labels`" not in note
+    assert "not the rows that answer" in contract
+    assert "8 / 10" in contract  # the counter itself is unchanged
+    insurance = text.split("## insurance_claim", 1)[1].split("\n## ", 1)[0]
+    assert "source-container coverage" not in insurance
+
+
 def test_render_reports_a_class_with_no_rows(mod, inject_status):
     """A class absent from the status says so instead of inventing counts."""
     status = _status(150)

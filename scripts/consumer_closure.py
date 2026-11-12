@@ -54,7 +54,10 @@ Usage::
         [--extra-ref GITREF ...] --check
 
 ``--check`` exits 1 and prints a diff when the committed JSON drifts, and 2 when a
-requested checkout or ref is missing.  Standard library only.
+requested checkout or ref is missing or a consumer file does not parse (its imports
+would be invisible, so nothing is written or accepted).  A consumer ``import *`` is
+expanded: the root's ``__all__`` roots each exported name's module, a module or package
+roots itself.  Standard library only.
 """
 
 from __future__ import annotations
@@ -150,6 +153,8 @@ class Package:
     packages: frozenset[str]
     legacy: dict[str, str]
     root_names: dict[str, str | None] = field(default_factory=dict)
+    #: The root ``__all__`` when it is a literal list/tuple of strings, else ``None``.
+    root_all: list[str] | None = None
 
     def package_of(self, module: str) -> str:
         """Dotted package a module's relative imports are resolved against (``''`` = root)."""
@@ -202,6 +207,26 @@ def _assigned_dict(tree: ast.Module, name: str) -> dict[str, str]:
                     for k, v in literal.items()
                 }
     return {}
+
+
+def _literal_all(tree: ast.Module) -> list[str] | None:
+    """The literal ``__all__`` of a module (list/tuple of strings), or ``None`` if absent/dynamic."""
+    for node in tree.body:
+        if isinstance(node, ast.AnnAssign) and node.value is not None:
+            targets, value = [node.target], node.value
+        elif isinstance(node, ast.Assign):
+            targets, value = node.targets, node.value
+        else:
+            continue
+        if any(isinstance(t, ast.Name) and t.id == "__all__" for t in targets):
+            try:
+                literal = ast.literal_eval(value)
+            except (ValueError, SyntaxError):
+                return None
+            if isinstance(literal, (list, tuple)) and all(isinstance(n, str) for n in literal):
+                return list(literal)
+            return None
+    return None
 
 
 def _toplevel_statements(body: Iterable[ast.stmt]) -> Iterable[ast.stmt]:
@@ -284,7 +309,9 @@ def load_package(package_dir: Path) -> Package:
     pkg = Package(package_dir.name, package_dir, files, frozenset(packages), legacy)
     root_init = files.get(ROOT)
     if root_init is not None:
-        pkg.root_names = _root_names(pkg, ast.parse(root_init.read_text(encoding="utf-8")))
+        root_tree = ast.parse(root_init.read_text(encoding="utf-8"))
+        pkg.root_names = _root_names(pkg, root_tree)
+        pkg.root_all = _literal_all(root_tree)
     return pkg
 
 
@@ -459,7 +486,7 @@ class Scan:
     dispatch: dict[str, set[str]] = field(default_factory=dict)
     dynamic: dict[str, int] = field(default_factory=dict)
     unresolved: set[str] = field(default_factory=set)
-    star_imports: int = 0
+    parse_failures: list[str] = field(default_factory=list)
 
     def update(self, other: Scan) -> None:
         """Merge another scan into this one."""
@@ -469,7 +496,7 @@ class Scan:
         for func, count in other.dynamic.items():
             self.dynamic[func] = self.dynamic.get(func, 0) + count
         self.unresolved |= other.unresolved
-        self.star_imports += other.star_imports
+        self.parse_failures.extend(other.parse_failures)
 
 
 _DOTTED = re.compile(r"[A-Za-z_]\w*(\.[A-Za-z_]\w*)*")
@@ -501,6 +528,35 @@ def _attribute_chain(node: ast.AST) -> tuple[str | None, list[str]]:
     if isinstance(node, ast.Name):
         return node.id, list(reversed(attrs))
     return None, []
+
+
+def star_import_modules(pkg: Package, target: str) -> set[str]:
+    """Modules a consumer's ``from <package>[.<target>] import *`` binds names from.
+
+    A root star import binds the root's ``__all__`` (every public root name when there is
+    none), so each name's defining module is a root.  A star import of a module or package
+    roots that module (its own imports are graph edges); for a package, the submodules its
+    literal ``__all__`` lists are imported by the star import too.
+    """
+    reached: set[str] = set()
+    if target == "":
+        names = pkg.root_all if pkg.root_all is not None else [
+            n for n in pkg.root_names if not n.startswith("_")
+        ]
+        for name in names:
+            module = pkg.root_module(name)
+            if module:
+                reached.add(module)
+        return reached
+    module, rest = resolve_modules(pkg, target)
+    if module is None:
+        return reached
+    reached.add(module)
+    path = pkg.files.get(module)
+    if not rest and module in pkg.packages and path is not None:
+        exported = _literal_all(ast.parse(path.read_text(encoding="utf-8"))) or []
+        reached |= {f"{module}.{n}" for n in exported if f"{module}.{n}" in pkg.files}
+    return reached
 
 
 def scan_source(pkg: Package, text: str, homes: Mapping[str, str] | None = None) -> Scan:
@@ -541,7 +597,7 @@ def scan_source(pkg: Package, text: str, homes: Mapping[str, str] | None = None)
             for alias in node.names:
                 bound = alias.asname or alias.name
                 if alias.name == "*":
-                    scan.star_imports += 1
+                    scan.modules |= star_import_modules(pkg, target)
                     continue
                 if alias.name in DISPATCH_FUNCS:
                     func_aliases[bound] = alias.name
@@ -777,7 +833,11 @@ def read_consumer(root: Path, ref: str | None, prefixes: tuple[str, ...]) -> dic
 
 
 def scan_files(pkg: Package, files: Mapping[str, str], homes: Mapping[str, str]) -> tuple[Scan, int]:
-    """Scan many sources; returns the merged scan and the number that failed to parse."""
+    """Scan many sources; returns the merged scan and the number that failed to parse.
+
+    The scan's ``parse_failures`` names each file that did not parse: its imports are
+    invisible, so the closure built from it is incomplete.
+    """
     total = Scan()
     failures = 0
     for rel, text in sorted(files.items()):
@@ -785,6 +845,7 @@ def scan_files(pkg: Package, files: Mapping[str, str], homes: Mapping[str, str])
             total.update(scan_source(pkg, text, homes))
         except SyntaxError:
             failures += 1
+            total.parse_failures.append(rel)
             print(f"warning: could not parse {rel}", file=sys.stderr)
     return total, failures
 
@@ -938,6 +999,7 @@ def collect_sources(
         if failures:
             meta["parse_failures"] = failures
         sources[code] = Source(scan.modules, meta)
+        scan.parse_failures = [f"{code}: {rel}" for rel in scan.parse_failures]
         merged.update(scan)
     return sources, merged
 
@@ -1022,8 +1084,13 @@ def main(argv: list[str] | None = None) -> int:
 
     if scan.unresolved:
         print("note: names that resolve to no module: " + ", ".join(sorted(scan.unresolved)), file=sys.stderr)
-    if scan.star_imports:
-        print(f"note: {scan.star_imports} star import(s) of the package were not expanded", file=sys.stderr)
+    if scan.parse_failures:
+        print(
+            "cannot build the closure: consumer files did not parse, so their imports are "
+            "invisible (fix or exclude them): " + ", ".join(scan.parse_failures),
+            file=sys.stderr,
+        )
+        return 2
 
     report = build_report(args.package_dir, sources, scan)
     text = _dump(report)
