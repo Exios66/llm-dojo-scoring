@@ -398,7 +398,8 @@ def test_new_insurance_field_reaches_every_derived_table() -> None:
 @pytest.mark.parametrize("cls", ["contract", "merger_agreement"])
 def test_new_field_without_a_prompt_descriptor_fails_the_import(cls: str) -> None:
     """Contract and merger carry hand-written prompt descriptors; a field without one fails loudly."""
-    result = _run_with_edited_registry(cls, "print('imported')")
+    module = {"contract": "cuad_schema", "merger_agreement": "maud_schema"}[cls]
+    result = _run_with_edited_registry(cls, f"import llm_dojo_scoring.schemas.{module}\nprint('imported')")
     assert result.returncode != 0
     assert "zz_new_field" in result.stderr
     assert "imported" not in result.stdout

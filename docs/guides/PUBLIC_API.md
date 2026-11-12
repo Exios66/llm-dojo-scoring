@@ -11,6 +11,11 @@ repositories made by `scripts/audit_consumer_surface.py`. `tests/test_public_api
 when a name in that fixture is missing here, so regenerate the fixture first and then update this
 page.
 
+The package root is lazy (PEP 562): `import llm_dojo_scoring` loads no scoring module, and each
+root name imports its defining module on first access (`_LAZY` and `_SUBMODULES` in
+`llm_dojo_scoring/__init__.py`). A name removed in the production slim-down raises an
+`AttributeError` that points at `CHANGELOG.md`.
+
 ## Package root (`from llm_dojo_scoring import …`)
 
 | Name | Defined in | Used by |

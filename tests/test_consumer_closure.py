@@ -483,3 +483,21 @@ def test_committed_json_honours_the_hold_list_and_the_structural_modules():
         assert data["modules"][name]["decision"] in {"keep", "hold"}, name
     for name in cc.STRUCTURAL:
         assert data["modules"][name]["decision"] == "keep"
+
+
+def test_lazy_root_tables_resolve_root_names(fake_package):
+    """A PEP 562 root (``_LAZY`` name -> (module, attr), ``_SUBMODULES`` name -> module) maps names."""
+    (fake_package / "__init__.py").write_text(
+        "from ._layout import install_legacy_aliases\n"
+        "_LAZY: dict[str, tuple[str, str]] = {\n"
+        "    'core_fn': ('scoring.core', 'core_fn'),\n"
+        "    'renamed_util': ('scoring.util', 'util_fn'),\n"
+        "}\n"
+        "_SUBMODULES: dict[str, str] = {'lazy': 'lazy', 'held_two': 'held.two'}\n"
+        "__version__ = '0'\n"
+    )
+    names = cc.load_package(fake_package).root_names
+    assert names["core_fn"] == "scoring.core"
+    assert names["renamed_util"] == "scoring.util"
+    assert names["lazy"] == "lazy"
+    assert names["held_two"] == "held.two"

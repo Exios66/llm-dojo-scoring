@@ -37,6 +37,13 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Changed
 
+- The package root is lazy (#80): `import llm_dojo_scoring` now loads 2 package modules instead
+  of 67 (0.02 s instead of 0.12 s here), and each root name or submodule imports on first access
+  through a PEP 562 `__getattr__`. Every previously exported name that still exists resolves to
+  the same object; `__all__` keeps all of them and adds the consumed module names
+  `agent_rubrics`, `legalbench_scoring` and `pipeline_scoring`. A removed name raises an
+  `AttributeError` naming this changelog. Code that relied on `import llm_dojo_scoring` importing
+  a submodule as a side effect must import that submodule itself.
 - `schemas/` no longer imports class or field tables from `scoring/` (it read
   `scoring.suites.DEFAULT_FIELD_TYPES`); the only remaining upward import is
   `scoring.field_scoring.CMS_ROW_FIELD_TYPES`, a scorer-side type override.
