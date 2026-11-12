@@ -16,7 +16,7 @@ fields the dataset actually labels (and so scores today) is generated from the p
 | Pin | Value |
 |---|---|
 | Package | `llm-dojo-scoring` **v0.28.1** |
-| Field maps | `schemas/doc_classes.py` (`DOC_CLASSES`) is the one hand-edited table; `scoring.suites.DEFAULT_FIELD_TYPES` and `schemas.corpus.CORPUS_EXTRACTION_FIELDS` are derived from it and must equal the taxonomy fixture `tests/fixtures/taxonomy_field_types.json` |
+| Field maps | `schemas/doc_classes.py` (`DOC_CLASSES`) is the one hand-edited table. `scoring.suites.DEFAULT_FIELD_TYPES` (class → field → type) is derived from it, and for the five live classes it must equal the taxonomy fixture `tests/fixtures/taxonomy_field_types.json`. `schemas.corpus.CORPUS_EXTRACTION_FIELDS` is a projection of the same registry to field names only (class → tuple of names), not a type map |
 | Taxonomy blob | llm-mailroom `src/config/taxonomy.yaml` blob SHA-1 `44e0ab59b6b705aed4c1939b5e85ed8499e38d0a` (the fixture's `authority_blob_sha1`) |
 | Frozen prompts | `get_prompt(<agent>, family="production_prompts")` — eval-environment v1, frozen 2026-09-26T05:09:29+00:00 |
 | Live classes | `contract` · `merger_agreement` · `corporate_record` · `correspondence` · `insurance_claim` |
