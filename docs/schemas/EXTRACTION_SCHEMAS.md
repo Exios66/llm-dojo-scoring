@@ -464,7 +464,7 @@ a **document-type schema** plus a **schema per subtype**: 25 contract families,
 from llm_dojo_scoring import extraction_schema, iter_extraction_schemas, schema_coverage
 
 pde = extraction_schema("insurance_claim", "pde")      # any corpus surface works too
-pde.schema_id                    # "insurance_claim/pde@v9.2.1"
+pde.schema_id                    # "insurance_claim/pde@v9.3"
 pde.scored_fields                # fields that count when the row labels them
 pde.documented_absent_fields     # ("adjuster", "denial_reasons")
 pde.pending_fields               # ("claim_checklist",)
@@ -472,11 +472,13 @@ pde.json_schema()                # strict, typed object for guided decoding
 extraction_schema("contract", "License_Agreements").salient   # CUAD categories
 ```
 
-Each field has a status read from the v9.2.1 `ground_truth` rows (Hub branch
-`corporate-labels-v9.2.1` @ `0a2f8292`: v9.2 plus the corporate relabel), frozen in
+Each field has a status read from the v9.3 `ground_truth` rows (Hub tag `v9.3` @
+`ccd040f6`, the revision llm-mailroom pins; its per-field statuses equal those of
+v9.2.1, which added the corporate relabel), frozen in
 `llm_dojo_scoring/schemas/data/extraction_status.json` by
-`scripts/build_extraction_status.py`. The source revision is in the file and in
-`extraction_status_source()`.
+`scripts/build_extraction_status.py --from-hub`. The source revision is in the file and in
+`extraction_status_source()`. The populated count behind every status is in the generated
+[`GT_COVERAGE.md`](GT_COVERAGE.md).
 
 | Status | Meaning | Example |
 |---|---|---|
@@ -488,7 +490,7 @@ Each field has a status read from the v9.2.1 `ground_truth` rows (Hub branch
 | `pending_annotation` | in the live map, not labelled yet | correspondence `sender`, corporate entities, `claim_checklist` |
 | `not_applicable` | GT marks it n/a for the class | merger `intent` |
 
-What v9.2.1 labels, per class:
+What v9.3 labels, per class:
 
 - **contract**: CUAD clause labels give the six metadata fields and
   `cuad_clauses` for 22 families. Most `consulting`, `ip` and `supply` rows are
@@ -496,7 +498,7 @@ What v9.2.1 labels, per class:
 - **merger_agreement**: `maud_clauses` (MAUD labels) and
   `merger_consideration` (the subtype). The other five fields are pending.
 - **corporate_record**: `intent`, `subject_matter`, `keywords`, `record_type`
-  (the subtype) and, from the v9.2.1 relabel, `entity_name` (the EDGAR
+  (the subtype) and, since the v9.2.1 relabel, `entity_name` (the EDGAR
   registrant: 92% of rows; `scored` on seven subtypes, `partial` on articles,
   bylaws and rights instruments). `filing_number` is `not_applicable` except on
   articles and charter amendments; on `subsidiary_list`, `signatories` and

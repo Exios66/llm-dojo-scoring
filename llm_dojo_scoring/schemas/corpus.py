@@ -2,8 +2,9 @@
 
 Grounded in the published Hugging Face dataset
 ``Lucius-Morningstar/mailroom-dataset`` (default + ``ground_truth`` configs;
-3,302 rows: 2,979 train / 323 test; current pin Hub tag ``v9.2`` (same rows
-as the v9 GT-closure revision ``46a4d3c2``, v9.1 ``ed7576b6``) — the v9 successor of the frozen v8 ``mailroom-corpus``
+3,302 rows: 2,979 train / 323 test; current pin Hub tag ``v9.3`` (``ccd040f6``,
+what llm-mailroom pins and ``schemas/data/extraction_status.json`` is frozen from;
+the same rows as the v9 GT-closure revision ``46a4d3c2``, v9.1 ``ed7576b6``) — the v9 successor of the frozen v8 ``mailroom-corpus``
 baseline).
 
 **v10 (0.28.0 aligns to it; not yet published).** The v10 revision built in
@@ -16,7 +17,7 @@ deprecated. The new configs carry ``subclass`` as the canonical key from
 :data:`DOC_TYPE_SUBCLASSES` (``source_subclass`` keeps the raw value), so the
 canonical keys are corpus surfaces too. :mod:`llm_dojo_scoring.schemas.v10_rows`
 maps a typed row onto the legacy ``gt_fields`` shape. The v10 tag and its commit
-are pinned here when the revision is published; until then ``v9.2`` is the pin.
+are pinned here when the revision is published; until then ``v9.3`` is the pin.
 
 This module is the single source mapping each mailroom document class to:
 

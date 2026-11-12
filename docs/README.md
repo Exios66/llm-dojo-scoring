@@ -21,6 +21,7 @@ The docs are grouped by purpose. The package layout itself is described in
 | Doc | Covers |
 |:---|:---|
 | [`schemas/EXTRACTION_SCHEMAS.md`](schemas/EXTRACTION_SCHEMAS.md) | Live extraction schemas for the five mailroom-dataset classes, including the CMS source-table mapping |
+| [`schemas/GT_COVERAGE.md`](schemas/GT_COVERAGE.md) | Generated: per-field ground-truth coverage and unused vocabulary values at the pinned dataset revision |
 | [`schemas/GT_METADATA.md`](schemas/GT_METADATA.md) | Hub `gt_fields` parsing, `gt_presence` and per-class label scoping |
 | [`schemas/CUAD_SCHEMA.md`](schemas/CUAD_SCHEMA.md) | CUAD: 41 categories, families, questions, JSON Schema |
 | [`schemas/MAUD_SCHEMA.md`](schemas/MAUD_SCHEMA.md) | MAUD: the 22 questions, allowed answers and grammar |
