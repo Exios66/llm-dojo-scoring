@@ -272,7 +272,7 @@
     },
     "schemas.corpus": {
       "decision": "keep",
-      "lines": 636,
+      "lines": 637,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "schemas.correspondence_gt_audit": {
