@@ -37,6 +37,12 @@ The docs are grouped by purpose. The package layout itself is described in
 | [`contracts/REVIEWER_SCORING.md`](contracts/REVIEWER_SCORING.md) | Decision/LLM reviewer records, risk bounds, calibration, routing, and cost |
 | [`contracts/ARCHIVE_SCORING.md`](contracts/ARCHIVE_SCORING.md) | The archivist scoring block and audit row |
 
+## Analysis: measured evidence behind a change
+
+| Doc | Covers |
+|:---|:---|
+| [`analysis/2026-11-production-surface.md`](analysis/2026-11-production-surface.md) | Production slim-down (#66): CI diagnosis, consumer usage, keep/delete/hold with line counts, ground-truth coverage, issue ledger, test durations, phase-2 roadmap |
+
 ## History: proposals and status records
 
 These docs record decisions and their status when they were written. They are not kept current. The CHANGELOG
