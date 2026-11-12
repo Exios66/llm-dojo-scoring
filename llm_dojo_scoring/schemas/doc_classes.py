@@ -69,8 +69,16 @@ class DocClass:
 
     @property
     def auditor(self) -> str:
-        """The class's auditor agent name (``<stem>_specialist`` -> ``<stem>_auditor``)."""
-        return self.specialist.removesuffix("_specialist") + "_auditor"
+        """The class's auditor agent name (``<stem>_specialist`` -> ``<stem>_auditor``).
+
+        ``contracts_specialist`` is audited by ``contract_auditor`` (the taxonomy's name);
+        ``merger_agreement`` has no auditor agent, so its derived name has no profile.
+        """
+        return _AUDITOR_OVERRIDES.get(self.key) or self.specialist.removesuffix("_specialist") + "_auditor"
+
+
+#: Auditor names that do not follow the ``<stem>_specialist`` -> ``<stem>_auditor`` rule.
+_AUDITOR_OVERRIDES: Mapping[str, str] = MappingProxyType({"contract": "contract_auditor"})
 
 
 #: Registry order is the taxonomy order the field maps have always had (the sorter's

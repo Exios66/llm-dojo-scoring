@@ -453,3 +453,15 @@ def test_importing_the_registry_alone_stays_cheap() -> None:
     )
     result = subprocess.run([sys.executable, "-c", source], capture_output=True, text=True, timeout=60, check=False)
     assert result.returncode == 0, result.stderr[-1000:]
+
+
+def test_auditor_names_match_the_registered_profiles() -> None:
+    """Every class whose auditor has a profile names it exactly; ``contract`` maps to ``contract_auditor``."""
+    from llm_dojo_scoring.metrics.profiles import DEFAULT_PROFILES
+
+    assert DOC_CLASSES["contract"].auditor == "contract_auditor"
+    for key, cls in DOC_CLASSES.items():
+        if key == "merger_agreement":
+            continue  # the merger specialist has no auditor agent
+        assert cls.auditor in DEFAULT_PROFILES, f"{key}: {cls.auditor} has no profile"
+
