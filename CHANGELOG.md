@@ -185,6 +185,10 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
   **Consumers:** this changes scores `llm-mailroom` and the sandbox report, so `llm-mailroom`
   needs a Dojo pin bump (`bump_dojo_scoring.py`) and the sandbox a vendor refresh once this
   is released. No public name changed.
+- Tooling only, no score change (review on #136): `scripts/consumer_closure.py` expands a consumer
+  `import *` (root `__all__`, module or package) and exits 2 when a consumer file does not parse;
+  `audit_consumer_surface.py` rejects an unknown `--root` code; `GT_COVERAGE.md` counts
+  `cms_source_table` on CMS subtypes only and says CUAD/MAUD counts are source-container coverage.
 
 ## [0.28.1] - 2026-11-07
 ### Changed

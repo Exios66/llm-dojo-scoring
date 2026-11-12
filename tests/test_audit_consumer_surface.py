@@ -9,6 +9,7 @@ from __future__ import annotations
 import ast
 import json
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -318,6 +319,28 @@ def test_only_rejects_unknown_codes(capsys):
     assert "NOPE" in capsys.readouterr().err
 
 
+def test_root_rejects_unknown_codes_before_scanning_or_writing(monkeypatch, tmp_path, capsys):
+    """A mistyped ``--root`` code is a usage error: it must not silently scan the default checkout."""
+    pinned = _surface({"x": [_site("MAIL")]}, mail_sites=[_site("MAIL")])
+    fixture = _redirect_fixture(monkeypatch, tmp_path, pinned, pinned)
+
+    def _must_not_scan(*args, **kwargs):
+        """Fail the test if the audit starts scanning despite the bad ``--root`` code."""
+        raise AssertionError("scanned despite an unknown --root code")
+
+    monkeypatch.setattr(audit, "build_fixture", _must_not_scan)
+    before = fixture.read_text(encoding="utf-8")
+
+    for argv in (
+        ["--only", "MAIL", "--root", "MAL=/x", "--write"],
+        ["--root", "MAL=/x", "--check"],
+    ):
+        assert audit.main(argv) == 2
+        err = capsys.readouterr().err
+        assert "MAL" in err and "MAIL" in err  # names the bad code and the known ones
+    assert fixture.read_text(encoding="utf-8") == before
+
+
 def test_only_write_refreshes_requested_codes_and_keeps_the_others(monkeypatch, tmp_path):
     """``--only MAIL --write`` rewrites the fixture with the merge result."""
     pinned = _surface({"keep": [_site("EDA")], "x": [_site("MAIL", "old.py")]},
@@ -363,7 +386,7 @@ def test_scan_provenance_has_a_repo_code_and_commit_but_no_local_path(tmp_path, 
 def test_default_checkout_locations_are_siblings_not_developer_paths():
     """No built-in default points at a developer's home directory."""
     for spec in audit.REPOS:
-        assert "/Users/" not in spec.default_path and "/tmp/" not in spec.default_path
+        assert Path(spec.default_path).parent == audit.REPO_ROOT.parent, spec.label
         assert spec.default_path.endswith(("local-mailroom-sandbox", "llm-mailroom", "Mailroom-Corpus-EDA",
                                            "eval-environment", "mailroom-ml", "The-Mailroom"))
 

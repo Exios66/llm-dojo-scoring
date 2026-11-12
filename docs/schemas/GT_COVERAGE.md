@@ -35,6 +35,8 @@ Every field the dataset populates is scored; there are no label-quality tiers. S
 | `cuad_family` | label | derived | 600 / 600 | 100.0% | subtype | truth is the row's subtype |
 | `cuad_clauses` | entity_list:free_text | derived | 509 / 600 | 84.8% | cuad_clause_labels | all CUAD categories |
 
+Fields whose truth comes from `cuad_clause_labels` show source-container coverage: the count is the rows whose label container is populated, not the rows that answer that field's own category.
+
 ## merger_agreement
 
 152 rows; scored now: 2 of 21 fields.
@@ -62,6 +64,8 @@ Every field the dataset populates is scored; there are no label-quality tiers. S
 | `intent` | label | not_applicable | 0 / 152 | 0.0% | gt_fields |  |
 | `subject_matter` | free_text | not_applicable | 0 / 152 | 0.0% | gt_fields |  |
 | `keywords` | entity_list:name | not_applicable | 0 / 152 | 0.0% | gt_fields |  |
+
+Fields whose truth comes from `maud_clause_labels` show source-container coverage: the count is the rows whose label container is populated, not the rows that answer that field's own category.
 
 ## corporate_record
 
@@ -122,7 +126,7 @@ Every field the dataset populates is scored; there are no label-quality tiers. S
 | `subject_matter` | free_text | scored | 1,100 / 1,100 | 100.0% | gt_fields |  |
 | `keywords` | entity_list:name | scored | 1,100 / 1,100 | 100.0% | gt_fields |  |
 | `claim_checklist` | entity_list:free_text | pending_annotation | 0 / 1,100 | 0.0% | gt_fields |  |
-| `cms_source_table` | label | derived | 1,100 / 1,100 | 100.0% | subtype | truth is the row's subtype (CMS tables only) |
+| `cms_source_table` | label | derived | 600 / 1,100 | 54.5% | subtype | truth is the row's subtype (CMS tables only) |
 
 ## Never seen in ground truth
 

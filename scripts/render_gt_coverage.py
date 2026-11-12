@@ -28,10 +28,19 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from llm_dojo_scoring.schemas import extraction_schemas as _schemas  # noqa: E402
+from llm_dojo_scoring.schemas.corpus import cms_source_table as _cms_source_table  # noqa: E402
 
 STATUS_PATH = REPO_ROOT / "llm_dojo_scoring/schemas/data/extraction_status.json"
 DOC_PATH = REPO_ROOT / "docs/schemas/GT_COVERAGE.md"
 _REGEN = "scripts/build_extraction_status.py --from-hub --commit <40-hex> --revision <tag>"
+
+
+#: Shown under a class table with fields whose truth is read from a label container.
+_CONTAINER_NOTE = (
+    "Fields whose truth comes from {sources} show source-container coverage: the count is "
+    "the rows whose label container is populated, not the rows that answer that field's own "
+    "category."
+)
 
 
 def _n(value: int) -> str:
@@ -40,9 +49,17 @@ def _n(value: int) -> str:
 
 
 def _populated(status: Mapping[str, Any], doc_type: str, spec: Any) -> int:
-    """Rows of ``doc_type`` whose ground truth labels the field, summed over its subtypes."""
-    parts = status.get("doc_types", {}).get(doc_type, {}).values()
+    """Rows of ``doc_type`` whose ground truth labels the field, summed over its subtypes.
+
+    ``cms_source_table`` is derived on the CMS tables only, so it counts just those
+    subtypes.  A CUAD/MAUD-derived field counts rows whose label *container* is populated
+    (see :data:`_CONTAINER_NOTE`), not rows that answer its own category.
+    """
+    by_subtype = status.get("doc_types", {}).get(doc_type, {})
+    parts = by_subtype.values()
     if spec.source == "subtype":
+        if spec.name == "cms_source_table":
+            parts = [p for sub, p in by_subtype.items() if _cms_source_table(doc_type, sub)]
         return sum(int(part["rows"]) for part in parts)
     if spec.source == "other class":
         return 0
@@ -70,6 +87,10 @@ def _class_section(status: Mapping[str, Any], doc_type: str) -> list[str]:
             f"| `{name}` | {spec.field_type} | {spec.status} | {_n(populated)} / {_n(schema.rows)} "
             f"| {share} | {spec.source} | {spec.note} |"
         )
+    containers = sorted({s.source for s in schema.fields.values() if s.source in _schemas._LABEL_SOURCES})
+    if containers:
+        sources = " and ".join(f"`{name}`" for name in containers)
+        lines += ["", _CONTAINER_NOTE.format(sources=sources)]
     return [*lines, ""]
 
 

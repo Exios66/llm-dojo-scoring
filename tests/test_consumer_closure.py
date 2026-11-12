@@ -196,6 +196,49 @@ def test_scan_roots_the_defining_module_of_root_names_and_flat_paths(fake_packag
     }
 
 
+def test_root_star_import_roots_every_module_the_root_exports(fake_package):
+    """``from llm_dojo_scoring import *`` binds the root's public names, so it roots their modules."""
+    pkg = cc.load_package(fake_package)
+    found = cc.scan_source(pkg, "from llm_dojo_scoring import *\n")
+    assert {"orphan", "scoring.core", "scoring.util"} <= found.modules
+    assert "lazy" not in found.modules  # the fake root does not export it
+
+
+def test_root_star_import_honours_the_root_all(fake_package):
+    """With a root ``__all__`` the star import reaches exactly the listed names' modules."""
+    init = fake_package / "__init__.py"
+    init.write_text(init.read_text(encoding="utf-8") + "__all__ = ['core_fn']\n", encoding="utf-8")
+    pkg = cc.load_package(fake_package)
+    found = cc.scan_source(pkg, "from llm_dojo_scoring import *\n")
+    assert found.modules == {"scoring.core"}
+
+
+def test_subpackage_star_import_roots_the_package_and_its_all_submodules(fake_package):
+    """A star import from a package roots it and the submodules its ``__all__`` lists."""
+    (fake_package / "scoring" / "__init__.py").write_text("__all__ = ['util']\n", encoding="utf-8")
+    pkg = cc.load_package(fake_package)
+    found = cc.scan_source(pkg, "from llm_dojo_scoring.scoring import *\n")
+    assert found.modules == {"scoring", "scoring.util"}
+
+
+def test_module_star_import_roots_the_module(fake_package):
+    """A star import from a module (flat legacy path too) roots that module."""
+    pkg = cc.load_package(fake_package)
+    found = cc.scan_source(pkg, "from llm_dojo_scoring.core import *\n")
+    assert found.modules == {"scoring.core"}
+
+
+def test_star_import_keeps_the_exported_module_out_of_the_delete_list(tmp_path, fake_package):
+    """End to end: a consumer star import must not let ``--write`` mark an exported module delete."""
+    mail = _write_tree(tmp_path / "mail", {"src/app.py": "from llm_dojo_scoring import *\n"})
+    sbx = _write_tree(tmp_path / "sbx", {"scripts/run.py": "x = 1\n"})
+    args = _cli_args(tmp_path, fake_package, "--mailroom", str(mail), "--sandbox", str(sbx))
+    assert cc.main([*args, "--write"]) == 0
+    data = json.loads((tmp_path / "out" / "closure.json").read_text(encoding="utf-8"))
+    assert {"orphan", "scoring.core", "scoring.util"} <= set(data["roots"]["MAIL"])
+    assert data["modules"]["orphan"]["decision"] == "keep"
+
+
 def test_scan_follows_package_aliases_attributes_and_patch_strings(fake_package):
     """Attribute access on a package alias and ``mock.patch`` target strings are roots."""
     pkg = cc.load_package(fake_package)
@@ -325,7 +368,9 @@ def _cli_args(tmp_path, fake_package, *extra):
 @pytest.fixture(autouse=True)
 def _fake_hold(request, monkeypatch):
     """CLI tests run on the fake package, so the real hold list (real modules) is replaced."""
-    if request.node.name.startswith(("test_write", "test_check", "test_extra", "test_missing_extra")):
+    if request.node.name.startswith(
+        ("test_write", "test_check", "test_extra", "test_missing_extra", "test_a_consumer", "test_star_import")
+    ):
         monkeypatch.setattr(cc, "HOLD", {"held": "in-flight work #1"})
 
 
@@ -400,6 +445,30 @@ def test_check_exits_2_when_a_requested_checkout_is_missing(tmp_path, fake_packa
     assert cc.main([*args, "--check"]) == 2
     assert cc.main([*args, "--write"]) == 2
     assert not (tmp_path / "out" / "closure.json").exists()
+    assert "SBX" in capsys.readouterr().err
+
+
+def test_a_consumer_file_that_does_not_parse_fails_closed_and_writes_nothing(
+    tmp_path, fake_package, consumers, capsys
+):
+    """An unparsable consumer file hides imports: exit 2 naming the file, no JSON written."""
+    mail, sbx = consumers
+    (mail / "src" / "broken.py").write_text("def broken(:\n", encoding="utf-8")
+    args = _cli_args(tmp_path, fake_package, "--mailroom", str(mail), "--sandbox", str(sbx))
+    assert cc.main([*args, "--write"]) == 2
+    err = capsys.readouterr().err
+    assert "src/broken.py" in err and "MAIL" in err
+    assert not (tmp_path / "out" / "closure.json").exists()
+
+
+def test_check_does_not_accept_a_scan_with_parse_failures(tmp_path, fake_package, consumers, capsys):
+    """``--check`` against matching JSON still exits 2 when a consumer file does not parse."""
+    mail, sbx = consumers
+    args = _cli_args(tmp_path, fake_package, "--mailroom", str(mail), "--sandbox", str(sbx))
+    assert cc.main([*args, "--write"]) == 0
+    (sbx / "scripts" / "broken.py").write_text("class (:\n", encoding="utf-8")
+    capsys.readouterr()
+    assert cc.main([*args, "--check"]) == 2
     assert "SBX" in capsys.readouterr().err
 
 
