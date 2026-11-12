@@ -491,15 +491,41 @@ def _imports(path: Path) -> list[tuple[int, str, list[str]]]:
     return found
 
 
+def _scoring_target(module: str, names: list[str]) -> tuple[str, list[str]] | None:
+    """``(relative scoring module, imported names)`` when an import reaches ``scoring/``, else ``None``.
+
+    ``from .. import scoring`` resolves to the package root with ``scoring`` as an imported
+    name, so at the root the names decide.
+    """
+    relative = module.removeprefix("llm_dojo_scoring.")
+    if relative == "llm_dojo_scoring":
+        hit = [name for name in names if name == "scoring"]
+        return ("scoring", hit) if hit else None
+    if relative == "scoring" or relative.startswith("scoring."):
+        return relative, names
+    return None
+
+
+def test_scoring_target_sees_scoring_imported_through_the_package_root() -> None:
+    """Direct, nested and package-root imports of ``scoring`` are all found; other root names are not."""
+    assert _scoring_target("llm_dojo_scoring", ["scoring"]) == ("scoring", ["scoring"])
+    assert _scoring_target("llm_dojo_scoring", ["config", "scoring"]) == ("scoring", ["scoring"])
+    assert _scoring_target("llm_dojo_scoring", ["config"]) is None
+    assert _scoring_target("llm_dojo_scoring.scoring", ["x"]) == ("scoring", ["x"])
+    assert _scoring_target("llm_dojo_scoring.scoring.field_scoring", []) == ("scoring.field_scoring", [])
+    assert _scoring_target("llm_dojo_scoring.schemas.corpus", ["x"]) is None
+
+
 def test_schemas_never_import_scoring() -> None:
     """No module under ``schemas/`` imports ``scoring/`` (top level or nested), bar the listed exemptions."""
     offenders: list[str] = []
     for path in sorted((_PACKAGE / "schemas").glob("*.py")):
         for line, module, names in _imports(path):
-            relative = module.removeprefix("llm_dojo_scoring.")
-            if relative != "scoring" and not relative.startswith("scoring."):
+            target = _scoring_target(module, names)
+            if target is None:
                 continue
-            used = names or [""]
+            relative, scoring_names = target
+            used = scoring_names or [""]
             if all((path.name, relative, name) in _SCORING_EXEMPTIONS for name in used):
                 continue
             offenders.append(f"{path.name}:{line} imports {module} {names}")

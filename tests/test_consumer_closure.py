@@ -269,6 +269,30 @@ def test_scan_records_dispatch_keys_and_roots_the_dispatch_modules(fake_package)
     assert {"scoring.suites", "scoring.tasks"} <= found.modules
 
 
+def test_root_star_import_binds_the_exported_dispatch_functions(fake_package):
+    """After ``from <pkg> import *`` a bare ``get_suite("sorter")`` records its dispatch key."""
+    init = fake_package / "__init__.py"
+    init.write_text(init.read_text(encoding="utf-8") + "from .scoring.suites import get_suite\n", encoding="utf-8")
+    pkg = cc.load_package(fake_package)
+    found = cc.scan_source(pkg, "from llm_dojo_scoring import *\nget_suite('sorter')\n")
+    assert found.dispatch == {"get_suite": {"sorter"}}
+    assert "scoring.suites" in found.modules
+
+
+def test_module_star_import_binds_the_dispatch_functions_it_defines(fake_package):
+    """``from <pkg>.scoring.suites import *`` binds ``get_suite`` for the call scanner too."""
+    pkg = cc.load_package(fake_package)
+    found = cc.scan_source(pkg, "from llm_dojo_scoring.scoring.suites import *\nget_suite('sorter')\n")
+    assert found.dispatch == {"get_suite": {"sorter"}}
+
+
+def test_contract_surface_name_defined_in_the_root_is_not_unresolved(fake_package):
+    """A ``package:name`` entry for a name the root itself defines is resolved; a missing one is not."""
+    pkg = cc.load_package(fake_package)
+    found = cc.scan_contract_surface(pkg, {"names": {"llm_dojo_scoring:__version__": 1, "llm_dojo_scoring:gone": 1}})
+    assert found.unresolved == {"llm_dojo_scoring:gone"}
+
+
 # ---------------------------------------------------------------------------
 # decisions
 # ---------------------------------------------------------------------------
@@ -458,6 +482,22 @@ def test_a_consumer_file_that_does_not_parse_fails_closed_and_writes_nothing(
     assert cc.main([*args, "--write"]) == 2
     err = capsys.readouterr().err
     assert "src/broken.py" in err and "MAIL" in err
+    assert not (tmp_path / "out" / "closure.json").exists()
+
+
+def test_a_consumer_import_of_a_removed_name_fails_closed_and_writes_nothing(
+    tmp_path, fake_package, consumers, capsys
+):
+    """An import the package no longer satisfies cannot be rooted: exit 2 naming it, no JSON written."""
+    mail, sbx = consumers
+    (mail / "src" / "stale.py").write_text(
+        "from llm_dojo_scoring import removed_name\nfrom llm_dojo_scoring import __version__\n", encoding="utf-8"
+    )
+    args = _cli_args(tmp_path, fake_package, "--mailroom", str(mail), "--sandbox", str(sbx))
+    assert cc.main([*args, "--write"]) == 2
+    assert cc.main([*args, "--check"]) == 2
+    err = capsys.readouterr().err
+    assert "removed_name" in err and "__version__" not in err
     assert not (tmp_path / "out" / "closure.json").exists()
 
 
