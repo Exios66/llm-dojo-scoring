@@ -38,8 +38,7 @@ Format based on Keep a Changelog; versioning is SemVer.
 - `extraction_status.json` records, per CUAD category, the contract rows whose labels carry it
   and how many of those give a span (`label_categories`). `GT_COVERAGE.md` uses it: each
   single-category CUAD field now shows the rows whose span answers its own category, for
-  example `renewal_terms` 176 of 600 rows (was the container count, 509), with the
-  labelled-but-empty rows in the Note. Status classification and scores are unchanged.
+  example `renewal_terms` 176 of 600 rows, with the labelled-but-empty rows in the Note. Status classification and scores are unchanged.
 
 ### Changed
 
