@@ -874,7 +874,8 @@ def _merge_modules(
         )
         # A module the rescanned consumers stopped using is kept with what remains: direct
         # ``import llm_dojo_scoring.<module>`` sites are not recorded, so an unrescanned
-        # consumer may still import it. A full rescan (no ``--only``) drops it.
+        # consumer may still import it. A full rescan (no ``--only``, or ``--only`` naming every
+        # consumer) drops it.
         kept_attrs = any(
             site["repo"] not in only
             for attr in (old or {}).get("attrs", {}).values()
@@ -1070,6 +1071,10 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 2
+        if only == set(known):
+            # Every consumer is rescanned, so nothing can still need an old key: take the
+            # full-rescan path, which rebuilds the surface and drops stale modules.
+            only = None
     overrides = _parse_roots(args.root)
     bad_roots = sorted(set(overrides) - set(known))
     if bad_roots:
