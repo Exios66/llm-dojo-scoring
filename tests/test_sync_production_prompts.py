@@ -126,3 +126,21 @@ def test_missing_lineage_refuses_frozen_bodies_with_a_clear_reason(sync, tmp_pat
     (root / "src" / "llm" / "frozen_v1" / "lineage.json").unlink()
     assert mod.main(["--mailroom", str(root)]) == 1
     assert "no frozen_v1 digest" in capsys.readouterr().err
+
+
+def test_dojo_authored_row_is_neither_overwritten_nor_digest_checked(sync, tmp_path, capsys):
+    """A production row authored here (v2) keeps its body and metadata though mailroom serves frozen_v1."""
+    mod, templates, catalog = sync
+    authored = (CATALOG.replace("version: v1", "version: v2")
+                .replace("source_repo: llm-mailroom\n  source_key: frozen_v1",
+                         "source_repo: llm-dojo-scoring\n  source_key: production_v2"))
+    catalog.write_text(authored)
+    v2 = mod._render("production_v2", "V2 BODY WITH EVERY FIELD\n")
+    (templates / "corporate_records_specialist.production.md").write_text(v2)
+    # a wrong frozen digest would refuse a frozen_v1 row; the authored row is not checked at all
+    assert mod.main(["--mailroom", str(_mailroom(tmp_path, digest="0" * 64))]) == 0
+    assert (templates / "corporate_records_specialist.production.md").read_text() == v2
+    row = catalog.read_text().split("- agent: corporate_records_specialist")[1].split("- agent: judge")[0]
+    assert "version: v2" in row and "source_key: production_v2" in row and "source_commit: old" in row
+    assert "authored in this repo, not synced: corporate_records_specialist" in capsys.readouterr().out
+    assert mod.main(["--mailroom", str(_mailroom(tmp_path / "again", digest="0" * 64)), "--check"]) == 0

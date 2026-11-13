@@ -9,8 +9,8 @@ The catalog is `llm_dojo_scoring/prompts/catalog.yaml`, the lineage is
 | Agent | Kind | Version | Source | Commit | Template sha256 |
 |:---|:---|:---|:---|:---|:---|
 | `sorter` | llm | `sorter_condensed_v5` | llm-mailroom `sorter_condensed_v5` | 19203eac | 831a8abd4bffa01e8965cfc1bd8fb2248c100f60d1052690308305ed1728a69f |
-| `contracts_specialist` | llm | `v1` | llm-mailroom `frozen_v1` | 19203eac | c72a41ec96c8fe5ba6a063643654016de7079c651accd53df4bb4b6ae2619c5d |
-| `merger_agreement_specialist` | llm | `v1` | llm-mailroom `frozen_v1` | 19203eac | 4ef658f2dd5314cdddfb95215a15c784264f68bcf14684565ba0b2c24881597f |
+| `contracts_specialist` | llm | `v2` | llm-dojo-scoring `production_v2` | 19203eac | 69526a94b954eda70548ce4df7e227f97705ea831ad788e7665d7352e18f3388 |
+| `merger_agreement_specialist` | llm | `v2` | llm-dojo-scoring `production_v2` | 19203eac | 1098c015bef8cfb759dcf481120141834dd2dbad0595b47cf6c750871fe046d2 |
 | `corporate_records_specialist` | llm | `v1` | llm-mailroom `frozen_v1` | 19203eac | 67dd7f58e18f4336304a072a25b980e581e3cf18cde47048b27547de1f24ffbb |
 | `correspondence_specialist` | llm | `v1` | llm-mailroom `frozen_v1` | 19203eac | b56904eed92a33d0afc86efb29dfad51b345da7662e6dad6502ffdc7bc28a715 |
 | `compliance_specialist` | llm | `SYSTEM_PROMPT` | llm-mailroom `SYSTEM_PROMPT` | - | f862c2cc7876d73a8e503089336943f382ef6c64ac42e86820143c748760e796 |
@@ -164,35 +164,17 @@ The catalog is `llm_dojo_scoring/prompts/catalog.yaml`, the lineage is
 Fields the scoring schema (`schemas/doc_classes.py`) scores that the production
 specialist prompt never asks for, and keys the prompt asks for that the schema does
 not score (`confidence` and `reasoning` are allowed). Recorded in
-`llm_dojo_scoring/prompts/data/alignment_gaps.json`; the guard test fails when this
-list changes. Nothing here is fixed by the Dojo: the prompts belong to llm-mailroom.
+`llm_dojo_scoring/prompts/data/alignment_gaps.json` with a reason each; the guard test
+fails when this list changes. Contracts and merger production v2 closed the gaps their
+frozen v1 prompts had.
 
 ### `contracts_specialist` (contract)
 
-- `agreement_date` (missing from prompt): frozen v1 prompt predates this registry field; awaiting a prompt revision in llm-mailroom
-- `dispute_forum` (missing from prompt): frozen v1 prompt predates this registry field; awaiting a prompt revision in llm-mailroom
-- `expiration_date` (missing from prompt): frozen v1 prompt predates this registry field; awaiting a prompt revision in llm-mailroom
-- `party_roles` (missing from prompt): frozen v1 prompt predates this registry field; awaiting a prompt revision in llm-mailroom
-- `payment_terms` (missing from prompt): frozen v1 prompt predates this registry field; awaiting a prompt revision in llm-mailroom
-- `signatories` (missing from prompt): frozen v1 prompt predates this registry field; awaiting a prompt revision in llm-mailroom
-- `termination_notice_period` (missing from prompt): frozen v1 prompt predates this registry field; awaiting a prompt revision in llm-mailroom
-- `territory` (missing from prompt): frozen v1 prompt predates this registry field; awaiting a prompt revision in llm-mailroom
-- `maud_clauses` (extra in prompt): retired merger keys the frozen v1 prompt keeps so older payloads parse; the registry does not score them on a contract
-- `merger_consideration` (extra in prompt): retired merger keys the frozen v1 prompt keeps so older payloads parse; the registry does not score them on a contract
+- aligned
 
 ### `merger_agreement_specialist` (merger_agreement)
 
-- `acquirer` (missing from prompt): frozen v1 prompt predates this registry field; awaiting a prompt revision in llm-mailroom
-- `exchange_ratio` (missing from prompt): frozen v1 prompt predates this registry field; awaiting a prompt revision in llm-mailroom
-- `financial_advisors` (missing from prompt): frozen v1 prompt predates this registry field; awaiting a prompt revision in llm-mailroom
-- `legal_counsel` (missing from prompt): frozen v1 prompt predates this registry field; awaiting a prompt revision in llm-mailroom
-- `merger_sub` (missing from prompt): frozen v1 prompt predates this registry field; awaiting a prompt revision in llm-mailroom
-- `outside_date` (missing from prompt): frozen v1 prompt predates this registry field; awaiting a prompt revision in llm-mailroom
-- `parent_termination_fee` (missing from prompt): frozen v1 prompt predates this registry field; awaiting a prompt revision in llm-mailroom
-- `per_share_cash_amount` (missing from prompt): frozen v1 prompt predates this registry field; awaiting a prompt revision in llm-mailroom
-- `signatories` (missing from prompt): frozen v1 prompt predates this registry field; awaiting a prompt revision in llm-mailroom
-- `target` (missing from prompt): frozen v1 prompt predates this registry field; awaiting a prompt revision in llm-mailroom
-- `target_termination_fee` (missing from prompt): frozen v1 prompt predates this registry field; awaiting a prompt revision in llm-mailroom
+- aligned
 
 ### `corporate_records_specialist` (corporate_record)
 

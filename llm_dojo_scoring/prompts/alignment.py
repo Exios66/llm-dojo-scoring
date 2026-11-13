@@ -3,9 +3,10 @@
 The registry (``schemas.doc_classes``) says which fields a live document type is scored on.
 Each specialist prompt carries its own field block (``- name (type): description``). This
 module reads that block and reports, per production specialist, the schema fields the
-prompt never asks for and the prompt keys the schema does not score. Today's gaps are
-recorded in ``data/alignment_gaps.json``; the guard test fails on any change in either
-direction, so a gap can neither appear nor be fixed unnoticed.
+prompt never asks for and the prompt keys the schema does not score. Known gaps are
+recorded with a reason in ``data/alignment_gaps.json`` (empty since contracts and merger
+production v2); the guard test fails on any change in either direction, so a gap can neither
+appear nor be fixed unnoticed.
 
 Imported from ``llm_dojo_scoring.prompts.alignment``; not exported from the package root.
 The sorter's class list is not compared: its template only holds a

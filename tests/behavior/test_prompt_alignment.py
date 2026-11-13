@@ -39,6 +39,14 @@ def _template_without(monkeypatch, agent: str, field: str) -> None:
     monkeypatch.setattr(alignment, "get_prompt", lambda a, f="production": patched if a == agent else real(a, f))
 
 
+def test_production_specialist_prompts_ask_for_every_scored_field():
+    """No live specialist prompt misses a scored field or asks for an unscored one."""
+    for agent, row in alignment_report().items():
+        assert row["missing_from_prompt"] == [], agent
+        assert row["extra_in_prompt"] == [], agent
+    assert recorded_gaps() == []
+
+
 def test_prompt_gaps_match_the_recorded_gaps_exactly():
     """A new drift or a fixed-but-still-listed gap fails with the entries to change."""
     new, fixed = compare_to_recorded()
@@ -68,9 +76,12 @@ def test_new_gap_and_fixed_gap_are_reported_in_the_right_direction(monkeypatch):
     new, fixed = compare_to_recorded()
     assert ("correspondence_specialist", "sender", "missing_from_prompt") in new
     assert not fixed
-    report = alignment_report()
-    report["contracts_specialist"]["missing_from_prompt"].remove("territory")
-    _, fixed = compare_to_recorded(report)
+    monkeypatch.setattr(
+        alignment, "recorded_gaps",
+        lambda: [{"agent": "contracts_specialist", "field": "territory", "side": "missing_from_prompt",
+                  "reason": "a gap the prompt has since closed"}],
+    )
+    new, fixed = compare_to_recorded()
     assert ("contracts_specialist", "territory", "missing_from_prompt") in fixed
 
 
@@ -140,10 +151,21 @@ def test_changelog_template_digest_is_the_template_file_digest(agent):
     assert changelog.template_sha256(rec.template) == digest
 
 
-def test_changelog_lists_recorded_reasons_in_the_alignment_section():
-    """Every recorded gap and its reason is printed under its agent."""
-    page = changelog.render()
-    section = page.split("## Prompt <-> schema alignment", 1)[1]
-    for gap in recorded_gaps():
-        assert f"`{gap['field']}`" in section
-        assert gap["reason"] in section
+def test_changelog_lists_recorded_reasons_in_the_alignment_section(monkeypatch):
+    """A gap and its recorded reason are printed under its agent; an aligned agent says so."""
+    report = alignment_report()
+    report["contracts_specialist"]["missing_from_prompt"] = ["territory"]
+    gap = {"agent": "contracts_specialist", "field": "territory", "side": "missing_from_prompt",
+           "reason": "awaiting a prompt revision upstream"}
+    monkeypatch.setattr(changelog, "alignment_report", lambda: report)
+    monkeypatch.setattr(changelog, "recorded_gaps", lambda: [gap])
+    section = changelog.render().split("## Prompt <-> schema alignment", 1)[1]
+    assert "- `territory` (missing from prompt): awaiting a prompt revision upstream" in section
+    assert "### `merger_agreement_specialist` (merger_agreement)\n\n- aligned" in section
+
+
+def test_changelog_shows_every_production_specialist_as_aligned():
+    """With the committed record the alignment section holds no gap lines."""
+    section = changelog.render().split("## Prompt <-> schema alignment", 1)[1]
+    assert "(missing from prompt)" not in section and "(extra in prompt)" not in section
+    assert section.count("- aligned") == 5

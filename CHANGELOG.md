@@ -10,13 +10,26 @@ Format based on Keep a Changelog; versioning is SemVer.
   specialist prompt asks for the fields the scoring schema scores. `prompt_fields(agent)` reads
   the `- name (type):` field block of a template; `alignment_report()` lists, per live specialist,
   the schema fields the prompt never asks for and the prompt keys the schema does not score
-  (`confidence` and `reasoning` allowed). Today's 21 gaps (contracts: 8 missing, 2 extra merger
-  keys; merger_agreement: 11 missing) are recorded with reasons in
-  `prompts/data/alignment_gaps.json`; no prompt or schema changed, and the guard test fails on a
-  new gap and on a recorded gap that is gone. `scripts/render_prompt_changelog.py --write|--check`
-  renders each production prompt's version, source, commit and template sha256, the
-  eval-environment version chains and the alignment gaps; `scripts/ci.py --tier full` runs
-  `--check`. Not exported from the package root.
+  (`confidence` and `reasoning` allowed). Known gaps would be recorded with reasons in
+  `prompts/data/alignment_gaps.json` (empty today); the guard test fails on a new gap and on a
+  recorded gap that is gone. `scripts/render_prompt_changelog.py --write|--check` renders each
+  production prompt's version, source, commit and template sha256, the eval-environment version
+  chains and the alignment section; `scripts/ci.py --tier full` runs `--check`. Not exported from
+  the package root.
+- Prompts: contracts and merger specialist production v2 ask for every scored field. The frozen v1
+  prompts asked for 8 fewer contract fields and 11 fewer merger fields than the registry scores
+  (contract: `agreement_date`, `dispute_forum`, `expiration_date`, `party_roles`, `payment_terms`,
+  `signatories`, `termination_notice_period`, `territory`; merger: `acquirer`, `target`,
+  `merger_sub`, `signatories`, `per_share_cash_amount`, `exchange_ratio`, both termination fees,
+  `outside_date`, `financial_advisors`, `legal_counsel`) and the contract prompt still asked for the
+  retired `merger_consideration` / `maud_clauses`. v2 is frozen v1 plus those fields, in registry
+  order; the merger `intent` line lists the `MERGER_INTENTS` tokens. Catalog rows are
+  `v2` / `llm-dojo-scoring` / `production_v2`; the `production_prompts` v1 rows and the lineage
+  JSON keep the frozen bytes. `scripts/sync_production_prompts.py` skips rows whose `source_repo`
+  is `llm-dojo-scoring`. No score changes: the new fields have no ground truth yet
+  (`pending_annotation`). Consumer impact: llm-mailroom serves frozen v1 until it adopts v2; its
+  `src/llm/frozen_v1/lineage.json` digests and its Dojo pin must move together, and the Langfuse
+  `mailroom-<agent>` production label needs the owner's prompt sync (a hosted write).
 - `ml/`: the contract `mailroom-ml` vendors instead of importing the Dojo. `ml_contract()` builds
   one JSON document from the owning modules: live doc types, canonical subclasses, CUAD subtypes
   and aliases, MAUD consideration types, every corpus subclass surface with its canonical key
