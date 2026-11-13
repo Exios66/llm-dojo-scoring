@@ -10,7 +10,7 @@ The catalog is `llm_dojo_scoring/prompts/catalog.yaml`, the lineage is
 |:---|:---|:---|:---|:---|:---|
 | `sorter` | llm | `sorter_condensed_v5` | llm-mailroom `sorter_condensed_v5` | 19203eac | 831a8abd4bffa01e8965cfc1bd8fb2248c100f60d1052690308305ed1728a69f |
 | `contracts_specialist` | llm | `v2` | llm-dojo-scoring `production_v2` | 19203eac | 69526a94b954eda70548ce4df7e227f97705ea831ad788e7665d7352e18f3388 |
-| `merger_agreement_specialist` | llm | `v2` | llm-dojo-scoring `production_v2` | 19203eac | 1098c015bef8cfb759dcf481120141834dd2dbad0595b47cf6c750871fe046d2 |
+| `merger_agreement_specialist` | llm | `v2` | llm-dojo-scoring `production_v2` | 19203eac | eeba3a8b9f8a74481afbb78f4b0d4f819d269bdae9927b07cee2c1146226a3f3 |
 | `corporate_records_specialist` | llm | `v1` | llm-mailroom `frozen_v1` | 19203eac | 67dd7f58e18f4336304a072a25b980e581e3cf18cde47048b27547de1f24ffbb |
 | `correspondence_specialist` | llm | `v1` | llm-mailroom `frozen_v1` | 19203eac | b56904eed92a33d0afc86efb29dfad51b345da7662e6dad6502ffdc7bc28a715 |
 | `compliance_specialist` | llm | `SYSTEM_PROMPT` | llm-mailroom `SYSTEM_PROMPT` | - | f862c2cc7876d73a8e503089336943f382ef6c64ac42e86820143c748760e796 |
