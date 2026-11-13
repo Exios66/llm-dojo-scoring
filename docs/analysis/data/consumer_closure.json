@@ -107,7 +107,7 @@
     },
     "metrics.metric_meta": {
       "decision": "keep",
-      "lines": 605,
+      "lines": 607,
       "reason": "imported by kept metrics.registry"
     },
     "metrics.profiles": {
@@ -397,7 +397,7 @@
     },
     "scoring.suites": {
       "decision": "keep",
-      "lines": 1639,
+      "lines": 1645,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "scoring.tasks": {
