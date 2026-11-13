@@ -351,8 +351,9 @@ def test_cms_omitted_field_without_a_field_map_is_one_false_positive():
     assert counts["fp"] == 1
 
 
+@pytest.mark.parametrize("with_field_map", [True, False])
 @pytest.mark.parametrize("omitted", [True, False])
-def test_cms_blank_list_items_are_silence(omitted):
+def test_cms_blank_list_items_are_silence(omitted, with_field_map):
     """``denial_reasons: [None, ""]`` on a CMS row is silence, as in ``score_extraction``."""
     from llm_dojo_scoring.scoring.extraction_metrics import extraction_binary_metrics
     from llm_dojo_scoring.schemas.doc_classes import field_types
@@ -362,6 +363,7 @@ def test_cms_blank_list_items_are_silence(omitted):
         expected["denial_reasons"] = ""
     counts = extraction_binary_metrics(
         expected, {**expected, "denial_reasons": [None, ""]},
-        field_types=field_types("insurance_claim"), doc_class="insurance_claim",
+        field_types=field_types("insurance_claim") if with_field_map else None,
+        doc_class="insurance_claim",
     )
     assert counts["fp"] == 0
