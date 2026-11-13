@@ -1334,15 +1334,17 @@ class ScoringSuite:
             # Single-document payload: flatten the document's own overall
             # score so consumers do not have to dig into the dataclass.
             payload["overall_score"] = extraction.overall_score
-            if (
-                not presence
-                and extraction.overall_score is None
-                and filtered.get("maud_question_accuracy") is not None
-            ):
-                # MAUD-only merger GT: no extraction field is scored, so the
-                # headline is the MAUD question accuracy, not a null overall.
-                mid = metric_id_for("maud_question_accuracy", doc_class=doc_class)
-                payload["metric_id"] = mid
+        rows = extraction if is_batch else [extraction]
+        if (
+            not presence
+            and filtered.get("maud_question_accuracy") is not None
+            and all(getattr(row, "overall_score", None) is None for row in rows)
+        ):
+            # MAUD-only merger GT (one document or a whole batch): no
+            # extraction field is scored, so the headline is the MAUD question
+            # accuracy, not a null overall.
+            mid = metric_id_for("maud_question_accuracy", doc_class=doc_class)
+            payload["metric_id"] = mid
         return _stamp(payload, mid)
 
     def _score_audit(
