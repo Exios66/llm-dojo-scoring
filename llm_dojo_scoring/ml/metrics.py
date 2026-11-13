@@ -21,13 +21,14 @@ accepted documents says little about the true rate.
 from __future__ import annotations
 
 import math
+import numbers
 from collections import Counter
 from collections.abc import Iterable, Mapping
 from typing import Any
 
 from ..analysis.bootstrap import wilson_ci
 from ..analysis.calibration import expected_calibration_error
-from ..schemas.corpus import normalize_corpus_subclass
+from ..schemas.corpus import DOC_TYPE_SUBCLASSES, normalize_corpus_subclass
 from ..scoring.classification import macro_prf
 
 __all__ = ["METRIC_IDS", "score_intake_model"]
@@ -56,10 +57,16 @@ def _token(value: Any) -> str | None:
 
 def _confidence(value: Any) -> float | None:
     """A finite confidence in [0, 1], else None."""
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
+    if isinstance(value, bool) or not isinstance(value, numbers.Real):  # numpy floats are Real
         return None
     number = float(value)
     return number if math.isfinite(number) and 0.0 <= number <= 1.0 else None
+
+
+def _is_true(value: Any) -> bool:
+    """True for ``True`` and numpy's ``True_``; strings, numbers and None are not a flag."""
+    kind = type(value)
+    return value is True or (kind.__module__ == "numpy" and kind.__name__ in {"bool", "bool_"} and bool(value))
 
 
 def _rate(numerator: int, denominator: int) -> float | None:
@@ -96,7 +103,7 @@ def score_intake_model(records: Iterable[Mapping[str, Any]], *, z: float = 1.96)
             class_pairs.append((confidence, class_ok))
         wrong = not class_ok
         gold_sub_raw = _token(raw.get("subclass"))
-        if gold_sub_raw is not None:
+        if gold_sub_raw is not None and DOC_TYPE_SUBCLASSES.get(gold):  # no catalog: nothing to grade
             gold_sub = normalize_corpus_subclass(gold, gold_sub_raw)
             pred_sub_raw = _token(raw.get("pred_subclass"))
             pred_sub = normalize_corpus_subclass(gold, pred_sub_raw) if pred_sub_raw else ""
@@ -107,7 +114,7 @@ def score_intake_model(records: Iterable[Mapping[str, Any]], *, z: float = 1.96)
             if sub_confidence is not None:
                 sub_pairs.append((sub_confidence, sub_ok))
             wrong = wrong or not sub_ok
-        if raw.get("fast_path") is True:
+        if _is_true(raw.get("fast_path")):
             accepted += 1
             errors += int(wrong)
     scored = len(class_gold)
