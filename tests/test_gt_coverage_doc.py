@@ -168,6 +168,48 @@ def test_label_container_counts_are_labelled_as_source_container_coverage(mod, i
     assert "source-container coverage" not in insurance
 
 
+def test_cuad_fields_count_rows_that_carry_their_own_category(mod, inject_status):
+    """With per-category counts, a CUAD field shows rows whose span answers its category; ``cuad_clauses`` keeps the container."""
+    status = _contract_status()
+    status["label_categories"] = {
+        "contract": {
+            "cuad_clause_labels": {
+                "Parties": {"labeled": 7, "with_spans": 6},
+                "Governing Law": {"labeled": 5, "with_spans": 2},
+            }
+        }
+    }
+    inject_status(status)
+    text = mod.render(status)
+    contract = text.split("## contract", 1)[1].split("\n## ", 1)[0]
+    rows = {
+        m.group(1): line
+        for line in contract.splitlines()
+        if (m := re.match(r"\| `([a-z_]+)` \|", line))
+    }
+    assert "| 6 / 10 |" in rows["parties"]  # rows whose span gives a value
+    assert "7 labelled, 1 with no span" in rows["parties"]
+    assert "| 2 / 10 |" in rows["governing_law"]
+    assert "5 labelled, 3 with no span" in rows["governing_law"]
+    assert "| 0 / 10 |" in rows["renewal_terms"]  # no row labels that category
+    assert "0 labelled" in rows["renewal_terms"]
+    assert "| 8 / 10 |" in rows["cuad_clauses"]  # all categories: the container count
+    assert "category coverage" in contract
+    assert "source-container coverage" not in contract
+
+
+
+def test_empty_category_counts_fall_back_to_the_container(mod, inject_status):
+    """A status whose ``label_categories`` has no entry for the class keeps the container count and note."""
+    status = _contract_status()
+    status["label_categories"] = {}
+    inject_status(status)
+    contract = mod.render(status).split("## contract", 1)[1].split("\n## ", 1)[0]
+    parties = next(line for line in contract.splitlines() if line.startswith("| `parties` |"))
+    assert "| 8 / 10 |" in parties
+    assert "source-container coverage" in contract
+
+
 def test_render_reports_a_class_with_no_rows(mod, inject_status):
     """A class absent from the status says so instead of inventing counts."""
     status = _status(150)

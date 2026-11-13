@@ -167,8 +167,10 @@ Status counts below were tallied from that page **[M]**. Status rule: scored sta
 
 Caveats on the counts (from `GT_COVERAGE.md`):
 
-- `derived` CUAD and MAUD fields show **source-container coverage** (rows whose `cuad_clause_labels` /
-  `maud_clause_labels` is populated), not rows that answer that field's own category.
+- The single-category CUAD fields (`document_name`, `parties`, `effective_date`, `term_length`,
+  `renewal_terms`, `governing_law`) count rows whose labels carry a span for that field's own category.
+  `cuad_clauses` and the MAUD fields still show **source-container coverage** (rows whose
+  `cuad_clause_labels` / `maud_clause_labels` is populated).
 - `insurance_claim.cms_source_table` is 600 / 1,100 (CMS tables only), not 100%.
 
 Closed-vocabulary values the scorer accepts but no GT row uses **[M]**: `insurance_claim.claim_type`:
