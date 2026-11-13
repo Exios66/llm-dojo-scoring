@@ -108,6 +108,7 @@ HOLD: dict[str, str] = {
     "ml": "ML contract package mailroom-ml vendors as JSON, never imports (stacked on Dojo #142)",
     "ml.contract": "label and intake contract behind ml/data/ml_contract.json for mailroom-ml (stacked on Dojo #142)",
     "ml.metrics": "intake-classifier scorecard for mailroom-ml evaluation reports (stacked on Dojo #142)",
+    "prompts.alignment": "guard that each specialist prompt asks for the fields the schema scores; no consumer imports it, CI runs it (stacked on Dojo #143)",
     "scoring.decision_lanes": "judge/arbiter/boss/review-tray scorecards; llm-mailroom wires its decision export next (stacked on Dojo #140)",
 }
 
