@@ -319,3 +319,22 @@ def test_helper_is_a_module_function_not_a_root_export():
 
     assert "hub_merger_expected_fields" in maud_schema.__all__
     assert not hasattr(llm_dojo_scoring, "hub_merger_expected_fields")
+
+
+@pytest.mark.parametrize("question", [
+    "Agreement provides for matching rights in connection with COR",
+    "Agreement provides for matching rights in connection with FTR",
+    "Fiduciary exception to COR covenant",
+    "Fiduciary exception:  Board determination (no-shop)",
+])
+def test_the_hub_class_none_is_an_answer_not_a_blank(question):
+    """``None`` is a catalog class (no matching right / no exception), so it is gold."""
+    row = merger_row({question: "None"}, subclass="all_cash")
+    gold = maud_schema.hub_merger_expected_fields(row)
+    assert len(gold["maud_clauses"]) == 1
+    assert gold["maud_clauses"][0].endswith(": None")
+    oracle = score(row, {"maud_clauses": gold["maud_clauses"], "merger_consideration": "all_cash"})
+    assert oracle["overall_score"] == 1.0
+    wrong = score(row, {"maud_clauses": [gold["maud_clauses"][0][: -len("None")] + "Yes"],
+                        "merger_consideration": "all_cash"})
+    assert wrong["overall_score"] < 1.0

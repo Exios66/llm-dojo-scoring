@@ -878,8 +878,23 @@ def _label_answer(record: object) -> str:
     answer = record.get("answer") if isinstance(record, Mapping) else record
     answer = parse_json_container(answer)
     if isinstance(answer, (list, tuple)):
-        answer = ", ".join(str(item).strip() for item in answer if not is_empty_value(item))
-    return "" if is_empty_value(answer) else str(answer).strip()
+        answer = ", ".join(str(item).strip() for item in answer if not _blank_answer(item))
+    return "" if _blank_answer(answer) else str(answer).strip()
+
+
+def _blank_answer(value: object) -> bool:
+    """True for a missing MAUD answer: ``None``, NaN, ``""``, ``"nan"`` or an empty container.
+
+    Unlike :func:`is_empty_value`, the string ``"None"`` is **not** blank here: it is a
+    Hub class (no matching right, no fiduciary exception) and must stay gold.
+    """
+    if value is None:
+        return True
+    if isinstance(value, float):
+        return value != value
+    if isinstance(value, (list, tuple, dict, set)):
+        return not value
+    return str(value).strip().lower() in {"", "nan"}
 
 
 def hub_merger_expected_fields(
@@ -901,7 +916,8 @@ def hub_merger_expected_fields(
         the catalog does not know is kept verbatim as ``'<Question>: <answer>'``
         (the lenient rule of :func:`maud_answers_to_clauses`), because the Hub is
         the ground truth: dropping it would score the model as right for omitting
-        a labelled answer. Blank, ``None`` and ``"nan"`` answers are not labels.
+        a labelled answer. Blank, missing and ``"nan"`` answers are not labels; the Hub class
+        ``"None"`` is an answer and stays gold.
     ``merger_consideration``
         The subclass token of the row's ``Type of Consideration`` answer,
         falling back to *subclass* (then the row's own ``expected_subclass``).
