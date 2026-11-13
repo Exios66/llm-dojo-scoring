@@ -15,6 +15,9 @@ import hashlib
 import pytest
 
 from llm_dojo_scoring.prompts import FAMILIES, get_prompt, get_prompt_version, list_prompts
+from llm_dojo_scoring.prompts.alignment import prompt_fields
+from llm_dojo_scoring.schemas.doc_classes import field_types
+from llm_dojo_scoring.schemas.intents import MERGER_INTENTS
 
 FROZEN_V1: dict[str, dict[str, object]] = {
     "contracts_specialist": {
@@ -126,9 +129,16 @@ LIVE = ("contracts_specialist", "corporate_records_specialist", "correspondence_
         "insurance_claims_specialist", "merger_agreement_specialist")
 
 
+#: Specialists whose production prompt is v2: authored in this repo as frozen v1 plus every
+#: registry field. Their frozen v1 bytes stay in the production_prompts family.
+PRODUCTION_V2 = ("contracts_specialist", "merger_agreement_specialist")
+
+
 def test_production_specialists_are_frozen_v1():
     """Use frozen specialist bodies while retaining the production corporate-records v6 pin."""
     for a in LIVE:
+        if a in PRODUCTION_V2:
+            continue
         if a == "corporate_records_specialist":
             # Mailroom still pins v6; evaluation v7 must not advance production.
             text = get_prompt(a).text
@@ -140,12 +150,76 @@ def test_production_specialists_are_frozen_v1():
 
 
 def test_production_specialist_rows_say_frozen_v1():
-    """Attach frozen-v1 version metadata and a source commit to production specialists."""
+    """Attach frozen-v1 version metadata and a source commit to the specialists still on frozen v1."""
     for a in LIVE:
+        if a in PRODUCTION_V2:
+            continue
         rec = get_prompt(a)
         assert rec.version == "v1"
         assert rec.source_key == "frozen_v1"
         assert rec.source_commit
+
+
+#: sha256 (frozen-catalog convention) and character count of each production v2 template.
+V2_TEMPLATES = {
+    "contracts_specialist": ("21dc7e398a6c5ce06cc8715f02a3709b57feb1b3add8a0d13464ee4849e69684", 11202),
+    "merger_agreement_specialist": ("0c5e24c6a09df8eecd541921608bac023246dbe2091184fd7be150bbaea6246e", 8098),
+}
+
+
+@pytest.mark.parametrize("agent", PRODUCTION_V2)
+def test_production_v2_row_is_authored_here_and_keeps_its_base_commit(agent):
+    """The v2 row names this repo as its source and the llm-mailroom commit of the v1 base it grew from."""
+    rec = get_prompt(agent)
+    v1 = get_prompt(agent, family="production_prompts")
+    assert rec.version == "v2"
+    assert rec.source_repo == "llm-dojo-scoring"
+    assert rec.source_key == "production_v2"
+    assert rec.source_commit == "19203eac07f67c215f50af2fd498560ce195adae"
+    assert "frozen_v1" in rec.notes and "not a commit of this repo" in rec.notes
+    assert v1.version == "v1" and v1.source_key == FROZEN_V1[agent]["eval_key"]
+
+
+@pytest.mark.parametrize("agent", PRODUCTION_V2)
+def test_production_v2_text_extends_frozen_v1_with_every_registry_field(agent):
+    """v2 differs from the frozen v1 bytes, which stay intact, and asks for every scored field."""
+    rec = get_prompt(agent)
+    v1 = get_prompt(agent, family="production_prompts")
+    assert rec.text != v1.text
+    assert _frozen_sha(v1.text) == FROZEN_V1[agent]["sha256"]
+    asked = set(prompt_fields(agent))
+    assert set(field_types(FROZEN_V1[agent]["doc_bundle"])) <= asked
+    assert "<!--" not in rec.text and rec.text.startswith("You are the")
+
+
+@pytest.mark.parametrize("agent", PRODUCTION_V2)
+def test_production_v2_field_block_follows_the_registry_order(agent):
+    """The field block lists reasoning first, the registry fields in registry order, confidence last."""
+    names = list(prompt_fields(agent))
+    registry = list(field_types(FROZEN_V1[agent]["doc_bundle"]))
+    assert names == ["reasoning", *registry, "confidence"]
+
+
+@pytest.mark.parametrize("agent", sorted(V2_TEMPLATES))
+def test_production_v2_template_digest_is_pinned(agent):
+    """Pin the v2 template bytes; a prompt edit must change the pin, the version and the changelog."""
+    sha, chars = V2_TEMPLATES[agent]
+    text = get_prompt(agent).text
+    assert _frozen_sha(text) == sha
+    assert len(text) == chars
+
+
+def test_contract_prompt_no_longer_asks_for_merger_keys():
+    """Merger keys belong to the merger specialist; the contract prompt only says not to emit them."""
+    text = get_prompt("contracts_specialist").text
+    assert "- merger_consideration (" not in text and "- maud_clauses (" not in text
+    assert "Do not emit merger_consideration or maud_clauses" in text
+
+
+def test_merger_intent_line_lists_the_registry_tokens():
+    """The intent field names exactly the MERGER_INTENTS tokens, not examples."""
+    line = next(ln for ln in get_prompt("merger_agreement_specialist").text.splitlines() if ln.startswith("- intent ("))
+    assert ", ".join(MERGER_INTENTS) in line
 
 
 def test_production_family_has_no_retired_vocabulary():

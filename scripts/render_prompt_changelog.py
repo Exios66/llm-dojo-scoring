@@ -81,8 +81,9 @@ def render() -> str:
         "Fields the scoring schema (`schemas/doc_classes.py`) scores that the production",
         "specialist prompt never asks for, and keys the prompt asks for that the schema does",
         "not score (`confidence` and `reasoning` are allowed). Recorded in",
-        "`llm_dojo_scoring/prompts/data/alignment_gaps.json`; the guard test fails when this",
-        "list changes. Nothing here is fixed by the Dojo: the prompts belong to llm-mailroom.",
+        "`llm_dojo_scoring/prompts/data/alignment_gaps.json` with a reason each; the guard test",
+        "fails when this list changes. Contracts and merger production v2 closed the gaps their",
+        "frozen v1 prompts had.",
         "",
     ]
     reasons = {(g["agent"], g["field"], g["side"]): g["reason"] for g in recorded_gaps()}
