@@ -75,7 +75,9 @@ local-mailroom-sandbox, the recorded consumer surface and the open mailroom audi
 import; these modules were outside that closure (13 modules, about 4,800 lines):
 
 - The `dojo-analyze`, `dojo-export`, `dojo-rescore` and `dojo-sync` CLIs (`llm_dojo_scoring/cli.py`).
-  `dojo-version` stays. Re-score a stored run with `get_suite(...).score(...)`.
+  `dojo-version` stays. Re-score a stored extraction run with
+  `get_suite(<agent>).score_document(expected=..., predicted=...)`: bare `score(...)` returns no
+  field-micro precision, recall or F1 for a single document. Classification suites keep `score(...)`.
 - `analysis.export`, `analysis.io`, `analysis.report`, `analysis.interpret`, `analysis.visualize`,
   `analysis.error_analysis`, `analysis.grid` (workbook export, report and plot generation, grid
   reports) and `docs/guides/GRID_REPORTS.md`; `examples/analyze_sorter_results.py`.
