@@ -315,3 +315,26 @@ def test_empty_label_batch_is_not_scored():
     )
     assert isinstance(result, ExtractionScoreResult)
     assert result.overall_score == 1.0
+
+
+def test_cms_row_value_on_an_omitted_documented_absent_field_is_a_false_positive():
+    """A CMS row that omits ``adjuster`` still treats a stated adjuster as an FP."""
+    from llm_dojo_scoring.scoring.extraction_metrics import extraction_binary_metrics
+    from llm_dojo_scoring.schemas.doc_classes import field_types
+
+    expected = {"claim_type": "health", "claim_number": "CLM-0002", "cms_source_table": "carrier"}
+    predicted = {**expected, "adjuster": "Casey Example"}
+    counts = extraction_binary_metrics(
+        expected, predicted, field_types=field_types("insurance_claim"), doc_class="insurance_claim"
+    )
+    assert counts["fp"] == 1
+    assert counts["extraction_precision"] < 1.0
+
+
+def test_batch_row_with_no_expected_fields_adds_no_false_positives():
+    """A batch row whose expected dict is empty contributes no field-micro events."""
+    labels = dict(CORRESPONDENCE_LABELS)
+    payload = get_suite("correspondence").score_document(
+        [labels, {}], [dict(labels), {"invented_field": "x"}], doc_subclass="email"
+    )
+    assert payload["extraction_precision"] == 1.0
