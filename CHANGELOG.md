@@ -14,7 +14,8 @@ Format based on Keep a Changelog; versioning is SemVer.
   `llm_dojo_scoring/ml/data/ml_contract.json`, is checked by `scripts/export_ml_contract.py
   --check`, which `scripts/ci.py --tier full` now runs. `score_intake_model(records)` scores the
   intake classifier: per-head accuracy, macro F1 and ECE, fast-path coverage, selective risk and
-  its Wilson upper bound. 9 new `ml.intake.*` metric ids, registered and listed in
+  its Wilson upper bound. `by_class` adds the per-class subclass macro F1 the mailroom-ml release gates read
+  (documents whose class was right); `subclass_macro_f1` stays end to end. 9 new `ml.intake.*` metric ids, registered and listed in
   `docs/contracts/METRIC_IDS.md`, with a `score_changelog` entry (new metrics only). Imported from
   `llm_dojo_scoring.ml`; not exported from the package root.
 - `scoring/decision_lanes.py`: scorecards for the pipeline's routing decisions, from mailroom

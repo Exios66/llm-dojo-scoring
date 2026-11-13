@@ -130,6 +130,12 @@ names (the registry name without `ml_intake_`).
 | `ml_intake_selective_risk` | `ml.intake.selective_risk` |
 | `ml_intake_selective_risk_upper` | `ml.intake.selective_risk_upper` |
 
+The scorecard also carries `by_class`: per gold class, `n`, `n_class_right` and
+`subclass_macro_f1`, which scores that class's subclasses only on documents whose class
+was predicted right. That per-class figure is what the mailroom-ml release gates read.
+`metrics.subclass_macro_f1` is end to end: a wrong class makes the subclass wrong. Macro
+F1 is exact arithmetic over the gold labels, rounded once to six places.
+
 `selective_risk_upper` is the Wilson upper bound of `selective_risk`. Hold a release
 gate on it, not on the point rate. The `ml.*` namespace is not a doc-class extraction
 identity.

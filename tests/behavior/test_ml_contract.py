@@ -113,7 +113,8 @@ def test_intake_scorecard_on_a_mixed_batch():
     assert (card["n"], card["n_scored"], card["n_subclass_scored"], card["n_fast_path"]) == (6, 5, 4, 3)
     assert card["n_unscored_by_reason"] == {"no_gold_doc_type": 1}
     assert m["doc_type_accuracy"] == 0.8
-    assert m["doc_type_macro_f1"] == pytest.approx(0.7333, abs=1e-3)
+    # contract F1 2/3 (one corporate_record predicted contract), corporate_record 0, others 1.
+    assert m["doc_type_macro_f1"] == round((2 / 3 + 0 + 1 + 1 + 1) / 5, 6)
     assert m["doc_type_ece"] == expected_calibration_error(
         [(0.95, True), (0.9, True), (0.6, True), (0.7, False), (0.99, True)]
     )
@@ -126,6 +127,28 @@ def test_intake_scorecard_on_a_mixed_batch():
     assert m["selective_risk"] == pytest.approx(1 / 3, abs=1e-6)
     assert m["selective_risk_upper"] == wilson_ci(1 / 3, 3)["hi"]
     assert m["selective_risk_upper"] > m["selective_risk"]
+
+
+def test_per_class_subclass_f1_is_the_gate_figure():
+    """by_class scores a class's subclasses only where the class was right (mailroom-ml gates)."""
+    by_class = score_intake_model(BATCH)["by_class"]
+    assert by_class["contract"] == {"n": 1, "n_class_right": 1, "subclass_macro_f1": 1.0}
+    assert by_class["insurance_claim"] == {"n": 1, "n_class_right": 1, "subclass_macro_f1": 0.0}
+    # Class wrong: no evidence about the subclass head, so None rather than 0.
+    assert by_class["corporate_record"] == {"n": 1, "n_class_right": 0, "subclass_macro_f1": None}
+    assert "merger_agreement" not in by_class  # no gold subclass on that row
+
+
+def test_macro_f1_is_exact_over_observed_classes():
+    """Unrounded per-class F1, classes with no gold row left out, a blank prediction is a miss."""
+    rows = [{"doc_type": "correspondence", "subclass": gold, "pred_doc_type": "correspondence",
+             "pred_subclass": pred} for gold, pred in
+            [("email", "email"), ("email", "memo"), ("memo", "memo"), ("letter", None)]]
+    card = score_intake_model(rows)
+    # email: P 1, R 1/2 -> 2/3; memo: P 1/2, R 1 -> 2/3; letter: 0. memo-as-email adds no class.
+    expected = round((2 / 3 + 2 / 3 + 0) / 3, 6)
+    assert card["by_class"]["correspondence"]["subclass_macro_f1"] == expected
+    assert card["metrics"]["subclass_macro_f1"] == expected
 
 
 def test_no_fast_path_and_no_gold_report_none_not_zero():
