@@ -26,6 +26,7 @@ from typing import Any
 import pytest
 
 from llm_dojo_scoring import get_suite
+from llm_dojo_scoring.scoring.field_scoring import ExtractionScoreResult
 
 #: The payload key that carries each headline ``metric_id``.
 HEADLINE_KEY = {
@@ -312,5 +313,5 @@ def test_empty_label_batch_is_not_scored():
         dict(CORRESPONDENCE_LABELS), dict(CORRESPONDENCE_LABELS),
         expected_topic=[], predicted_topic=["general_business"],
     )
-    payload = result if isinstance(result, dict) else {}
-    assert payload.get("content_topic_accuracy") is None
+    assert isinstance(result, ExtractionScoreResult)
+    assert result.overall_score == 1.0
