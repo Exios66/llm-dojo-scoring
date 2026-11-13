@@ -143,7 +143,9 @@ Insurance; Covenant Not To Sue; Third Party Beneficiary.
 
 **GT extras (not schema keys):** `expected_subclass`,
 `cuad_clause_labels` → category-presence scorer. 91 EX-10 rows remain
-`unscorable`.
+`unscorable`. The CUAD-derived fields the coverage page lists as scored count
+through clause presence (`cuad.clause_presence.micro_f1`), not as separate
+field scores; field-micro P/R/F1/F2 on a presence-only row are null.
 
 **Allowed `metric_id`:** `pipeline.extraction.overall`,
 `cuad.clause_presence.micro_f1`, `pipeline.extraction.field_micro_f1` /
@@ -208,7 +210,9 @@ subclass table: [`MAUD_SCHEMA.md`](MAUD_SCHEMA.md) (`llm_dojo_scoring.schemas.ma
 Ambiguous collapsed GT is `unscorable` on those keys, not a guessed match.
 
 **GT extras:** `expected_subclass`, `maud_clause_labels`. MAUD-only rows
-still score the content metric.
+still score the content metric: their headline `metric_id` is
+`maud.question.micro_accuracy`, and field-micro P/R/F1/F2 are null (no
+extraction field is labelled).
 
 **Allowed `metric_id`:** `pipeline.extraction.overall`,
 `maud.question.micro_accuracy`, `maud.clause_presence.rate`,
@@ -405,7 +409,11 @@ consistency is degenerate on GT-shaped predictions.
 4. **Hub union GT.** `parse_gt_fields` + `scoring_gt_fields(..., drop_unmapped=True)`
    before scoring. `not_applicable` / `schema_documented_absence` /
    `pending_annotation` are never required events. Passing the class-label
-   string as GT fails closed (`gt_wrong_schema`).
+   string as GT fails closed (`gt_wrong_schema`). A schema field the GT does
+   not label is excluded from field-micro P/R/F1 on both sides (a value there
+   is not a false positive); a value on a field labelled empty, or an
+   off-schema key, is. A blank or literal `"nan"` `content_topic` /
+   `sentiment_label` is not a label and emits no topic / sentiment score.
 5. **Perfect-prediction replay** (both splits, 3,302 rows, 19,924
    extraction events): 0 FN / 0 FP / 0 spurious fills; 91 triage-only
    contracts stay `unscorable`.
