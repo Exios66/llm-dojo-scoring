@@ -342,3 +342,30 @@ def test_batch_row_with_no_expected_fields_adds_no_false_positives():
         [labels, {}], [dict(labels), {"invented_field": "x"}], doc_subclass="email"
     )
     assert payload["extraction_precision"] == 1.0
+
+
+def test_cms_omitted_field_without_a_field_map_is_one_false_positive():
+    """Without a field map, an omitted CMS adjuster is still one FP, not two."""
+    from llm_dojo_scoring.scoring.extraction_metrics import extraction_binary_metrics
+
+    expected = {"claim_type": "health", "claim_number": "CLM-0002", "cms_source_table": "carrier"}
+    counts = extraction_binary_metrics(
+        expected, {**expected, "adjuster": "Casey Example"}, doc_class="insurance_claim"
+    )
+    assert counts["fp"] == 1
+
+
+@pytest.mark.parametrize("omitted", [True, False])
+def test_cms_blank_list_items_are_silence(omitted):
+    """``denial_reasons: [None, ""]`` on a CMS row is silence, as in ``score_extraction``."""
+    from llm_dojo_scoring.scoring.extraction_metrics import extraction_binary_metrics
+    from llm_dojo_scoring.schemas.doc_classes import field_types
+
+    expected = {"claim_type": "health", "claim_number": "CLM-0002", "cms_source_table": "carrier"}
+    if not omitted:
+        expected["denial_reasons"] = ""
+    counts = extraction_binary_metrics(
+        expected, {**expected, "denial_reasons": [None, ""]},
+        field_types=field_types("insurance_claim"), doc_class="insurance_claim",
+    )
+    assert counts["fp"] == 0
