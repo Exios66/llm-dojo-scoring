@@ -39,6 +39,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from llm_dojo_scoring.pipeline.sandbox_scoring import gt_categories
 from llm_dojo_scoring.schemas import doc_classes
 from llm_dojo_scoring.schemas.corpus import normalize_corpus_subclass
 from llm_dojo_scoring.schemas.gt_metadata import (
@@ -189,6 +190,33 @@ def _vocabulary_counts(rows: list[dict[str, Any]]) -> dict[str, Any]:
     return out
 
 
+def _cuad_category_counts(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Per CUAD category, contract rows whose labels carry it (``labeled``) and hold a span (``with_spans``).
+
+    A CUAD-derived field is scored only on rows whose label universe carries its
+    category (``pipeline.sandbox_scoring.field_value_ok``), so this is that field's
+    own coverage; the container count says only that a row has some labels.
+    """
+    labeled: Counter[str] = Counter()
+    with_spans: Counter[str] = Counter()
+    for row in rows:
+        if row["expected"] != "contract":
+            continue
+        raw = parse_gt_fields(row["gt_fields"] or "{}").get("cuad_clause_labels")
+        for category, spans in gt_categories(raw).items():
+            labeled[category] += 1
+            with_spans[category] += bool(spans)
+    if not labeled:
+        return {}
+    return {
+        "contract": {
+            "cuad_clause_labels": {
+                c: {"labeled": labeled[c], "with_spans": with_spans[c]} for c in sorted(labeled)
+            }
+        }
+    }
+
+
 def build(rows: list[dict[str, Any]], revision: str, commit: str) -> dict[str, Any]:
     """The status document for ``rows``."""
     counts: Counter[tuple[str, str]] = Counter()
@@ -219,6 +247,7 @@ def build(rows: list[dict[str, Any]], revision: str, commit: str) -> dict[str, A
         "rows": sum(counts.values()),
         "doc_types": {},
         "vocabulary": _vocabulary_counts(rows),
+        "label_categories": _cuad_category_counts(rows),
     }
     for doc_type in FIVE:
         live_fields = set(doc_classes.field_names(doc_type))

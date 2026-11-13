@@ -1176,6 +1176,176 @@
    }
   }
  },
+ "label_categories": {
+  "contract": {
+   "cuad_clause_labels": {
+    "Affiliate License-Licensee": {
+     "labeled": 509,
+     "with_spans": 58
+    },
+    "Affiliate License-Licensor": {
+     "labeled": 509,
+     "with_spans": 22
+    },
+    "Agreement Date": {
+     "labeled": 509,
+     "with_spans": 469
+    },
+    "Anti-Assignment": {
+     "labeled": 509,
+     "with_spans": 373
+    },
+    "Audit Rights": {
+     "labeled": 509,
+     "with_spans": 213
+    },
+    "Cap On Liability": {
+     "labeled": 509,
+     "with_spans": 274
+    },
+    "Change Of Control": {
+     "labeled": 509,
+     "with_spans": 120
+    },
+    "Competitive Restriction Exception": {
+     "labeled": 509,
+     "with_spans": 76
+    },
+    "Covenant Not To Sue": {
+     "labeled": 509,
+     "with_spans": 99
+    },
+    "Document Name": {
+     "labeled": 509,
+     "with_spans": 509
+    },
+    "Effective Date": {
+     "labeled": 509,
+     "with_spans": 389
+    },
+    "Exclusivity": {
+     "labeled": 509,
+     "with_spans": 179
+    },
+    "Expiration Date": {
+     "labeled": 509,
+     "with_spans": 412
+    },
+    "Governing Law": {
+     "labeled": 509,
+     "with_spans": 436
+    },
+    "Insurance": {
+     "labeled": 509,
+     "with_spans": 165
+    },
+    "Ip Ownership Assignment": {
+     "labeled": 509,
+     "with_spans": 124
+    },
+    "Irrevocable Or Perpetual License": {
+     "labeled": 509,
+     "with_spans": 69
+    },
+    "Joint Ip Ownership": {
+     "labeled": 509,
+     "with_spans": 45
+    },
+    "License Grant": {
+     "labeled": 509,
+     "with_spans": 254
+    },
+    "Liquidated Damages": {
+     "labeled": 509,
+     "with_spans": 61
+    },
+    "Minimum Commitment": {
+     "labeled": 509,
+     "with_spans": 165
+    },
+    "Most Favored Nation": {
+     "labeled": 509,
+     "with_spans": 28
+    },
+    "No-Solicit Of Customers": {
+     "labeled": 509,
+     "with_spans": 34
+    },
+    "No-Solicit Of Employees": {
+     "labeled": 509,
+     "with_spans": 59
+    },
+    "Non-Compete": {
+     "labeled": 509,
+     "with_spans": 118
+    },
+    "Non-Disparagement": {
+     "labeled": 509,
+     "with_spans": 38
+    },
+    "Non-Transferable License": {
+     "labeled": 509,
+     "with_spans": 137
+    },
+    "Notice Period To Terminate Renewal": {
+     "labeled": 509,
+     "with_spans": 111
+    },
+    "Parties": {
+     "labeled": 509,
+     "with_spans": 508
+    },
+    "Post-Termination Services": {
+     "labeled": 509,
+     "with_spans": 181
+    },
+    "Price Restrictions": {
+     "labeled": 509,
+     "with_spans": 15
+    },
+    "Renewal Term": {
+     "labeled": 509,
+     "with_spans": 176
+    },
+    "Revenue/Profit Sharing": {
+     "labeled": 509,
+     "with_spans": 165
+    },
+    "Rofr/Rofo/Rofn": {
+     "labeled": 509,
+     "with_spans": 84
+    },
+    "Source Code Escrow": {
+     "labeled": 509,
+     "with_spans": 13
+    },
+    "Termination For Convenience": {
+     "labeled": 509,
+     "with_spans": 182
+    },
+    "Third Party Beneficiary": {
+     "labeled": 509,
+     "with_spans": 32
+    },
+    "Uncapped Liability": {
+     "labeled": 509,
+     "with_spans": 110
+    },
+    "Unlimited/All-You-Can-Eat-License": {
+     "labeled": 509,
+     "with_spans": 17
+    },
+    "Volume Restriction": {
+     "labeled": 509,
+     "with_spans": 82
+    },
+    "Warranty Duration": {
+     "labeled": 509,
+     "with_spans": 75
+    }
+   }
+  }
+ },
  "revision": "v9.3",
  "rows": 3302,
  "vocabulary": {
