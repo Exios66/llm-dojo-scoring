@@ -119,6 +119,8 @@ def test_merger_and_corporate_subtypes_carry_their_guidance():
     cash = extraction_schema("merger_agreement", "all_cash")
     assert cash.fields["maud_clauses"].status == "derived"
     assert cash.fields["merger_consideration"].source == "subtype"
+    assert "Type of Consideration" in cash.fields["merger_consideration"].note
+    assert cash.fields["merger_consideration"].status == "derived"
     assert cash.fields["intent"].status == "not_applicable"
     assert "Type of Consideration" in cash.salient
     indenture = extraction_schema("corporate_record", "indenture")
