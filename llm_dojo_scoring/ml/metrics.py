@@ -12,6 +12,11 @@ never scored. Subclasses are compared after :func:`normalize_corpus_subclass` fo
 gold class, so ``License_Agreements`` and ``license`` are the same answer. A subclass
 is right only when the class is right too.
 
+Two subclass F1 figures are reported. ``metrics["subclass_macro_f1"]`` is end to
+end: a wrong class makes the subclass wrong. ``by_class[doc_type]["subclass_macro_f1"]``
+is the per-class head figure the mailroom-ml release gates read: that class's
+subclasses, scored only on documents whose class was predicted right.
+
 Fast-path risk is the error rate over the documents the model answered alone (class
 or subclass wrong). ``selective_risk_upper`` is the Wilson upper bound of that rate:
 the number a release gate should hold under its error budget, since a handful of
@@ -29,7 +34,6 @@ from typing import Any
 from ..analysis.bootstrap import wilson_ci
 from ..analysis.calibration import expected_calibration_error
 from ..schemas.corpus import DOC_TYPE_SUBCLASSES, normalize_corpus_subclass
-from ..scoring.classification import macro_prf
 
 __all__ = ["METRIC_IDS", "score_intake_model"]
 
@@ -87,6 +91,8 @@ def score_intake_model(records: Iterable[Mapping[str, Any]], *, z: float = 1.96)
     sub_gold: list[str] = []
     sub_pred: list[str] = []
     sub_pairs: list[tuple[float, bool]] = []
+    by_class: dict[str, list[tuple[str, str]]] = {}
+    sub_counts: Counter[str] = Counter()
     accepted = errors = 0
     for raw in records:
         n += 1
@@ -110,6 +116,9 @@ def score_intake_model(records: Iterable[Mapping[str, Any]], *, z: float = 1.96)
             sub_ok = class_ok and pred_sub == gold_sub
             sub_gold.append(f"{gold}/{gold_sub}")
             sub_pred.append(f"{pred}/{pred_sub}")
+            sub_counts[gold] += 1
+            if class_ok:
+                by_class.setdefault(gold, []).append((gold_sub, pred_sub))
             sub_confidence = _confidence(raw.get("subclass_confidence"))
             if sub_confidence is not None:
                 sub_pairs.append((sub_confidence, sub_ok))
@@ -138,12 +147,36 @@ def score_intake_model(records: Iterable[Mapping[str, Any]], *, z: float = 1.96)
         "n_subclass_scored": len(sub_gold),
         "n_fast_path": accepted,
         "metrics": metrics,
+        "by_class": {
+            doc_type: {
+                "n": count,
+                "n_class_right": len(by_class.get(doc_type, ())),
+                "subclass_macro_f1": _macro_f1(
+                    [g for g, _ in by_class.get(doc_type, ())],
+                    [p for _, p in by_class.get(doc_type, ())],
+                ),
+            }
+            for doc_type, count in sorted(sub_counts.items())
+        },
         "provenance": {"metric_ids": dict(METRIC_IDS), "wilson_z": z},
     }
 
 
 def _macro_f1(gold: list[str], pred: list[str]) -> float | None:
-    """Macro F1 over the gold labels, or None with no rows."""
+    """Unweighted mean one-vs-rest F1 over the gold labels, or None with no rows.
+
+    Classes with no gold row are left out of the mean; a prediction outside the gold
+    labels (or blank) only adds misses. Arithmetic is exact and the mean is rounded
+    once, to six places, so it matches mailroom-ml's ``_macro_f1_observed``.
+    """
     if not gold:
         return None
-    return round(float(macro_prf(gold, pred, normalize=False)["f1_macro"]), 6)
+    scores = []
+    for label in sorted(set(gold)):
+        tp = sum(1 for g, p in zip(gold, pred) if g == label and p == label)
+        fp = sum(1 for g, p in zip(gold, pred) if g != label and p == label)
+        fn = sum(1 for g, p in zip(gold, pred) if g == label and p != label)
+        precision = tp / (tp + fp) if tp + fp else 0.0
+        recall = tp / (tp + fn) if tp + fn else 0.0
+        scores.append(2 * precision * recall / (precision + recall) if precision + recall else 0.0)
+    return round(sum(scores) / len(scores), 6)
