@@ -6,6 +6,19 @@ Format based on Keep a Changelog; versioning is SemVer.
 ## [Unreleased]
 ### Added
 
+- `scoring/decision_lanes.py`: scorecards for the pipeline's routing decisions, from mailroom
+  `RunRecord`-shaped mappings: `score_judge_lane` (verdict accuracy, macro F1, escalation recall,
+  false-escalation rate, `judge_error` rate), `score_arbiter_lane` (decision accuracy, retry
+  usefulness at a score rise of `epsilon`, wrongful-accept and unnecessary-escalation rates),
+  `score_boss_lane` (wrongful approve, needless review; human outcome only) and
+  `score_review_tray` (resolution mix, wasted-review rate, per-field correction rate, reject
+  reasons, per-cause precision). Gold per row is the person's resolution, else the dataset
+  extraction score read through the ambiguous band; a row with neither is counted under
+  `n_unscored_by_reason`, never scored 0. 14 new `decision.{judge,arbiter,boss,review_tray}.*`
+  metric ids, registered and listed in `docs/contracts/METRIC_IDS.md`, with a `score_changelog`
+  entry (new metrics; no existing value changes). Imported from
+  `llm_dojo_scoring.scoring.decision_lanes`; not exported from the package root, so the consumer
+  surface is unchanged.
 - `schemas/doc_classes.py`: one hand-edited registry (`DOC_CLASSES`, `DocClass`, `field_types()`,
   `field_names()`, `LIVE_DOC_TYPES`, `RETIRED_DOC_TYPES`) for the eight document classes, their
   specialists and their extraction fields. Every other class list and per-class field table now

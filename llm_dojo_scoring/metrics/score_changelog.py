@@ -130,6 +130,31 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         ),
         "rescore_required": True,
     },
+    {
+        # Fourth 0.29.0 change set (new metrics only; no existing value moves).
+        "version": "0.29.0",
+        "metric_ids": (
+            "decision.judge.verdict_accuracy",
+            "decision.judge.macro_f1",
+            "decision.judge.escalation_recall",
+            "decision.judge.false_escalation_rate",
+            "decision.judge.error_rate",
+            "decision.arbiter.decision_accuracy",
+            "decision.arbiter.retry_usefulness",
+            "decision.arbiter.wrongful_accept_rate",
+            "decision.arbiter.unnecessary_escalation_rate",
+            "decision.boss.wrongful_approve_rate",
+            "decision.boss.needless_review_rate",
+            "decision.review_tray.wasted_review_rate",
+            "decision.review_tray.correction_rate",
+            "decision.review_tray.reject_rate",
+        ),
+        "change": (
+            "New metrics: judge, arbiter, boss and review-tray decision lanes "
+            "(scoring.decision_lanes). No existing metric value changes."
+        ),
+        "rescore_required": False,
+    },
 )
 
 
