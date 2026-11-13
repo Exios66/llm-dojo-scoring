@@ -100,6 +100,7 @@ HOLD: dict[str, str] = {
     "scoring.doc_scorers": "per-document-type scorers, Dojo #120 (mailroom PRs #226-#229)",
     "scoring.extraction_scope": "extraction scoping for the audit row, Dojo #120 (mailroom PRs #226-#229)",
     "pipeline.sandbox_schema_adherence": "schema adherence for the audit row, Dojo #120 (mailroom PRs #226-#229)",
+    "scoring.decision_lanes": "judge, arbiter, boss and review-tray scorecards; mailroom adopts after the release",
     "schemas.v10_rows": "v10 dataset row loaders, mailroom #174",
     "schemas.correspondence_gt_audit": "correspondence ground-truth audit, Dojo #94",
     "schemas.corporate_record_relabel": "corporate record relabelling, Dojo #52",
