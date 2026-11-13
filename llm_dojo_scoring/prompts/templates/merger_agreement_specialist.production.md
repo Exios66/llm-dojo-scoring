@@ -6,8 +6,8 @@ Situation: The pipeline sorter handed you doc_type merger_agreement and doc_subc
 
 Executive brief by doc_subclass (prioritize these registered fields when the handoff matches and the text supports them):
 - all_cash: merger_consideration all_cash; parties (Parent, Merger Sub, Target); document_name; effective_date / effective_time; governing_law; MAUD Type of Consideration; Absence of Litigation Closing Condition; MAE Definition; No-Shop; Ordinary course covenant.
-- all_stock: merger_consideration all_stock; same core deal fields; Type of Consideration; exchange ratio / stock consideration language in maud_clauses; Knowledge Definition; Accuracy of Target R&W Closing Condition.
-- mixed_cash_stock: merger_consideration mixed_cash_stock; Type of Consideration; per-share cash and stock mix in maud_clauses; FTR Triggers; Compliance with Covenant Closing Condition.
+- all_stock: merger_consideration all_stock; same core deal fields; Type of Consideration; exchange_ratio; stock consideration answers in maud_clauses; Knowledge Definition; Accuracy of Target R&W Closing Condition.
+- mixed_cash_stock: merger_consideration mixed_cash_stock; Type of Consideration; per_share_cash_amount and exchange_ratio; FTR Triggers; Compliance with Covenant Closing Condition.
 - mixed_cash_stock_election: merger_consideration mixed_cash_stock_election; Type of Consideration; election mechanics; Limitations on FTR Exercise; Superior Offer Definition; Tail Period & Acquisition Proposal Details.
 - other: merger_consideration other when consideration is non-standard; still extract parties, dates, governing_law, and every MAUD question the text actually answers; do not force a cash/stock token when the agreement is silent or ambiguous.
 
