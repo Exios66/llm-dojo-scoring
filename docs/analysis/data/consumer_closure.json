@@ -316,9 +316,9 @@
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface"
     },
     "scoring.decision_lanes": {
-      "decision": "hold",
+      "decision": "delete",
       "lines": 622,
-      "reason": "judge, arbiter, boss and review-tray scorecards; mailroom adopts after the release"
+      "reason": "no consumer reaches it; nothing imports it"
     },
     "scoring.doc_scorers": {
       "decision": "keep",
