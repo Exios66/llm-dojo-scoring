@@ -50,6 +50,20 @@ mismatch; `compare_serving` sets `incomparable: true` on the quality block.
 | `reviewer_confidence_ece` | `review.lane.confidence_ece` |
 | `reviewer_confidence_brier` | `review.lane.confidence_brier` |
 | `reviewer_cost_per_accepted_usd` | `review.lane.cost_per_accepted_usd` |
+| `judge_verdict_accuracy` | `decision.judge.verdict_accuracy` |
+| `judge_verdict_macro_f1` | `decision.judge.macro_f1` |
+| `judge_escalation_recall` | `decision.judge.escalation_recall` |
+| `judge_false_escalation_rate` | `decision.judge.false_escalation_rate` |
+| `judge_error_rate` | `decision.judge.error_rate` |
+| `arbiter_decision_accuracy` | `decision.arbiter.decision_accuracy` |
+| `arbiter_retry_usefulness` | `decision.arbiter.retry_usefulness` |
+| `arbiter_wrongful_accept_rate` | `decision.arbiter.wrongful_accept_rate` |
+| `arbiter_unnecessary_escalation_rate` | `decision.arbiter.unnecessary_escalation_rate` |
+| `boss_wrongful_approve_rate` | `decision.boss.wrongful_approve_rate` |
+| `boss_needless_review_rate` | `decision.boss.needless_review_rate` |
+| `review_tray_wasted_review_rate` | `decision.review_tray.wasted_review_rate` |
+| `review_tray_correction_rate` | `decision.review_tray.correction_rate` |
+| `review_tray_reject_rate` | `decision.review_tray.reject_rate` |
 | `f1_macro` | `pipeline.classification.f1_macro` |
 | `accuracy` | `pipeline.classification.accuracy` |
 | `sandbox_maud_accuracy` | `maud.sandbox_labeled.micro_accuracy` |
@@ -83,6 +97,62 @@ The reviewer namespace is not a doc-class extraction identity. Do not compare a
 `review.lane.*` number with `pipeline.extraction.*` or `cuad.*`; the reviewer
 scorecard is a separate lane with its own target population, risk bar, and
 question set.
+
+### Decision lanes
+
+`llm_dojo_scoring.scoring.decision_lanes` scores the pipeline's routing
+decisions: `score_judge_lane`, `score_arbiter_lane`, `score_boss_lane` and
+`score_review_tray`. Each takes mailroom `RunRecord`-shaped mappings and returns a
+scorecard with `n`, `n_scored`, `n_unscored_by_reason`, a `metrics` dict keyed by the
+short names below, and `provenance` (`gold_source` counts, dataset revision, split,
+`metric_ids`, `scorer_version`). A row with no gold is counted under
+`n_unscored_by_reason` and is never scored 0. Gold per row: the person's resolution
+(`human`), else the dataset extraction score (`corpus`).
+
+| Registry name | `metric_id` |
+|---|---|
+| `judge_verdict_accuracy` | `decision.judge.verdict_accuracy` |
+| `judge_verdict_macro_f1` | `decision.judge.macro_f1` |
+| `judge_escalation_recall` | `decision.judge.escalation_recall` |
+| `judge_false_escalation_rate` | `decision.judge.false_escalation_rate` |
+| `judge_error_rate` | `decision.judge.error_rate` |
+| `arbiter_decision_accuracy` | `decision.arbiter.decision_accuracy` |
+| `arbiter_retry_usefulness` | `decision.arbiter.retry_usefulness` |
+| `arbiter_wrongful_accept_rate` | `decision.arbiter.wrongful_accept_rate` |
+| `arbiter_unnecessary_escalation_rate` | `decision.arbiter.unnecessary_escalation_rate` |
+| `boss_wrongful_approve_rate` | `decision.boss.wrongful_approve_rate` |
+| `boss_needless_review_rate` | `decision.boss.needless_review_rate` |
+| `review_tray_wasted_review_rate` | `decision.review_tray.wasted_review_rate` |
+| `review_tray_correction_rate` | `decision.review_tray.correction_rate` |
+| `review_tray_reject_rate` | `decision.review_tray.reject_rate` |
+
+Gold and the rules behind each lane:
+
+- **Judge.** Human: `approve_as_is` is `complete`, `correct` is `partial`, `reject` and
+  `reclassify` are `incomplete`. Corpus: the dataset score of the judged extraction at or
+  above the high edge of the ambiguous band (`get_ambiguous_band()`, default 0.5 / 0.85) is
+  `complete`, at or below the low edge `incomplete`, between them `partial`. A
+  `judge_error` verdict is unscored and counted in `error_rate`. `escalation_recall` is
+  over documents whose gold is not `complete`, `false_escalation_rate` over those whose
+  gold is `complete`.
+- **Arbiter.** The unit is a ruling. A `retry_extraction` is useful when the dataset score
+  of the next attempt is at least `epsilon` (default 0.05) above the attempt ruled on.
+  An `accept_with_caveats` is right when the person approved as is or, with no resolution,
+  the final dataset score is at or above the high edge. A `human_review` is needed when the
+  person changed or refused the work or, with no resolution, the final score is below the
+  high edge. The scorecard also carries `by_decision` right / wrong counts.
+- **Boss.** Human outcome only. `approved` is wrongful when the person corrected,
+  reclassified or rejected the document; `review` is needless when the person approved as
+  is. A row without a resolution is `no_boss_gold`. Approved documents reach a person only
+  when they are sampled for audit, so `wrongful_approve_rate` describes the audited ones.
+- **Review tray.** Rows with a resolution are scored; others are `unresolved` (still parked)
+  or `not_parked`. Beyond the three scalar metrics, the scorecard carries `resolutions`
+  (mix), `reject_reasons`, `field_correction_rate` (per field, over reviews that checked
+  fields: `approve_as_is` and `correct`) and `by_review_cause` (per cause: parks, parks where
+  the person changed the work, and their ratio).
+
+The `decision.*` namespace is not a doc-class extraction identity. Do not compare a
+`decision.*` number with `pipeline.extraction.*`, `cuad.*` or `review.lane.*`.
 
 ## Doc class → allowed metric_ids
 
