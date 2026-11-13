@@ -261,3 +261,23 @@ def test_row_without_labels_is_unscorable(doc_class):
     assert payload.get("status") == "unscorable"
     assert payload.get("overall_score") is None
     assert payload.get("extraction_f1") is None
+
+
+def test_batch_payloads_follow_the_single_document_rules():
+    """A batch of Hub rows keeps the same headline, null and label rules."""
+    merger = get_suite("merger_agreement").score_document(
+        [MERGER_GT, MERGER_GT], [MERGER_ORACLE, MERGER_ORACLE], doc_subclass="all_cash"
+    )
+    assert merger["metric_id"] == "maud.question.micro_accuracy"
+    assert merger["maud_question_accuracy"] == 1.0
+    assert merger["extraction_f1"] is None
+
+    nan_gt = hub_row(**CORRESPONDENCE_LABELS, content_topic="nan", sentiment_label="nan")
+    letters = get_suite("correspondence").score_document(
+        [CORRESPONDENCE_GT, nan_gt],
+        [{**CORRESPONDENCE_ORACLE, "communication_type": "email"}, dict(CORRESPONDENCE_LABELS)],
+        doc_subclass="email",
+    )
+    assert letters["content_topic_accuracy"] == 1.0
+    assert letters["sentiment_accuracy"] == 1.0
+    assert letters["extraction_precision"] == 1.0
