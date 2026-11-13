@@ -79,6 +79,14 @@ All five live extract classes are covered.
 | `insurance_claim` | `pipeline.extraction.overall`, `pipeline.extraction.field_micro_f1`, `pipeline.extraction.field_micro_f2`, `pipeline.extraction.field_micro_precision`, `pipeline.extraction.field_micro_recall` |
 | `correspondence` | `pipeline.extraction.overall`, `pipeline.extraction.field_micro_f1`, `pipeline.extraction.field_micro_f2`, `pipeline.extraction.field_micro_precision`, `pipeline.extraction.field_micro_recall`, `pipeline.enron.topic_accuracy`, `pipeline.enron.topic_f1_macro`, `pipeline.enron.sentiment_accuracy`, `pipeline.enron.sentiment_f1_macro` |
 
+**Merger headline.** A `merger_agreement` payload whose ground truth labels no
+extraction field (every row of mailroom-dataset v9.3 is MAUD-only) carries
+`maud.question.micro_accuracy` as its `metric_id`, since its
+`pipeline.extraction.overall` is null. A batch takes it only when every row is
+MAUD-only. A run that mixes MAUD-only rows with rows that label extraction
+fields therefore carries two ids, and `compare_serving` reports it as
+`metric_id_mixed` rather than pooling two different headlines.
+
 `compare_serving` sets `incomparable: true` (and leaves the quality delta
 `None`) when the local and API legs carry different `metric_id` values
 (`metric_id_mismatch`), when only one leg carries one (`metric_id_missing`),
