@@ -438,3 +438,22 @@ def test_only_check_rejects_a_retained_name_the_package_no_longer_exports(monkey
     monkeypatch.setattr(audit, "_classify_top_level", lambda name, index: ("missing", None))
     assert audit.main(["--only", "MAIL", "--check"]) == 2
     assert "x" in capsys.readouterr().err
+
+
+def test_only_naming_every_consumer_takes_the_full_rescan_path(monkeypatch, tmp_path):
+    """``--only`` with every consumer code rescans like no ``--only``, so stale module keys drop (#136 review)."""
+    pinned = _surface({}, mail_sites=[_site("MAIL", "old.py")])
+    fresh = _surface({}, mail_sites=[])
+    fresh["modules"] = {}
+    _redirect_fixture(monkeypatch, tmp_path, pinned, fresh)
+    calls: list[dict] = []
+
+    def build(**kwargs):
+        """Record how the script asked for the fresh scan."""
+        calls.append(kwargs)
+        return json.loads(json.dumps(fresh))
+
+    monkeypatch.setattr(audit, "build_fixture", build)
+    every = ",".join(spec.label for spec in audit.REPOS)
+    audit.main(["--only", every, "--check"])
+    assert calls and "specs" not in calls[0]
