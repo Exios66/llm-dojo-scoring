@@ -111,10 +111,15 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
   field-micro P/R/F1/F2 as null instead of 0.0, as the presence-only contract path already did.
 - A MAUD-only merger payload now names its headline: `metric_id` is
   `maud.question.micro_accuracy` (it was `pipeline.extraction.overall` with a null
-  `overall_score`).
+  `overall_score`). A batch takes it only when every row is MAUD-only; a run mixing
+  MAUD-only rows with rows that label extraction fields carries both ids and is reported
+  `metric_id_mixed` (see `docs/contracts/METRIC_IDS.md`).
 - A blank or literal `"nan"` `content_topic` / `sentiment_label` (350 insurance rows of the v9.3
   dataset) is no longer scored as a label: the topic and sentiment metrics are omitted for that
   row instead of emitting 0.0. A real label still scores a wrong or missing prediction as 0.0.
+  When that leaves a `suite.score(...)` call with no extras, it returns the bare
+  `ExtractionScoreResult` like any other extras-free call; `score_document` always returns
+  the full dictionary.
 - `tests/behavior/test_class_headline_contract.py`: every live class, on synthetic rows shaped
   like Hub `ground_truth` rows, scores its headline 1.0 for an oracle and 0.0 for an empty
   prediction, keeps unlabelled and `"nan"` labels out of the score, and reports a label-less

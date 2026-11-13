@@ -281,3 +281,18 @@ def test_batch_payloads_follow_the_single_document_rules():
     assert letters["content_topic_accuracy"] == 1.0
     assert letters["sentiment_accuracy"] == 1.0
     assert letters["extraction_precision"] == 1.0
+
+
+def test_mixed_merger_batch_keeps_the_extraction_headline():
+    """A batch with one row that labels extraction fields keeps the overall headline."""
+    labels = {"intent": "acquisition", "subject_matter": "Merger of Example Corp into Example Sub."}
+    labelled = hub_row(
+        maud_label_count="2",
+        maud_clause_labels=json.loads(json.loads(MERGER_GT)["maud_clause_labels"]),
+        **labels,
+    )
+    payload = get_suite("merger_agreement").score_document(
+        [MERGER_GT, labelled], [MERGER_ORACLE, {**MERGER_ORACLE, **labels}],
+        doc_subclass="all_cash",
+    )
+    assert payload["metric_id"] == "pipeline.extraction.overall"
