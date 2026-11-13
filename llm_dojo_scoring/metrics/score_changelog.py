@@ -108,6 +108,28 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         ),
         "rescore_required": True,
     },
+    {
+        # Third 0.29.0 change set (merger MAUD labels become extraction gold).
+        "version": "0.29.0",
+        "metric_ids": (
+            "pipeline.extraction.overall",
+            "pipeline.extraction.field_micro_f1",
+            "pipeline.extraction.field_micro_f2",
+            "pipeline.extraction.field_micro_precision",
+            "pipeline.extraction.field_micro_recall",
+            "maud.question.micro_accuracy",
+        ),
+        "change": (
+            "A Hub merger row's maud_clause_labels are extraction gold: maud_clauses (one "
+            "'<Question>: <Hub class>' line per answered question) and merger_consideration "
+            "(the Type of Consideration answer, else the subclass) are scored by the suites, "
+            "so such a row has an overall score and field-micro P/R/F1/F2 instead of null, and "
+            "its headline metric_id is pipeline.extraction.overall (it was "
+            "maud.question.micro_accuracy). maud_clauses is scored question by question, not "
+            "as fuzzy text. maud.question.micro_accuracy itself keeps its value."
+        ),
+        "rescore_required": True,
+    },
 )
 
 
