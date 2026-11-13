@@ -11,6 +11,11 @@ repositories made by `scripts/audit_consumer_surface.py`. `tests/test_public_api
 when a name in that fixture is missing here, so regenerate the fixture first and then update this
 page.
 
+The package root is lazy (PEP 562): `import llm_dojo_scoring` loads no scoring module, and each
+root name imports its defining module on first access (`_LAZY` and `_SUBMODULES` in
+`llm_dojo_scoring/__init__.py`). A name removed in the production slim-down raises an
+`AttributeError` that points at `CHANGELOG.md`.
+
 ## Package root (`from llm_dojo_scoring import …`)
 
 | Name | Defined in | Used by |
@@ -35,6 +40,7 @@ page.
 | `ExtractionScoreResult` | `scoring.field_scoring` | llm-mailroom |
 | `field_scoring` | `scoring.field_scoring` | llm-mailroom |
 | `get_ambiguous_band` | `scoring.field_scoring` | llm-mailroom |
+| `get_doc_scorer` | `scoring.doc_scorers` | llm-mailroom |
 | `get_field_types` | `scoring.field_scoring` | llm-mailroom |
 | `get_suite` | `scoring.suites` | llm-mailroom, local-mailroom-sandbox |
 | `headline_metrics` | `metrics.pruning` | local-mailroom-sandbox |
@@ -115,12 +121,14 @@ pre-0.26 flat path work (see [MIGRATION.md](MIGRATION.md#legacy-flat-import-path
 
 | Module | Names used | Used by |
 |:---|---:|:---|
+| `llm_dojo_scoring.analysis` | 0 | llm-mailroom |
 | `llm_dojo_scoring.analysis.bootstrap` | 5 | llm-mailroom |
+| `llm_dojo_scoring.analysis.calibration` | 8 | llm-mailroom |
 | `llm_dojo_scoring.analysis.cost` | 1 | llm-mailroom |
 | `llm_dojo_scoring.analysis.diagnostics` | 6 | llm-mailroom |
 | `llm_dojo_scoring.analysis.experiment` | 4 | local-mailroom-sandbox |
 | `llm_dojo_scoring.analysis.serving` | 9 | llm-mailroom, local-mailroom-sandbox |
-| `llm_dojo_scoring.config` | 1 | llm-mailroom |
+| `llm_dojo_scoring.config` | 2 | llm-mailroom, local-mailroom-sandbox |
 | `llm_dojo_scoring.metrics.emitter` | 1 | local-mailroom-sandbox |
 | `llm_dojo_scoring.metrics.pruning` | 1 | llm-mailroom |
 | `llm_dojo_scoring.metrics.registry` | 1 | llm-mailroom |
@@ -145,10 +153,12 @@ pre-0.26 flat path work (see [MIGRATION.md](MIGRATION.md#legacy-flat-import-path
 | `llm_dojo_scoring.schemas.sorter_guide` | 1 | llm-mailroom |
 | `llm_dojo_scoring.scoring.agent_rubrics` | 6 | llm-mailroom |
 | `llm_dojo_scoring.scoring.content_scoring` | 1 | llm-mailroom |
+| `llm_dojo_scoring.scoring.doc_scorers` | 1 | llm-mailroom |
 | `llm_dojo_scoring.scoring.extraction_metrics` | 1 | local-mailroom-sandbox |
 | `llm_dojo_scoring.scoring.field_scoring` | 17 | llm-mailroom, local-mailroom-sandbox |
 | `llm_dojo_scoring.scoring.field_support` | 2 | llm-mailroom |
 | `llm_dojo_scoring.scoring.legalbench_scoring` | 6 | llm-mailroom |
+| `llm_dojo_scoring.scoring.reviewer` | 2 | llm-mailroom |
 | `llm_dojo_scoring.scoring.suites` | 1 | llm-mailroom |
 
 The per-name detail (which file and line uses each attribute) is in the fixture.
@@ -170,7 +180,7 @@ contract too: `get_suite`, `score_task`, `suite_for_doc_type`.
 |:---|:---|
 | Mailroom-Corpus-EDA | yes, at `8d730fc1` |
 | eval-environment | no: path does not exist |
-| llm-mailroom | yes, at `a7d7bf0b` |
+| llm-mailroom | yes, at `5bcfe445` |
 | mailroom-ml | yes, at `bd8557a8` |
-| local-mailroom-sandbox | yes, at `93b76d42` |
+| local-mailroom-sandbox | yes, at `c81a79ae` |
 | The-Mailroom | yes, at `8b0bee5b` |

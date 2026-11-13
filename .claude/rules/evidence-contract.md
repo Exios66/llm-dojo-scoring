@@ -42,7 +42,7 @@ becomes a wrong number in `llm-mailroom`, the sandbox and every report built on 
 | Release chain consistent | `python scripts/release.py check` → exit 0, plus every `WARN` line quoted (warnings do not fail the check). |
 | Dependency change | `pyproject.toml` diff, `uv lock` re-run (never a hand-edited `uv.lock`), `uv lock --check` → exit 0, suite green with `uv sync --frozen`. |
 | Docs are true | Every command you added was run (paste the result) or is marked unverified; every path, name and version you mention exists. |
-| Visual change (README SVGs, `docs/assets/`, `visualize.py` / grid report output) | Before and after screenshots (Playwright, `deviceScaleFactor: 2`) of the rendered asset or report. |
+| Visual change (README SVGs, `docs/assets/`) | Before and after screenshots (Playwright, `deviceScaleFactor: 2`) of the rendered asset or report. |
 | Cross-repo impact | Whether `llm-mailroom` (pin) and the sandbox (vendor snapshot) need a bump, and which public names changed. "None" is a claim too: say why. |
 
 ## Where evidence goes
