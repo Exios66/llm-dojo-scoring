@@ -55,7 +55,7 @@ in any tool.
 ```bash
 uv sync --frozen --extra dev                     # install from the lock (what CI does)
 uv run --locked --extra dev pytest tests -q      # full suite (~3,500 tests, under a minute; one release test uses the network)
-uv run --extra dev pytest tests/test_cli.py -q   # one file
+uv run --extra dev pytest tests/test_field_scoring.py -q   # one file
 uvx ruff@0.17.3 check llm_dojo_scoring tests scripts examples   # lint gate (CI pins 0.17.3)
 uv run --locked python scripts/freeze_goldens.py --check   # golden score baseline (exit 1 + unified diff on drift)
 uv run python scripts/freeze_goldens.py --write --reason "…"   # ONLY for an intended score change
@@ -63,7 +63,7 @@ uv run python scripts/audit_consumer_surface.py --check   # consumer import surf
 python scripts/release.py status                 # read-only: version / changelog / pin chain
 python scripts/release.py check                  # read-only: errors exit 1; WARN lines exit 0
 python scripts/release.py cut X.Y.Z              # dry run; --apply writes (needs the user's go-ahead)
-# CLIs: dojo-analyze, dojo-export, dojo-rescore, dojo-sync, dojo-version (see README "CLI reference")
+# CLI: dojo-version (see README "CLI reference")
 ```
 
 - Plain `pip install -e ".[dev]"` then `pytest` also works. Extras: `embeddings`
@@ -83,12 +83,12 @@ Modules are grouped into subpackages; only entry points sit at the root. The ful
 
 | Subpackage | Owns |
 |:---|:---|
-| `scoring/` | Deterministic scorers: `field_scoring` (field types), `classification`, `tasks` (`score_task`), `suites` (one per pipeline agent — the API consumers call), `extraction_metrics`, `content_scoring`, `claims_consistency`, `legalbench_scoring`, `asr`, `reviewer`, `rescore` |
-| `schemas/` | What dataset rows mean: `corpus`, `gt_metadata`, `intents`, `equivalences`, CUAD / MAUD / corporate-record schemas, `schema_contract` |
+| `scoring/` | Deterministic scorers: `field_scoring` (field types), `classification`, `tasks` (`score_task`), `suites` (one per pipeline agent — the API consumers call), `extraction_metrics`, `content_scoring`, `claims_consistency`, `legalbench_scoring`, `asr`, `reviewer` |
+| `schemas/` | What dataset rows mean: `doc_classes` (the one hand-edited registry of classes, fields and field types; every other class/field table derives from it), `corpus`, `gt_metadata`, `intents`, `equivalences`, CUAD / MAUD / corporate-record schemas, `schema_contract` |
 | `pipeline/` | The llm-mailroom pipeline contract (`mailroom`), intake clerk, pilot labels, verdicts, `archive` (audit-row hash, byte-identical to llm-mailroom's), sandbox rubrics |
 | `metrics/` | `registry` (every score name → tier T0–T3), `profiles`, `bundles`, `emitter` (`ScoreRecord`, JSONL / Langfuse routing), `scorecard_honesty`, `score_changelog` |
-| `analysis/` | `bootstrap`, `calibration`, `diagnostics`, `error_analysis`, `failure_modes`, `report`, `visualize`, `grid`, `serving`, `cost` |
-| `integrations/` | `langfuse_sync`, `phoenix_sync`, `update_awareness` (`dojo-version`) |
+| `analysis/` | `bootstrap`, `calibration`, `diagnostics`, `failure_modes`, `experiment`, `serving`, `cost` |
+| `integrations/` | `update_awareness` (`dojo-version`) |
 | `prompts/` | Importable prompt catalog and the frozen eval-environment lineage |
 
 **Legacy flat paths.** Until v0.26.0 every module sat directly under `llm_dojo_scoring`.
@@ -189,7 +189,7 @@ Digital-Mailroom `governance/TASKS.md`.
 - `README.md` — public contract, install, quickstart, CLI reference.
 - `llm_dojo_scoring/README.md` — package layout and the module table.
 - `docs/guides/` — `SCORING.md`, `PUBLIC_API.md`, `RELEASES.md`, `MIGRATION.md`,
-  `ADDING_A_DOCUMENT_TYPE.md`, `COMPARABILITY.md`, `GRID_REPORTS.md`, `PROMPTS.md`,
+  `ADDING_A_DOCUMENT_TYPE.md`, `COMPARABILITY.md`, `PROMPTS.md`,
   `UPDATE_AWARENESS.md`.
 - `docs/contracts/` — metric ids, scorecard honesty, archive / reviewer / sandbox scoring.
 - `docs/schemas/` — extraction, CUAD, MAUD, corporate-record and GT metadata schemas.

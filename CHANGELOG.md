@@ -4,8 +4,63 @@ All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
+### Added
+
+- `schemas/doc_classes.py`: one hand-edited registry (`DOC_CLASSES`, `DocClass`, `field_types()`,
+  `field_names()`, `LIVE_DOC_TYPES`, `RETIRED_DOC_TYPES`) for the eight document classes, their
+  specialists and their extraction fields. Every other class list and per-class field table now
+  derives from it: `scoring.suites` (`DEFAULT_FIELD_TYPES`, `SPECIALIST_DOC_TYPES`), `schemas.corpus`
+  (`CORPUS_EXTRACTION_FIELDS`, `CORPUS_DOC_TYPES`, `CORPUS_ABSENT_DOC_TYPES`),
+  `schemas.extraction_schemas.MAILROOM_DOC_TYPES`, the `pipeline.mailroom` live/retired rosters,
+  `config` `*_DOC_CLASS_KEYS`, `metrics.doc_bundles.DOC_TYPES`, the `metrics.registry` specialist
+  rosters, `pipeline.archive.LIVE_ARCHIVE_DOC_TYPES`, the extraction-scope and adherence field sets,
+  the promotion gates, the v10 row configs and the CUAD / MAUD / corporate-record / schema-contract
+  helpers. A field added to the registry reaches all of them; a contract or merger field without a
+  prompt descriptor fails the import. **No behaviour change**: every table keeps its public name,
+  type, value and order (checked against a snapshot of all 41 tables captured before the
+  refactor; the snapshot was retired once it passed, and `tests/test_doc_classes.py` now ties
+  every derived table to the registry).
+- `schemas.extraction_schemas.scoreable_fields(doc_type, subtype=None)`: the fields whose dataset
+  status counts toward the score (`scored`, `partial`, `derived`, `documented_absent`), the rule
+  `schema_coverage` applies row by row. Not exported from the package root.
+- `scripts/build_extraction_status.py --from-hub --commit <40-hex> --revision <tag>` rebuilds
+  `schemas/data/extraction_status.json` from the pinned live dataset in one command: it lists
+  and downloads the `ground_truth` shards of that exact commit (sha256-checked against the
+  Hub's LFS digest) and refuses a branch name or short SHA. The file also gains a
+  `vocabulary` section: per class, the GT row count of every value of each closed-vocabulary
+  field (`intent`, `claim_type`, `coverage_determination`, `record_type`, `content_topic`,
+  `sentiment_label`), zero-count values included.
+- `scripts/render_gt_coverage.py --write|--check` renders `docs/schemas/GT_COVERAGE.md`: per
+  class, every extraction-schema field with its status and populated rows out of the class's
+  rows, and the vocabulary values the ground truth never uses (for example insurance
+  `loss_report`). CircleCI runs `--check`, so the page cannot go stale. A field becomes scored
+  by rebuilding the status file; no code edit is needed.
+- `extraction_status.json` records, per CUAD category, the contract rows whose labels carry it
+  and how many of those give a span (`label_categories`). `GT_COVERAGE.md` uses it: each
+  single-category CUAD field now shows the rows whose span answers its own category, for
+  example `renewal_terms` 176 of 600 rows, with the labelled-but-empty rows in the Note. Status classification and scores are unchanged.
+
 ### Changed
 
+- The package root is lazy (#80): `import llm_dojo_scoring` now loads 2 package modules instead
+  of 67 (0.02 s instead of 0.12 s here), and each root name or submodule imports on first access
+  through a PEP 562 `__getattr__`. Every previously exported name that still exists resolves to
+  the same object; `__all__` keeps all of them and adds the consumed module names
+  `agent_rubrics`, `legalbench_scoring` and `pipeline_scoring`. A removed name raises an
+  `AttributeError` naming this changelog. Code that relied on `import llm_dojo_scoring` importing
+  a submodule as a side effect must import that submodule itself.
+- `schemas/` no longer imports class or field tables from `scoring/` (it read
+  `scoring.suites.DEFAULT_FIELD_TYPES`); the only remaining upward import is
+  `scoring.field_scoring.CMS_ROW_FIELD_TYPES`, a scorer-side type override.
+- `docs/guides/ADDING_A_DOCUMENT_TYPE.md` describes the registry path (edit `doc_classes.py`, then
+  re-freeze the status from the dataset), and `docs/schemas/EXTRACTION_SCHEMAS.md` corrects its
+  package version, dataset tag, taxonomy blob and field-slot count (75, not 58).
+- The extraction status file is re-pinned from `v9.2.1` (`0a2f8292`) to the dataset tag `v9.3`
+  (`ccd040f6`, the revision llm-mailroom pins). Every per-field status is unchanged (the
+  `doc_types` data is identical). `ExtractionSchema.schema_id` and `schema_coverage()["schema_id"]`
+  embed the revision, so their values change from `<class>@v9.2.1` to `<class>@v9.3`. The golden
+  baseline `tests/fixtures/golden/scores.json` was rewritten for those five labels only; no score
+  value moved.
 - Production prompts re-vendored from llm-mailroom `19203eac` (#179's merge commit) with
   `scripts/sync_production_prompts.py`. `get_prompt("sorter")` is now `sorter_condensed_v5`
   (a bylaw amendment is `bylaws`, agreeing with the 0.28.1 sorter guide), replacing
@@ -13,8 +68,52 @@ Format based on Keep a Changelog; versioning is SemVer.
   moves. `tests/test_prompt_lineage.py` keeps the historical `sorter_v4` → `sorter_v14`
   check by pinning the v14 body's sha256, and pins production to `sorter_condensed_v5`.
 
+### Removed
+
+Production slim-down (#66). `scripts/consumer_closure.py` computes everything llm-mailroom,
+local-mailroom-sandbox, the recorded consumer surface and the open mailroom audit-row branches
+import; these modules were outside that closure (13 modules, about 4,800 lines):
+
+- The `dojo-analyze`, `dojo-export`, `dojo-rescore` and `dojo-sync` CLIs (`llm_dojo_scoring/cli.py`).
+  `dojo-version` stays. Re-score a stored extraction run with
+  `get_suite(<agent>).score_document(expected=..., predicted=...)`: bare `score(...)` returns no
+  field-micro precision, recall or F1 for a single document. Classification suites keep `score(...)`.
+- `analysis.export`, `analysis.io`, `analysis.report`, `analysis.interpret`, `analysis.visualize`,
+  `analysis.error_analysis`, `analysis.grid` (workbook export, report and plot generation, grid
+  reports) and `docs/guides/GRID_REPORTS.md`; `examples/analyze_sorter_results.py`.
+- `integrations.langfuse_sync` and `integrations.phoenix_sync` (trace pulls). `LangfuseSink` in
+  `metrics.emitter` is unchanged.
+- `scoring.rescore` (`rescore_file`, `rescore_record`, `rescore_records`, `diff_scorecards`,
+  `RescoreError`).
+- `pipeline.sandbox_agent_scoring` and `pipeline.sandbox_composite`. `tasks.chained_composite`
+  is now the only `chained_composite` (#78) and, like the sandbox copy did, raises
+  `RuntimeError` when either half is `None` instead of a `TypeError`.
+- `suites.LEGACY_FULL_EXTRACTION_FIELD_TYPES` (pre-v0.6.0 free-text maps, #79).
+- The `[jellyfish]` alias extra (jellyfish is core), and `arize-phoenix`, `python-dotenv` and the
+  OpenTelemetry packages from `[tracing]` (now `langfuse` only).
+- Root re-exports of the names above and the legacy flat aliases `llm_dojo_scoring.export`, `.io`,
+  `.report`, `.interpret`, `.visualize`, `.error_analysis`, `.grid`, `.langfuse_sync`,
+  `.phoenix_sync`, `.sandbox_agent_scoring`, `.sandbox_composite`.
+
+`analysis.failure_modes` is kept: it is the source of the registry metric
+`failure_mode_breakdown`. `pandas`, `openpyxl` and `matplotlib` stay core dependencies although
+no Dojo module imports them any more: llm-mailroom imports pandas without declaring it.
+
 ### Fixed
 
+- **Score change.** Money strings with a currency word next to a K/M/B suffix parsed to `None`
+  (#133): `parse_money("1.2M USD")` and `parse_money("USD 1.2M")` are now `1200000.0`
+  (`"5K dollars"` → `5000.0`, `"EUR 3B"` → `3e9`; `"$1.2M"` and `"3 dollars"` unchanged).
+  Currency words are stripped before the suffix check.
+- **Score change.** A perfect `insurance_claim / carrier` extraction scored 0.9412 (#132): the
+  `cms_source_table` marker is derived from the subclass, the production extractor never emits
+  it, and silence on it scored 0. It is now not scored when the prediction states no table; a
+  table stated on `cms_source_table` or, as the frozen prompt does, on `claim_type`, is still
+  scored, and `score_document` now keeps a stated `cms_source_table` through scoping. Field-micro
+  recall follows the same rule. The golden cases do not exercise either change
+  (`freeze_goldens.py --check` exit 0); `SCORE_CHANGELOG` gains a 0.29.0 entry for
+  `pipeline.extraction.overall` and the field-micro `f1`, `f2`, `precision` and `recall`
+  (the #133 money fix can turn a false positive plus a false negative into a true positive).
 - Date scoring no longer reads the clock (#134, split from llm-mailroom#195).
   `field_scoring._parse_date` handed `dateutil` the bare text, and `dateutil` fills every
   component the text omits from today's date: the CUAD-style "18th day of August" got the
@@ -94,6 +193,10 @@ Format based on Keep a Changelog; versioning is SemVer.
   **Consumers:** this changes scores `llm-mailroom` and the sandbox report, so `llm-mailroom`
   needs a Dojo pin bump (`bump_dojo_scoring.py`) and the sandbox a vendor refresh once this
   is released. No public name changed.
+- Tooling only, no score change (review on #136): `scripts/consumer_closure.py` expands a consumer
+  `import *` (root `__all__`, module or package) and exits 2 when a consumer file does not parse;
+  `audit_consumer_surface.py` rejects an unknown `--root` code; `GT_COVERAGE.md` counts
+  `cms_source_table` on CMS subtypes only and says CUAD/MAUD counts are source-container coverage.
 
 ## [0.28.1] - 2026-11-07
 ### Changed
