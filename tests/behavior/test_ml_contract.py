@@ -148,6 +148,26 @@ def test_out_of_range_confidence_is_left_out_of_calibration():
     assert card["metrics"]["doc_type_ece"] is None
 
 
+def test_numpy_rows_score_like_python_rows():
+    """Rows read from a DataFrame carry numpy flags and floats; they count the same."""
+    np = pytest.importorskip("numpy")
+    row = {"doc_type": "contract", "pred_doc_type": "contract",
+           "doc_type_confidence": np.float32(0.9), "fast_path": np.True_}
+    card = score_intake_model([row])
+    assert card["n_fast_path"] == 1
+    assert card["metrics"]["selective_risk"] == 0.0
+    assert card["metrics"]["doc_type_ece"] == expected_calibration_error([(float(np.float32(0.9)), True)])
+    assert score_intake_model([{**row, "fast_path": "yes"}])["n_fast_path"] == 0
+
+
+def test_class_without_a_subclass_catalog_is_not_subclass_scored():
+    """Two arbitrary labels both normalize to other there; that is no evidence of a right answer."""
+    card = score_intake_model([{"doc_type": "due_diligence", "subclass": "foo",
+                                "pred_doc_type": "due_diligence", "pred_subclass": "bar"}])
+    assert card["n_subclass_scored"] == 0
+    assert card["metrics"]["subclass_accuracy"] is None
+
+
 def test_metric_ids_are_registered_and_changelogged():
     """Each ml.intake id is in the registry, the honesty map and the score changelog."""
     registry = get_registry()
