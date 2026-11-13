@@ -127,7 +127,7 @@
     },
     "metrics.score_changelog": {
       "decision": "keep",
-      "lines": 128,
+      "lines": 129,
       "reason": "imported by kept analysis.serving"
     },
     "metrics.scorecard_honesty": {
@@ -664,7 +664,7 @@
   "schema_version": 1,
   "sources": {
     "MAIL": {
-      "commit": "5bcfe44584e468d8fc9d5d30e28abd5cc52cadfc",
+      "commit": "4aa34186ee962c38f7e0ad42c000f674b3f302dc",
       "files_scanned": 374
     },
     "MAIL@origin/claude/howdy-n8vcc1": {
@@ -684,7 +684,7 @@
       "files_scanned": 414
     },
     "SBX": {
-      "commit": "c81a79aecaebfb2c05a124bbf93f7d4d63774e02",
+      "commit": "900c38a09ebf5901b1271f6690078288e0ce8052",
       "files_scanned": 505
     },
     "consumer_surface": {
