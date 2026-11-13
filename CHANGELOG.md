@@ -6,6 +6,17 @@ Format based on Keep a Changelog; versioning is SemVer.
 ## [Unreleased]
 ### Added
 
+- `prompts/alignment.py` and `docs/prompts/PROMPT_CHANGELOG.md`: a guard that each production
+  specialist prompt asks for the fields the scoring schema scores. `prompt_fields(agent)` reads
+  the `- name (type):` field block of a template; `alignment_report()` lists, per live specialist,
+  the schema fields the prompt never asks for and the prompt keys the schema does not score
+  (`confidence` and `reasoning` allowed). Today's 21 gaps (contracts: 8 missing, 2 extra merger
+  keys; merger_agreement: 11 missing) are recorded with reasons in
+  `prompts/data/alignment_gaps.json`; no prompt or schema changed, and the guard test fails on a
+  new gap and on a recorded gap that is gone. `scripts/render_prompt_changelog.py --write|--check`
+  renders each production prompt's version, source, commit and template sha256, the
+  eval-environment version chains and the alignment gaps; `scripts/ci.py --tier full` runs
+  `--check`. Not exported from the package root.
 - `ml/`: the contract `mailroom-ml` vendors instead of importing the Dojo. `ml_contract()` builds
   one JSON document from the owning modules: live doc types, canonical subclasses, CUAD subtypes
   and aliases, MAUD consideration types, every corpus subclass surface with its canonical key

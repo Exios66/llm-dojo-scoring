@@ -205,6 +205,11 @@
       "lines": 187,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
+    "prompts.alignment": {
+      "decision": "hold",
+      "lines": 83,
+      "reason": "guard that each specialist prompt asks for the fields the schema scores; no consumer imports it, CI runs it (stacked on Dojo #143)"
+    },
     "prompts.lineage": {
       "decision": "keep",
       "lines": 255,
