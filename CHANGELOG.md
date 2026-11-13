@@ -101,6 +101,25 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
 
 ### Fixed
 
+- **Score change (merger MAUD gold, Hub rows).** A Hub merger row's `maud_clause_labels` now give
+  extraction gold, the way `cuad_clause_labels` feed a contract:
+  `schemas.maud_schema.hub_merger_expected_fields(gt_fields, subclass=None)` converts them to
+  `maud_clauses` (one `'<Question>: <Hub class>'` line per answered question, catalog order) and
+  `merger_consideration` (the `Type of Consideration` answer's token, else the subclass; `other` is
+  never gold). `get_suite("merger_agreement").score_document` / `score` merge them into the scoped
+  gold of a row that answers at least one question (never over a value the row carries, never from
+  a pending / absent label map or a bare subclass), for single documents and batches. Such a row now
+  has an `overall_score` and `pipeline.extraction.overall` as its headline, real field-micro
+  P/R/F1/F2, and keeps the MAUD extras (`maud_question_accuracy`, ...) unchanged. The
+  `maud.question.micro_accuracy` headline remains for a payload with labels but nothing
+  derivable. `maud_clauses` is scored question by question in the suites (the share of labelled
+  questions answered with the same class, bullets / numbering / case / quotes tolerated) instead of
+  as fuzzy text, which gave a wrong answer to a labelled question (`No-Shop: No` against `Yes`)
+  0.67 to 0.83 similarity against a 0.6 match threshold. `extraction_schemas` reports both fields as
+  derived from `maud_clause_labels`. The per-document-type departures overlay records the moved
+  merger cases. `schemas.maud_schema.hub_merger_expected_fields` is not exported from the package
+  root. llm-mailroom and the sandbox vendor snapshot need a coordinated bump to see the new
+  scores; direct `score_extraction` callers keep the fuzzy matcher.
 - **Score change (field-micro, Hub rows).** A correct value on a schema field the ground truth
   does not label is no longer a false positive: unlabelled fields are excluded from field-micro
   precision on both sides, as `overall_score` already excluded them (correspondence with a
