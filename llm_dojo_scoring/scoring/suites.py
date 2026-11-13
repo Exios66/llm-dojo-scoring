@@ -369,6 +369,108 @@ def _labelled_label_pairs(expected: Any, predicted: Any) -> tuple[Any, Any]:
     return expected, "" if predicted is None else predicted
 
 
+def _merger_gold_from_labels(
+    row: dict[str, Any], scoped: dict[str, Any], subclass: Any
+) -> dict[str, Any]:
+    """Extraction gold a Hub merger row's MAUD labels give, for the keys it lacks.
+
+    Converts ``maud_clause_labels`` (and the subclass) with
+    :func:`~llm_dojo_scoring.schemas.maud_schema.hub_merger_expected_fields`, the
+    way ``cuad_clause_labels`` feed a contract. Only a row that actually answers
+    MAUD questions gets gold: a pending / absent / empty label map, or a bare
+    subclass, stays unlabelled (unscorable) rather than scoring a lone
+    ``merger_consideration``. A key the row already carries (non-empty) or whose
+    ``gt_presence`` status is absent is never overwritten or invented.
+    """
+    from ..schemas import gt_metadata as gtm
+    from ..schemas.maud_schema import hub_merger_expected_fields
+
+    derived = hub_merger_expected_fields(
+        row, subclass if isinstance(subclass, str) else None
+    )
+    if not derived.get("maud_clauses"):
+        return {}
+    presence = gtm.gt_presence_map(row)
+    return {
+        key: value
+        for key, value in derived.items()
+        if gtm.is_empty_value(scoped.get(key))
+        and presence.get(key) not in gtm.ABSENT_PRESENCE_STATUSES
+    }
+
+
+def _canonical_maud_line(line: Any) -> Any:
+    """A predicted clause line in canonical ``'<Question>: <Hub class>'`` form.
+
+    Bullets, numbering, quotes / backticks, case, smart quotes and stray spacing
+    are removed when the line names a catalog question with a catalog answer
+    (:func:`~llm_dojo_scoring.schemas.maud_schema.parse_maud_clause`); any other
+    line is returned unchanged for the MAUD scorer to read as written.
+    """
+    from ..schemas.maud_schema import parse_maud_clause
+
+    parsed = parse_maud_clause(line) if isinstance(line, str) else None
+    return f"{parsed[0]}: {parsed[1]}" if parsed else line
+
+
+def _score_maud_clauses_by_question(
+    result: ExtractionScoreResult, expected: Any, predicted: Any
+) -> None:
+    """Rescore a merger ``maud_clauses`` field question by question, in place.
+
+    The generic ``entity_list:free_text`` matcher compares clause lines as
+    fuzzy text, so a line with the wrong answer still matches its gold line
+    (0.67 to 0.83 similarity against a 0.6 threshold). A MAUD line is a
+    ``question -> class`` answer, so the field is scored as the MAUD scorer scores
+    it (lines or a ``{question: class}`` object): the share of labelled questions answered with the same class
+    (``maud_question_accuracy``), tolerant of bullets, case, quotes and spacing.
+    Precision counts predicted questions that are wrong or unlabelled. The
+    overall score is recomputed. Gold whose lines name no question is left to the
+    generic matcher.
+    """
+    from .content_scoring import parse_maud_labels, score_maud_extraction
+    from .field_scoring import EntityListScore
+
+    if "maud_clauses" not in result.field_scores or not isinstance(expected, dict):
+        return
+    exp_lines = expected.get("maud_clauses")
+    if not isinstance(exp_lines, (list, tuple)):
+        return
+    pred_lines = predicted.get("maud_clauses") if isinstance(predicted, dict) else None
+    if isinstance(pred_lines, str):
+        pred_lines = [pred_lines]
+    if isinstance(pred_lines, (list, tuple)):
+        pred_lines = list(pred_lines)
+    elif not isinstance(pred_lines, Mapping):  # the ``{question: class}`` object grammar parses too
+        pred_lines = []
+    if isinstance(pred_lines, list):
+        pred_lines = [_canonical_maud_line(line) for line in pred_lines]
+    scored = score_maud_extraction(list(exp_lines), pred_lines)
+    n_expected = scored.get("n_questions") or 0
+    if not n_expected:
+        return
+    exact = round((scored.get("maud_question_accuracy") or 0.0) * n_expected)
+    n_predicted = len(parse_maud_labels(pred_lines))
+    precision = exact / n_predicted if n_predicted else 0.0
+    recall = exact / n_expected
+    f1 = 2 * precision * recall / (precision + recall) if exact else 0.0
+    result.entity_list_scores["maud_clauses"] = EntityListScore(
+        field_name="maud_clauses",
+        precision=precision,
+        recall=recall,
+        f1=f1,
+        matched=exact,
+        unmatched_predicted=n_predicted - exact,
+        unmatched_expected=n_expected - exact,
+        partial_gt=True,
+    )
+    result.field_scores["maud_clauses"] = round(recall, 4)
+    if "maud_clauses" in result.ambiguous_fields:
+        result.ambiguous_fields.remove("maud_clauses")
+    values = list(result.field_scores.values())
+    result.overall_score = round(sum(values) / len(values), 4)
+
+
 def _subclass_kwarg(kwargs: Mapping[str, Any]) -> Any:
     """``doc_subclass`` (else ``expected_subclass``) as a scalar or a per-row list.
 
@@ -799,7 +901,7 @@ class ScoringSuite:
             is_hub_metadata = bool(_gtm.gt_presence_map(value)) or (
                 _gtm.GT_PRESENCE_KEY in value
             )
-            return _gtm.scoring_gt_fields(
+            scoped = _gtm.scoring_gt_fields(
                 value,
                 field_types=ftypes,
                 extra_keys=scorable_gt_keys,
@@ -807,6 +909,9 @@ class ScoringSuite:
                 doc_type=doc_class,
                 subclass=_subclass_for(index),
             )
+            if doc_class == "merger_agreement":
+                scoped.update(_merger_gold_from_labels(value, scoped, _subclass_for(index)))
+            return scoped
 
         scoped_to_empty = False
         scoped_empty_rows: list[bool] = []
@@ -951,9 +1056,12 @@ class ScoringSuite:
 
         def _run(exp: Any, pred: Any, text: str | None, audit_pred: Any = None):
             """Score one extraction using this suite's document class and field types."""
-            return score_extraction(
+            result = score_extraction(
                 doc_class, ftypes, pred, exp, doc_text=text, audit_predicted=audit_pred,
             )
+            if doc_class == "merger_agreement":
+                _score_maud_clauses_by_question(result, exp, pred)
+            return result
 
         def _prf_one(exp: Any, pred: Any, result: ExtractionScoreResult) -> dict[str, Any]:
             """Compute field-presence metrics, treating non-mapping predictions as misses."""
