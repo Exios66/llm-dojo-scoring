@@ -209,10 +209,18 @@ Per-question allowed answers, deal-point groups, the guided-decoding JSON Schema
 subclass table: [`MAUD_SCHEMA.md`](MAUD_SCHEMA.md) (`llm_dojo_scoring.schemas.maud_schema`).
 Ambiguous collapsed GT is `unscorable` on those keys, not a guessed match.
 
-**GT extras:** `expected_subclass`, `maud_clause_labels`. MAUD-only rows
-still score the content metric: their headline `metric_id` is
-`maud.question.micro_accuracy`, and field-micro P/R/F1/F2 are null (no
-extraction field is labelled).
+**GT extras:** `expected_subclass`, `maud_clause_labels`. The MAUD labels are
+categorical (no text spans), so they convert to extraction gold the way CUAD
+labels feed a contract (`maud_schema.hub_merger_expected_fields`): `maud_clauses`
+is one `'<Question>: <Hub class>'` line per **answered** question (catalog order,
+verbatim Hub class; an answer or question the catalog does not know is kept as
+written; blank and `nan` answers are not labels) and `merger_consideration` is the
+`Type of Consideration` answer's token, else the subtype's (`other` is never gold).
+`maud_clauses` is scored question by question (a wrong answer is a miss, bullets /
+case / quotes are tolerated), so it equals `maud_question_accuracy` on the same
+row. A pending, not-applicable or empty label map gives no gold and the row is
+unscorable. A payload with labels but nothing derivable keeps
+`maud.question.micro_accuracy` as its headline with null field-micro.
 
 **Allowed `metric_id`:** `pipeline.extraction.overall`,
 `maud.question.micro_accuracy`, `maud.clause_presence.rate`,
@@ -511,7 +519,8 @@ What v9.3 labels, per class:
   `cuad_clauses` for 22 families. Most `consulting`, `ip` and `supply` rows are
   still `pending_annotation`. `contract_value` has no source.
 - **merger_agreement**: `maud_clauses` (MAUD labels) and
-  `merger_consideration` (the subtype). The other five fields are pending.
+  `merger_consideration` (the `Type of Consideration` label, else the subtype). The other
+  five fields are pending.
 - **corporate_record**: `intent`, `subject_matter`, `keywords`, `record_type`
   (the subtype) and, since the v9.2.1 relabel, `entity_name` (the EDGAR
   registrant: 92% of rows; `scored` on seven subtypes, `partial` on articles,
