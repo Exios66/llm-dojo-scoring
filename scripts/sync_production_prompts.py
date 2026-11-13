@@ -189,7 +189,8 @@ def main(argv: list[str] | None = None) -> int:
         if drifted:
             print("drifted production prompts:\n  " + "\n  ".join(drifted))
             return 1
-        print(f"production prompts in sync with mailroom {commit[:7]}")
+        skipped = f" (not compared: {', '.join(authored)})" if authored else ""
+        print(f"production prompts in sync with mailroom {commit[:7]}{skipped}")
         return 0
 
     for path, text in writes.items():

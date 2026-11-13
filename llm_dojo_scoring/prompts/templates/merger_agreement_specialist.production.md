@@ -16,7 +16,7 @@ Fill only MergerAgreementExtraction keys. This is NOT the CUAD extractor: do not
 What “empty” means on a merger agreement (not a generic extract template):
 - Unstated scalar (document_name, acquirer, target, effective_date, effective_time, governing_law, per_share_cash_amount, exchange_ratio, target_termination_fee, parent_termination_fee, outside_date, merger_consideration, intent, subject_matter) → null.
 - Unstated list (parties, merger_sub, signatories, financial_advisors, legal_counsel, keywords) → [].
-- per_share_cash_amount is null when the consideration has no cash component, and exchange_ratio is null when it has no stock component. Never compute either from an aggregate price or a share count.
+- per_share_cash_amount is null when the consideration has no cash component, and exchange_ratio is null when it has no stock component. Never compute either from an aggregate price or a share count. per_share_cash_amount, exchange_ratio and both termination fees are JSON strings ("$45.00", "0.5432"), never bare numbers.
 - Unanswered MAUD questions are omitted from maud_clauses — never guessed, never filled with "not specified". None answered → [].
 - effective_date is null when the agreement only defines an Effective Time and states no calendar date. That is not a miss; put the clock/defined-term language in effective_time.
 - Numeric zero is a stated value if a dollar figure is written as $0; merger_consideration is still a token (all_cash / …), not a dollar amount.

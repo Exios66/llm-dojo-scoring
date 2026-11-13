@@ -144,3 +144,4 @@ def test_dojo_authored_row_is_neither_overwritten_nor_digest_checked(sync, tmp_p
     assert "version: v2" in row and "source_key: production_v2" in row and "source_commit: old" in row
     assert "authored in this repo, not synced: corporate_records_specialist" in capsys.readouterr().out
     assert mod.main(["--mailroom", str(_mailroom(tmp_path / "again", digest="0" * 64)), "--check"]) == 0
+    assert "(not compared: corporate_records_specialist)" in capsys.readouterr().out
