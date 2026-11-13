@@ -121,6 +121,16 @@ _METRIC_ID_BY_NAME: dict[str, str] = {
     "reviewer_confidence_ece": "review.lane.confidence_ece",
     "reviewer_confidence_brier": "review.lane.confidence_brier",
     "reviewer_cost_per_accepted_usd": "review.lane.cost_per_accepted_usd",
+    # Intake classifier (ml/metrics.py).
+    "ml_intake_doc_type_accuracy": "ml.intake.doc_type_accuracy",
+    "ml_intake_doc_type_macro_f1": "ml.intake.doc_type_macro_f1",
+    "ml_intake_doc_type_ece": "ml.intake.doc_type_ece",
+    "ml_intake_subclass_accuracy": "ml.intake.subclass_accuracy",
+    "ml_intake_subclass_macro_f1": "ml.intake.subclass_macro_f1",
+    "ml_intake_subclass_ece": "ml.intake.subclass_ece",
+    "ml_intake_fast_path_coverage": "ml.intake.fast_path_coverage",
+    "ml_intake_selective_risk": "ml.intake.selective_risk",
+    "ml_intake_selective_risk_upper": "ml.intake.selective_risk_upper",
     # Decision lanes (scoring/decision_lanes.py): judge, arbiter, boss, review tray.
     "judge_verdict_accuracy": "decision.judge.verdict_accuracy",
     "judge_verdict_macro_f1": "decision.judge.macro_f1",

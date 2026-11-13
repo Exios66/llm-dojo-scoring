@@ -50,6 +50,15 @@ mismatch; `compare_serving` sets `incomparable: true` on the quality block.
 | `reviewer_confidence_ece` | `review.lane.confidence_ece` |
 | `reviewer_confidence_brier` | `review.lane.confidence_brier` |
 | `reviewer_cost_per_accepted_usd` | `review.lane.cost_per_accepted_usd` |
+| `ml_intake_doc_type_accuracy` | `ml.intake.doc_type_accuracy` |
+| `ml_intake_doc_type_macro_f1` | `ml.intake.doc_type_macro_f1` |
+| `ml_intake_doc_type_ece` | `ml.intake.doc_type_ece` |
+| `ml_intake_subclass_accuracy` | `ml.intake.subclass_accuracy` |
+| `ml_intake_subclass_macro_f1` | `ml.intake.subclass_macro_f1` |
+| `ml_intake_subclass_ece` | `ml.intake.subclass_ece` |
+| `ml_intake_fast_path_coverage` | `ml.intake.fast_path_coverage` |
+| `ml_intake_selective_risk` | `ml.intake.selective_risk` |
+| `ml_intake_selective_risk_upper` | `ml.intake.selective_risk_upper` |
 | `judge_verdict_accuracy` | `decision.judge.verdict_accuracy` |
 | `judge_verdict_macro_f1` | `decision.judge.macro_f1` |
 | `judge_escalation_recall` | `decision.judge.escalation_recall` |
@@ -97,6 +106,33 @@ The reviewer namespace is not a doc-class extraction identity. Do not compare a
 `review.lane.*` number with `pipeline.extraction.*` or `cuad.*`; the reviewer
 scorecard is a separate lane with its own target population, risk bar, and
 question set.
+
+### Intake classifier
+
+`llm_dojo_scoring.ml.score_intake_model` scores the `mailroom-ml` intake classifier.
+A record carries the gold `doc_type` and `subclass`, the predictions `pred_doc_type`
+and `pred_subclass`, the head confidences `doc_type_confidence` and
+`subclass_confidence`, and `fast_path` (the model's answer was used without the LLM
+sorter). A record with no gold class is counted under `n_unscored_by_reason`. Subclasses
+are compared after `normalize_corpus_subclass` for the gold class; a subclass is right
+only when the class is right. The scorecard's `metrics` dict is keyed by the short
+names (the registry name without `ml_intake_`).
+
+| Registry name | `metric_id` |
+|---|---|
+| `ml_intake_doc_type_accuracy` | `ml.intake.doc_type_accuracy` |
+| `ml_intake_doc_type_macro_f1` | `ml.intake.doc_type_macro_f1` |
+| `ml_intake_doc_type_ece` | `ml.intake.doc_type_ece` |
+| `ml_intake_subclass_accuracy` | `ml.intake.subclass_accuracy` |
+| `ml_intake_subclass_macro_f1` | `ml.intake.subclass_macro_f1` |
+| `ml_intake_subclass_ece` | `ml.intake.subclass_ece` |
+| `ml_intake_fast_path_coverage` | `ml.intake.fast_path_coverage` |
+| `ml_intake_selective_risk` | `ml.intake.selective_risk` |
+| `ml_intake_selective_risk_upper` | `ml.intake.selective_risk_upper` |
+
+`selective_risk_upper` is the Wilson upper bound of `selective_risk`. Hold a release
+gate on it, not on the point rate. The `ml.*` namespace is not a doc-class extraction
+identity.
 
 ### Decision lanes
 
