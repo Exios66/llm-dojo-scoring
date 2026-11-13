@@ -135,6 +135,21 @@
       "lines": 1151,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
+    "ml": {
+      "decision": "hold",
+      "lines": 21,
+      "reason": "ML contract package mailroom-ml vendors as JSON, never imports (stacked on Dojo #142)"
+    },
+    "ml.contract": {
+      "decision": "hold",
+      "lines": 95,
+      "reason": "label and intake contract behind ml/data/ml_contract.json for mailroom-ml (stacked on Dojo #142)"
+    },
+    "ml.metrics": {
+      "decision": "hold",
+      "lines": 142,
+      "reason": "intake-classifier scorecard for mailroom-ml evaluation reports (stacked on Dojo #142)"
+    },
     "pipeline": {
       "decision": "keep",
       "lines": 1,
@@ -317,7 +332,7 @@
     },
     "scoring.decision_lanes": {
       "decision": "hold",
-      "lines": 622,
+      "lines": 632,
       "reason": "judge/arbiter/boss/review-tray scorecards; llm-mailroom wires its decision export next (stacked on Dojo #140)"
     },
     "scoring.doc_scorers": {

@@ -6,6 +6,17 @@ Format based on Keep a Changelog; versioning is SemVer.
 ## [Unreleased]
 ### Added
 
+- `ml/`: the contract `mailroom-ml` vendors instead of importing the Dojo. `ml_contract()` builds
+  one JSON document from the owning modules: live doc types, canonical subclasses, CUAD subtypes
+  and aliases, MAUD consideration types, every corpus subclass surface with its canonical key
+  (`normalize_corpus_subclass`), and the intake clerk's prep steps with golden
+  `deterministic_normalize` cases. Each part carries a sha256 digest. The committed copy,
+  `llm_dojo_scoring/ml/data/ml_contract.json`, is checked by `scripts/export_ml_contract.py
+  --check`, which `scripts/ci.py --tier full` now runs. `score_intake_model(records)` scores the
+  intake classifier: per-head accuracy, macro F1 and ECE, fast-path coverage, selective risk and
+  its Wilson upper bound. 9 new `ml.intake.*` metric ids, registered and listed in
+  `docs/contracts/METRIC_IDS.md`, with a `score_changelog` entry (new metrics only). Imported from
+  `llm_dojo_scoring.ml`; not exported from the package root.
 - `scoring/decision_lanes.py`: scorecards for the pipeline's routing decisions, from mailroom
   `RunRecord`-shaped mappings: `score_judge_lane` (verdict accuracy, macro F1, escalation recall,
   false-escalation rate, `judge_error` rate), `score_arbiter_lane` (decision accuracy, retry
