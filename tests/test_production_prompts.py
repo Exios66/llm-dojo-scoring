@@ -163,7 +163,7 @@ def test_production_specialist_rows_say_frozen_v1():
 #: sha256 (frozen-catalog convention) and character count of each production v2 template.
 V2_TEMPLATES = {
     "contracts_specialist": ("21dc7e398a6c5ce06cc8715f02a3709b57feb1b3add8a0d13464ee4849e69684", 11202),
-    "merger_agreement_specialist": ("cb2ea4c75744a6477a19dc12dbaff45dfb26a9988fbdd5953de4585fb9352546", 8092),
+    "merger_agreement_specialist": ("5c5a95afeb01830614e5ce1438190d8621a03bee5875ee0d639fae0b4893530f", 8215),
 }
 
 
