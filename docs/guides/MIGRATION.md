@@ -8,8 +8,9 @@
 > **Removed in the production slim-down (Unreleased):** the `dojo-analyze`, `dojo-export`,
 > `dojo-rescore` and `dojo-sync` CLIs, `LEGACY_FULL_EXTRACTION_FIELD_TYPES`, and the
 > analysis/export/grid/sync modules behind them. Sections below that use them are
-> historical. Only `dojo-rescore` has an alternative (re-score a stored run with
-> `get_suite(...).score(...)`; see `CHANGELOG.md`). The analysis, export, grid and sync modules and
+> historical. Only `dojo-rescore` has an alternative (re-score a stored extraction run with
+> `get_suite(<agent>).score_document(expected=..., predicted=...)`, which returns the field-micro
+> metrics; classification suites use `score(...)`; see `CHANGELOG.md`). The analysis, export, grid and sync modules and
 > `LEGACY_FULL_EXTRACTION_FIELD_TYPES` were removed without a replacement.
 
 The scoring code that lives in the pipeline projects is now consolidated in

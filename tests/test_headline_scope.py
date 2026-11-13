@@ -132,3 +132,10 @@ def test_headline_scope_rejects_str_and_skips_bad_counts():
     assert headline_scope("contract", {}, n_docs=1)["headline_scope"] == "unknown"
     assert headline_scope("contract", ["parties"], n_docs=1, n_docs_with_fields=1)["headline_scope"] == "partial"
     assert headline_scope("contract", set(DEFAULT_FIELD_TYPES["contract"]))["headline_scope"] == "full"
+
+
+def test_aggregate_field_score_lookup_skips_empty_holders():
+    """An empty top-level ``field_scores`` does not hide the nested ``scores.field_scores``."""
+    row = {"overall_score": 0.5, "field_scores": {}, "scores": {"field_scores": {"maud_clauses": 0.5}}}
+    out = aggregate_quality_honest([row], doc_class="merger_agreement")
+    assert out["scored_fields"] == {"maud_clauses": 1}
