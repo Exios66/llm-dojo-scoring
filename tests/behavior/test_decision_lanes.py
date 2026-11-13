@@ -162,7 +162,9 @@ def test_judge_lane_on_the_mixed_batch(batch):
     m = card["metrics"]
     assert (card["n"], card["n_scored"]) == (26, 16)
     assert card["n_unscored_by_reason"] == {"judge_error": 1, "judge_not_run": 8, "no_gold": 1}
-    assert card["provenance"]["gold_source"] == {"corpus": 9, "human": 7}
+    # retry-flat and retry-down were judged on attempt 1 and resolved on attempt 2,
+    # so their judge gold is the attempt-1 dataset score, not the human outcome.
+    assert card["provenance"]["gold_source"] == {"corpus": 11, "human": 5}
     assert m["verdict_accuracy"] == 0.75  # 12 of 16
     assert m["escalation_recall"] == 0.8182  # 9 of the 11 not-complete documents
     assert m["false_escalation_rate"] == 0.2  # over-flag, 1 of 5 complete
@@ -451,3 +453,41 @@ def test_decision_lanes_stay_off_the_package_root():
     for name in ("score_judge_lane", "score_arbiter_lane", "score_boss_lane", "score_review_tray"):
         assert name not in dir(llm_dojo_scoring)
         assert not hasattr(llm_dojo_scoring, name)
+
+
+def test_human_gold_grades_the_judge_only_on_the_extraction_it_saw():
+    """A person approving the retried extraction does not make the first verdict wrong."""
+    record = {
+        "doc_id": "retried",
+        "gold": {"label_source": "human", "human_resolution": "approve_as_is"},
+        "extraction": [
+            {"attempt": 1, "doc_type": DOC_TYPE, "extraction_score": 0.3},
+            {"attempt": 2, "doc_type": DOC_TYPE, "extraction_score": 0.95},
+        ],
+        "judge": {"ran": True, "verdict": "incomplete", "on_attempt": 1, "doc_type": DOC_TYPE},
+    }
+    card = score_judge_lane([record])
+    assert card["provenance"]["gold_source"] == {"corpus": 1}
+    assert card["metrics"]["verdict_accuracy"] == 1.0
+    assert card["metrics"]["false_escalation_rate"] is None
+    final = copy.deepcopy(record)
+    final["judge"]["on_attempt"] = 2
+    final["judge"]["verdict"] = "complete"
+    assert score_judge_lane([final])["provenance"]["gold_source"] == {"human": 1}
+
+
+def test_a_judge_that_ran_without_a_verdict_is_an_error_and_flat_keys_are_read():
+    """A blank verdict from a judge that ran counts as an error, not as not run."""
+    blank = score_judge_lane([{"judge": {"ran": True, "verdict": None}}])
+    assert blank["n_unscored_by_reason"] == {"judge_error": 1}
+    assert blank["metrics"]["error_rate"] == 1.0
+    flat = score_judge_lane([{"judge_verdict": "complete", "extraction": [{"attempt": 1, "extraction_score": 0.9}]}])
+    assert flat["metrics"]["verdict_accuracy"] == 1.0
+
+
+def test_removed_fields_are_a_change_not_a_wasted_review():
+    """Dropping a parked field without editing others is not a wasted review."""
+    record = {"gold": {"human_resolution": "approve_as_is", "removed_fields": ["adjuster"]}}
+    card = score_review_tray([record])
+    assert card["metrics"]["wasted_review_rate"] == 0.0
+    assert card["field_correction_rate"] == {"adjuster": 1.0}

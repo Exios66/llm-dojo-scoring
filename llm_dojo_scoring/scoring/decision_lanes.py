@@ -193,6 +193,10 @@ def _read(raw: Mapping[str, Any], index: int) -> _Row:
     if resolution not in RESOLUTIONS or source == "corpus":
         resolution = None  # an explicit corpus label is not the person's outcome
     corrections = _pick(raw, "gold", "field_corrections", "human_fields")
+    removed = _pick(raw, "gold", "removed_fields")
+    if isinstance(removed, (list, tuple)) and removed:
+        corrections = dict(corrections) if isinstance(corrections, Mapping) else {}
+        corrections.update({str(name): None for name in removed if str(name) not in corrections})
     attempts = []
     for position, item in enumerate(raw.get("extraction") or ()):
         if not isinstance(item, Mapping):
@@ -202,7 +206,9 @@ def _read(raw: Mapping[str, Any], index: int) -> _Row:
         attempts.append((number, _label(item.get("doc_type")), _number(item.get("extraction_score"))))
     judge = _section(raw, "judge")
     ran = judge.get("ran")
-    verdict = _label(judge.get("verdict")) if ran is not False else None
+    verdict = _label(_pick(raw, "judge", "verdict", "judge_verdict")) if ran is not False else None
+    if verdict is None and ran is True:
+        verdict = "judge_error"  # the judge ran and returned nothing
     rulings = []
     for item in raw.get("arbiters") or ():
         if not isinstance(item, Mapping) or item.get("ran") is False:
@@ -303,9 +309,11 @@ def _expected_verdict(row: _Row, low: float, high: float) -> tuple[str | None, s
     """The verdict the judge should have given and where that gold comes from.
 
     Human: ``approve_as_is`` is ``complete``, ``correct`` is ``partial``,
-    ``reject`` and ``reclassify`` are ``incomplete``. Corpus: the score of the
-    judged extraction at or above ``high`` is ``complete``, at or below ``low``
-    ``incomplete``, between ``partial``.
+    ``reject`` and ``reclassify`` are ``incomplete``. The person resolved the
+    final extraction, so human gold applies only when the judge saw that
+    attempt; a verdict on an earlier, retried attempt is graded by the corpus.
+    Corpus: the score of the judged extraction at or above ``high`` is
+    ``complete``, at or below ``low`` ``incomplete``, between ``partial``.
     """
     human = {
         "approve_as_is": "complete",
@@ -313,7 +321,9 @@ def _expected_verdict(row: _Row, low: float, high: float) -> tuple[str | None, s
         "reject": "incomplete",
         "reclassify": "incomplete",
     }.get(row.resolution or "")
-    if human:
+    last = max((number for number, _kind, _score in row.attempts), default=None)
+    judged_final = row.judge_on_attempt is None or last is None or row.judge_on_attempt >= last
+    if human and judged_final:
         return human, "human"
     if row.judge_on_attempt is not None:
         score = row.score_of(row.judge_on_attempt, row.judge_doc_type)
