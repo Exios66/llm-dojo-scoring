@@ -316,9 +316,9 @@
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface"
     },
     "scoring.decision_lanes": {
-      "decision": "delete",
+      "decision": "hold",
       "lines": 622,
-      "reason": "no consumer reaches it; nothing imports it"
+      "reason": "judge/arbiter/boss/review-tray scorecards; llm-mailroom wires its decision export next (stacked on Dojo #140)"
     },
     "scoring.doc_scorers": {
       "decision": "keep",
