@@ -181,6 +181,8 @@ def extraction_binary_metrics(
         # A schema field the ground truth does not label is excluded on both
         # sides (it is not in ``result.field_scores`` either); only an
         # off-schema key, or a value on a field labelled empty, is an FP.
+        if cms_table is not None and key in CMS_DOCUMENTED_ABSENT_FIELDS:
+            value = _cms_absent_prediction(value)
         if (key not in expected and key not in types and key not in cms_added
                 and not _is_empty(value)):
             fp += 1
