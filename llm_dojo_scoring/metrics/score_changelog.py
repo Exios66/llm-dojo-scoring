@@ -101,7 +101,7 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
             "label on both sides (a correct value there was a false positive); an "
             "off-schema key, or a value on a field labelled empty, is still one. A row "
             "with no labelled extraction field (presence-only CUAD, MAUD-only merger, "
-            "no GT) reports them as null, not 0.0. A MAUD-only merger payload's "
+            "no GT) gets them as null from the suite and doc scorers, not 0.0. A MAUD-only merger payload's "
             "headline metric_id is maud.question.micro_accuracy (overall is null). "
             "A blank or literal 'nan' content_topic / sentiment_label is not a label: "
             "no topic or sentiment score is emitted for it (it scored 0.0)."
