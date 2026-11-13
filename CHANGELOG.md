@@ -112,8 +112,9 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
 - A MAUD-only merger payload now names its headline: `metric_id` is
   `maud.question.micro_accuracy` (it was `pipeline.extraction.overall` with a null
   `overall_score`). A batch takes it only when every row is MAUD-only; a run mixing
-  MAUD-only rows with rows that label extraction fields carries both ids and is reported
-  `metric_id_mixed` (see `docs/contracts/METRIC_IDS.md`).
+  MAUD-only rows with rows that label extraction fields keeps `pipeline.extraction.overall` for
+  that batch; per-document payloads of such a run carry both ids, and `aggregate_serving`
+  reports them as `metric_id_mixed` (see `docs/contracts/METRIC_IDS.md`).
 - A blank or literal `"nan"` `content_topic` / `sentiment_label` (350 insurance rows of the v9.3
   dataset) is no longer scored as a label: the topic and sentiment metrics are omitted for that
   row instead of emitting 0.0. A real label still scores a wrong or missing prediction as 0.0.

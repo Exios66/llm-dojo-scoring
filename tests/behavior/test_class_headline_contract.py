@@ -272,6 +272,14 @@ def test_batch_payloads_follow_the_single_document_rules():
     assert merger["maud_question_accuracy"] == 1.0
     assert merger["extraction_f1"] is None
 
+    stray = hub_row(claim_type="property")
+    with_unscorable = get_suite("merger_agreement").score_document(
+        [MERGER_GT, stray], [MERGER_ORACLE, {"intent": "acquisition"}], doc_subclass="all_cash"
+    )
+    assert with_unscorable["metric_id"] == "maud.question.micro_accuracy"
+    assert with_unscorable["extraction_precision"] is None
+    assert with_unscorable["extraction_f1"] is None
+
     nan_gt = hub_row(**CORRESPONDENCE_LABELS, content_topic="nan", sentiment_label="nan")
     letters = get_suite("correspondence").score_document(
         [CORRESPONDENCE_GT, nan_gt],
@@ -296,3 +304,13 @@ def test_mixed_merger_batch_keeps_the_extraction_headline():
         doc_subclass="all_cash",
     )
     assert payload["metric_id"] == "pipeline.extraction.overall"
+
+
+def test_empty_label_batch_is_not_scored():
+    """An empty expected label list is no labels at all, not a length error."""
+    result = get_suite("correspondence").score(
+        dict(CORRESPONDENCE_LABELS), dict(CORRESPONDENCE_LABELS),
+        expected_topic=[], predicted_topic=["general_business"],
+    )
+    payload = result if isinstance(result, dict) else {}
+    assert payload.get("content_topic_accuracy") is None

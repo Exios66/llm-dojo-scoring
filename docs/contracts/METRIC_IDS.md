@@ -84,8 +84,10 @@ extraction field (every row of mailroom-dataset v9.3 is MAUD-only) carries
 `maud.question.micro_accuracy` as its `metric_id`, since its
 `pipeline.extraction.overall` is null. A batch takes it only when every row is
 MAUD-only. A run that mixes MAUD-only rows with rows that label extraction
-fields therefore carries two ids, and `compare_serving` reports it as
-`metric_id_mixed` rather than pooling two different headlines.
+fields therefore carries two ids across its per-document payloads, and
+`compare_serving` reports it as `metric_id_mixed` rather than pooling two
+different headlines. A single batch payload that mixes the two keeps
+`pipeline.extraction.overall`.
 
 `compare_serving` sets `incomparable: true` (and leaves the quality delta
 `None`) when the local and API legs carry different `metric_id` values

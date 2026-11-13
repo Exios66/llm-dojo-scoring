@@ -347,6 +347,8 @@ def _labelled_label_pairs(expected: Any, predicted: Any) -> tuple[Any, Any]:
     if expected is None:
         return None, None
     if isinstance(expected, (list, tuple)):
+        if not expected:
+            return None, None
         preds = (
             list(predicted)
             if isinstance(predicted, (list, tuple))
@@ -1185,8 +1187,8 @@ class ScoringSuite:
         # explicitly null rather than reporting a misleading 0.0.
         has_extraction_events = any(
             not _gtm.is_empty_value(value)
-            for exp in peeled_exp
-            if isinstance(exp, dict)
+            for idx, exp in enumerate(peeled_exp)
+            if idx not in unscorable_rows and isinstance(exp, dict)
             for value in exp.values()
         )
         if not has_extraction_events:
@@ -1199,7 +1201,9 @@ class ScoringSuite:
             for idx, (exp, pred, result) in enumerate(
                 zip(peeled_exp, peeled_pred, extraction)
             ):
-                if not isinstance(result, ExtractionScoreResult):
+                if idx in unscorable_rows or not isinstance(
+                    result, ExtractionScoreResult
+                ):
                     continue
                 row_presence = (
                     presence[idx]
