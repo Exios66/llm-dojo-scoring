@@ -206,8 +206,12 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
             "as are ids, section numbers and reference numbers that look like dates "
             "(HO3-12-2020, Section 3.1.20, Case No. 03-2024). A date written with an "
             "article, a spelled-out day or year, \"in the year of our Lord\", the legal 3d, "
-            "a range (read as its first day) or a stray bracket now reads, so a date field "
-            "score and the field-micro metrics can move on those predictions."
+            "a day range (a value that is a range reads as its first day; the document scan "
+            "reads both ends where the document states them) or a stray bracket now reads, so "
+            "a date field score and the field-micro metrics can move on those predictions. A "
+            "tens word split from its unit word by a hyphenated line break, a soft hyphen or a "
+            "zero-width character (\"twenty-\\nfirst\") reads like the unbroken form: the 21st, "
+            "and \"thirty-\\nsecond\" names no day."
         ),
         "rescore_required": True,
     },

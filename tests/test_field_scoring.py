@@ -1884,6 +1884,52 @@ def test_compound_ordinal_whitespace_run_matches_the_prediction_side():
     assert fs._parse_date_parts("thirty   second of March 2024") == fs._parse_date_parts("thirty second of March 2024")
 
 
+# A tens word split from its unit word by a PDF line break or an invisible character.
+_BROKEN_GAPS = [
+    "-\n", "-\r\n  ", "-\n\n\t ", "- ", "\u00ad", "\u200b", "-\u2060", "\ufeff",
+    "\u00ad\n", "\u200b-\u200b", "-\u00ad", "\u2060\ufeff",
+]
+_BROKEN_IDS = [repr(g) for g in _BROKEN_GAPS]
+
+
+@pytest.mark.parametrize("gap", _BROKEN_GAPS, ids=_BROKEN_IDS)
+def test_twenty_first_across_a_hyphenated_break_or_invisible_char_is_the_21st(gap):
+    """"twenty-<newline>first of March" reads like "twenty-first of March": the 21st, never the 1st."""
+    doc = f"twenty{gap}first of March 2024"
+    assert fs._date_grounded_in_doc(date(2024, 3, 21), doc), repr(doc)
+    assert not fs._date_grounded_in_doc(date(2024, 3, 1), doc), repr(doc)
+    assert fs._parse_date_parts(doc) == fs._parse_date_parts("twenty-first of March 2024"), repr(doc)
+    assert fs._parse_date_parts(doc) == fs._DateParts(2024, 3, 21), repr(doc)
+
+
+@pytest.mark.parametrize("gap", _BROKEN_GAPS, ids=_BROKEN_IDS)
+@pytest.mark.parametrize("tens", ["thirty", "Fifty"])
+def test_compound_ordinal_across_a_hyphenated_break_or_invisible_char_is_no_day(tens, gap):
+    """"thirty-<newline>second of March" names no day, like "thirty second" and "thirty-second"."""
+    doc = f"{tens}{gap}second of March 2024"
+    assert not fs._date_grounded_in_doc(date(2024, 3, 2), doc), repr(doc)
+    assert not fs._date_grounded_in_doc(fs._DateParts(None, 3, 2), doc), repr(doc)
+    assert fs._parse_date_parts(doc) == fs._parse_date_parts(f"{tens} second of March 2024"), repr(doc)
+
+
+@pytest.mark.parametrize("gap", _BROKEN_GAPS, ids=_BROKEN_IDS)
+def test_hyphenated_break_before_a_non_ordinal_word_creates_no_date(gap):
+    """"twenty-<newline>five dollars" is money, not a day: the break changes nothing there."""
+    doc = f"Pay twenty{gap}five dollars by March 2024."
+    for day in (5, 20, 25):
+        assert not fs._date_grounded_in_doc(date(2024, 3, day), doc), (day, repr(doc))
+    assert fs._date_grounded_in_doc(fs._DateParts(2024, 3, None), doc), repr(doc)
+
+
+def test_plain_hyphenated_ordinal_is_unchanged():
+    """The single-line "twenty-first" and "thirty-second" read as they did before the break fix."""
+    assert fs._date_grounded_in_doc(date(2024, 3, 21), "twenty-first of March 2024")
+    assert not fs._date_grounded_in_doc(date(2024, 3, 1), "twenty-first of March 2024")
+    assert not fs._date_grounded_in_doc(date(2024, 3, 2), "thirty-second of March 2024")
+    assert fs._parse_date_parts("twenty-first of March 2024") == fs._DateParts(2024, 3, 21)
+    assert fs._parse_date_parts("thirty-second of March 2024") is None
+
+
 _HOSTILE_ROUND5 = [
     "twenty" + " " * 200_000 + "first of March 2024",
     "twenty   " * 40_000,
@@ -1897,4 +1943,20 @@ _HOSTILE_ROUND5 = [
 @pytest.mark.parametrize("hostile", _HOSTILE_ROUND5, ids=[f"round5_{i}" for i in range(len(_HOSTILE_ROUND5))])
 def test_document_date_scan_stays_linear_on_ordinal_ranges_and_whitespace_runs(hostile):
     """The widened prefilter and the whitespace normalisation keep the scan linear."""
+    _assert_scan_is_linear(hostile)
+
+
+_HOSTILE_BREAKS = [
+    "twenty" + "-" * 200_000 + "first of March 2024",
+    "twenty-" * 40_000,
+    "twenty-\n" * 40_000,
+    "twenty" + "\u00ad-" * 100_000 + "first of March 2024",
+    "thirty\u200b" * 40_000,
+    "twenty" + "-\n " * 70_000,
+]
+
+
+@pytest.mark.parametrize("hostile", _HOSTILE_BREAKS, ids=[f"breaks_{i}" for i in range(len(_HOSTILE_BREAKS))])
+def test_document_date_scan_stays_linear_on_hyphen_and_invisible_runs_after_a_tens_word(hostile):
+    """The widened tens gap (hyphens, soft hyphens, zero-width characters) is linear on long runs."""
     _assert_scan_is_linear(hostile)

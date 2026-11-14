@@ -82,6 +82,16 @@ Format based on Keep a Changelog; versioning is SemVer.
   on those. Goldens are unchanged (no golden case carries document text). Consumers:
   `llm-mailroom` and the sandbox vendor snapshot get new factuality numbers on the next pin
   bump; no public name changes. Contract: `docs/contracts/GROUNDING.md` ("Dates").
+- **Score change: a tens word split from its unit word by a PDF line break reads as the unbroken
+  form** (tracker #146, same unreleased date reader). "twenty-" + newline + "first", a soft
+  hyphen (U+00AD) or a zero-width character (U+200B, U+2060, U+FEFF) between "twenty" and "first"
+  was read as the 1st on the document scan, and as no date on the value side; "thirty-" +
+  newline + "second" was read as the 2nd on the scan. Both readers now collapse a hyphen, any
+  whitespace run and those characters after a tens word to one space (`_TENS_GAP_RE`, used by
+  `_document_dates` and `_parse_date_parts`), so the 21st is the 21st and "thirty-second" names
+  no day, broken or not; "twenty-first" on one line and "twenty-" + newline + "five dollars" read as
+  before. Moves the same metrics as the date reader above, only on documents and values with such a
+  break; goldens are unchanged (no golden case carries document text).
 - `grounding/candidates.py`, `ledger.py`, `labels.py`, `io.py`: every audited value becomes a
   review candidate with a stable id and a priority; confirmations from a person or an agent
   are validated into an append-only ledger (rejects kept with a reason); valid labels are

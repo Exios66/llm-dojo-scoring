@@ -477,16 +477,23 @@ def _ascii_digits(text: str) -> str:
 #: "thirty second" and "fifty-third" are no day of the month, "twenty-first" is read from "twenty".
 _TENS_WORDS = ("twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety")
 #: A lookbehind is fixed-width, so it sees ONE whitespace character after the tens word. Both readers
-#: of text collapse a longer run first: the value side (``_parse_date_parts`` collapses every run)
-#: and the document scan (``_TENS_GAP_RE`` in ``_document_dates``).
+#: of text collapse a longer run first: the value side (``_parse_date_parts`` collapses every run
+#: and applies ``_TENS_GAP_RE``) and the document scan (``_TENS_GAP_RE`` in ``_document_dates``).
 _NOT_COMPOUND = r"(?<![-\w])" + "".join(rf"(?<!{t}\s)" for t in _TENS_WORDS)
-#: "thirty   second", "twenty\n\nfirst": a run of whitespace after a tens word is one space, so the
-#: compound guard and ``_ORD_WORD`` read it as they read the single-space form.
+#: "thirty   second", "twenty\n\nfirst", "twenty-\nfirst": what separates a tens word from the word
+#: after it is one space for the compound guard and ``_ORD_WORD``, however a PDF wrote it. The gap is
+#: a run of whitespace, soft hyphens (U+00AD) and zero-width characters (U+200B, U+2060, U+FEFF),
+#: each optionally led by hyphens ("twenty-\n  first" is a hyphenated line break). A plain
+#: "twenty-first" has no such character, so it is not a gap and ``_ORD_WORD`` reads it as it always
+#: did. Possessive, so a long run of hyphens or invisible characters is scanned once.
 #: Unicode ``\s`` on purpose: the scan itself is ASCII-only, so a line or paragraph separator
-#: (U+2028, U+2029, U+0085, U+001C-U+001F), which NFKC leaves alone, becomes a plain space here,
-#: as it does on the value side (``_WS_RE``).
+#: (U+2028, U+2029, U+0085, U+001C-U+001F), which NFKC leaves alone, becomes a plain space here.
+#: Both readers use it: the document scan (``_document_dates``) and the value side
+#: (``_parse_date_parts``), so a value and a document in the same form read the same date.
 #: No leading ``\b``: "x_thirty   second" collapses like "x_thirty second", which the guard reads.
-_TENS_GAP_RE = re.compile(r"(" + "|".join(_TENS_WORDS) + r")\s+", re.IGNORECASE)
+_TENS_GAP_RE = re.compile(
+    r"(" + "|".join(_TENS_WORDS) + r")(?:-*+[\s\u00ad\u200b\u2060\ufeff])++", re.IGNORECASE
+)
 _DAY_NUMBER = r"\d{1,2}(?:st|nd|rd|th)?"
 
 
@@ -572,7 +579,7 @@ def _parse_date_parts(text) -> Optional[_DateParts]:
     """
     if not isinstance(text, str):
         return None
-    s = _WS_RE.sub(" ", _ascii_digits(text).strip())
+    s = _WS_RE.sub(" ", _TENS_GAP_RE.sub(r"\1 ", _ascii_digits(text)).strip())
     if not s:
         return None
     # "in the year 2024", "in the year of our Lord 2024", "A.D. 2024": the year is the number.
