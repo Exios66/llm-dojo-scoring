@@ -377,7 +377,13 @@ def test_every_canonical_id_is_allowed_somewhere():
     reviewer_lane = {
         mid for mid in _METRIC_ID_BY_NAME.values() if mid.startswith("review.lane.")
     }
-    assert set(_METRIC_ID_BY_NAME.values()) - allowed <= classification_or_content | reviewer_lane
+    decision_lanes = {
+        mid for mid in _METRIC_ID_BY_NAME.values() if mid.startswith("decision.")
+    }
+    assert (
+        set(_METRIC_ID_BY_NAME.values()) - allowed
+        <= classification_or_content | reviewer_lane | decision_lanes
+    )
 
 
 @pytest.mark.parametrize("doc_class", LIVE)
