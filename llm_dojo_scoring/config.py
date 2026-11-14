@@ -388,11 +388,6 @@ class GroundingSettings:
                 f"grounding.trust_window ({self.trust_window}) must be at least "
                 f"grounding.trust_min_n ({self.trust_min_n})"
             )
-        if self.spot_check_min_per_agent > self.trust_window:
-            raise ValueError(
-                f"grounding.spot_check_min_per_agent ({self.spot_check_min_per_agent}) must be at most "
-                f"grounding.trust_window ({self.trust_window}): the floor is counted over that window"
-            )
         return self
 
 
