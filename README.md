@@ -231,6 +231,7 @@ Modules are grouped into subpackages by what they are about. The full module tab
 | `pipeline/` | Mailroom pipeline contract, intake, pilot labels, verdicts, archive, sandbox rubrics |
 | `metrics/` | Registry, metric metadata, bundles, profiles, emitter, scorecard honesty |
 | `analysis/` | Bootstrap, calibration, diagnostics, failure modes, experiment, serving, cost |
+| `grounding/` | Unlabelled-value grounding, a separate pass after scoring: verdicts, selection, audit records, rates ([contract](docs/contracts/GROUNDING.md)) |
 | `integrations/` | `dojo-version` update awareness (the Langfuse sink is `LangfuseSink` in `metrics/`) |
 | root | `config`, `cli`, `prompts/`, and the public API in `__init__` |
 

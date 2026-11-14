@@ -111,6 +111,106 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         ),
         "rescore_required": True,
     },
+    {
+        # Third 0.29.0 change set (merger MAUD labels become extraction gold).
+        "version": "0.29.0",
+        "metric_ids": (
+            "pipeline.extraction.overall",
+            "pipeline.extraction.field_micro_f1",
+            "pipeline.extraction.field_micro_f2",
+            "pipeline.extraction.field_micro_precision",
+            "pipeline.extraction.field_micro_recall",
+            "maud.question.micro_accuracy",
+        ),
+        "change": (
+            "A Hub merger row's maud_clause_labels are extraction gold: maud_clauses (one "
+            "'<Question>: <Hub class>' line per answered question) and merger_consideration "
+            "(the Type of Consideration answer, else the subclass) are scored by the suites, "
+            "so such a row has an overall score and field-micro P/R/F1/F2 instead of null, and "
+            "its headline metric_id is pipeline.extraction.overall (it was "
+            "maud.question.micro_accuracy). maud_clauses is scored question by question, not "
+            "as fuzzy text. maud.question.micro_accuracy itself keeps its value."
+        ),
+        "rescore_required": True,
+    },
+    {
+        # Fourth 0.29.0 change set (new metrics only; no existing value moves).
+        "version": "0.29.0",
+        "metric_ids": (
+            "decision.judge.verdict_accuracy",
+            "decision.judge.macro_f1",
+            "decision.judge.escalation_recall",
+            "decision.judge.false_escalation_rate",
+            "decision.judge.error_rate",
+            "decision.arbiter.decision_accuracy",
+            "decision.arbiter.retry_usefulness",
+            "decision.arbiter.wrongful_accept_rate",
+            "decision.arbiter.unnecessary_escalation_rate",
+            "decision.boss.wrongful_approve_rate",
+            "decision.boss.needless_review_rate",
+            "decision.review_tray.wasted_review_rate",
+            "decision.review_tray.correction_rate",
+            "decision.review_tray.reject_rate",
+        ),
+        "change": (
+            "New metrics: judge, arbiter, boss and review-tray decision lanes "
+            "(scoring.decision_lanes). No existing metric value changes."
+        ),
+        "rescore_required": False,
+    },
+    {
+        # Fifth 0.29.0 change set (new metrics only; no existing value moves).
+        "version": "0.29.0",
+        "metric_ids": (
+            "ml.intake.doc_type_accuracy",
+            "ml.intake.doc_type_macro_f1",
+            "ml.intake.doc_type_ece",
+            "ml.intake.subclass_accuracy",
+            "ml.intake.subclass_macro_f1",
+            "ml.intake.subclass_ece",
+            "ml.intake.fast_path_coverage",
+            "ml.intake.selective_risk",
+            "ml.intake.selective_risk_upper",
+        ),
+        "change": (
+            "New metrics: intake classifier accuracy, macro F1, calibration and "
+            "fast-path risk (ml.score_intake_model). No existing metric value changes."
+        ),
+        "rescore_required": False,
+    },
+    {
+        # Proposed 0.31.0 (unlabelled-value grounding stack); cut separately with release.py.
+        "version": "0.31.0",
+        # The factuality names are unmapped registry metrics: the emitter stamps them
+        # ``registry:<name>`` (scorecard_honesty._METRIC_ID_BY_NAME has no entry), and
+        # score_changes_between matches the stamped id exactly.
+        "metric_ids": (
+            "registry:hallucination_rate",
+            "registry:verified_precision",
+            "registry:extraction_hallucination_rate",
+            "registry:extraction_overall_verified_precision",
+            "registry:extraction_verified_precision",
+            "pipeline.extraction.overall",
+            "pipeline.extraction.field_micro_f1",
+            "pipeline.extraction.field_micro_f2",
+            "pipeline.extraction.field_micro_precision",
+            "pipeline.extraction.field_micro_recall",
+        ),
+        "change": (
+            "Dates in the document are read in every common written form (ISO and "
+            "year-first numeric, month-first and day-first prose with ordinals, spelled-out "
+            "days and years, two-digit-year prose, 03MAR2024, month and year, month and day, "
+            "day ranges; #147): the factuality audit's verified_in_doc / verified_precision / "
+            "hallucination_rate move for date fields, and the old scan's false matches "
+            "(\"5 days after the first day of March 2024\", \"version 1.2.34\") are gone, "
+            "as are ids, section numbers and reference numbers that look like dates "
+            "(HO3-12-2020, Section 3.1.20, Case No. 03-2024). A date written with an "
+            "article, a spelled-out day or year, \"in the year of our Lord\", the legal 3d, "
+            "a range (read as its first day) or a stray bracket now reads, so a date field "
+            "score and the field-micro metrics can move on those predictions."
+        ),
+        "rescore_required": True,
+    },
 )
 
 

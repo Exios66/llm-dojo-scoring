@@ -36,9 +36,11 @@ from __future__ import annotations
 import os
 import re
 import threading
+import unicodedata
 from collections import Counter
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
+from functools import lru_cache
 from typing import Any, NamedTuple, Optional
 
 import structlog
@@ -287,7 +289,7 @@ _CORPORATE_SUFFIXES = {
     "HOLDINGS", "TRUST",
 }
 _PUNCT_RE = re.compile(r"[,.;:'\"()\[\]{}!?@#$%^&*+=|\\/<>~`_-]")
-_ORDINAL_RE = re.compile(r"(\d)(st|nd|rd|th)\b", re.IGNORECASE)
+_ORDINAL_RE = re.compile(r"(\d)(st|nd|rd|th|d)\b", re.IGNORECASE)  # "3d": the legal 3rd
 _WS_RE = re.compile(r"\s+")
 
 
@@ -423,6 +425,132 @@ def _date_parserinfo():
     return _DATE_PARSERINFO
 
 
+# Written-out numbers in dates ("this third day of March, two thousand twenty-four").
+_ORD_BASE = {
+    "first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5, "sixth": 6, "seventh": 7,
+    "eighth": 8, "ninth": 9, "tenth": 10, "eleventh": 11, "twelfth": 12, "thirteenth": 13,
+    "fourteenth": 14, "fifteenth": 15, "sixteenth": 16, "seventeenth": 17, "eighteenth": 18,
+    "nineteenth": 19, "twentieth": 20, "thirtieth": 30,
+}
+_CARDINAL_WORDS = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
+    "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14,
+    "fifteen": 15, "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19,
+    "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70,
+    "eighty": 80, "ninety": 90,
+}
+_ORD_UNIT_WORDS = "first|second|third|fourth|fifth|sixth|seventh|eighth|ninth"
+#: "first" .. "thirty-first" (hyphen or one space); never "thirty-second": no such day.
+_ORD_WORD = (
+    r"(?:(?:" + "|".join(_ORD_BASE) + r")"
+    r"|twenty[-\s](?:" + _ORD_UNIT_WORDS + r")|thirty[-\s]first)\b"
+)
+_CARDINAL_SUB100 = (
+    r"(?:(?:twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)"
+    r"(?:[-\s](?:one|two|three|four|five|six|seven|eight|nine))?"
+    r"|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen"
+    r"|one|two|three|four|five|six|seven|eight|nine)"
+)
+#: "two thousand [and] twenty-four", "nineteen ninety-nine", "nineteen hundred".
+_YEAR_WORDS = (
+    r"(?:two\s{1,9}thousand(?:\s{1,9}(?:and\s{1,9})?" + _CARDINAL_SUB100 + r")?"
+    r"|(?:eighteen|nineteen)\s{1,9}(?:hundred(?:\s{1,9}(?:and\s{1,9})?" + _CARDINAL_SUB100 + r")?"
+    r"|" + _CARDINAL_SUB100 + r"))\b"
+)
+_MONTH_ANY_WORD = (
+    r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?"
+    r"|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+)
+
+
+def _ascii_digits(text: str) -> str:
+    """Fold full-width and other Unicode digits to ASCII, so a date written with them reads."""
+    if text.isascii():
+        return text
+    text = unicodedata.normalize("NFKC", text)
+    return "".join(
+        str(unicodedata.decimal(ch)) if ch > "\x7f" and ch.isdecimal() else ch for ch in text
+    )
+
+
+#: An ordinal word starts a day only when it is not the tail of a compound: "thirty-second",
+#: "thirty second" and "fifty-third" are no day of the month, "twenty-first" is read from "twenty".
+_TENS_WORDS = ("twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety")
+#: A lookbehind is fixed-width, so it sees ONE whitespace character after the tens word. Both readers
+#: of text collapse a longer run first: the value side (``_parse_date_parts`` collapses every run)
+#: and the document scan (``_TENS_GAP_RE`` in ``_document_dates``).
+_NOT_COMPOUND = r"(?<![-\w])" + "".join(rf"(?<!{t}\s)" for t in _TENS_WORDS)
+#: "thirty   second", "twenty\n\nfirst": a run of whitespace after a tens word is one space, so the
+#: compound guard and ``_ORD_WORD`` read it as they read the single-space form.
+#: Unicode ``\s`` on purpose: the scan itself is ASCII-only, so a line or paragraph separator
+#: (U+2028, U+2029, U+0085, U+001C-U+001F), which NFKC leaves alone, becomes a plain space here,
+#: as it does on the value side (``_WS_RE``).
+#: No leading ``\b``: "x_thirty   second" collapses like "x_thirty second", which the guard reads.
+_TENS_GAP_RE = re.compile(r"(" + "|".join(_TENS_WORDS) + r")\s+", re.IGNORECASE)
+_DAY_NUMBER = r"\d{1,2}(?:st|nd|rd|th)?"
+
+
+def _ordinal_word_value(word: str) -> int:
+    """The day number of "third", "twenty-first", "Thirty first"."""
+    tokens = [t for t in re.split(r"[-\s]+", word.lower()) if t]
+    if len(tokens) == 2:
+        return _CARDINAL_WORDS[tokens[0]] + _ORD_BASE[tokens[1]]
+    return _ORD_BASE[tokens[0]]
+
+
+def _spelled_year_value(words: str) -> int:
+    """The year in "two thousand twenty-four" (2024) or "nineteen ninety-nine" (1999)."""
+    tokens = [t for t in re.split(r"[-\s]+", words.lower()) if t and t != "and"]
+    base = {"two": 2000, "nineteen": 1900, "eighteen": 1800}[tokens[0]]
+    rest = tokens[1:]
+    if rest and rest[0] in ("thousand", "hundred"):
+        rest = rest[1:]
+    return base + sum(_CARDINAL_WORDS[t] for t in rest)
+
+
+def _resolve_double_spelled_day(s: str) -> str:
+    """"the 3rd (third) day of March" is the 3rd; "3rd (fourth)" names no day, so it is dropped."""
+
+    def day(token: str) -> int:
+        """The day number a digit or word ordinal names."""
+        return int(re.match(r"\d+", token).group(0)) if token[0].isdigit() else _ordinal_word_value(token)
+
+    def resolve(match: "re.Match[str]") -> str:
+        """Keep the day when both forms agree, drop the whole phrase when they do not."""
+        return f"{day(match.group('a'))}{match.group('tail')}" if day(match.group("a")) == day(match.group("b")) else ""
+
+    return re.sub(
+        _NOT_COMPOUND + r"(?P<a>" + _DAY_NUMBER + "|" + _ORD_WORD + r")\s{0,3}\(\s{0,3}"
+        r"(?P<b>" + _DAY_NUMBER + "|" + _ORD_WORD + r")\s{0,3}\)(?P<tail>\s{1,3}(?:day\s{1,3})?of\s{1,3})"
+        r"(?=" + _MONTH_ANY_WORD + r"\b)",
+        resolve, s, flags=re.IGNORECASE,
+    )
+
+
+def _digits_for_written_numbers(s: str) -> str:
+    """Replace a spelled-out day or year with digits, only where it is plainly a date.
+
+    A day word counts only in "third day of March" / "third of March" (so "the second
+    Monday of March" names no day), a year phrase only in the forms of ``_YEAR_WORDS``.
+    """
+    s = re.sub(
+        r"\b" + _YEAR_WORDS, lambda m: str(_spelled_year_value(m.group(0))), s,
+        flags=re.IGNORECASE,
+    )
+    s = re.sub(
+        _NOT_COMPOUND + r"(" + _ORD_WORD + r")(\s+day)?\s+of\s+(?=" + _MONTH_ANY_WORD + r"\b)",
+        lambda m: f"{_ordinal_word_value(m.group(1))}{m.group(2) or ''} of ",
+        s, flags=re.IGNORECASE,
+    )
+    # "May twenty-fourth, 2024": a day word after the month counts when a year follows.
+    return re.sub(
+        r"(\b" + _MONTH_ANY_WORD + r"\b\.?\s{1,3}(?:the\s{1,3})?)" + _NOT_COMPOUND + r"(" + _ORD_WORD
+        + r")(?=\s{0,3}(?:,\s{0,3})?\d{4}\b)",
+        lambda m: f"{m.group(1)}{_ordinal_word_value(m.group(2))}",
+        s, flags=re.IGNORECASE,
+    )
+
+
 def _parse_date_parts(text) -> Optional[_DateParts]:
     """Return the (year, month, day) components ``text`` states, or None.
 
@@ -433,14 +561,36 @@ def _parse_date_parts(text) -> Optional[_DateParts]:
 
     Handles the forms that appear in CUAD ground truth: ISO, mm/dd/yyyy,
     "March 3, 2024", ordinal prose ("10th day of January 2000"), and stray
-    trailing artifacts like "1st day of April, 2007 (".
+    trailing artifacts like "1st day of April, 2007 (". Also: spelled-out days and
+    years ("this third day of March, two thousand twenty-four"), "in the year of our
+    Lord 2024", "March the 3rd", "in March of 2024", year-first prose, compact
+    ``20240303`` and a day written twice ("the 3rd (third) day of March": the day when
+    both agree, no day when they do not). Numeric ``03/04/2024`` is month-first. A day range ("March 3-5,
+    2024", "3 to 5 March 2024", "March 30-April 2, 2024") states its FIRST day only
+    here: the reader of one value never invents a second date (the document scan
+    reads both ends).
     """
     if not isinstance(text, str):
         return None
-    s = _WS_RE.sub(" ", text.strip())
+    s = _WS_RE.sub(" ", _ascii_digits(text).strip())
     if not s:
         return None
+    # "in the year 2024", "in the year of our Lord 2024", "A.D. 2024": the year is the number.
+    s = re.sub(
+        r"\b(?:in\s+)?the\s+year(?:\s+of\s+(?:our|the)\s+Lord)?\s+", "", s, flags=re.IGNORECASE
+    )
+    s = re.sub(r"\bA\.?D\.?\s+(?=\d)", "", s, flags=re.IGNORECASE)
+    s = re.sub(r"\bthe\s+month\s+of\s+", "", s, flags=re.IGNORECASE)  # "3rd day of the month of March"
+    s = _resolve_double_spelled_day(s)
+    s = _digits_for_written_numbers(s)
     s = _ORDINAL_RE.sub(r"\1", s)
+    # "this third day of March", "in March of 2024", "on 3 March": a leading word is noise.
+    s = re.sub(r"^(?:(?:this|the|on|in)\s+)+", "", s, flags=re.IGNORECASE)
+    # "March the 3rd, 2024", "the 3rd of March": the article before a day is noise.
+    s = re.sub(r"\bthe\s+(?=\d)", "", s, flags=re.IGNORECASE)
+    # "March 3rd, 2024)": a stray bracket or comma around the date is not part of it.
+    s = re.sub(r"^[)\]}\s,;:]+", "", s)
+    s = re.sub(r"[)\]},;:\s]+$", "", s)
     # "March 12,1999": dateutil drops a year glued to the comma and would
     # report it as unstated, so the stated year must get its space back.
     s = re.sub(r",(?=\d)", ", ", s)
@@ -448,8 +598,14 @@ def _parse_date_parts(text) -> Optional[_DateParts]:
     # dateutil would read the second number as a year. ISO and numeric dates
     # (2014-08-18, 18-08-2014) are untouched: the range must sit next to a word
     # or a ", YYYY".
-    s = re.sub(r"\b([A-Za-z]{3,}\.?\s+\d{1,2})\s*[-\u2013]\s*\d{1,2}\b(?![-/.]\d)", r"\1", s)
-    s = re.sub(r"(?<![\d/.\-])(\d{1,2})\s*[-\u2013]\s*\d{1,2}(?=\s+[A-Za-z]{3,})", r"\1", s)
+    # "March 3 to 5, 2024" and "March 30-April 2, 2024" name their first day too.
+    _range = r"(?:[-\u2013\u2014]|\bto\b|\bthrough\b|\bthru\b)"
+    s = re.sub(
+        r"\b([A-Za-z]{3,}\.?\s+\d{1,2})\s*" + _range + r"\s*[A-Za-z]{3,}\.?\s+\d{1,2}(?=\s*(?:,\s*)?\d{4}\b|[\s,.;]*$)",
+        r"\1", s,
+    )
+    s = re.sub(r"\b([A-Za-z]{3,}\.?\s+\d{1,2})\s*" + _range + r"\s*\d{1,2}\b(?![-/.]\d)", r"\1", s)
+    s = re.sub(r"(?<![\d/.\-])(\d{1,2})\s*" + _range + r"\s*\d{1,2}(?=\s+[A-Za-z]{3,})", r"\1", s)
     # A weekday name is not a day of the month: dateutil would resolve "Monday
     # August 2014" to the first Monday after each probe default and invent a day.
     s = re.sub(
@@ -1187,36 +1343,344 @@ def _verification_tokens(value, field_type: str) -> set[str]:
     return _containment_tokens(text)
 
 
-# Date-like spans in a document: numeric (04-01-06, 3/24/2006), month-first
-# prose (April 1, 2006), or day-first prose ("18th day of August, 2014",
-# incl. OCR artifacts like "18t h day of").
+# Date spans in a document. Every common written form is found; each span is then
+# read by ``_parse_date_parts``, the same reader the prediction and the label go
+# through, so "stated" means the same thing on both sides of the comparison.
+#
+#   ISO / year-first numeric   2024-03-03  2024/03/03  2024.03.03  2024-Mar-03  20240303
+#   US / day-first numeric     3/24/2006  04-01-06  13.04.2024  3.4.24  (month-first when ambiguous)
+#   month-first prose          March 3, 2024  Mar. 3rd, 2024  March the 3rd, 2024  may 3, 2024
+#   day-first prose            3 March 2024  3rd of March, 2024  03-Mar-2024
+#                              the 3rd day of March, 2024 (also "18t h day of", "twenty-first
+#                              of June", "this third day of March in the year of our Lord
+#                              two thousand twenty-four")
+#   year-first prose           2024 March 3  2024, March 3rd
+#   month and year             March 2024  March of 2024  Mar-2024  2024-03  03/2024  3/2024
+#   month and day, no year     March 3  3rd of March
+#   day ranges                 March 3-5, 2024  3-5 March 2024  March 3 to 5, 2024
+#                              March 30-April 2, 2024  (BOTH ends are read: the document states them)
+#
+# A weekday prefix ("Sunday, March 3, 2024") sits outside the span: the reader drops
+# weekdays anyway. Two guard strengths keep a date-shaped string that is not a date out:
+#
+# * A COMPLETE date (day, month and a four-digit year, or a numeric two-digit year after
+#   dashes or slashes) may touch punctuation, ``_``, ``@`` or a letter on either side, so
+#   ranges ("01/01/2024-12/31/2024", "March 1, 2024/March 1, 2025") and file names
+#   ("contract_3-1-2024.pdf") read. It may not touch a digit, which would make it part of
+#   a longer number ("2024-03-0001").
+# * Every other form (month and year, month and day, compact, dotted two-digit year) must
+#   stand alone: never part of a longer alphanumeric, hyphen, slash or dotted run (ids like
+#   ``INV-2024-0301``, ``2024-03-0001``, phone numbers, ``1.2.34``), and never after ``#``,
+#   ``@``, a currency sign or ``+``.
+#
+# Other lookalike guards: numbers are a day, month or year only in their calendar range;
+# a dotted two-digit year is not read after "v", "version", "release", "build" or "rev"
+# (``3.4.24`` is a date, ``version 1.2.34`` is not; any other ``1.2.34`` is read as a
+# date); "May" and "March" are months in a partial date only when capitalised ("you may 5
+# times" is not May 5), and in a full date ("may 3, 2024") in any case; a decimal or
+# thousands group after a day ("March 3,000", "March 3.50") is money, not a day. Every
+# gap between the parts of a date is bounded (30 whitespace characters) so that a hostile
+# document cannot make the scan quadratic.
+_S = r"\s{1,30}"
+_S0 = r"\s{0,30}"
+_MON_ANY = _MONTH_ANY_WORD + r"\b\.?"
+_MON_PART_WORD = (
+    r"(?:jan(?:uary)?|feb(?:ruary)?|(?-i:Mar(?:ch)?|MAR(?:CH)?)|apr(?:il)?|(?-i:May|MAY)"
+    r"|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+)
+_MON_PART = _MON_PART_WORD + r"\b\.?"
+_DAY = r"(?:3[01]|[12]\d|0?[1-9])"
+_DAY_ORD = _DAY + r"(?:st|nd|rd|th|d)?"  # "3d" is the legal 3rd
+_DAY_OCR = r"\d{1,2}(?:\s?(?:s\s?t|n\s?d|r\s?d|t\s?h))?"  # "18t h day of"
+_NUM_MONTH = r"(?:1[0-2]|0?[1-9])"
+_PAD_MONTH = r"(?:1[0-2]|0[1-9])"
+_YEAR = r"(?:18|19|20)\d{2}(?!\d)"  # 1800-2099: 1/1000 is a fraction
+_YEAR_X = r"(?:" + _YEAR + "|" + _YEAR_WORDS + ")"
+_YEAR_FILL = r"(?:in" + _S + r"the" + _S + r"year(?:" + _S + r"of" + _S + r"our" + _S + r"Lord)?" + _S + r")?(?:A\.?D\.?" + _S + r")?"
+_SEP_DAY_YEAR = r"(?:" + _S0 + "," + _S0 + "|" + _S + ")"
+_SEP_DAY_YEAR_OF = r"(?:" + _S0 + "," + _S0 + "|" + _S + r"(?:of" + _S + ")?)"  # "March 3rd of 2024"
+_SEP_MONTH_YEAR = _S0 + r"(?:," + _S0 + ")?"
+_THE_DAY = r"(?:" + _S + "the" + _S + "|" + _S0 + ")"
+_THE_DAY_COMMA = r"(?:" + _S0 + "," + _S0 + "|" + _S + "the" + _S + "|" + _S0 + ")"  # "March, 3 2024"
+#: "3rd day of March", "3rd of March", "3rd day of the month of March".
+_DAY_OF = r"(?:(?:day" + _S + ")?of" + _S + r"(?:the" + _S + "month" + _S + "of" + _S + ")?)"
+_RANGE_JOIN = r"(?:" + _S0 + r"[-–—]" + _S0 + "|" + _S + r"(?:to|through|thru|until)" + _S + ")"
+_QUOTE = "['’]"
+
+# A date may not start right after a letter ("HO3-12-2020", "A1-12-2020" are ids) unless a
+# separator comes between: "contract_3-1-2024.pdf", "Filed 3/1/2024", "ref-3-1-2024".
+_LEFT_STRICT = r"(?<![\w\-/#@$€£+])(?<!\d\.)(?<!\d,)"
+_LEFT_NUMBER = r"(?<![\dA-Za-z])(?<!\d\.)"  # complete numeric date: not inside a longer number or id
+_LEFT_WORD = r"(?<![A-Za-z\d])"  # prose date starting with a word: not inside a longer word
+_RIGHT_STRICT = r"(?:(?=T\d{2}:\d{2})|(?![\w\-/@]))(?![.,]\d)"  # ISO datetime: 2024-03-03T10:30
+_RIGHT_OPEN = r"(?!\d)(?!\.\d)"  # complete date: anything but a digit may follow
+#: A two-digit year in prose must not be the start of a longer number ("4 March 15, 2024").
+_RIGHT_TWO_DIGIT_YEAR = _RIGHT_STRICT + r"(?!" + _S0 + r"(?:," + _S0 + r")?\d)"
+#: "the 3rd (third) day of March": the day written twice, as contracts do.
+_PAREN_DAY = r"(?:\s{0,3}\(\s{0,3}(?:" + _DAY_ORD + "|" + _ORD_WORD + r")\s{0,3}\))?"
+_DOTTED_NEXT = r"[-–]\d{1,2}\.\d{1,2}\.\d{2}(?!\d)"  # a dotted two-digit-year range
+
+
+def _guarded(left: str, body: str, right: str) -> str:
+    """One alternative of the scan: ``body`` with its own left and right guard."""
+    return left + "(?:" + body + ")" + right
+
+
+# The alternatives are split by what they start with, and each group sits behind a cheap
+# lookahead on the shape of what follows the first number or word. A position that cannot start
+# a date skips every alternative of the group on that one check, which keeps the scan of a long
+# hostile document fast.
+def _num(left: str, body: str, right: str) -> tuple[str, str]:
+    """An alternative that starts with a number and a separator: 2024-03-03, 3/4/24, 3.4.24."""
+    return "num", _guarded(left, body, right)
+
+
+def _prose(left: str, body: str, right: str) -> tuple[str, str]:
+    """An alternative that starts with a number and a space: 3 March 2024, 2024 March 3."""
+    return "prose", _guarded(left, body, right)
+
+
+def _misc(left: str, body: str, right: str) -> tuple[str, str]:
+    """An alternative that starts with a number glued to a letter or eight digits: 03MAR2024."""
+    return "misc", _guarded(left, body, right)
+
+
+def _wmonth(left: str, body: str, right: str) -> tuple[str, str]:
+    """An alternative that starts with a month name."""
+    return "wmonth", _guarded(left, body, right)
+
+
+def _word(left: str, body: str, right: str) -> tuple[str, str]:
+    """An alternative that starts with an ordinal word: twenty-first of June."""
+    return "word", _guarded(left, body, right)
+
+
+_DATE_ALTERNATIVES = (
+    [
+        # --- complete dates: open guards ---
+        # year-first numeric, one separator throughout: 2024-03-03, 2024/03/03, 2024.03.03
+        _num(_LEFT_NUMBER, _YEAR + r"(?P<iso>[-/.])" + _NUM_MONTH + r"(?P=iso)" + _DAY, _RIGHT_OPEN),
+        # day, month, year with dashes or slashes: 3/24/2006, 13-04-2024, 04-01-06
+        _num(_LEFT_NUMBER, _DAY + r"(?P<num>[-/])" + _DAY + r"(?P=num)" + _YEAR, _RIGHT_OPEN),
+        _num(_LEFT_NUMBER, _DAY + r"(?P<num2>[-/])" + _DAY + r"(?P=num2)\d{2}", _RIGHT_OPEN),
+        # dotted: 13.04.2024 (a version or section number after its word is filtered out of the matches)
+        _num(_LEFT_NUMBER, _DAY + r"\." + _DAY + r"\." + _YEAR, _RIGHT_OPEN),
+        # month-first prose: March 3, 2024  Mar. 3rd 2024  March the 3rd, in the year 2024
+        # March, 3 2024  March 3rd of 2024
+        _wmonth(_LEFT_WORD, _MON_ANY + _THE_DAY_COMMA + _DAY_ORD + _SEP_DAY_YEAR_OF + _YEAR_FILL + _YEAR_X, _RIGHT_OPEN),
+        # month first with the day spelled out: March third, 2024  May twenty-fourth, 2024
+        _wmonth(
+            _LEFT_WORD,
+            _MON_ANY + r"(?:" + _S + "the" + _S + "|" + _S + ")" + _NOT_COMPOUND + _ORD_WORD + _SEP_DAY_YEAR
+            + _YEAR_FILL + _YEAR_X,
+            _RIGHT_OPEN,
+        ),
+        # day-first prose: 3 March 2024, 3rd of March, 2024, 3rd day of March, in the year 2024
+        _prose(
+            _LEFT_NUMBER,
+            r"(?:" + _DAY_ORD + _PAREN_DAY + _S + _DAY_OF + "?|" + _DAY_OCR + _S + "day" + _S + "of" + _S + ")"
+            + _MON_ANY + _SEP_MONTH_YEAR + _YEAR_FILL + _YEAR_X,
+            _RIGHT_OPEN,
+        ),
+        # day-first with the day spelled out: twenty-first of June 2024, third day of March, 2024
+        _word(
+            _NOT_COMPOUND,
+            _ORD_WORD + _PAREN_DAY + _S + _DAY_OF + _MON_ANY + _SEP_MONTH_YEAR + _YEAR_FILL + _YEAR_X,
+            _RIGHT_OPEN,
+        ),
+        # 03-Mar-2024, 03-Mar-24, 3/Mar/2024, 3rd-March-2024
+        _num(
+            _LEFT_NUMBER,
+            _DAY_ORD + r"(?P<dm>[-/])" + _MONTH_ANY_WORD + r"\b(?P=dm)(?:" + _YEAR + r"|\d{2}(?!\d))",
+            _RIGHT_OPEN,
+        ),
+        # year-first prose: 2024 March 3, 2024, March 3rd, 2024-Mar-03
+        _prose(_LEFT_NUMBER, _YEAR + _SEP_DAY_YEAR + _MON_ANY + _THE_DAY + _DAY_ORD, _RIGHT_OPEN),
+        _num(_LEFT_NUMBER, _YEAR + "-" + _MONTH_ANY_WORD + r"\b-" + _DAY_ORD, _RIGHT_OPEN),
+        # --- partial and ambiguous forms: strict guards ---
+        # DDMONYYYY and DDMONYY, standing alone: 03MAR2024, 3MAR24
+        _misc(_LEFT_STRICT, _DAY + _MONTH_ANY_WORD + r"(?:" + _YEAR + r"|\d{2}(?!\d))", _RIGHT_STRICT),
+        # two-digit-year prose: Mar 3, 24  March 3rd, '24  31 Dec 23  3 Mar 24
+        _wmonth(
+            _LEFT_STRICT,
+            _MON_ANY + _THE_DAY + _DAY_ORD + r"(?:" + _SEP_DAY_YEAR + _QUOTE + "|" + _S0 + "," + _S0 + r")\d{2}",
+            _RIGHT_TWO_DIGIT_YEAR,
+        ),
+        _prose(
+            _LEFT_STRICT,
+            _DAY_ORD + _S + r"(?:of" + _S + ")?" + _MON_ANY + r"(?:" + _S0 + "," + _S0 + "|" + _S + ")" + _QUOTE + r"?\d{2}",
+            _RIGHT_TWO_DIGIT_YEAR,
+        ),
+        # compact ISO, standing alone: 20240303 (years 1800-2099, like _YEAR)
+        _misc(_LEFT_STRICT, r"(?:18|19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])", _RIGHT_STRICT),
+        # dotted two-digit year: 03.04.24, 3.4.24
+        # (both ends of a range 12.31.99-12.31.99 read; the version filter is in _document_dates)
+        _num(
+            r"(?:(?<=\.\d{2}[-–])|" + _LEFT_STRICT + ")",
+            _DAY + r"\." + _DAY + r"\.\d{2}",
+            r"(?:(?=" + _DOTTED_NEXT + ")|" + _RIGHT_STRICT + ")",
+        ),
+        # month and year: March 2024, March of 2024, Mar-2024, 03/2024, 3/2024, 2024-03, 2024/03
+        _wmonth(_LEFT_STRICT, _MON_PART + r"(?:" + _S0 + "," + _S0 + "|" + _S + "of" + _S + "|" + _S0 + ")" + _YEAR, _RIGHT_STRICT),
+        _wmonth(_LEFT_STRICT, _MON_PART_WORD + r"\b-" + _YEAR, _RIGHT_STRICT),
+        _num(_LEFT_STRICT, _NUM_MONTH + "/" + _YEAR, _RIGHT_STRICT),
+        _num(_LEFT_STRICT, _PAD_MONTH + "-" + _YEAR, _RIGHT_STRICT),
+        _num(_LEFT_STRICT, _YEAR + r"[-/]" + _PAD_MONTH, _RIGHT_STRICT),
+        # month and day, no year: March 3, 3rd of March, twenty-first of June
+        _wmonth(_LEFT_STRICT, _MON_PART + _THE_DAY + _DAY_ORD, _RIGHT_STRICT),
+        _prose(_LEFT_STRICT, _DAY_ORD + _PAREN_DAY + _S + _DAY_OF + "?" + _MON_PART, _RIGHT_STRICT),
+        _word(_LEFT_STRICT + _NOT_COMPOUND, _ORD_WORD + _PAREN_DAY + _S + _DAY_OF + _MON_PART, _RIGHT_STRICT),
+    ]
+)
+# Every start position is tried (a zero-width match that captures the span from a lookahead),
+# not only the first one after the previous match: "Item 4 March 15, 2024" has a year-less
+# "4 March" at the 4 and the full date at "March", and a non-overlapping scan loses the second.
+# The scan runs on text with ASCII digits and spaces (see ``_ascii_digits``: NFKC folds no-break and
+# other Unicode spaces), so the cheaper ASCII classes are exact and the scan is a fifth faster.
+_SCAN_FLAGS = re.IGNORECASE | re.ASCII
+_PRE_MONTH = r"(?=(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))"
+_PRE_ORDINAL = r"(?=(?:fir|sec|thi|fou|fif|six|sev|eig|nin|ten|ele|twe))"
 _DATE_CANDIDATE_RE = re.compile(
-    r"\b\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}\b"
-    r"|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}\b"
-    r"|\b\d{1,2}[a-z]*(?:\s+[a-z]+)*\s+day\s+of\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s*,?\s*\d{4}\b",
+    r"(?<![\dA-Za-z])(?:"
+    r"(?=\d{1,4}(?:st|nd|rd|th|d)?[-/.][\dA-Za-z])(?=(?P<g_num>"
+    + "|".join(alt for kind, alt in _DATE_ALTERNATIVES if kind == "num") + "))"
+    r"|(?=\d{1,4}[A-Za-z]{0,2}[\s,(]{1,30}(?:of\b|day\b|[a-z]\b|\(|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)))"
+    r"(?=(?P<g_prose>" + "|".join(alt for kind, alt in _DATE_ALTERNATIVES if kind == "prose") + "))"
+    r"|(?=\d{1,2}[A-Za-z]|\d{8})(?=(?P<g_misc>"
+    + "|".join(alt for kind, alt in _DATE_ALTERNATIVES if kind == "misc") + "))"
+    r"|" + _PRE_MONTH + r"(?=(?P<g_wmonth>" + "|".join(alt for kind, alt in _DATE_ALTERNATIVES if kind == "wmonth") + "))"
+    r"|" + _PRE_ORDINAL + r"(?=(?P<g_word>" + "|".join(alt for kind, alt in _DATE_ALTERNATIVES if kind == "word") + "))"
+    r")",
+    flags=_SCAN_FLAGS,
+)
+
+# Day ranges. The document states every day a range names, so both ends are dates:
+# "March 3-5, 2024" is March 3 and March 5, 2024; "March 30-April 2, 2024" is March 30 and
+# April 2; "March 1 to June 30" is both days, year-less. (A range does not state the days
+# between its ends.) A dated range may follow a letter or punctuation; a year-less one is a
+# partial date and keeps the strict guards, and "May"/"March" need a capital there.
+_ORD_SUFFIX = r"(?:st|nd|rd|th|d)?"
+_RANGE_DATED = (
+    # March 3-5, 2024 / March 3 to 5, 2024 / March 3rd through 5th, 2024
+    r"(?P<m1>" + _MON_ANY + r")" + _THE_DAY + r"(?P<d1>" + _DAY + r")" + _ORD_SUFFIX + _RANGE_JOIN
+    + r"(?P<d2>" + _DAY + r")" + _ORD_SUFFIX + _SEP_DAY_YEAR + r"(?P<y>" + _YEAR + ")",
+    # 3-5 March 2024 / 3 to 5 March, 2024
+    r"(?P<d1>" + _DAY + r")" + _ORD_SUFFIX + _RANGE_JOIN + r"(?P<d2>" + _DAY + r")" + _ORD_SUFFIX
+    + _S + r"(?:of" + _S + r")?(?P<m1>" + _MON_ANY + ")" + _SEP_MONTH_YEAR + r"(?P<y>" + _YEAR + ")",
+    # March 30-April 2, 2024 / March 1 to April 5, 2024
+    r"(?P<m1>" + _MON_ANY + r")" + _THE_DAY + r"(?P<d1>" + _DAY + r")" + _ORD_SUFFIX + _RANGE_JOIN
+    + r"(?P<m2>" + _MON_ANY + r")" + _THE_DAY + r"(?P<d2>" + _DAY + r")" + _ORD_SUFFIX
+    + _SEP_DAY_YEAR + r"(?P<y>" + _YEAR + ")",
+)
+_RANGE_YEARLESS = (
+    r"(?P<m1>" + _MON_PART + r")" + _THE_DAY + r"(?P<d1>" + _DAY + r")" + _ORD_SUFFIX + _RANGE_JOIN
+    + r"(?P<d2>" + _DAY + r")" + _ORD_SUFFIX,
+    r"(?P<d1>" + _DAY + r")" + _ORD_SUFFIX + _RANGE_JOIN + r"(?P<d2>" + _DAY + r")" + _ORD_SUFFIX
+    + _S + r"(?:of" + _S + r")?(?P<m1>" + _MON_PART + ")",
+    r"(?P<m1>" + _MON_PART + r")" + _THE_DAY + r"(?P<d1>" + _DAY + r")" + _ORD_SUFFIX + _RANGE_JOIN
+    + r"(?P<m2>" + _MON_PART + r")" + _THE_DAY + r"(?P<d2>" + _DAY + r")" + _ORD_SUFFIX,
+)
+def _range_pattern(body: str, left: str, right: str) -> "re.Pattern[str]":
+    """One range regex, tried at every start position behind a one-character lookahead."""
+    first = r"(?=\d)" if body.startswith(r"(?P<d1>") else r"(?=[A-Za-z])"
+    return re.compile(first + left + "(?=(?:" + body + ")" + right + ")", flags=_SCAN_FLAGS)
+
+
+_DATE_RANGE_RES = tuple(_range_pattern(body, _LEFT_WORD, r"(?!\d)") for body in _RANGE_DATED) + tuple(
+    _range_pattern(body, _LEFT_STRICT, _RIGHT_STRICT) for body in _RANGE_YEARLESS
+)
+
+# A range needs a number or month, a join and a number or month, close together: one cheap
+# search decides whether the six range regexes can match anywhere in the document.
+_RANGE_HINT_RE = re.compile(
+    r"(?:\d" + _ORD_SUFFIX + "|" + _MONTH_ANY_WORD + r"\b\.?)" + _S0 + r"(?:[-\u2013\u2014]|" + r"\b(?:to|through|thru|until)\b)"
+    + _S0 + r"(?:\d|" + _MONTH_ANY_WORD + ")",
+    flags=_SCAN_FLAGS,
+)
+
+# Words that make a number a reference, not a date.
+_VERSION_WORDS = r"v|ver(?:sion)?|release|build|rev(?:ision)?"
+_SECTION_WORDS = (
+    r"sec(?:tion)?s?|clauses?|articles?|art|paragraphs?|para|rules?|items?|parts?|schedules?|exhibits?"
+)
+_ID_WORDS = (
+    r"case|nos?|numbers?|ordinances?|resolutions?|policy|policies|claims?|dockets?|ref(?:erence)?s?|rfc"
+    r"|pub\.?\s{0,2}l|ext|rooms?|invoices?|inv"
+)
+_DOTTED_CHAIN = r"(?:\d{1,2}(?:\.\d{1,2}){2,}[-–])?"
+#: A dotted span (3.4.24, 13.04.2024) right after one of these is a version or a section number
+#: ("Version: 1.2.34", "Release notes 1.2.34", "Section 3.1.20", "§ 5.2.14", "see build 1.2.34-1.2.35").
+_DOTTED_CONTEXT_RE = re.compile(
+    r"(?:\b(?:" + _VERSION_WORDS + "|" + _SECTION_WORDS + r")\.?(?:\s{1,3}notes?)?|§§?|¶¶?)[\s:]{0,3}"
+    + _DOTTED_CHAIN + r"\Z",
     flags=re.IGNORECASE,
 )
+#: A numeric month and year alone (03/2024, 3/2024, 03-2024, 2024-03) after one of these is a
+#: reference number ("Case No. 03-2024", "Invoice #03/2024", "Section 3/2024").
+_ID_CONTEXT_RE = re.compile(
+    r"(?:\b(?:" + _ID_WORDS + "|" + _SECTION_WORDS + "|" + _VERSION_WORDS
+    + r")\.?(?:\s{1,3}(?:no|number|nr)\.?)?|#)[\s:#]{0,3}\Z",
+    flags=re.IGNORECASE,
+)
+_DOTTED_SPAN_RE = re.compile(r"\d{1,2}\.\d{1,2}\.\d{2,4}\Z")
+_MONTH_YEAR_NUMERIC_RE = re.compile(r"(?:\d{1,2}[-/]\d{4}|\d{4}[-/]\d{2})\Z")
+
+
+@lru_cache(maxsize=8)
+def _document_dates(doc_text: str) -> frozenset:
+    """The :class:`_DateParts` of every date the document writes, scanned once per text."""
+    text = _TENS_GAP_RE.sub(r"\1 ", _ascii_digits(doc_text))
+    spans = set()
+    blocked: dict[tuple[bool, str], bool] = {}  # (dotted?, the 40 characters before a span) -> verdict
+    for match in _DATE_CANDIDATE_RE.finditer(text):
+        span = match.group(match.lastgroup)
+        if span in spans:
+            continue
+        dotted = _DOTTED_SPAN_RE.match(span) is not None
+        if dotted or _MONTH_YEAR_NUMERIC_RE.match(span):
+            before = text[max(0, match.start() - 40):match.start()]
+            key = (dotted, before)
+            if key not in blocked:
+                pattern = _DOTTED_CONTEXT_RE if dotted else _ID_CONTEXT_RE
+                blocked[key] = pattern.search(before) is not None
+            if blocked[key]:
+                continue
+        spans.add(span)
+    for pattern in _DATE_RANGE_RES if _RANGE_HINT_RE.search(text) else ():
+        for match in pattern.finditer(text):
+            ends = match.groupdict()
+            year = f", {ends['y']}" if ends.get("y") else ""
+            for month, day in ((ends["m1"], ends["d1"]), (ends.get("m2") or ends["m1"], ends["d2"])):
+                spans.add(f"{month} {day}{year}")
+    parsed = (_parse_date_parts(span) for span in spans)
+    return frozenset(parts for parts in parsed if parts is not None)
 
 
 def _date_grounded_in_doc(pred_date, doc_text: str) -> bool:
-    """True when the document contains a date that agrees with ``pred_date``,
-    in ANY format (numeric dashed, slashed, or prose month-name).
+    """True when the document writes a date that agrees with ``pred_date``, in ANY
+    common format: ISO and other year-first numeric, US numeric, month-first or
+    day-first prose (ordinals, spelled-out days and years, "the 3rd day of March,
+    2024", weekday prefixes), year-first prose, month and year, month and day, and
+    day ranges (a range states both its ends). The scan is :data:`_DATE_CANDIDATE_RE`
+    (every start position is tried) plus :data:`_DATE_RANGE_RES`; ids, section numbers and
+    reference numbers are filtered out (see the contract, ``docs/contracts/GROUNDING.md``).
 
     ``pred_date`` is a ``datetime.date`` or the :class:`_DateParts` of a
-    partial date. A partial prediction ("August 18") is grounded by a document
-    date that agrees on every component it states; no component is invented.
+    partial date. Every component the prediction states must be stated by the
+    document's date and equal: a partial prediction ("August 18") is grounded by
+    a document date that agrees on what it states, but a year-less document date
+    ("on August 18") never grounds a prediction that states a year, and no
+    component is invented. Numeric ``03/04/2024`` is month-first, as everywhere
+    in this module. Never reads the clock.
     """
     if pred_date is None or not doc_text:
         return False
     if not isinstance(pred_date, _DateParts):
         pred_date = _DateParts(pred_date.year, pred_date.month, pred_date.day)
-    for match in _DATE_CANDIDATE_RE.finditer(doc_text):
-        candidate = _parse_date_parts(match.group(0))
-        if candidate is not None and all(
-            want is None or want == got for want, got in zip(pred_date, candidate)
-        ):
-            return True
-    return False
+    return any(
+        all(want is None or want == got for want, got in zip(pred_date, candidate))
+        for candidate in _document_dates(doc_text)
+    )
 
 
 def audit_scalar_field(field_type: str, pred, exp, doc_text: str | None) -> dict:
