@@ -223,3 +223,22 @@ def test_backdated_late_human_record_moves_the_cutoff_back():
     ledger = _ledger(c, [(0, "agent", "boss@v1", "valid", 5), (0, "human", "human:a", "valid", 10),
                          (0, "human", "human:b", "valid", 3)])
     assert paired_checks(ledger) == []
+
+
+def test_agent_whose_latest_blind_word_is_unsure_is_not_paired():
+    """An agent that said valid, then unsure, before people decided took no position."""
+    candidates = _candidates(1)
+    ledger = _ledger(candidates, [(0, "agent", "boss@v1", "valid", 5), (0, "agent", "boss@v1", "unsure", 8),
+                                  (0, "human", "human:a", "valid", 100)])
+    assert paired_checks(ledger) == []
+
+
+def test_backdated_human_record_rewrites_the_reconstructed_past():
+    """Known limitation (docs/contracts/GROUNDING.md): ``as_of`` reads ``confirmed_at``,
+    not arrival, so a person's record appended later but dated earlier counts at past
+    ``as_of`` times. Pinned so a fix (an arrival time per record) updates it knowingly."""
+    candidates = _candidates(1)
+    rows = [(0, "agent", "boss@v1", "valid", 10), (0, "human", "human:a", "valid", 100)]
+    assert len(paired_checks(_ledger(candidates, rows), as_of=100)) == 1
+    later = _ledger(candidates, rows + [(0, "human", "human:b", "hallucinated", 50)])
+    assert paired_checks(later, as_of=100) == []

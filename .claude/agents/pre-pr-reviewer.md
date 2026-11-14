@@ -65,3 +65,6 @@ caught before. Check each one. Append a line when a new one gets through (see
 - A metric or suite renamed in code but not in `docs/contracts/METRIC_IDS.md` or the
   registry.
 - A changed docstring or comment that no longer describes the code.
+- A reader that accepts what its writer refuses (`json.loads` takes `NaN` and `Infinity`
+  unless `parse_constant` rejects them), or a value that skips the check its correction
+  gets (an uncorrected `valid` on a predicted `false`).

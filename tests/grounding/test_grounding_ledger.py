@@ -110,3 +110,21 @@ def test_numeric_and_text_corrections_accepted():
     ledger = ingest_confirmations([_record(corrected_value=12.5), _record(corrected_value="Robin X")],
                                   CANDIDATES.values())
     assert [c.corrected_value for c in ledger.confirmations] == [12.5, "Robin X"]
+
+
+@pytest.mark.parametrize("value", [False, True, {"a": 1}, [1], float("nan")])
+def test_valid_on_a_value_that_is_not_text_or_a_number_needs_a_correction(value):
+    """A ``valid`` verdict would make the candidate's value a label, so the value must be
+    usable as one (non-blank text or a finite number), else the reviewer corrects it."""
+    from dataclasses import replace
+
+    from llm_dojo_scoring.grounding.labels import derive_valid_labels
+
+    candidates = {CID: replace(CANDIDATES["adjuster"], value=value)}
+    ledger = ingest_confirmations([_record(), _record(reviewer_id="human:b", verdict="hallucinated"),
+                                   _record(reviewer_id="human:c", corrected_value="Robin Example")],
+                                  candidates.values())
+    assert [r.reason for r in ledger.rejects] == [
+        "the candidate's value is not text or a finite number; a valid verdict needs a corrected_value"]
+    assert [c.reviewer_id for c in ledger.confirmations] == ["human:b", "human:c"]
+    assert derive_valid_labels(ledger).labels == ()  # people disagree: no label from the bad value
