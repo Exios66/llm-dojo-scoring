@@ -872,3 +872,196 @@ def test_audit_list_field_does_not_match_an_unverified_year():
 def test_strict_date_list_matching_cases(pred, label, matched):
     """List pairing for dates: unverified or stray years never match; exact copies do."""
     assert fs.score_entity_list("date", pred, label).matched == matched
+
+
+# ---------------------------------------------------------------------------
+# Dates in the document: every common written form is read, none is invented
+# ---------------------------------------------------------------------------
+
+#: (prediction, document) pairs where the document states the predicted date.
+_DOC_DATE_GROUNDED = [
+    # ISO and year-first numeric, three separators
+    ("2024-03-03", "Effective 2024-03-03."),
+    ("2024-03-03", "Effective 2024/03/03."),
+    ("2024-03-03", "Effective 2024.03.03."),
+    ("2024-03-03", "Effective 2024-3-3 hereof."),
+    ("2024-03-03", "Executed 2024-03-03T10:30:00Z by the parties."),
+    ("2024-03-03", "Executed (2024-03-03)."),
+    # US numeric (month-first, unchanged) and a day that cannot be a month
+    ("2024-03-04", "Dated 03/04/2024 by the parties."),
+    ("2024-04-13", "Dated 13/04/2024 by the parties."),
+    ("2024-03-03", "Dated 03.03.2024 by the parties."),
+    ("2024-03-03", "Dated 03.03.24 by the parties."),
+    # month-first prose: ordinal, comma, period, no comma, "the"
+    ("2024-03-03", "Signed March 3rd, 2024."),
+    ("2024-03-03", "Signed Mar. 3rd, 2024."),
+    ("2024-03-03", "Signed March 3 2024."),
+    ("2024-03-03", "Signed March 3,2024."),
+    ("2024-09-03", "Signed Sept. 3, 2024."),
+    ("2024-03-03", "Signed on March the 3rd, 2024."),
+    # day-first prose
+    ("2024-03-03", "Signed 3 March 2024."),
+    ("2024-03-03", "Signed 3rd March 2024."),
+    ("2024-03-03", "Signed 3rd of March, 2024."),
+    ("2024-03-03", "Signed 3 Mar. 2024."),
+    ("2024-03-03", "Signed 03-Mar-2024."),
+    ("2024-03-03", "Signed on the 3rd of March 2024."),
+    ("2024-03-03", "Made this 3rd day of March, 2024, between."),
+    ("2024-03-03", "Made the 3rd day of March 2024."),
+    # weekday prefixes
+    ("2024-03-03", "Signed Sunday, March 3, 2024."),
+    ("2024-03-03", "Signed Sun. 3 March 2024."),
+    ("2024-03-03", "Signed Sun, March 3rd, 2024."),
+    # month and year
+    ("2024-03", "dated March 2024"),
+    ("2024-03", "dated Mar 2024"),
+    ("2024-03", "dated Mar. 2024"),
+    ("2024-03", "dated in March, 2024"),
+    ("March 2024", "due 2024-03 at the latest"),
+    ("March 2024", "due 03/2024 at the latest"),
+    ("2024-03", "due 2024/03 at the latest"),
+    # month and day without a year
+    ("March 3", "Signed on March 3."),
+    ("March 3", "Signed on March 3rd."),
+    ("March 3", "Signed on 3 March."),
+    ("March 3", "Signed on the 3rd of March."),
+    ("March 3", "Signed on Mar. 3."),
+    # a full date in the document grounds a partial prediction that agrees
+    ("March 3", "Signed on March 3, 2024."),
+    ("2024-03", "Signed on March 3, 2024."),
+    ("2024", "Signed on March 3, 2024."),
+    # a prediction written in prose, the document in ISO
+    ("March the 3rd, 2024", "Effective 2024-03-03."),
+    ("the 3rd of March 2024", "Effective 2024-03-03."),
+    ("3rd day of March, 2024", "Effective 2024-03-03."),
+]
+
+#: (prediction, document) pairs where the document does NOT state the predicted date.
+_DOC_DATE_NOT_GROUNDED = [
+    # a different date in the same form
+    ("2024-03-04", "Effective 2024-03-03."),
+    ("2024-04-03", "Dated 03/04/2024."),  # numeric stays month-first: March 4, not April 3
+    ("2024-03-03", "Signed March 4th, 2024."),
+    ("2024-03-03", "Signed 4 March 2024."),
+    ("2024-02", "dated March 2024"),
+    ("March 4", "Signed on March 3."),
+    # a year-less document date never grounds a prediction that states a year
+    ("2024-03-03", "Signed on March 3."),
+    ("March 3, 2024", "Signed on the 3rd of March."),
+    # a month and year never grounds a day
+    ("2024-03-03", "dated March 2024"),
+    # the modal verb "may" is not a month
+    ("May 5", "you may 5 times"),
+    ("May 2024", "Tenants may 2024 reasons"),
+    # identifiers, phone numbers and references
+    ("2024-03-01", "INV-2024-0301"),
+    ("2024-03", "INV-2024-0301"),
+    ("2024-03-01", "Ref 2024-03-0001"),
+    ("2024-03", "Ref 2024-03-0001"),
+    ("2024-03", "Ref 2024-03-0001-A"),
+    ("2024-05", "call 415-555-2024 now"),
+    ("2024-05", "call 415-505-2024 now"),  # "05-2024" inside a phone number
+    ("2024-03", "ref INV-03/2024"),
+    ("2024-03", "order #03/2024"),
+    ("March 5", "call 415-555-0305 March now"),
+    # versions, money, section and page numbers
+    ("2003-01-02", "see v1.2.3 for details"),
+    ("2034-01-02", "version 1.2.34 was released"),
+    ("2024-03-05", "in 5 days after the first day of March 2024 we"),  # "5 day of March"
+    ("March 3", "March 3,000 units shipped"),
+    ("March 3", "March 3.50 per unit"),
+    ("March 3", "see Section 3 and the March report"),
+    ("March 3", "In March we met 3 times"),
+    ("March 12", "page 12 of the March report"),
+    ("2000-01", "one 1/2000 share"),  # a fraction: numeric month-year needs a padded month
+    # a month word with no number next to it
+    ("2024-03", "The march of the 2024 team"),
+]
+
+
+@pytest.mark.parametrize("pred, doc", _DOC_DATE_GROUNDED)
+def test_document_date_in_any_written_form_grounds_the_prediction(pred, doc):
+    """The document states the predicted date, however it writes it."""
+    assert fs._date_grounded_in_doc(fs._parse_date_parts(pred), doc), (pred, doc)
+
+
+@pytest.mark.parametrize("pred, doc", _DOC_DATE_NOT_GROUNDED)
+def test_document_text_that_is_not_that_date_does_not_ground_it(pred, doc):
+    """A different date, a missing year, a modal verb or an id-like run is not the date."""
+    assert not fs._date_grounded_in_doc(fs._parse_date_parts(pred), doc), (pred, doc)
+
+
+@pytest.mark.parametrize("pred, doc", _DOC_DATE_GROUNDED)
+def test_audit_verifies_a_date_the_document_writes_in_any_form(pred, doc):
+    """audit_scalar_field's verified_in_doc and hallucination_rate follow the document."""
+    out = fs.audit_scalar_field("date", pred, "", doc)
+    assert (out["verified_in_doc"], out["hallucination_rate"], out["verified_precision"]) == (1, 0.0, 1.0), (pred, doc)
+
+
+@pytest.mark.parametrize("pred, doc", _DOC_DATE_NOT_GROUNDED)
+def test_audit_flags_a_date_the_document_does_not_state(pred, doc):
+    """A date the document does not state is a hallucination in the audit."""
+    out = fs.audit_scalar_field("date", pred, "", doc)
+    assert (out["verified_in_doc"], out["hallucination_rate"], out["verified_precision"]) == (0, 1.0, 0.0), (pred, doc)
+
+
+@pytest.mark.parametrize(
+    "doc, grounded, not_grounded",
+    [
+        ("dated 3/4/69 here", "1969-03-04", "2069-03-04"),  # two-digit year: fixed 69 pivot
+        ("dated 3/4/68 here", "2068-03-04", "1968-03-04"),
+    ],
+)
+def test_document_two_digit_year_uses_the_fixed_pivot(doc, grounded, not_grounded):
+    """A two-digit year in the document reads with the fixed pivot, never the clock."""
+    assert fs._date_grounded_in_doc(fs._parse_date_parts(grounded), doc)
+    assert not fs._date_grounded_in_doc(fs._parse_date_parts(not_grounded), doc)
+
+
+def test_document_date_scan_finds_a_date_among_look_alikes():
+    """An id, a version and a phone number around the date neither hide nor become it."""
+    doc = "INV-2024-0301 v1.2.3 call 415-555-2024. Effective 3rd of March, 2024; ref 2024-03-0001."
+    assert fs._date_grounded_in_doc(fs._parse_date_parts("2024-03-03"), doc)
+    assert not fs._date_grounded_in_doc(fs._parse_date_parts("2024-03-01"), doc)
+
+
+@pytest.mark.parametrize(
+    "pred, label",
+    [
+        ("March the 3rd, 2024", "2024-03-03"),
+        ("the 3rd of March 2024", "2024-03-03"),
+        ("March 3rd, 2024)", "2024-03-03"),
+        ("2024.03.03", "March 3rd, 2024"),
+        ("3 Mar. 2024", "2024-03-03"),
+        ("3rd of March, 2024", "2024/03/03"),
+        ("Sun, 3 March 2024", "2024-03-03"),
+        ("2024-03", "March 2024"),
+        ("03/2024", "Mar. 2024"),
+        ("March 3", "3rd of March"),
+        ("03/04/2024", "March 4, 2024"),  # numeric is month-first
+    ],
+)
+def test_the_same_date_in_two_formats_scores_one(pred, label):
+    """Prediction and label that state the same date score 1.0 in either direction."""
+    assert fs.score_date_field(pred, label) == 1.0
+    assert fs.score_date_field(label, pred) == 1.0
+    assert fs._date_match_similarity(pred, label) == 1.0
+
+
+@pytest.mark.parametrize(
+    "text, parts",
+    [
+        ("2024.03.03", (2024, 3, 3)),
+        ("March the 3rd, 2024", (2024, 3, 3)),
+        ("the 3rd of March 2024", (2024, 3, 3)),
+        ("3rd of March", (None, 3, 3)),
+        ("Mar. 3rd", (None, 3, 3)),
+        ("03/2024", (2024, 3, None)),
+        ("2024-03", (2024, 3, None)),
+        ("03/04/2024", (2024, 3, 4)),  # ambiguous numeric stays month-first
+        ("13/04/2024", (2024, 4, 13)),
+    ],
+)
+def test_parse_date_parts_reads_every_written_form(text, parts):
+    """_parse_date_parts states exactly the components the text writes."""
+    assert tuple(fs._parse_date_parts(text)) == parts

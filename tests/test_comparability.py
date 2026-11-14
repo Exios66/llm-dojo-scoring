@@ -141,6 +141,14 @@ def test_score_changelog_0_29_0_moves_field_micro_precision():
     assert any("#133" in entry["change"] for entry in changes)
 
 
+def test_score_changelog_0_31_0_moves_the_factuality_metrics():
+    """The date-scan fix (#147) moves the audit's verified/hallucination numbers."""
+    for metric_id in ("hallucination_rate", "verified_precision", "extraction_hallucination_rate"):
+        changes = score_changes_for_metric(metric_id, "0.30.0", "0.31.0")
+        assert {entry["version"] for entry in changes} == {"0.31.0"}, metric_id
+        assert all("#147" in entry["change"] and entry["rescore_required"] for entry in changes)
+
+
 def test_score_changelog_handles_reversed_and_invalid_versions():
     """Reversing the pair is harmless; missing or junk releases yield nothing."""
     assert score_changes_between("0.26.0", "0.24.0") == score_changes_between(
