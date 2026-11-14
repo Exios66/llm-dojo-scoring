@@ -15,6 +15,7 @@ llm_dojo_scoring/
 ├── metrics/           metric identity and emission
 ├── analysis/          run analysis and reporting
 ├── grounding/         unlabelled-value grounding (a separate pass, never on the scoring path)
+├── ml/                contract mailroom-ml vendors; intake-classifier scorecard
 └── integrations/      trace sinks and release awareness
 ```
 
@@ -66,6 +67,8 @@ llm_dojo_scoring/
 | | `audit`, `summary` | Per-value records; unlabelled-value rates as `ScoreRecord`s (`docs/contracts/GROUNDING.md`) |
 | | `candidates`, `ledger`, `labels`, `io` | Review candidates; append-only confirmations; valid labels with provenance; local JSONL |
 | | `agreement` | Each agent's agreement with human spot-checks (valid precision, Wilson bound, κ) |
+| **`ml/`** | `contract` | `ml_contract()`: the label and intake tables `mailroom-ml` vendors as `ml/data/ml_contract.json` |
+| | `metrics` | `score_intake_model`: accuracy, macro F1, ECE, fast-path coverage and risk |
 | **`integrations/`** | `update_awareness` | `dojo-version` release awareness |
 | | `update_awareness` | Opt-in release discovery behind `dojo-version` |
 
