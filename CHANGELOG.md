@@ -6,6 +6,16 @@ Format based on Keep a Changelog; versioning is SemVer.
 ## [Unreleased]
 ### Added
 
+<!-- 0.31.0: unlabelled-value grounding -->
+- `grounding/` (new subpackage, tracker #146): checks every value an extractor states on a
+  field the GT does not label (key absent or `pending_annotation`) against the source
+  document, as `grounded`, `not_found` or `unverifiable`, and reports
+  `grounding_not_found_rate` (tier 1), `grounding_unverifiable_rate` (tier 2) and
+  `grounding_n_audited` (tier 3) per run, class and field. A separate pass: nothing on the
+  scoring path imports it, and the headline, field-micro and golden scores are unchanged.
+  Contract: `docs/contracts/GROUNDING.md`. No consumer imports it yet (`hold`).
+<!-- end 0.31.0 -->
+
 - `schemas/doc_classes.py`: one hand-edited registry (`DOC_CLASSES`, `DocClass`, `field_types()`,
   `field_names()`, `LIVE_DOC_TYPES`, `RETIRED_DOC_TYPES`) for the eight document classes, their
   specialists and their extraction fields. Every other class list and per-class field table now
