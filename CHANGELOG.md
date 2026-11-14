@@ -30,23 +30,29 @@ Format based on Keep a Changelog; versioning is SemVer.
   prose ("2024 March 3"), month and year ("March 2024", "March of 2024", "Mar-2024",
   "2024-03", "03/2024", "3/2024"), month and day with no year ("March 3", "3rd of March"),
   unpadded dotted `3.4.24`, and day ranges ("March 3-5, 2024", "3 to 5 March 2024",
-  "March 3 through 5, 2024", "March 30-April 2, 2024"), where the document states both ends.
+  "March 3 through 5, 2024", "March 30-April 2, 2024", year-less "March 1 to June 30", dotted
+  "12.31.99-12.31.99"), where the document states both ends, and the double-spelled contract
+  form ("the 3rd (third) day of March, 2024"; "3rd (fourth)" names no day). Document years
+  run from 1800 to 2099 and "thirty-second of March" names no day.
   Complete dates may touch punctuation, so `01/01/2024-12/31/2024`,
   `March 1, 2024/March 1, 2025` and `contract_3-1-2024.pdf` read, as they did before. The rule is unchanged: every component the
   prediction states must be stated by the document date and equal, so a year-less document
   date never grounds a prediction that states a year, and a full document date grounds a
   partial prediction that agrees. Ambiguous numeric `03/04/2024` stays month-first and the
   two-digit-year pivot is unchanged. Ids (`INV-2024-0301`, `2024-03-0001`), phone numbers,
-  versions (`version 1.2.34`), money (`March 3,000`), the modal verb "may" and a month word
-  with no number are not dates. The old scan also read "5 days after the first day of March
-  2024" as March 5 and `1.2.34` as January 2, 2034; it no longer does. On the interpretation
+  money (`March 3,000`), the modal verb "may" and a month word with no number are not dates,
+  and a dotted span right after "v", "version", "ver", "release", "build" or "rev" (with an
+  optional "notes", colon or spaces: `Version: 1.2.34`, `Release notes 1.2.34`) is a version,
+  not a date. A bare `1.2.34` with no such word still reads as January 2, 2034, because
+  `3.4.24` must read. The old scan also read "5 days after the first day of March 2024" as
+  March 5, and "version 1.2.34" as January 2, 2034; it no longer does. On the interpretation
   side `_parse_date_parts` now reads spelled-out days and years, "in the year of our Lord",
   an article before a day, "in March of 2024", "March 3 to 5, 2024" (as its first day, since
   a single value never invents a second date) and a stray closing bracket, so a prediction
   and a label in those forms score as the same date. The scan is linear on hostile text
   (bounded gaps, a digit/word prefilter; guarded by a timing test). Trade-offs that remain
-  are listed in `docs/contracts/GROUNDING.md` ("Dates"): a version like `Section 3.2.15`,
-  `1/2000` and an 8-digit `YYYYMMDD` number read as dates.
+  are listed in `docs/contracts/GROUNDING.md` ("Dates"): a version like `Section 3.2.15` (no
+  version word before it), `1/2000` and an 8-digit `YYYYMMDD` number read as dates.
   **Metrics that move** on unchanged predictions: `verified_in_doc`, `verified_precision`
   and `hallucination_rate` of the factuality audit (`audit_scalar_field`, per field and as
   the run means `verified_precision`, `hallucination_rate`, `extraction_hallucination_rate`,
