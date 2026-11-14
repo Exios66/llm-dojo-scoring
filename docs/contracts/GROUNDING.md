@@ -15,9 +15,9 @@ and never stores document text.
 
 Status (0.31.0): pieces 1 and 2 (verdicts and rates; review candidates, the
 confirmation ledger and valid labels with provenance), the reviewer-trust settings,
-agent agreement with human spot-checks and the trust gate. Spot-check sampling follows in
-a stacked PR
-(`docs/superpowers/plans/2026-11-14-unlabelled-value-grounding-piece-3.md`); see the design
+agent agreement with human spot-checks, spot-check sampling and the trust gate: the whole
+loop from audit to labels (piece 3 is split across four stacked PRs,
+`docs/superpowers/plans/2026-11-14-unlabelled-value-grounding-piece-3.md`); see the design
 (`docs/superpowers/specs/2026-11-14-unlabelled-value-grounding-design.md`) and tracker
 Exios66/llm-dojo-scoring#146. Consumers: none yet (`hold` in
 `docs/analysis/data/consumer_closure.json`); llm-mailroom wiring follows the release.
@@ -437,6 +437,30 @@ and `metadata.denominator`; the metrics apply to `ALL` agents for that reason.
 shared agent name it would aggregate by metric id alone and show only the last
 reviewer's precision.
 
+### Spot-check sampling
+
+`select_spot_checks(ledger, *, rate=None, min_per_agent=None, seed=0) -> list[str]`
+returns the candidate ids to send to people, in candidate-id order:
+
+- per agent, the eligible candidates are those whose latest confirmation by that agent
+  is `valid` or `hallucinated` and that no person has decided yet (a latest `unsure`
+  is not a decision);
+- each gets a fixed draw in `[0, 1)` from `sha256([seed, reviewer_id, candidate_id])`
+  (the first 64 bits of the JSON list's digest), and a draw below `rate` is sampled; that
+  part of the sample does not change as the ledger grows or between runs;
+- when the agent's paired checks in its latest `trust_window` plus its drawn candidates
+  are fewer than `min_per_agent`, its lowest remaining draws top it up (all its eligible
+  candidates if there are fewer). Checks people already made count, so calling again
+  after they answered does not add another 20. The floor is capped at `trust_window`,
+  the most paired checks that can count toward it. The top-up can change as candidates
+  arrive, so a caller keeps its own record of what it sent;
+- a candidate sampled for several agents is listed once.
+
+`rate` and `min_per_agent` default to `grounding.spot_check_rate` (0.10) and
+`grounding.spot_check_min_per_agent` (20) and are validated like them (`ValueError`);
+`seed` must be a whole number. Precision counts every paired check, including ones a
+person made without being asked, not only sampled ones.
+
 ## Trust gate
 
 `grounding/trust.py`. `TrustGate(bar=None, min_n=None, window=None, certainty_floor=None)`
@@ -485,6 +509,56 @@ arrives late but is dated inside a passing run counts as trusted; the regression
 still lists it if that run later ends, and a consumer that needs arrival-time trust
 should stamp `confirmed_at` on ingest.
 
+The whole loop, from extraction to labels (synthetic data; low thresholds so 30 checks
+suffice):
+
+```python
+from llm_dojo_scoring.grounding.agreement import reviewer_agreement, select_spot_checks
+from llm_dojo_scoring.grounding.audit import audit_unlabelled_values
+from llm_dojo_scoring.grounding.candidates import review_candidates
+from llm_dojo_scoring.grounding.labels import derive_valid_labels
+from llm_dojo_scoring.grounding.ledger import ingest_confirmations
+from llm_dojo_scoring.grounding.trust import TrustGate
+
+doc_text = "Claim AB-12/34 filed March 3, 2024 by Acme Holdings for 1250 dollars."
+audits = []
+for i in range(40):
+    audits += audit_unlabelled_values({}, {"adjuster": f"Robin Example {i}"}, doc_class="insurance_claim",
+                                      doc_text=doc_text, doc_id=f"doc-{i}")
+candidates = review_candidates(audits)
+ids = [c.candidate_id for c in candidates]
+
+def record(cid, kind, reviewer, at, **extra):
+    """A ``valid`` confirmation."""
+    return {"candidate_id": cid, "verdict": "valid", "reviewer_kind": kind,
+            "reviewer_id": reviewer, "confirmed_at": at, **extra}
+
+boss = [record(cid, "agent", "boss@v3", 1767225600, certainty=0.97) for cid in ids[:30]]
+ledger = ingest_confirmations(boss, candidates)
+sample = select_spot_checks(ledger, rate=1.0)    # send every one to people this time
+people = [record(cid, "human", "human:r1", 1767229200) for cid in sample]
+later = [record(cid, "agent", "boss@v3", 1767232800, certainty=0.97) for cid in ids[30:]]
+ledger = ledger.extend(people + later)
+
+gate = TrustGate(bar=0.85, min_n=25)             # defaults: 0.95 and 50
+counts = reviewer_agreement(ledger)["boss@v3"].overall
+print(counts.n_agent_valid, round(counts.valid_precision_lower_95, 4))
+print([(s.effective_at, s.trusted) for s in gate.history(ledger)])
+result = derive_valid_labels(ledger, gate)
+print(sorted({l.validity_basis for l in result.labels}), len(result.labels), result.pending)
+```
+
+Output (run on this release):
+
+```
+30 0.8865
+[(1767229200.0, True)]
+['human', 'trusted_agent'] 40 {}
+```
+
+The boss's first 30 values became `human` labels; its later 10, made after the gate
+trusted it, became `trusted_agent` labels with no one checking them.
+
 The Dojo stores nothing: the caller keeps the ledger, and every snapshot can be
 recomputed from it. `history` is cached per ledger object (ledgers are immutable) and
 recomputes only the candidates a person touched at each step; a test checks it against
@@ -530,5 +604,5 @@ ignored. Updates change `get_settings().grounding` in place.
 | `grounding/ledger.py` | `Confirmation`, `ConfirmationReject`, `ConfirmationLedger`, `ingest_confirmations` |
 | `grounding/labels.py` | `ValidLabel`, `LabelDerivation`, `derive_valid_labels`, `label_score_records`, `TrustLookup` |
 | `grounding/io.py` | `read_jsonl`, `write_jsonl` |
-| `grounding/agreement.py` | `PairedCheck`, `paired_checks`, `AgreementCounts`, `ReviewerAgreement`, `reviewer_agreement`, `agreement_score_records` |
+| `grounding/agreement.py` | `PairedCheck`, `paired_checks`, `AgreementCounts`, `ReviewerAgreement`, `reviewer_agreement`, `agreement_score_records`, `select_spot_checks` |
 | `grounding/trust.py` | `TrustGate`, `GateSnapshot`, `Regression` |

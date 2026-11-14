@@ -91,8 +91,8 @@ the end-to-end test can exercise the whole chain once.
 
 ## Action items
 
-1. [ ] 3a: `GroundingSettings` and this ADR.
-2. [ ] 3b: agreement statistics and metrics.
-3. [ ] 3c: trust gate and snapshots.
-4. [ ] 3d: spot-check sampling, end-to-end test, and the final contract doc.
-5. [ ] Update tracker #146 as each PR opens.
+1. [x] 3a: `GroundingSettings` and this ADR (#150).
+2. [x] 3b: agreement statistics and metrics (#151).
+3. [x] 3c: trust gate and snapshots (#152).
+4. [x] 3d: spot-check sampling, end-to-end test, and the final contract doc.
+5. [x] Update tracker #146 as each PR opens.

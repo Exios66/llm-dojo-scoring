@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+
 import pytest
 from grounding_inputs import DOC_TEXT
 
@@ -12,6 +15,8 @@ from llm_dojo_scoring.grounding.agreement import (
     agreement_score_records,
     paired_checks,
     reviewer_agreement,
+    _draw,
+    select_spot_checks,
 )
 from llm_dojo_scoring.grounding.audit import audit_unlabelled_values
 from llm_dojo_scoring.grounding.candidates import review_candidates
@@ -224,6 +229,97 @@ def test_backdated_late_human_record_moves_the_cutoff_back():
                          (0, "human", "human:b", "valid", 3)])
     assert paired_checks(ledger) == []
 
+
+def _draw_expected(seed, reviewer_id, candidate_id):
+    """The documented draw, recomputed independently: sha256 of the JSON list, first 64 bits."""
+    payload = json.dumps([seed, reviewer_id, candidate_id], separators=(",", ":")).encode("utf-8")
+    return int(hashlib.sha256(payload).hexdigest()[:16], 16) / 2.0 ** 64
+
+
+def _agent_rows(n, reviewer="boss@v1", verdict="valid"):
+    """Agent verdicts on candidates ``0…n-1``, no human yet."""
+    return [(i, "agent", reviewer, verdict, i) for i in range(n)]
+
+
+def test_spot_checks_rate_floor_and_eligibility():
+    """About ``rate`` of each agent's decided candidates, at least ``min_per_agent``; humans done are skipped."""
+    c = _candidates(200)
+    ledger = _ledger(c, _agent_rows(200) + [(0, "human", "human:a", "valid", 500)]
+                     + [(1, "human", "human:a", "unsure", 500)] + [(2, "agent", "jev-1", "unsure", 3)])
+    picked = select_spot_checks(ledger, rate=0.1, min_per_agent=0)
+    assert 10 <= len(picked) <= 35 and picked == sorted(picked)
+    assert c[0].candidate_id not in select_spot_checks(ledger, rate=1.0)
+    assert c[1].candidate_id in select_spot_checks(ledger, rate=1.0)  # unsure is not a decision
+    assert len(select_spot_checks(ledger, rate=0.0, min_per_agent=20)) == 19  # candidate 0 is already a check
+    assert select_spot_checks(ledger, rate=0.0, min_per_agent=0) == []
+    assert len(select_spot_checks(_ledger(c, _agent_rows(5)), rate=0.0, min_per_agent=20)) == 5
+
+
+def test_spot_checks_are_deterministic_and_stable_as_the_ledger_grows():
+    """Same seed, same sample; earlier draws keep their selection when more candidates arrive."""
+    c = _candidates(120)
+    small = select_spot_checks(_ledger(c, _agent_rows(60)), rate=0.2, min_per_agent=0)
+    large = select_spot_checks(_ledger(c, _agent_rows(120)), rate=0.2, min_per_agent=0)
+    assert small == select_spot_checks(_ledger(c, _agent_rows(60)), rate=0.2, min_per_agent=0)
+    assert set(small) == {cid for cid in large if cid in {x.candidate_id for x in c[:60]}}
+    assert small != select_spot_checks(_ledger(c, _agent_rows(60)), rate=0.2, min_per_agent=0, seed=1)
+
+
+def test_spot_checks_are_per_agent_and_follow_settings():
+    """Each agent gets its own floor; defaults come from settings and are validated."""
+    c = _candidates(40)
+    ledger = _ledger(c, _agent_rows(20) + [(i, "agent", "jev-1", "hallucinated", i) for i in range(20, 40)])
+    picked = set(select_spot_checks(ledger, rate=0.0, min_per_agent=3))
+    assert len(picked & {x.candidate_id for x in c[:20]}) == 3
+    assert len(picked & {x.candidate_id for x in c[20:]}) == 3
+    configure(grounding__spot_check_rate=0.0, grounding__spot_check_min_per_agent=2)
+    assert len(select_spot_checks(ledger)) == 4
+    for bad in ({"rate": 1.5}, {"min_per_agent": -1}, {"seed": 1.5}, {"seed": True}):
+        with pytest.raises(ValueError):
+            select_spot_checks(ledger, **bad)
+
+
+def test_floor_counts_checks_people_already_made():
+    """Once people checked the first sample, a second call tops up only to the floor."""
+    c = _candidates(300)
+    rows = _agent_rows(300)
+    first = select_spot_checks(_ledger(c, rows), rate=0.1, min_per_agent=20)
+    index = {x.candidate_id: i for i, x in enumerate(c)}
+    rows += [(index[cid], "human", "human:a", "valid", 1000) for cid in first]
+    second = select_spot_checks(_ledger(c, rows), rate=0.1, min_per_agent=20)
+    assert not set(first) & set(second)
+    drawn_only = select_spot_checks(_ledger(c, rows), rate=0.1, min_per_agent=0)
+    assert second == drawn_only  # the window already holds 20+ checks: no top-up
+
+
+
+def test_floor_is_capped_at_the_trust_window():
+    """A floor above trust_window would never be met (only the window counts): it is capped there."""
+    configure(grounding__trust_min_n=1, grounding__trust_window=5)
+    c = _candidates(40)
+    rows = _agent_rows(40)
+    first = select_spot_checks(_ledger(c, rows), rate=0.0, min_per_agent=20)
+    assert len(first) == 5
+    index = {x.candidate_id: i for i, x in enumerate(c)}
+    rows += [(index[cid], "human", "human:a", "valid", 1000) for cid in first]
+    assert select_spot_checks(_ledger(c, rows), rate=0.0, min_per_agent=20) == []
+
+def test_draws_are_pinned_and_shared_candidates_listed_once():
+    """The draw is a fixed function of (seed, reviewer, candidate); a candidate two agents decided appears once."""
+    assert _draw(0, "boss@v1", "abc") == _draw_expected(0, "boss@v1", "abc") == 0.5334060011203018
+    c = _candidates(30)
+    ledger = _ledger(c, _agent_rows(30) + _agent_rows(30, reviewer="jev-1"))
+    picked = select_spot_checks(ledger, rate=0.0, min_per_agent=30)
+    assert picked == sorted({x.candidate_id for x in c})
+
+
+def test_revisions_and_unsure_people_follow_the_latest_word():
+    """An agent's latest unsure drops it; a person's unsure then decisive verdict removes the candidate."""
+    c = _candidates(3)
+    ledger = _ledger(c, [(0, "agent", "boss@v1", "valid", 1), (0, "agent", "boss@v1", "unsure", 2),
+                         (1, "agent", "boss@v1", "valid", 1), (1, "human", "human:a", "unsure", 2),
+                         (1, "human", "human:a", "valid", 3), (2, "agent", "boss@v1", "hallucinated", 1)])
+    assert select_spot_checks(ledger, rate=1.0) == [c[2].candidate_id]
 
 def test_agent_whose_latest_blind_word_is_unsure_is_not_paired():
     """An agent that said valid, then unsure, before people decided took no position."""
