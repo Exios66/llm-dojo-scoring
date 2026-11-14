@@ -23,6 +23,9 @@ the human's ``confirmed_at``, :func:`reviewer_agreement` reports:
   verdicts;
 * the same counts per ``doc_class.field``.
 
+:func:`select_spot_checks` picks which agent-decided candidates to send to people, so
+the pairs above keep coming: a deterministic sample per agent, seeded by candidate id.
+
 Pairs with the same human time are ordered by candidate id, so the window edge is
 deterministic. The precision bound is unrounded (``analysis.bootstrap.wilson_ci``
 rounds to four decimals, which could lift 0.94998 to a 0.95 bar), and its
@@ -32,9 +35,11 @@ counts ``valid`` verdicts, the only pairs that carry precision evidence.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 from collections import defaultdict
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from typing import Any, Iterable, Mapping
 
 from ..config import get_settings
@@ -302,3 +307,49 @@ def agreement_score_records(
             for metric, value, denominator in values
         ]
     return records
+
+
+def _draw(seed: int, reviewer_id: str, candidate_id: str) -> float:
+    """A fixed pseudo-random number in ``[0, 1)`` for one agent and candidate."""
+    payload = json.dumps([seed, reviewer_id, candidate_id], separators=(",", ":"))
+    return int(hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16], 16) / 2.0 ** 64
+
+
+def select_spot_checks(
+    ledger: ConfirmationLedger, *, rate: float | None = None, min_per_agent: int | None = None,
+    seed: int = 0,
+) -> list[str]:
+    """Candidate ids to send to people for spot-checks, in candidate-id order.
+
+    For each agent, the eligible candidates are those whose latest confirmation by that
+    agent is ``valid`` or ``hallucinated`` and that no person has decided yet (a person
+    whose latest word is ``unsure`` has not decided). Each gets a fixed draw in
+    ``[0, 1)`` from ``sha256([seed, reviewer_id, candidate_id])``; a draw below ``rate``
+    is sampled, so a candidate's selection never changes as the ledger grows. When that
+    gives an agent fewer than ``min_per_agent``, its lowest remaining draws top it up (or
+    all its eligible candidates, if fewer). A candidate sampled for several agents is
+    listed once.
+
+    ``rate`` and ``min_per_agent`` default to ``grounding.spot_check_rate`` and
+    ``grounding.spot_check_min_per_agent`` and are validated like them; ``seed`` must
+    be a whole number.
+    """
+    overrides = {key: value for key, value in (
+        ("spot_check_rate", rate), ("spot_check_min_per_agent", min_per_agent)) if value is not None}
+    checked = replace(get_settings().grounding, **overrides)
+    checked.validate()
+    if isinstance(seed, bool) or not isinstance(seed, int):
+        raise ValueError(f"seed must be a whole number, got {seed!r}")
+    rate, minimum = float(checked.spot_check_rate), int(checked.spot_check_min_per_agent)
+    eligible: dict[str, list[str]] = defaultdict(list)
+    for cid, by_reviewer in ledger.latest().items():
+        if _decisive(by_reviewer.values(), HUMAN):
+            continue
+        for c in _decisive(by_reviewer.values(), AGENT):
+            eligible[c.reviewer_id].append(cid)
+    chosen: set[str] = set()
+    for reviewer_id, cids in eligible.items():
+        ranked = sorted(cids, key=lambda cid: (_draw(seed, reviewer_id, cid), cid))
+        drawn = [cid for cid in ranked if _draw(seed, reviewer_id, cid) < rate]
+        chosen.update(ranked[:max(len(drawn), minimum)])
+    return sorted(chosen)
