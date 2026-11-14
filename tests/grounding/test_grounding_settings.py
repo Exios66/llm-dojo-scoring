@@ -117,11 +117,20 @@ def test_bad_grounding_block_leaves_every_section_untouched():
     assert frozenset({"a", "b"}) not in get_settings().subtype_equivalences
 
 
-@pytest.mark.parametrize("block", ["trust_bar", [1]])
+@pytest.mark.parametrize("block", ["trust_bar", [1], False, 0, "", []])
 def test_non_mapping_block_raises(block):
-    """A grounding block that is not a mapping is a ValueError."""
+    """A grounding block that is not a mapping is a ValueError, falsy ones included."""
+    before = get_settings().field_scoring.bipartite_match_threshold
     with pytest.raises(ValueError, match="must be a mapping"):
-        configure_from_taxonomy({"grounding": block})
+        configure_from_taxonomy({"field_scoring": {"bipartite_match_threshold": 0.123}, "grounding": block})
+    assert get_settings().field_scoring.bipartite_match_threshold == before
+
+
+@pytest.mark.parametrize("block", [None, {}])
+def test_absent_or_empty_block_changes_nothing(block):
+    """``grounding: null`` and ``grounding: {}`` keep the current values."""
+    configure_from_taxonomy({"grounding": block})
+    assert get_settings().grounding == GroundingSettings()
 
 
 def test_configure_validates_overrides_together_in_any_order():
@@ -139,6 +148,19 @@ def test_configure_coerces_like_the_yaml_path():
     assert (grounding.trust_min_n, grounding.trust_bar, grounding.spot_check_min_per_agent) == (40, 0.5, 7)
     assert all(type(v) in (int, float) for v in (grounding.trust_min_n, grounding.trust_bar,
                                                  grounding.spot_check_min_per_agent))
+
+
+def test_whole_section_is_coerced_like_overrides():
+    """``grounding=GroundingSettings(trust_min_n=40.0)`` works as ``grounding__trust_min_n=40.0`` does."""
+    configure(grounding=GroundingSettings(trust_min_n=40.0, trust_bar=1))
+    grounding = get_settings().grounding
+    assert (grounding.trust_min_n, grounding.trust_bar) == (40, 1.0)
+    assert (type(grounding.trust_min_n), type(grounding.trust_bar)) == (int, float)
+    clear_settings_cache()
+    configure(grounding__trust_min_n=40.0, grounding__trust_bar=1)
+    assert get_settings().grounding == grounding
+    with pytest.raises(ValueError, match="whole number"):
+        configure(grounding=GroundingSettings(trust_min_n=40.5))
 
 
 @pytest.mark.parametrize("value", [None, {"trust_bar": 0.9}, GroundingSettings(trust_bar=5)])

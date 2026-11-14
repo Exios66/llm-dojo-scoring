@@ -69,6 +69,7 @@ def test_defaults_come_from_settings_and_are_validated():
     configure(grounding__trust_bar=0.9, grounding__trust_min_n=10)
     assert (TrustGate().bar, TrustGate().min_n) == (0.9, 10)
     assert TrustGate(bar=0.8).bar == 0.8
+    assert (TrustGate(min_n=5.0, window=10.0).min_n, type(TrustGate(min_n=5.0).min_n)) == (5, int)
     for bad in ({"bar": 1.5}, {"min_n": 0}, {"window": 5, "min_n": 10}, {"bar": float("nan")}):
         with pytest.raises(ValueError):
             TrustGate(**bad)

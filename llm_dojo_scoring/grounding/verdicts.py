@@ -44,13 +44,15 @@ _SCALE_WORDS = (("thousand", "K"), ("million", "M"), ("billion", "B"))
 _SCALE_WORD_RE = re.compile(r"\s*\b(" + "|".join(w for w, _ in _SCALE_WORDS) + r")\b", re.IGNORECASE)
 
 #: An amount in document text: optional currency marker, digits, optional scale and
-#: currency word. Only spans with a money signal count (see :func:`_document_amounts`),
-#: so a day, a year or a phone digit group never grounds an amount.
+#: currency word. A marker may stand apart from the number by spaces on the same line
+#: ("$ 500", "USD  500", "500  dollars"), never across a line break. Only spans with a
+#: money signal count (see :func:`_document_amounts`), so a day, a year or a phone digit
+#: group never grounds an amount.
 _AMOUNT_RE = re.compile(
-    r"(?P<lead>[$€£]|\b(?:USD|EUR|US\$)\s?)?"
+    r"(?P<lead>(?:[$€£]|\b(?:USD|EUR|US\$))[ \t\u00a0]*)?"
     r"(?P<num>\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)"
     r"(?P<scale>(?-i:[KMB])\b|\s?(?:thousand|million|billion)\b)?"
-    r"(?P<tail>\s?(?:USD|EUR|dollars?|euros?)\b)?",
+    r"(?P<tail>[ \t\u00a0]*(?:USD|EUR|dollars?|euros?)\b)?",
     re.IGNORECASE,
 )
 
@@ -104,7 +106,8 @@ def _document_amounts(doc_text: str) -> tuple[float, ...]:
                   or "," in number or re.search(r"\.\d{2}$", number))
         if not signal:
             continue
-        found = _parse_amount((match.group("lead") or "") + number + (match.group("scale") or ""))
+        lead = " ".join((match.group("lead") or "").split())
+        found = _parse_amount((lead + " " if lead else "") + number + (match.group("scale") or ""))
         if found is not None:
             amounts.append(found)
     return tuple(amounts)
