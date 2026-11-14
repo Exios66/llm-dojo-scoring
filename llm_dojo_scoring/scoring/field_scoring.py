@@ -39,6 +39,7 @@ import threading
 from collections import Counter
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
+from functools import lru_cache
 from typing import Any, NamedTuple, Optional
 
 import structlog
@@ -441,6 +442,11 @@ def _parse_date_parts(text) -> Optional[_DateParts]:
     if not s:
         return None
     s = _ORDINAL_RE.sub(r"\1", s)
+    # "March the 3rd, 2024", "the 3rd of March": the article before a day is noise.
+    s = re.sub(r"\bthe\s+(?=\d)", "", s, flags=re.IGNORECASE)
+    # "March 3rd, 2024)": a stray bracket or comma around the date is not part of it.
+    s = re.sub(r"^[)\]}\s,;:]+", "", s)
+    s = re.sub(r"[)\]},;:\s]+$", "", s)
     # "March 12,1999": dateutil drops a year glued to the comma and would
     # report it as unstated, so the stated year must get its space back.
     s = re.sub(r",(?=\d)", ", ", s)
@@ -1187,36 +1193,102 @@ def _verification_tokens(value, field_type: str) -> set[str]:
     return _containment_tokens(text)
 
 
-# Date-like spans in a document: numeric (04-01-06, 3/24/2006), month-first
-# prose (April 1, 2006), or day-first prose ("18th day of August, 2014",
-# incl. OCR artifacts like "18t h day of").
+# Date spans in a document. Every common written form is found; each span is then
+# read by ``_parse_date_parts``, the same reader the prediction and the label go
+# through, so "stated" means the same thing on both sides of the comparison.
+#
+#   ISO / year-first numeric   2024-03-03  2024/03/03  2024.03.03
+#   US / day-first numeric     3/24/2006  04-01-06  13.04.2024  (month-first when ambiguous)
+#   month-first prose          March 3, 2024  Mar. 3rd, 2024  March the 3rd, 2024
+#   day-first prose            3 March 2024  3rd of March, 2024  the 3rd day of March, 2024
+#                              (incl. OCR splits like "18t h day of")  03-Mar-2024
+#   month and year             March 2024  Mar. 2024  2024-03  03/2024
+#   month and day, no year     March 3  3rd of March
+#
+# A weekday prefix ("Sunday, March 3, 2024") sits outside the span: the reader
+# drops weekdays anyway. What keeps a date-shaped string that is not a date out:
+#
+# * a span must stand alone. It is never part of a longer alphanumeric, hyphen,
+#   slash or dotted run (ids like ``INV-2024-0301`` and ``2024-03-0001``, phone
+#   numbers, ``1.2.34``), and never follows ``#``, ``@``, a currency sign or ``+``;
+# * a number is a day, month or year only in its calendar range;
+# * dots between numbers need a four-digit year, or a two-digit day, month and year
+#   (``03.04.24``, ``13.04.24``): ``1.2.34`` is a version, not January 2, 2034. A
+#   version written with two-digit parts (``10.12.15``) still reads as a date;
+# * numeric month-year needs a zero-padded month (``03/2024``, ``2024-03``) so that
+#   ``1/2000`` stays a fraction;
+# * "May" is a month only when capitalised: "you may 5 times" is not May 5. A decimal
+#   or thousands group after a day ("March 3,000", "March 3.50") is money, not a day.
+_MONTH_WORD = (
+    r"(?:(?-i:May|MAY)|jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|june?|july?"
+    r"|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+)
+_MONTH = _MONTH_WORD + r"\b\.?"
+_DAY = r"(?:3[01]|[12]\d|0?[1-9])"
+_DAY_ORD = _DAY + r"(?:st|nd|rd|th)?"
+_DAY_OCR = r"\d{1,2}(?:\s?(?:s\s?t|n\s?d|r\s?d|t\s?h))?"  # "18t h day of"
+_NUM_MONTH = r"(?:1[0-2]|0?[1-9])"
+_PAD_MONTH = r"(?:1[0-2]|0[1-9])"
+_YEAR = r"[12]\d{3}"
+_LEFT = r"(?<![\w\-/#@$\u20ac\u00a3+])(?<!\d\.)(?<!\d,)"
+_RIGHT = r"(?:(?=T\d{2}:\d{2})|(?![\w\-/@]))(?![.,]\d)"  # ISO datetime: 2024-03-03T10:30
+_COMMA_YEAR = r"(?:\s*,\s*|\s+)"
+
 _DATE_CANDIDATE_RE = re.compile(
-    r"\b\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}\b"
-    r"|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}\b"
-    r"|\b\d{1,2}[a-z]*(?:\s+[a-z]+)*\s+day\s+of\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s*,?\s*\d{4}\b",
+    _LEFT + "(?:"
+    # year-first numeric, one separator throughout
+    + rf"{_YEAR}(?P<iso>[-/.]){_NUM_MONTH}(?P=iso){_DAY}"
+    # numeric with a day, month and year: dashes/slashes, then dots (see the notes above)
+    + rf"|{_DAY}(?P<num>[-/]){_DAY}(?P=num)(?:{_YEAR}|\d{{2}})"
+    + rf"|{_DAY}\.{_DAY}\.{_YEAR}"
+    + r"|(?:0[1-9]|[12]\d|3[01])\.(?:0[1-9]|[12]\d|3[01])\.\d{2}"
+    # month-first prose, ordinal and "the" optional: March the 3rd, 2024
+    + rf"|{_MONTH}(?:\s+the\s+|\s*){_DAY_ORD}{_COMMA_YEAR}{_YEAR}"
+    # day-first prose: 3 March 2024, 3rd of March, 2024, 3rd day of March 2024, 18t h day of ...
+    + rf"|(?:{_DAY_ORD}\s+(?:(?:day\s+)?of\s+)?|{_DAY_OCR}\s+day\s+of\s+){_MONTH}\s*,?\s*{_YEAR}"
+    + rf"|{_DAY}-{_MONTH_WORD}-(?:{_YEAR}|\d{{2}})"
+    # month and year
+    + rf"|{_MONTH}\s*,?\s*{_YEAR}"
+    + rf"|{_PAD_MONTH}[-/]{_YEAR}"
+    + rf"|{_YEAR}[-/]{_PAD_MONTH}"
+    # month and day, no year
+    + rf"|{_MONTH}(?:\s+the\s+|\s*){_DAY_ORD}"
+    + rf"|{_DAY_ORD}\s+(?:of\s+)?{_MONTH}"
+    + ")" + _RIGHT,
     flags=re.IGNORECASE,
 )
 
 
+@lru_cache(maxsize=8)
+def _document_dates(doc_text: str) -> frozenset:
+    """The :class:`_DateParts` of every date the document writes, scanned once per text."""
+    spans = {match.group(0) for match in _DATE_CANDIDATE_RE.finditer(doc_text)}
+    parsed = (_parse_date_parts(span) for span in spans)
+    return frozenset(parts for parts in parsed if parts is not None)
+
+
 def _date_grounded_in_doc(pred_date, doc_text: str) -> bool:
-    """True when the document contains a date that agrees with ``pred_date``,
-    in ANY format (numeric dashed, slashed, or prose month-name).
+    """True when the document writes a date that agrees with ``pred_date``, in ANY
+    common format: ISO and other year-first numeric, US numeric, month-first or
+    day-first prose (ordinals, "the 3rd day of March, 2024", weekday prefixes),
+    month and year, or month and day. The scan is :data:`_DATE_CANDIDATE_RE`.
 
     ``pred_date`` is a ``datetime.date`` or the :class:`_DateParts` of a
-    partial date. A partial prediction ("August 18") is grounded by a document
-    date that agrees on every component it states; no component is invented.
+    partial date. Every component the prediction states must be stated by the
+    document's date and equal: a partial prediction ("August 18") is grounded by
+    a document date that agrees on what it states, but a year-less document date
+    ("on August 18") never grounds a prediction that states a year, and no
+    component is invented. Numeric ``03/04/2024`` is month-first, as everywhere
+    in this module. Never reads the clock.
     """
     if pred_date is None or not doc_text:
         return False
     if not isinstance(pred_date, _DateParts):
         pred_date = _DateParts(pred_date.year, pred_date.month, pred_date.day)
-    for match in _DATE_CANDIDATE_RE.finditer(doc_text):
-        candidate = _parse_date_parts(match.group(0))
-        if candidate is not None and all(
-            want is None or want == got for want, got in zip(pred_date, candidate)
-        ):
-            return True
-    return False
+    return any(
+        all(want is None or want == got for want, got in zip(pred_date, candidate))
+        for candidate in _document_dates(doc_text)
+    )
 
 
 def audit_scalar_field(field_type: str, pred, exp, doc_text: str | None) -> dict:

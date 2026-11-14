@@ -111,6 +111,33 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         ),
         "rescore_required": True,
     },
+    {
+        # Proposed 0.31.0 (unlabelled-value grounding stack); cut separately with release.py.
+        "version": "0.31.0",
+        "metric_ids": (
+            "hallucination_rate",
+            "verified_precision",
+            "extraction_hallucination_rate",
+            "extraction_overall_verified_precision",
+            "extraction_verified_precision",
+            "pipeline.extraction.overall",
+            "pipeline.extraction.field_micro_f1",
+            "pipeline.extraction.field_micro_f2",
+            "pipeline.extraction.field_micro_precision",
+            "pipeline.extraction.field_micro_recall",
+        ),
+        "change": (
+            "Dates in the document are read in every common written form (ISO and "
+            "year-first numeric, month-first and day-first prose with ordinals, month "
+            "and year, month and day; #147): the factuality audit's verified_in_doc / "
+            "verified_precision / hallucination_rate move for date fields, and the old "
+            "scan's false matches (\"5 days after the first day of March 2024\", "
+            "\"1.2.34\") are gone. A date written with an article or a stray bracket "
+            "(\"March the 3rd, 2024\") now reads, so a date field score and the "
+            "field-micro metrics can move on those predictions."
+        ),
+        "rescore_required": True,
+    },
 )
 
 
