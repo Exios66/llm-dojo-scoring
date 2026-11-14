@@ -1364,10 +1364,33 @@
    "extraction_recall": null
   },
   "merger_agreement__all_cash__maud_labels_partial": {
-   "extraction_f1": null,
-   "extraction_f2": null,
-   "extraction_precision": null,
-   "extraction_recall": null
+   "entity_list_f1": 0.5714,
+   "fields": {
+    "ambiguous_fields": [],
+    "doc_class": "merger_agreement",
+    "entity_list_audit": {},
+    "entity_list_scores": {
+     "maud_clauses": {
+      "f1": 0.5714285714285715,
+      "field_name": "maud_clauses",
+      "matched": 2,
+      "partial_gt": true,
+      "precision": 0.6666666666666666,
+      "recall": 0.5,
+      "unmatched_expected": 2,
+      "unmatched_predicted": 1
+     }
+    },
+    "overall_score": 0.25,
+    "trace": {
+     "calibration_error": null,
+     "confidence": null,
+     "confidence_gate": "missing",
+     "n_reasoning_entries": null,
+     "reasoning": null
+    }
+   },
+   "suite_overall_extraction_score": 0.25
   },
   "merger_agreement__all_cash__no_ground_truth": {
    "extraction_f1": null,
@@ -1376,10 +1399,37 @@
    "extraction_recall": null
   },
   "merger_agreement__all_stock__maud_labels_colon_question": {
-   "extraction_f1": null,
-   "extraction_f2": null,
-   "extraction_precision": null,
-   "extraction_recall": null
+   "entity_list_f1": 0.3333,
+   "extraction_f1": 0.5,
+   "extraction_f2": 0.5,
+   "extraction_precision": 0.5,
+   "extraction_recall": 0.5,
+   "fields": {
+    "ambiguous_fields": [],
+    "doc_class": "merger_agreement",
+    "entity_list_audit": {},
+    "entity_list_scores": {
+     "maud_clauses": {
+      "f1": 0.3333333333333333,
+      "field_name": "maud_clauses",
+      "matched": 1,
+      "partial_gt": true,
+      "precision": 0.5,
+      "recall": 0.25,
+      "unmatched_expected": 3,
+      "unmatched_predicted": 1
+     }
+    },
+    "overall_score": 0.625,
+    "trace": {
+     "calibration_error": null,
+     "confidence": null,
+     "confidence_gate": "missing",
+     "n_reasoning_entries": null,
+     "reasoning": null
+    }
+   },
+   "suite_overall_extraction_score": 0.625
   },
   "merger_agreement__all_stock__partial": {
    "extraction_f1": 0.5333,
@@ -1427,16 +1477,62 @@
    "overall_extraction_score": 0.5556
   },
   "merger_agreement__mixed_cash_stock__maud_object_clauses": {
-   "extraction_f1": null,
-   "extraction_f2": null,
-   "extraction_precision": null,
-   "extraction_recall": null
+   "entity_list_f1": 0.3333,
+   "fields": {
+    "ambiguous_fields": [],
+    "doc_class": "merger_agreement",
+    "entity_list_audit": {},
+    "entity_list_scores": {
+     "maud_clauses": {
+      "f1": 0.3333333333333333,
+      "field_name": "maud_clauses",
+      "matched": 1,
+      "partial_gt": true,
+      "precision": 0.5,
+      "recall": 0.25,
+      "unmatched_expected": 3,
+      "unmatched_predicted": 1
+     }
+    },
+    "overall_score": 0.125,
+    "trace": {
+     "calibration_error": null,
+     "confidence": null,
+     "confidence_gate": "missing",
+     "n_reasoning_entries": null,
+     "reasoning": null
+    }
+   },
+   "suite_overall_extraction_score": 0.125
   },
   "merger_agreement__other__maud_labels_no_clause_keys": {
-   "extraction_f1": null,
-   "extraction_f2": null,
-   "extraction_precision": null,
-   "extraction_recall": null
+   "entity_list_f1": 0.0,
+   "fields": {
+    "ambiguous_fields": [],
+    "doc_class": "merger_agreement",
+    "entity_list_audit": {},
+    "entity_list_scores": {
+     "maud_clauses": {
+      "f1": 0.0,
+      "field_name": "maud_clauses",
+      "matched": 0,
+      "partial_gt": true,
+      "precision": 0.0,
+      "recall": 0.0,
+      "unmatched_expected": 4,
+      "unmatched_predicted": 0
+     }
+    },
+    "overall_score": 0.0,
+    "trace": {
+     "calibration_error": null,
+     "confidence": null,
+     "confidence_gate": "missing",
+     "n_reasoning_entries": null,
+     "reasoning": null
+    }
+   },
+   "suite_overall_extraction_score": 0.0
   },
   "merger_agreement__other__mixed": {
    "extraction_f1": 0.875,

@@ -3,6 +3,7 @@
 - Live extraction schemas (five mailroom-dataset classes): [`EXTRACTION_SCHEMAS.md`](../schemas/EXTRACTION_SCHEMAS.md)
 - Archive / unified scoring block: [`ARCHIVE_SCORING.md`](../contracts/ARCHIVE_SCORING.md)
 - MAUD GT, format vs extraction, completion and cost: [`SCORECARD_HONESTY.md`](../contracts/SCORECARD_HONESTY.md)
+- Merger MAUD labels as extraction gold: [`EXTRACTION_SCHEMAS.md`](../schemas/EXTRACTION_SCHEMAS.md) (`maud_schema.hub_merger_expected_fields`)
 - Headline scope (MAUD-only merger, partial correspondence): [`SCORECARD_HONESTY.md`](../contracts/SCORECARD_HONESTY.md#headline-scope-which-fields-a-class-score-covers-95)
 - Metric identity: [`METRIC_IDS.md`](../contracts/METRIC_IDS.md)
 - Controlled `intent` labels (`label` field type): `llm_dojo_scoring/schemas/intents.py`

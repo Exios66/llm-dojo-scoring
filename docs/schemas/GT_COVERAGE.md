@@ -59,8 +59,8 @@ Fields whose truth comes from `cuad_clause_labels` show category coverage: the c
 | `outside_date` | date | pending_annotation | 0 / 152 | 0.0% | gt_fields |  |
 | `financial_advisors` | entity_list:name | pending_annotation | 0 / 152 | 0.0% | gt_fields |  |
 | `legal_counsel` | entity_list:name | pending_annotation | 0 / 152 | 0.0% | gt_fields |  |
-| `merger_consideration` | label | derived | 152 / 152 | 100.0% | subtype | truth is the row's subtype |
-| `maud_clauses` | entity_list:free_text | derived | 152 / 152 | 100.0% | maud_clause_labels |  |
+| `merger_consideration` | label | derived | 152 / 152 | 100.0% | subtype | the Type of Consideration answer, else the row's subtype |
+| `maud_clauses` | entity_list:free_text | derived | 152 / 152 | 100.0% | maud_clause_labels | one '<Question>: <Hub class>' line per answered question |
 | `intent` | label | not_applicable | 0 / 152 | 0.0% | gt_fields |  |
 | `subject_matter` | free_text | not_applicable | 0 / 152 | 0.0% | gt_fields |  |
 | `keywords` | entity_list:name | not_applicable | 0 / 152 | 0.0% | gt_fields |  |
