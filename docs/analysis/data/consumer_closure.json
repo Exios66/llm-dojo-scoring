@@ -82,7 +82,7 @@
     },
     "grounding.audit": {
       "decision": "hold",
-      "lines": 134,
+      "lines": 138,
       "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
     },
     "grounding.candidates": {
@@ -107,7 +107,7 @@
     },
     "grounding.selection": {
       "decision": "hold",
-      "lines": 69,
+      "lines": 76,
       "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
     },
     "grounding.summary": {
