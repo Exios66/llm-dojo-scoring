@@ -476,7 +476,13 @@ def _ascii_digits(text: str) -> str:
 #: An ordinal word starts a day only when it is not the tail of a compound: "thirty-second",
 #: "thirty second" and "fifty-third" are no day of the month, "twenty-first" is read from "twenty".
 _TENS_WORDS = ("twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety")
-_NOT_COMPOUND = r"(?<![-\w])" + "".join(rf"(?<!{t}\s)(?<!{t}\s\s)" for t in _TENS_WORDS)
+#: A lookbehind is fixed-width, so it sees ONE whitespace character after the tens word. Both readers
+#: of text collapse a longer run first: the value side (``_parse_date_parts`` collapses every run)
+#: and the document scan (``_TENS_GAP_RE`` in ``_document_dates``).
+_NOT_COMPOUND = r"(?<![-\w])" + "".join(rf"(?<!{t}\s)" for t in _TENS_WORDS)
+#: "thirty   second", "twenty\n\nfirst": a run of whitespace after a tens word is one space, so the
+#: compound guard and ``_ORD_WORD`` read it as they read the single-space form.
+_TENS_GAP_RE = re.compile(r"\b(" + "|".join(_TENS_WORDS) + r")\s{2,}", re.IGNORECASE | re.ASCII)
 _DAY_NUMBER = r"\d{1,2}(?:st|nd|rd|th)?"
 
 
@@ -1501,8 +1507,8 @@ _DATE_ALTERNATIVES = (
             _DAY_ORD + _S + r"(?:of" + _S + ")?" + _MON_ANY + r"(?:" + _S0 + "," + _S0 + "|" + _S + ")" + _QUOTE + r"?\d{2}",
             _RIGHT_TWO_DIGIT_YEAR,
         ),
-        # compact ISO, standing alone: 20240303
-        _misc(_LEFT_STRICT, r"(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])", _RIGHT_STRICT),
+        # compact ISO, standing alone: 20240303 (years 1800-2099, like _YEAR)
+        _misc(_LEFT_STRICT, r"(?:18|19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])", _RIGHT_STRICT),
         # dotted two-digit year: 03.04.24, 3.4.24
         # (both ends of a range 12.31.99-12.31.99 read; the version filter is in _document_dates)
         _num(
@@ -1583,7 +1589,7 @@ _DATE_RANGE_RES = tuple(_range_pattern(body, _LEFT_WORD, r"(?!\d)") for body in 
 # A range needs a number or month, a join and a number or month, close together: one cheap
 # search decides whether the six range regexes can match anywhere in the document.
 _RANGE_HINT_RE = re.compile(
-    r"(?:\d|" + _MONTH_ANY_WORD + r"\b\.?)" + _S0 + r"(?:[-\u2013\u2014]|" + r"\b(?:to|through|thru|until)\b)"
+    r"(?:\d" + _ORD_SUFFIX + "|" + _MONTH_ANY_WORD + r"\b\.?)" + _S0 + r"(?:[-\u2013\u2014]|" + r"\b(?:to|through|thru|until)\b)"
     + _S0 + r"(?:\d|" + _MONTH_ANY_WORD + ")",
     flags=_SCAN_FLAGS,
 )
@@ -1619,7 +1625,7 @@ _MONTH_YEAR_NUMERIC_RE = re.compile(r"(?:\d{1,2}[-/]\d{4}|\d{4}[-/]\d{2})\Z")
 @lru_cache(maxsize=8)
 def _document_dates(doc_text: str) -> frozenset:
     """The :class:`_DateParts` of every date the document writes, scanned once per text."""
-    text = _ascii_digits(doc_text)
+    text = _TENS_GAP_RE.sub(r"\1 ", _ascii_digits(doc_text))
     spans = set()
     blocked: dict[tuple[bool, str], bool] = {}  # (dotted?, the 40 characters before a span) -> verdict
     for match in _DATE_CANDIDATE_RE.finditer(text):
