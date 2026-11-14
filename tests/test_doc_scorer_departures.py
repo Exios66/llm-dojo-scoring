@@ -3,8 +3,10 @@
 ``tests/fixtures/doc_scorers/departures.json`` holds the scores a release changed on
 purpose (``scripts/record_doc_scorer_departures.py``); the parity tests apply it over
 the captured goldens. These tests keep it from becoming a way to absorb any change:
-it must be current, and it may only move what the 0.28.0 v2 schemas and the
-0.29.0 field-micro rules (unlabelled fields excluded, no events -> null) move.
+it must be current, and it may only move what the 0.28.0 v2 schemas, the
+0.29.0 field-micro rules (unlabelled fields excluded, no events -> null) and the
+0.29.0 merger MAUD gold (``maud_clause_labels`` -> ``maud_clauses`` /
+``merger_consideration`` extraction gold) move.
 """
 
 from __future__ import annotations
@@ -29,6 +31,9 @@ _MOVABLE_FIELDS = {
 }
 _PRF = {"extraction_precision", "extraction_recall", "extraction_f1", "extraction_f2"}
 _PAYLOAD_KEYS = {"overall_extraction_score", "suite_overall_extraction_score", "fields"} | _PRF
+#: Only a merger case whose GT carries ``maud_clause_labels`` gains extraction gold
+#: (0.29.0), so only there may the list-field F1 move too.
+_MAUD_GOLD_KEYS = _PAYLOAD_KEYS | {"entity_list_f1"}
 _BLOCK_KEYS = {"field_map_sha", "field_scores", "overall_score", "schema_valid", "tp", "fp", "fn"} | _PRF
 
 
@@ -48,7 +53,12 @@ def test_departures_touch_only_v2_classes_and_keys():
             assert set(moved) <= _PRF, (case_id, set(moved) - _PRF)
             assert all(value is None for value in moved.values()), (case_id, moved)
             continue
-        assert set(moved) <= _PAYLOAD_KEYS, (case_id, set(moved) - _PAYLOAD_KEYS)
+        case = CASES[case_id]
+        labelled_merger = case["doc_type"] == "merger_agreement" and bool(
+            (case["expected"] or {}).get("maud_clause_labels")
+        )
+        allowed = _MAUD_GOLD_KEYS if labelled_merger else _PAYLOAD_KEYS
+        assert set(moved) <= allowed, (case_id, set(moved) - allowed)
     for case_id, variants in DEPARTURES["archive_block"].items():
         assert CASES[case_id]["doc_type"] in _V2_CLASSES, case_id
         for moved in variants.values():

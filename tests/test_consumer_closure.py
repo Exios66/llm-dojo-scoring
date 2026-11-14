@@ -637,3 +637,12 @@ def test_dotted_imports_must_name_a_whole_module_path(fake_package):
     surface = {"modules": {"scoring.core": {}, "core.missing": {}, "scoring.gone": {}}}
     recorded = cc.scan_consumer_surface(pkg, surface, cc.dispatch_homes(pkg))
     assert recorded.unresolved == {"core.missing", "scoring.gone"}
+
+
+def test_specific_hold_entry_beats_its_parent_package():
+    """``ml.metrics`` keeps its own reason; the package entry only fills in the rest."""
+    graph = {"ml": set(), "ml.contract": set(), "ml.metrics": set(), "ml.other": set()}
+    hold = {"ml": "package", "ml.contract": "contract", "ml.metrics": "metrics"}
+    assert cc.expand_hold(hold, graph) == {
+        "ml": "package", "ml.contract": "contract", "ml.metrics": "metrics", "ml.other": "package",
+    }
