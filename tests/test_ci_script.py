@@ -16,9 +16,9 @@ def _step(name: str, code: int) -> tuple[str, list[str]]:
 
 
 def test_full_tier_runs_every_gate_in_order():
-    """``full`` runs ruff, the lock check, pytest, the golden check and the coverage page."""
+    """``full`` runs every gate in order, ending with the ML contract and prompt changelog checks."""
     names = [name for name, _ in ci.steps("full")]
-    assert names == ["ruff", "lock", "pytest", "goldens", "gt-coverage", "ml-contract"]
+    assert names == ["ruff", "lock", "pytest", "goldens", "gt-coverage", "ml-contract", "prompt-changelog"]
 
 
 def test_smoke_tier_is_ruff_plus_the_contract_tests():
