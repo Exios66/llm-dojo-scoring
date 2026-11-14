@@ -1652,7 +1652,8 @@ def _date_grounded_in_doc(pred_date, doc_text: str) -> bool:
     day-first prose (ordinals, spelled-out days and years, "the 3rd day of March,
     2024", weekday prefixes), year-first prose, month and year, month and day, and
     day ranges (a range states both its ends). The scan is :data:`_DATE_CANDIDATE_RE`
-    plus :data:`_DATE_RANGE_RES`.
+    (every start position is tried) plus :data:`_DATE_RANGE_RES`; ids, section numbers and
+    reference numbers are filtered out (see the contract, ``docs/contracts/GROUNDING.md``).
 
     ``pred_date`` is a ``datetime.date`` or the :class:`_DateParts` of a
     partial date. Every component the prediction states must be stated by the

@@ -1617,7 +1617,10 @@ def test_the_scan_and_the_parser_read_the_same_forms(written, iso):
 
 #: Strings whose reading is deliberately NOT symmetric: the parser reads a full date from a
 #: lone value that a document scan does not accept as a date.
-_SYMMETRY_EXCEPTIONS: dict[str, str] = {}
+_SYMMETRY_EXCEPTIONS: dict[str, str] = {
+    # "March 3 24" could be "March 3, 24 hours": a month-first two-digit year needs a comma or an apostrophe.
+    "March 3 24": "2024-03-03",
+}
 
 _SYMMETRY_DATES = _PARSER_FORMS + [
     ("2024-03-03", "2024-03-03"),
@@ -1653,6 +1656,7 @@ _SYMMETRY_DATES = _PARSER_FORMS + [
     ("the 3rd (third) day of March, 2024", "2024-03-03"),
     ("March 3-5, 2024", "2024-03-03"),
     ("3 to 5 March 2024", "2024-03-03"),
+    ("March 3 24", "2024-03-03"),
 ]
 _SYMMETRY_PARTIAL = [
     "March 2024",
@@ -1669,8 +1673,11 @@ _SYMMETRY_PARTIAL = [
 @pytest.mark.parametrize("written, iso", _SYMMETRY_DATES)
 def test_parser_and_scan_agree_a_full_date_is_a_full_date(written, iso):
     """parse_date(s) is a full date if and only if a document containing s grounds that date."""
-    if written in _SYMMETRY_EXCEPTIONS:
-        pytest.skip(_SYMMETRY_EXCEPTIONS[written])
+    if written in _SYMMETRY_EXCEPTIONS:  # deliberate: the parser reads it, a document scan does not
+        iso = _SYMMETRY_EXCEPTIONS[written]
+        assert fs.parse_date(written).isoformat() == iso
+        assert not fs._date_grounded_in_doc(fs._parse_date_parts(iso), f"dated {written} here")
+        return
     parsed = fs.parse_date(written)
     assert parsed is not None and parsed.isoformat() == iso, written
     assert fs._date_grounded_in_doc(fs._parse_date_parts(iso), f"dated {written} here"), written
