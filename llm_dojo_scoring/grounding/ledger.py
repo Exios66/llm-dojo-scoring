@@ -93,7 +93,12 @@ class ConfirmationReject:
 
 def _is_number(value: Any) -> bool:
     """A finite int or float that is not a bool."""
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:  # an int too large for a float
+        return False
 
 
 def _correction_problem(value: Any) -> str | None:
