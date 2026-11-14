@@ -1870,6 +1870,14 @@ def test_twenty_first_across_a_whitespace_run_reads_like_the_single_space_form(g
         assert not fs._date_grounded_in_doc(date(2024, 3, 1), doc), repr(doc)
 
 
+@pytest.mark.parametrize("glue", ["x_", "2", "\u00e9"])
+def test_compound_ordinal_glued_to_a_word_reads_like_the_single_space_form(glue):
+    """A tens word glued to the word before it still guards its tail, whatever the gap."""
+    for gap in (" ", "   ", "\n\n"):
+        doc = f"{glue}thirty{gap}second of March 2024"
+        assert not fs._date_grounded_in_doc(date(2024, 3, 2), doc), repr(doc)
+
+
 def test_compound_ordinal_whitespace_run_matches_the_prediction_side():
     """The prediction side already collapses whitespace; the document scan now agrees with it."""
     assert fs._parse_date_parts("twenty   first of March 2024") == fs._parse_date_parts("twenty first of March 2024")

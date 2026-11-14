@@ -485,7 +485,8 @@ _NOT_COMPOUND = r"(?<![-\w])" + "".join(rf"(?<!{t}\s)" for t in _TENS_WORDS)
 #: Unicode ``\s`` on purpose: the scan itself is ASCII-only, so a line or paragraph separator
 #: (U+2028, U+2029, U+0085, U+001C-U+001F), which NFKC leaves alone, becomes a plain space here,
 #: as it does on the value side (``_WS_RE``).
-_TENS_GAP_RE = re.compile(r"\b(" + "|".join(_TENS_WORDS) + r")\s+", re.IGNORECASE)
+#: No leading ``\b``: "x_thirty   second" collapses like "x_thirty second", which the guard reads.
+_TENS_GAP_RE = re.compile(r"(" + "|".join(_TENS_WORDS) + r")\s+", re.IGNORECASE)
 _DAY_NUMBER = r"\d{1,2}(?:st|nd|rd|th)?"
 
 
