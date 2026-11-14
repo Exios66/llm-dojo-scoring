@@ -8,9 +8,10 @@ A record is one document::
      "fast_path": True when the model's answer was used without the LLM sorter}
 
 A record without a gold ``doc_type`` is counted under ``n_unscored_by_reason`` and
-never scored. Subclasses are compared after :func:`normalize_corpus_subclass` for the
-gold class, so ``License_Agreements`` and ``license`` are the same answer. A subclass
-is right only when the class is right too.
+never scored; ``None``, NaN, ``pd.NA`` and ``pd.NaT`` all count as missing. Subclasses are
+compared after :func:`normalize_corpus_subclass`, the gold subclass by the gold class and
+the predicted one by the predicted class, so ``License_Agreements`` and ``license`` are the
+same answer. A subclass is right only when the class is right too.
 
 Two subclass F1 figures are reported. ``metrics["subclass_macro_f1"]`` is end to
 end: a wrong class makes the subclass wrong. ``by_class[doc_type]["subclass_macro_f1"]``
@@ -51,12 +52,20 @@ METRIC_IDS: dict[str, str] = {
 }
 
 
+#: Spellings of a missing label after ``str()``: pandas' ``pd.NA`` / ``pd.NaT`` print as these.
+_MISSING_TEXT = frozenset({"", "nan", "none", "null", "<na>", "nat"})
+
+
 def _token(value: Any) -> str | None:
-    """A stripped, lower-cased label, or None for blank / NaN-like values."""
+    """A stripped, lower-cased label, or None for blank / NaN-like values.
+
+    Covers ``None``, float and numpy NaN, and pandas' ``pd.NA`` / ``pd.NaT`` (matched by
+    their printed form, so pandas is not imported here).
+    """
     if value is None or (isinstance(value, float) and math.isnan(value)):
         return None
     text = str(value).strip().lower()
-    return None if text in {"", "nan", "none", "null"} else text
+    return None if text in _MISSING_TEXT else text
 
 
 def _confidence(value: Any) -> float | None:
@@ -112,7 +121,8 @@ def score_intake_model(records: Iterable[Mapping[str, Any]], *, z: float = 1.96)
         if gold_sub_raw is not None and DOC_TYPE_SUBCLASSES.get(gold):  # no catalog: nothing to grade
             gold_sub = normalize_corpus_subclass(gold, gold_sub_raw)
             pred_sub_raw = _token(raw.get("pred_subclass"))
-            pred_sub = normalize_corpus_subclass(gold, pred_sub_raw) if pred_sub_raw else ""
+            # The prediction is read in the class the model named, not the gold class.
+            pred_sub = normalize_corpus_subclass(pred, pred_sub_raw) if pred_sub_raw and pred else ""
             sub_ok = class_ok and pred_sub == gold_sub
             sub_gold.append(f"{gold}/{gold_sub}")
             sub_pred.append(f"{pred}/{pred_sub}")
