@@ -1,20 +1,3 @@
-**Merger headline.** A Hub `merger_agreement` row's MAUD labels are extraction
-gold (`schemas.maud_schema.hub_merger_expected_fields`): `maud_clauses` (one
-`'<Question>: <Hub class>'` line per answered question) and `merger_consideration`
-(the `Type of Consideration` answer, else the subtype token). A row that answers
-at least one MAUD question therefore has a score, and its payload carries
-`pipeline.extraction.overall` with the MAUD content extras beside it
-(`maud.question.micro_accuracy` keeps its own value). Only a payload whose ground
-truth labels no extraction field and yields no such gold (a label map that answers
-no question, or MAUD scored through `expected_maud=`) carries
-`maud.question.micro_accuracy` as its `metric_id`, since its
-`pipeline.extraction.overall` is null; a batch takes it only when every row is
-in that state. A pending or absent label map, or a bare subclass, is unscorable,
-not scored. A run that mixes the two kinds of row carries two ids across its
-per-document payloads, and `compare_serving` reports it as `metric_id_mixed`
-rather than pooling two different headlines. A single batch payload that mixes
-the two keeps `pipeline.extraction.overall`.
-
 # Metric identity (v0.19, updated for v0.22)
 
 Cross-leg comparisons must use the **same** `metric_id` on both sides. Mixing
@@ -174,7 +157,10 @@ Gold and the rules behind each lane:
 - **Judge.** Human: `approve_as_is` is `complete`, `correct` is `partial`, `reject` and
   `reclassify` are `incomplete`. Corpus: the dataset score of the judged extraction at or
   above the high edge of the ambiguous band (`get_ambiguous_band()`, default 0.5 / 0.85) is
-  `complete`, at or below the low edge `incomplete`, between them `partial`. A
+  `complete`, at or below the low edge `incomplete`, between them `partial`. An
+  `approve_as_is` that also records removed or corrected fields counts as `correct`, in every
+  lane. When a decision is about the final extraction and that attempt has no dataset score,
+  the row has no gold (`no_gold`); an earlier attempt's score never stands in. A
   `judge_error` verdict is unscored and counted in `error_rate`. `escalation_recall` is
   over documents whose gold is not `complete`, `false_escalation_rate` over those whose
   gold is `complete`.
@@ -209,15 +195,22 @@ All five live extract classes are covered.
 | `insurance_claim` | `pipeline.extraction.overall`, `pipeline.extraction.field_micro_f1`, `pipeline.extraction.field_micro_f2`, `pipeline.extraction.field_micro_precision`, `pipeline.extraction.field_micro_recall` |
 | `correspondence` | `pipeline.extraction.overall`, `pipeline.extraction.field_micro_f1`, `pipeline.extraction.field_micro_f2`, `pipeline.extraction.field_micro_precision`, `pipeline.extraction.field_micro_recall`, `pipeline.enron.topic_accuracy`, `pipeline.enron.topic_f1_macro`, `pipeline.enron.sentiment_accuracy`, `pipeline.enron.sentiment_f1_macro` |
 
-**Merger headline.** A `merger_agreement` payload whose ground truth labels no
-extraction field (every row of mailroom-dataset v9.3 is MAUD-only) carries
+**Merger headline.** A Hub `merger_agreement` row's MAUD labels are extraction
+gold (`schemas.maud_schema.hub_merger_expected_fields`): `maud_clauses` (one
+`'<Question>: <Hub class>'` line per answered question) and `merger_consideration`
+(the `Type of Consideration` answer, else the subtype token). A row that answers
+at least one MAUD question therefore has a score, and its payload carries
+`pipeline.extraction.overall` with the MAUD content extras beside it
+(`maud.question.micro_accuracy` keeps its own value). Only a payload whose ground
+truth labels no extraction field and yields no such gold (a label map that answers
+no question, or MAUD scored through `expected_maud=`) carries
 `maud.question.micro_accuracy` as its `metric_id`, since its
-`pipeline.extraction.overall` is null. A batch takes it only when every row is
-MAUD-only. A run that mixes MAUD-only rows with rows that label extraction
-fields therefore carries two ids across its per-document payloads, and
-`compare_serving` reports it as `metric_id_mixed` rather than pooling two
-different headlines. A single batch payload that mixes the two keeps
-`pipeline.extraction.overall`.
+`pipeline.extraction.overall` is null; a batch takes it only when every row is
+in that state. A pending or absent label map, or a bare subclass, is unscorable,
+not scored. A run that mixes the two kinds of row carries two ids across its
+per-document payloads, and `compare_serving` reports it as `metric_id_mixed`
+rather than pooling two different headlines. A single batch payload that mixes
+the two keeps `pipeline.extraction.overall`.
 
 `compare_serving` sets `incomparable: true` (and leaves the quality delta
 `None`) when the local and API legs carry different `metric_id` values

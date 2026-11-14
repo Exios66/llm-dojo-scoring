@@ -371,3 +371,40 @@ def test_cms_blank_list_items_are_silence(omitted, with_field_map):
         doc_class="insurance_claim",
     )
     assert counts["fp"] == 0
+
+
+def test_scalar_label_prediction_is_not_repeated_across_a_batch():
+    """One scalar prediction against several expected labels keeps the scorer's length error."""
+    from llm_dojo_scoring.scoring.suites import _labelled_label_pairs
+
+    assert _labelled_label_pairs(["a", "b"], "a") == (["a", "b"], "a")
+    with pytest.raises(ValueError, match="length"):
+        get_suite("correspondence").score(
+            [CORRESPONDENCE_GT, CORRESPONDENCE_GT], [CORRESPONDENCE_ORACLE, CORRESPONDENCE_ORACLE],
+            expected_topic=["a", "b"], predicted_topic="a", doc_subclass=["email", "email"],
+        )
+    # One expected label and one scalar prediction is still a pair (blank labels still drop).
+    assert _labelled_label_pairs(["a"], "a") == (["a"], ["a"])
+    assert _labelled_label_pairs(["nan"], "a") == (None, None)
+    # A missing prediction stays a per-row miss.
+    assert _labelled_label_pairs(["a", "b"], None) == (["a", "b"], ["", ""])
+
+
+@pytest.mark.parametrize("raw", ["nan", "", None])
+def test_per_document_scorer_agrees_with_the_suite_on_a_blank_label(raw):
+    """``doc_scorers.score_document`` skips a blank topic / sentiment label like ``ScoringSuite``."""
+    from llm_dojo_scoring.scoring.doc_scorers.dispatch import score_document
+
+    gt = json.loads(hub_row(**CORRESPONDENCE_LABELS, content_topic="", sentiment_label=""))
+    gt.update(content_topic=raw, sentiment_label=raw)
+    prediction = {**CORRESPONDENCE_ORACLE, "content_topic": "legal", "sentiment_label": "positive"}
+    payload = score_document("correspondence", prediction, gt, doc_subclass="email")
+    for key in ("content_topic_accuracy", "content_topic_f1_macro",
+                "sentiment_accuracy", "sentiment_f1_macro"):
+        assert payload.get(key) is None, key
+    labelled = score_document(
+        "correspondence", {**prediction, "content_topic": "legal"},
+        {**gt, "content_topic": "legal", "sentiment_label": "positive"}, doc_subclass="email",
+    )
+    assert labelled["content_topic_accuracy"] == 1.0
+    assert labelled["sentiment_accuracy"] == 1.0
