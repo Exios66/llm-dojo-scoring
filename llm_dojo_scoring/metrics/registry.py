@@ -705,6 +705,26 @@ metrics:
     description: "Share of reported values not grounded in GT or the source doc"
     applicable_agents: [SPECIALISTS]
     notes: "mailroom SCORE_CONFIGS name; complement of verified precision"
+  grounding_not_found_rate:
+    tier: 1
+    description: "Share of checkable unlabelled values (no GT label) the source document does not state"
+    applicable_agents: [SPECIALISTS]
+    aggregation: none
+    source: "grounding.summary.summarize_grounding"
+    notes: "unlabelled fields only, never on the headline path; distinct from extraction_hallucination_rate, which mixes labelled and unlabelled values"
+  grounding_unverifiable_rate:
+    tier: 2
+    description: "Share of audited unlabelled values that could not be checked against the document"
+    applicable_agents: [SPECIALISTS]
+    aggregation: none
+    source: "grounding.summary.summarize_grounding"
+  grounding_n_audited:
+    tier: 3
+    units: count
+    description: "Unlabelled extracted values (list items counted singly) audited against the document"
+    applicable_agents: [SPECIALISTS]
+    aggregation: sum
+    source: "grounding.summary.summarize_grounding"
   completeness_label:
     tier: 2
     description: "Categorical completeness label (complete/partial/incomplete)"
