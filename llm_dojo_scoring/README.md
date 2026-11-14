@@ -67,6 +67,7 @@ llm_dojo_scoring/
 | | `audit`, `summary` | Per-value records; unlabelled-value rates as `ScoreRecord`s (`docs/contracts/GROUNDING.md`) |
 | | `candidates`, `ledger`, `labels`, `io` | Review candidates; append-only confirmations; valid labels with provenance; local JSONL |
 | | `agreement` | Each agent's agreement with human spot-checks (valid precision, Wilson bound, κ) |
+| | `trust` | The trust gate: snapshots of when each agent was trusted, and the regression guard |
 | **`ml/`** | `contract` | `ml_contract()`: the label and intake tables `mailroom-ml` vendors as `ml/data/ml_contract.json` |
 | | `metrics` | `score_intake_model`: accuracy, macro F1, ECE, fast-path coverage and risk |
 | **`integrations/`** | `update_awareness` | `dojo-version` release awareness |

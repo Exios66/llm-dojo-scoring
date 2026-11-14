@@ -59,7 +59,11 @@ METRIC_IDS: tuple[str, ...] = (N_CANDIDATES, N_VALID_LABELS, N_LABEL_CONFLICTS)
 
 
 class TrustLookup(Protocol):
-    """What :func:`derive_valid_labels` needs from a trust gate (``TrustGate``, piece 3)."""
+    """What :func:`derive_valid_labels` needs from a trust gate (``grounding.trust.TrustGate``).
+
+    A gate may also carry a numeric ``certainty_floor``; :func:`derive_valid_labels`
+    uses it when given no floor of its own.
+    """
 
     def trusted_snapshot_id(self, ledger: ConfirmationLedger, reviewer_id: str, at: float) -> str | None:
         """Id of the passing snapshot in force for ``reviewer_id`` at ``at``, or ``None``."""
@@ -182,11 +186,14 @@ def derive_valid_labels(
     """Apply the validity rules (module docstring) to every confirmed candidate.
 
     ``gate`` decides which agents were trusted when they confirmed; ``None`` trusts
-    no agent. ``certainty_floor`` defaults to ``get_settings().grounding.certainty_floor``
-    (0.9 unless configured); an explicit floor is validated like the setting
-    (``ValueError`` outside ``[0, 1]``). ``previous`` is an earlier export: its labels not derived now are
-    returned as ``withdrawn``. Outputs are in candidate-id order.
+    no agent. ``certainty_floor`` defaults to the gate's ``certainty_floor`` when it has
+    one, else ``get_settings().grounding.certainty_floor`` (0.9 unless configured); an
+    explicit floor is validated like the setting (``ValueError`` outside ``[0, 1]``).
+    ``previous`` is an earlier export: its labels not derived now are returned as
+    ``withdrawn``. Outputs are in candidate-id order.
     """
+    if certainty_floor is None:
+        certainty_floor = getattr(gate, "certainty_floor", None)
     if certainty_floor is None:
         certainty_floor = get_settings().grounding.certainty_floor
     certainty_floor = GroundingSettings(certainty_floor=certainty_floor).coerced().certainty_floor
