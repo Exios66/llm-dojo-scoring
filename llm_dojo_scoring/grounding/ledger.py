@@ -77,7 +77,8 @@ class Confirmation:
 
 @dataclass(frozen=True)
 class ConfirmationReject:
-    """A record that failed validation: its position in the input, the record and why."""
+    """A record that failed validation: why, the record, and its position among every
+    record the ledger has seen."""
 
     index: int
     record: Any

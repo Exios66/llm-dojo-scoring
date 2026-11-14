@@ -28,8 +28,8 @@ def write_jsonl(items: Iterable[Any], path: str | os.PathLike[str], *, append: b
 
     Without ``append`` the file is replaced atomically (written beside it, then
     renamed), so a failed write never leaves a half-written file; an existing file
-    keeps its permissions and a new one is owner-only. With ``append`` the lines are
-    added to the end, which is how a confirmation ledger grows; a torn last line (no
+    keeps its permissions and a new one is owner-only (on either path). With
+    ``append`` the lines are added to the end, which is how a confirmation ledger grows; a torn last line (no
     trailing newline) is closed first so a new record never joins it. Every record is serialised before anything is
     written, so an unserialisable record (``TypeError``) or a NaN or infinity
     (``ValueError``) raises and the file is left unchanged. There is no locking:
@@ -38,7 +38,8 @@ def write_jsonl(items: Iterable[Any], path: str | os.PathLike[str], *, append: b
     lines = [json.dumps(_as_mapping(item), ensure_ascii=False, allow_nan=False) + "\n" for item in items]
     target = Path(path)
     if append:
-        with target.open("a+b") as handle:
+        fd = os.open(target, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o600)
+        with os.fdopen(fd, "a+b") as handle:
             handle.seek(0, os.SEEK_END)
             if handle.tell():
                 handle.seek(-1, os.SEEK_END)
