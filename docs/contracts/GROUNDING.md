@@ -281,13 +281,14 @@ claimed_amount grounded 2 157461380899
 
 `grounding/agreement.py` measures how often people confirm what each agent
 (`reviewer_id`) said. `paired_checks(ledger, *, as_of=None)` pairs, per candidate, each
-agent's latest decisive verdict with people's:
+agent's blind verdict with people's, when that verdict is decisive:
 
 - the agent's side is its **blind** verdict: its latest confirmation from before people
   first decided the candidate (earlier in the ledger and no later in time). A revision
   after people decided never rewrites the pair, so an agent shown the human verdict
   cannot erase its miss, and a backdated record that arrived after the human one does
-  not count;
+  not count. When that latest blind confirmation is `unsure`, the agent took no
+  position and is not paired, even if it said `valid` earlier;
 - people's side is their latest confirmations; `unsure` from either side is left out
   (a person whose latest word is `unsure` no longer counts);
 - people must agree with each other (same verdict and, for `valid`, the same value),
@@ -296,6 +297,14 @@ agent's latest decisive verdict with people's:
   `valid` on a value people corrected to something else counts as `hallucinated`;
 - with `as_of`, only confirmations made at or before it count; a pair is dated by the
   latest deciding human confirmation.
+
+Known limitation: the ledger records when a confirmation was made (`confirmed_at`), not
+when it arrived. `as_of` therefore reconstructs the past from today's ledger: a person's
+record appended later but dated earlier is counted at every `as_of` after its date. If it
+disagrees with the person who decided first, the candidate loses its human truth, and the
+pair drops out of the history (and so out of the trust gate's snapshots, which are
+recomputed, not stored). Pinning history to arrival needs an arrival time on each record,
+a schema change tracked on Exios66/llm-dojo-scoring#146.
 
 `reviewer_agreement(ledger, *, window=None, as_of=None)` returns a `ReviewerAgreement`
 per agent over its latest `window` pairs (default `grounding.trust_window`), ordered by
