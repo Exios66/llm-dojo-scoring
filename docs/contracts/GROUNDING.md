@@ -58,7 +58,7 @@ checked item by item with its item type.
 | Field type | `grounded` when | Otherwise |
 | --- | --- | --- |
 | `name`, `free_text` (and unknown types) | at least `field_scoring.verification_token_coverage` (default 0.7) of the value's content tokens appear in the document | `not_found`; `unverifiable` when the value has no content tokens |
-| `date` | the document states the same date in any format (partial dates agree on every stated part) | `not_found`; text that is not a date uses the token rule |
+| `date` | the document writes the same date in any common form (see "Dates" below); partial dates agree on every stated part | `not_found`; text that is not a date uses the token rule |
 | `money` | the document states the same amount (within half a cent, sign ignored) as money: with a currency symbol or word (spaces between it and the number on the same line are fine: `$ 500`, `500  dollars`), a scale (`5M`, upper case and attached, or `thousand`/`million`/`billion`), a thousands separator or two decimals. Bare integers in the text (a day, a year, a phone digit group) never count | `not_found`; `unverifiable` when the value is not an amount |
 | `id`, `cms_doc_ref` | after casefolding and removing whitespace, `-`, `/` and `.`, the value equals one alphanumeric part of the text or up to six adjacent parts (`CLM 0001` matches `CLM-0001`; `12345` matches `INV-12345` and `No.12345`); a part is never split (`12` does not match inside `2012`) | `not_found`; `unverifiable` when shorter than three characters |
 | `label` | never: a closed-vocabulary label is inferred, not quoted | always `unverifiable` |
@@ -69,12 +69,51 @@ money parser; the money and identifier boundary rules are this module's own. Per
 work is cached (the last eight documents per cache), so auditing many values of one
 document scans it once.
 
-Known limitation: dates use the shared date matcher, which only reads document dates
-that state a year and does not read ordinal suffixes. So `March 3` against "Signed on
-March 3." is `not_found` (it is grounded by "March 3, 2024"), `2024-03` against "dated
-March 2024" is `not_found`, and `2024-03-03` against "March 3rd, 2024" is `not_found`.
-The headline factuality audit uses the same matcher, so fixing it changes headline scores
-and is out of scope here (tracked on Exios66/llm-dojo-scoring#146). A new field type
+### Dates
+
+A date value is read with `field_scoring._parse_date_parts`, the reader the headline date
+scorer uses, and is `grounded` when some date the document writes agrees with every
+component the value states (year, month, day). The document is scanned for these forms,
+each read by the same parser; a weekday prefix ("Sunday, March 3, 2024") is ignored:
+
+| Form | Examples |
+| --- | --- |
+| ISO and year-first numeric | `2024-03-03`, `2024/03/03`, `2024.03.03`, `2024-03-03T10:30:00Z` |
+| numeric with a year last | `3/24/2006`, `04-01-06`, `13.04.2024`, `03.04.24` |
+| month-first prose | `March 3, 2024`, `Mar. 3rd, 2024`, `March 3 2024`, `March the 3rd, 2024` |
+| day-first prose | `3 March 2024`, `3rd of March, 2024`, `the 3rd day of March, 2024`, `03-Mar-2024` |
+| month and year | `March 2024`, `Mar. 2024`, `2024-03`, `03/2024` |
+| month and day, no year | `March 3`, `3rd of March` |
+
+Rules that keep a date-shaped string from becoming a date:
+
+- A date states what it writes and nothing more. A year-less document date ("signed on
+  March 3") never grounds a value that states a year, and a month-and-year never
+  grounds a day. A full document date does ground a partial value that agrees ("March 3",
+  "2024-03").
+- An ambiguous numeric date is month-first: `03/04/2024` is March 4, so it grounds
+  `2024-03-04`, not `2024-04-03`. A first or second number above 12 is the day. A
+  two-digit year uses the fixed pivot (00 to 68 is 2000 to 2068, 69 to 99 is 1969 to 1999).
+  The clock is never read.
+- A span inside a longer alphanumeric, hyphenated, slashed or dotted run is not a date
+  (`INV-2024-0301`, `2024-03-0001`, `415-505-2024`, `1.2.34`), nor is one after `#`, `@`,
+  a currency sign or `+`. Numbers must be in calendar range.
+- "May" is a month only when capitalised ("you may 5 times" is not May 5). A decimal or
+  thousands group after a day (`March 3,000`, `March 3.50`) is an amount.
+- Numeric month-and-year needs a zero-padded month (`03/2024`, not `3/2024`), so `1/2000`
+  stays a fraction. Dots between numbers need a four-digit year, or two-digit day, month
+  and year.
+
+Not read, so the value is `not_found` (fix in the scanner if you hit one): day ranges
+(`March 3-5, 2024`), an ISO interval joined by a slash (`2024-03-03/2024-03-10`; joined
+by an en dash it reads), compact `20240303`, year-first prose (`2024 March 3`), a lowercase
+"may", month names in other languages, spelled-out days ("third of March"), "the month of
+March 2024", and quarters or fiscal years. Lookalikes that do read as a date: a version
+written with two-digit parts (`10.12.15`), a padded month-year reference number
+(`INV 03/2024`) and a month name followed by a number ("Dec 25 units"). The headline
+factuality audit (`audit_scalar_field`) uses the same matcher, so these verdicts and its
+`verified_in_doc`, `hallucination_rate` and `verified_precision` read a document's dates
+identically (tracked on Exios66/llm-dojo-scoring#146 and #147). A new field type
 is one entry in `grounding/verdicts.py:_RULES`.
 
 ## Metrics

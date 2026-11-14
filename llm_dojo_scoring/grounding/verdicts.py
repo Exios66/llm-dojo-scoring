@@ -2,7 +2,8 @@
 
 A verdict says whether the document supports a value, not whether the value is right:
 
-* ``grounded`` — the document states it (in any format the field type allows);
+* ``grounded`` — the document states it (in any format the field type allows: a date
+  as ISO, numeric, month-first or day-first prose, month and year, or month and day);
 * ``not_found`` — the value is checkable and the document does not state it;
 * ``unverifiable`` — it cannot be checked: no document text, a closed-vocabulary
   ``label`` (inferred, never a literal in the text), or a value with nothing to compare.
@@ -130,7 +131,13 @@ def _token_rule(value: Any, doc_text: str) -> tuple[str, float | None]:
 
 
 def _date_rule(value: Any, doc_text: str) -> tuple[str, float | None]:
-    """A date the document states in any format; unparseable text falls back to tokens."""
+    """A date the document writes in any common form; unparseable text falls back to tokens.
+
+    The document's dates are every ISO, numeric, month-first or day-first prose, month-year
+    and year-less month-day span in it (:func:`~llm_dojo_scoring.scoring.field_scoring._date_grounded_in_doc`).
+    The value is grounded when one agrees on every component the value states; a year-less
+    document date never grounds a value that states a year. See ``docs/contracts/GROUNDING.md``.
+    """
     parts = _parse_date_parts(value)
     if parts is None:
         return _token_rule(value, doc_text)
