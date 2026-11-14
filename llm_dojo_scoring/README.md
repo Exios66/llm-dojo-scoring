@@ -14,6 +14,7 @@ llm_dojo_scoring/
 ├── pipeline/          mailroom pipeline and sandbox contracts
 ├── metrics/           metric identity and emission
 ├── analysis/          run analysis and reporting
+├── grounding/         unlabelled-value grounding (a separate pass, never on the scoring path)
 └── integrations/      trace sinks and release awareness
 ```
 
@@ -61,6 +62,8 @@ llm_dojo_scoring/
 | | `calibration` | Exact risk bounds, sample size, ECE/Brier, AUROC, cutoffs |
 | | `experiment` | Experiment-log records |
 | | `serving`, `cost` | Local-vs-API serving, token cost |
+| **`grounding/`** | `verdicts`, `selection` | One value against the document; which fields are unlabelled |
+| | `audit`, `summary` | Per-value records; unlabelled-value rates as `ScoreRecord`s (`docs/contracts/GROUNDING.md`) |
 | **`integrations/`** | `update_awareness` | `dojo-version` release awareness |
 | | `update_awareness` | Opt-in release discovery behind `dojo-version` |
 

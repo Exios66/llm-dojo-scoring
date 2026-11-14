@@ -105,6 +105,7 @@ HOLD: dict[str, str] = {
     "schemas.corporate_record_relabel": "corporate record relabelling, Dojo #52",
     "integrations.update_awareness": "release tooling behind the dojo-version CLI, Dojo #66",
     "analysis.failure_modes": "source of registry metric failure_mode_breakdown (sorter bundle), Dojo #66",
+    "grounding": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146",
 }
 
 #: Dispatch functions whose first (or named) argument selects what runs.
