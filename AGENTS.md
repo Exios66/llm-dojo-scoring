@@ -88,6 +88,7 @@ Modules are grouped into subpackages; only entry points sit at the root. The ful
 | `pipeline/` | The llm-mailroom pipeline contract (`mailroom`), intake clerk, pilot labels, verdicts, `archive` (audit-row hash, byte-identical to llm-mailroom's), sandbox rubrics |
 | `metrics/` | `registry` (every score name → tier T0–T3), `profiles`, `bundles`, `emitter` (`ScoreRecord`, JSONL / Langfuse routing), `scorecard_honesty`, `score_changelog` |
 | `analysis/` | `bootstrap`, `calibration`, `diagnostics`, `failure_modes`, `experiment`, `serving`, `cost` |
+| `grounding/` | Unlabelled-value grounding, a separate pass after scoring: `verdicts`, `selection`, `audit`, `summary` (`docs/contracts/GROUNDING.md`). Nothing on the scoring path imports it. |
 | `integrations/` | `update_awareness` (`dojo-version`) |
 | `prompts/` | Importable prompt catalog and the frozen eval-environment lineage |
 
@@ -191,7 +192,8 @@ Digital-Mailroom `governance/TASKS.md`.
 - `docs/guides/` — `SCORING.md`, `PUBLIC_API.md`, `RELEASES.md`, `MIGRATION.md`,
   `ADDING_A_DOCUMENT_TYPE.md`, `COMPARABILITY.md`, `PROMPTS.md`,
   `UPDATE_AWARENESS.md`.
-- `docs/contracts/` — metric ids, scorecard honesty, archive / reviewer / sandbox scoring.
+- `docs/contracts/` — metric ids, scorecard honesty, archive / reviewer / sandbox scoring,
+  unlabelled-value grounding.
 - `docs/schemas/` — extraction, CUAD, MAUD, corporate-record and GT metadata schemas.
 - `docs/history/`, `docs/plans/` — past transfers, TODOs and plans; not current contracts.
 - `CHANGELOG.md` — every user-visible change under `[Unreleased]` until `release.py cut`.
