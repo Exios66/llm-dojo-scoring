@@ -26,6 +26,7 @@ only human-confirmed labels are derived.
 
 from __future__ import annotations
 
+import json
 from collections import Counter
 from dataclasses import asdict, dataclass, fields
 from typing import Any, Iterable, Mapping, Protocol
@@ -104,7 +105,8 @@ class LabelDerivation:
 
     ``labels`` are valid labels; ``rejected`` are candidate ids people called
     hallucinated; ``conflicts`` and ``pending`` map candidate ids to a reason;
-    ``withdrawn`` are labels of a previous export not derived this time.
+    ``withdrawn`` are labels of a previous export not derived this time (same candidate
+    and same value), so a correction to another value withdraws the old value.
     """
 
     labels: tuple[ValidLabel, ...]
@@ -150,6 +152,12 @@ def _agree(candidate: ReviewCandidate, confirmations: list[Confirmation]) -> boo
     """
     forms = {" ".join(str(_label_value(candidate, c)).casefold().split()) for c in confirmations}
     return len(forms) == 1
+
+
+def _label_key(label: ValidLabel) -> tuple[str, str]:
+    """A label's identity for ``withdrawn``: its candidate and its value (a correction to
+    another value withdraws the old one)."""
+    return label.source_candidate_id, json.dumps(label.value, sort_keys=True, default=str)
 
 
 def _label(candidate: ReviewCandidate, backing: list[Confirmation], latest: Iterable[Confirmation],
@@ -214,8 +222,8 @@ def derive_valid_labels(
                 labels.append(_label(candidate, [first], latest, TRUSTED_AGENT_BASIS, snapshot_id))
             else:
                 pending[cid] = AGENT_UNTRUSTED if sure else BELOW_CERTAINTY_FLOOR
-    current = {label.source_candidate_id for label in labels}
-    withdrawn = tuple(label for label in previous if label.source_candidate_id not in current)
+    current = {_label_key(label) for label in labels}
+    withdrawn = tuple(label for label in previous if _label_key(label) not in current)
     return LabelDerivation(tuple(labels), tuple(rejected), conflicts, pending, withdrawn)
 
 
