@@ -1842,6 +1842,7 @@ def test_range_with_ordinal_suffixes_grounds_through_the_factuality_audit(pred, 
     ],
 )
 def test_range_with_ordinal_suffixes_does_not_ground_the_middle_or_a_wrong_year(pred, doc):
+    """An ordinal range states its two ends only, and a year-less one states no year."""
     assert not fs._date_grounded_in_doc(fs._parse_date_parts(pred), doc), (pred, doc)
 
 
