@@ -87,22 +87,22 @@
     },
     "grounding.candidates": {
       "decision": "hold",
-      "lines": 115,
+      "lines": 117,
       "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
     },
     "grounding.io": {
       "decision": "hold",
-      "lines": 70,
+      "lines": 88,
       "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
     },
     "grounding.labels": {
       "decision": "hold",
-      "lines": 229,
+      "lines": 235,
       "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
     },
     "grounding.ledger": {
       "decision": "hold",
-      "lines": 175,
+      "lines": 212,
       "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
     },
     "grounding.selection": {
