@@ -30,6 +30,7 @@ from collections import Counter
 from dataclasses import asdict, dataclass, fields
 from typing import Any, Iterable, Mapping, Protocol
 
+from ..config import GroundingSettings, get_settings
 from ..metrics.emitter import ScoreRecord
 from .audit import SCHEMA_VERSION
 from .candidates import ReviewCandidate
@@ -37,9 +38,6 @@ from .ledger import AGENT, HALLUCINATED, HUMAN, UNSURE, VALID, Confirmation, Con
 
 HUMAN_BASIS = "human"
 TRUSTED_AGENT_BASIS = "trusted_agent"
-
-#: Default minimum certainty for an agent's ``valid`` to count (``GroundingSettings`` in piece 3).
-DEFAULT_CERTAINTY_FLOOR = 0.9
 
 # Why a candidate is in ``conflicts``.
 HUMANS_DISAGREE = "humans_disagree"
@@ -170,15 +168,20 @@ def derive_valid_labels(
     ledger: ConfirmationLedger,
     gate: TrustLookup | None = None,
     *,
-    certainty_floor: float = DEFAULT_CERTAINTY_FLOOR,
+    certainty_floor: float | None = None,
     previous: Iterable[ValidLabel] = (),
 ) -> LabelDerivation:
     """Apply the validity rules (module docstring) to every confirmed candidate.
 
     ``gate`` decides which agents were trusted when they confirmed; ``None`` trusts
-    no agent. ``previous`` is an earlier export: its labels not derived now are
+    no agent. ``certainty_floor`` defaults to ``get_settings().grounding.certainty_floor``
+    (0.9 unless configured); an explicit floor is validated like the setting
+    (``ValueError`` outside ``[0, 1]``). ``previous`` is an earlier export: its labels not derived now are
     returned as ``withdrawn``. Outputs are in candidate-id order.
     """
+    if certainty_floor is None:
+        certainty_floor = get_settings().grounding.certainty_floor
+    certainty_floor = GroundingSettings(certainty_floor=certainty_floor).coerced().certainty_floor
     labels: list[ValidLabel] = []
     rejected: list[str] = []
     conflicts: dict[str, str] = {}

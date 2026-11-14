@@ -22,6 +22,11 @@ Format based on Keep a Changelog; versioning is SemVer.
   derived from it with full provenance (human confirmation, or a trusted agent with enough
   certainty), with conflicts, pending reasons and withdrawals listed. New tier-3 counts:
   `grounding_n_candidates`, `grounding_n_valid_labels`, `grounding_n_label_conflicts`.
+- `config.GroundingSettings` (`Settings.grounding`, a `grounding:` YAML or taxonomy block,
+  `configure(grounding__…)`): reviewer-trust thresholds (`trust_bar`, `trust_min_n`,
+  `trust_window`, `certainty_floor`, `spot_check_rate`, `spot_check_min_per_agent`), validated
+  on every change. `derive_valid_labels` now reads its default certainty floor from it (0.9,
+  unchanged). Only `grounding/` reads these; no score moves.
 <!-- end 0.31.0 -->
 
 - `schemas/doc_classes.py`: one hand-edited registry (`DOC_CLASSES`, `DocClass`, `field_types()`,

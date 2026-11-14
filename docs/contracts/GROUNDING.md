@@ -13,9 +13,10 @@ run it after scoring, and nothing on the scoring path imports it
 golden baseline. It is deterministic, network-free, makes no LLM calls, writes no files
 and never stores document text.
 
-Status: pieces 1 and 2 of 3 (0.31.0): verdicts and rates, then review candidates, the
-confirmation ledger and valid labels with provenance. The agent trust gate follows; see
-the design
+Status (0.31.0): pieces 1 and 2 (verdicts and rates; review candidates, the
+confirmation ledger and valid labels with provenance) and the reviewer-trust settings.
+Agent agreement, the trust gate and spot-check sampling follow in stacked PRs
+(`docs/superpowers/plans/2026-11-14-unlabelled-value-grounding-piece-3.md`); see the design
 (`docs/superpowers/specs/2026-11-14-unlabelled-value-grounding-design.md`) and tracker
 Exios66/llm-dojo-scoring#146. Consumers: none yet (`hold` in
 `docs/analysis/data/consumer_closure.json`); llm-mailroom wiring follows the release.
@@ -190,8 +191,9 @@ each reviewer's **latest** confirmation per candidate counts (`ledger.latest()`;
 
 ## Valid labels (piece 2)
 
-`derive_valid_labels(ledger, gate=None, *, certainty_floor=0.9, previous=())` is a pure
-function of the ledger, recomputed every time. Per candidate, on latest confirmations:
+`derive_valid_labels(ledger, gate=None, *, certainty_floor=None, previous=())` is a pure
+function of the ledger, recomputed every time. `certainty_floor` defaults to the
+`grounding.certainty_floor` setting (0.9; see "Settings" below). Per candidate, on latest confirmations:
 
 | Situation | Outcome |
 | --- | --- |
@@ -267,6 +269,34 @@ claimed_amount grounded 2 157461380899
 [('claimed_amount', '$1,250.00', 'human')]
 {'c61ae340aca866de…': 'agent_untrusted'}
 ```
+
+## Settings
+
+`config.GroundingSettings`, the `grounding` section of `Settings`, holds the tunable
+thresholds. Only `grounding/` reads it, so no value here can move a headline score.
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `trust_bar` | 0.95 | Wilson lower bound an agent's `valid` precision must reach to be trusted |
+| `trust_min_n` | 50 | paired human checks needed before an agent can be trusted |
+| `trust_window` | 200 | most recent paired checks the gate looks at (at least `trust_min_n`) |
+| `certainty_floor` | 0.9 | least certainty an agent's `valid` needs to count |
+| `spot_check_rate` | 0.10 | share of each agent's confirmations sampled for people |
+| `spot_check_min_per_agent` | 20 | least sample per agent |
+
+Set them in the YAML config (`LLM_DOJO_SCORING_CONFIG`) or the taxonomy passed to
+`configure_from_taxonomy`, under a `grounding:` block, or with
+`configure(grounding__trust_bar=0.97)` (or `configure(grounding=GroundingSettings(...))`).
+Values must be finite numbers: rates in `[0, 1]`, counts whole numbers of at least 0
+(`trust_min_n` at least 1, so no agent is trusted on zero checks), and
+`trust_window ≥ trust_min_n` (overrides passed together are checked together). Every
+path coerces alike: `trust_min_n: 40.0` (YAML), `grounding__trust_min_n=40.0` and
+`grounding=GroundingSettings(trust_min_n=40.0)` all give `40`. A block that is not a
+mapping (`false`, `0`, `""` and `[]` included) is an error; `grounding: null` and
+`grounding: {}` change nothing. A bad
+grounding value raises `ValueError` before anything in that config file or taxonomy is
+applied, so every settings section keeps its old values; unknown keys in the block are
+ignored. Updates change `get_settings().grounding` in place.
 
 ## Modules
 
