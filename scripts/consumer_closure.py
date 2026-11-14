@@ -105,6 +105,9 @@ HOLD: dict[str, str] = {
     "schemas.corporate_record_relabel": "corporate record relabelling, Dojo #52",
     "integrations.update_awareness": "release tooling behind the dojo-version CLI, Dojo #66",
     "analysis.failure_modes": "source of registry metric failure_mode_breakdown (sorter bundle), Dojo #66",
+    "ml": "ML contract package mailroom-ml vendors as JSON, never imports (stacked on Dojo #142)",
+    "ml.contract": "label and intake contract behind ml/data/ml_contract.json for mailroom-ml (stacked on Dojo #142)",
+    "ml.metrics": "intake-classifier scorecard for mailroom-ml evaluation reports (stacked on Dojo #142)",
     "scoring.decision_lanes": "judge/arbiter/boss/review-tray scorecards; llm-mailroom wires its decision export next (stacked on Dojo #140)",
 }
 
@@ -871,9 +874,13 @@ def scan_files(pkg: Package, files: Mapping[str, str], homes: Mapping[str, str])
 
 
 def expand_hold(hold: Mapping[str, str], graph: Mapping[str, set[str]]) -> dict[str, str]:
-    """Hold table expanded to modules: a package entry holds every module below it."""
+    """Hold table expanded to modules: a package entry holds every module below it.
+
+    A module named in its own entry keeps that reason over its package's.
+    """
     expanded: dict[str, str] = {}
-    for key, reason in sorted(hold.items()):
+    # Longest key first: a specific module entry beats the package entry above it.
+    for key, reason in sorted(hold.items(), key=lambda item: (-len(item[0]), item[0])):
         for module in sorted(graph):
             if module == key or module.startswith(key + "."):
                 expanded.setdefault(module, reason)

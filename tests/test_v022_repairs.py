@@ -378,7 +378,7 @@ def test_every_canonical_id_is_allowed_somewhere():
         mid for mid in _METRIC_ID_BY_NAME.values() if mid.startswith("review.lane.")
     }
     decision_lanes = {
-        mid for mid in _METRIC_ID_BY_NAME.values() if mid.startswith("decision.")
+        mid for mid in _METRIC_ID_BY_NAME.values() if mid.startswith(("decision.", "ml."))
     }
     assert (
         set(_METRIC_ID_BY_NAME.values()) - allowed
