@@ -118,8 +118,7 @@ class TrustGate:
         overrides = {key: value for key, value in (
             ("trust_bar", bar), ("trust_min_n", min_n), ("trust_window", window),
             ("certainty_floor", certainty_floor)) if value is not None}
-        checked: GroundingSettings = replace(base, **overrides)
-        checked.validate()
+        checked: GroundingSettings = replace(base, **overrides).coerced()
         self._bar = float(checked.trust_bar)
         self._min_n = int(checked.trust_min_n)
         self._window = int(checked.trust_window)
