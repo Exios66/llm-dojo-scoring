@@ -12,6 +12,7 @@ from llm_dojo_scoring.grounding.agreement import (
     agreement_score_records,
     paired_checks,
     reviewer_agreement,
+    select_spot_checks,
 )
 from llm_dojo_scoring.grounding.audit import audit_unlabelled_values
 from llm_dojo_scoring.grounding.candidates import review_candidates
@@ -197,3 +198,46 @@ def test_backdated_late_human_record_moves_the_cutoff_back():
     ledger = _ledger(c, [(0, "agent", "boss@v1", "valid", 5), (0, "human", "human:a", "valid", 10),
                          (0, "human", "human:b", "valid", 3)])
     assert paired_checks(ledger) == []
+
+
+def _agent_rows(n, reviewer="boss@v1", verdict="valid"):
+    """Agent verdicts on candidates ``0…n-1``, no human yet."""
+    return [(i, "agent", reviewer, verdict, i) for i in range(n)]
+
+
+def test_spot_checks_rate_floor_and_eligibility():
+    """About ``rate`` of each agent's decided candidates, at least ``min_per_agent``; humans done are skipped."""
+    c = _candidates(200)
+    ledger = _ledger(c, _agent_rows(200) + [(0, "human", "human:a", "valid", 500)]
+                     + [(1, "human", "human:a", "unsure", 500)] + [(2, "agent", "jev-1", "unsure", 3)])
+    picked = select_spot_checks(ledger, rate=0.1, min_per_agent=0)
+    assert 10 <= len(picked) <= 35 and picked == sorted(picked)
+    assert c[0].candidate_id not in select_spot_checks(ledger, rate=1.0)
+    assert c[1].candidate_id in select_spot_checks(ledger, rate=1.0)  # unsure is not a decision
+    assert len(select_spot_checks(ledger, rate=0.0, min_per_agent=20)) == 20
+    assert select_spot_checks(ledger, rate=0.0, min_per_agent=0) == []
+    assert len(select_spot_checks(_ledger(c, _agent_rows(5)), rate=0.0, min_per_agent=20)) == 5
+
+
+def test_spot_checks_are_deterministic_and_stable_as_the_ledger_grows():
+    """Same seed, same sample; earlier draws keep their selection when more candidates arrive."""
+    c = _candidates(120)
+    small = select_spot_checks(_ledger(c, _agent_rows(60)), rate=0.2, min_per_agent=0)
+    large = select_spot_checks(_ledger(c, _agent_rows(120)), rate=0.2, min_per_agent=0)
+    assert small == select_spot_checks(_ledger(c, _agent_rows(60)), rate=0.2, min_per_agent=0)
+    assert set(small) == {cid for cid in large if cid in {x.candidate_id for x in c[:60]}}
+    assert small != select_spot_checks(_ledger(c, _agent_rows(60)), rate=0.2, min_per_agent=0, seed=1)
+
+
+def test_spot_checks_are_per_agent_and_follow_settings():
+    """Each agent gets its own floor; defaults come from settings and are validated."""
+    c = _candidates(40)
+    ledger = _ledger(c, _agent_rows(20) + [(i, "agent", "jev-1", "hallucinated", i) for i in range(20, 40)])
+    picked = set(select_spot_checks(ledger, rate=0.0, min_per_agent=3))
+    assert len(picked & {x.candidate_id for x in c[:20]}) == 3
+    assert len(picked & {x.candidate_id for x in c[20:]}) == 3
+    configure(grounding__spot_check_rate=0.0, grounding__spot_check_min_per_agent=2)
+    assert len(select_spot_checks(ledger)) == 4
+    for bad in ({"rate": 1.5}, {"min_per_agent": -1}, {"seed": 1.5}, {"seed": True}):
+        with pytest.raises(ValueError):
+            select_spot_checks(ledger, **bad)

@@ -65,7 +65,7 @@ llm_dojo_scoring/
 | **`grounding/`** | `verdicts`, `selection` | One value against the document; which fields are unlabelled |
 | | `audit`, `summary` | Per-value records; unlabelled-value rates as `ScoreRecord`s (`docs/contracts/GROUNDING.md`) |
 | | `candidates`, `ledger`, `labels`, `io` | Review candidates; append-only confirmations; valid labels with provenance; local JSONL |
-| | `agreement` | Each agent's agreement with human spot-checks (valid precision, Wilson bound, κ) |
+| | `agreement` | Each agent's agreement with human spot-checks (valid precision, Wilson bound, κ), and which candidates to spot-check |
 | | `trust` | The trust gate: snapshots of when each agent was trusted, and the regression guard |
 | **`integrations/`** | `update_awareness` | `dojo-version` release awareness |
 | | `update_awareness` | Opt-in release discovery behind `dojo-version` |
