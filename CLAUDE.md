@@ -42,10 +42,11 @@ The surface consumers rely on is listed in `docs/guides/PUBLIC_API.md` (written 
 | `llm_dojo_scoring/metrics/` | metric registry and tiers, bundles, profiles, emitter, scorecard honesty |
 | `llm_dojo_scoring/analysis/` | bootstrap, calibration, diagnostics, failure modes, serving, cost |
 | `llm_dojo_scoring/integrations/` | `dojo-version` release awareness |
+| `llm_dojo_scoring/ml/` | the label/intake contract `mailroom-ml` vendors (`ml_contract.json`) and `score_intake_model` |
 | `llm_dojo_scoring/prompts/` | importable prompt catalog and frozen lineage |
 | `llm_dojo_scoring/config.py` | `Settings` (`LLM_DOJO_SCORING_CONFIG`) |
 | `tests/` | ~3,500 tests, network-free but one release test; `tests/fixtures/golden/` is the golden score baseline |
-| `scripts/` | `release.py`, `freeze_goldens.py`, `audit_consumer_surface.py`, `consumer_closure.py`, `build_extraction_status.py`, `render_gt_coverage.py`, GT audits |
+| `scripts/` | `release.py`, `freeze_goldens.py`, `audit_consumer_surface.py`, `consumer_closure.py`, `build_extraction_status.py`, `render_gt_coverage.py`, `export_ml_contract.py`, GT audits |
 | `docs/guides/`, `docs/contracts/`, `docs/schemas/` | scoring guides, metric ids and contracts, schema docs |
 
 Full module table: `llm_dojo_scoring/README.md`.
@@ -74,7 +75,7 @@ python scripts/release.py check                  # read-only: verify the chain i
 
 Run the ones that match the change, on the final state, and keep the output for the PR
 (`.claude/rules/evidence-contract.md`). CI (`.circleci/config.yml`, job `test`) runs `scripts/ci.py --tier full`:
-ruff, `uv lock --check`, the full suite, the golden check and the GT coverage page check; `release-chain` runs `release.py check` on `main`.
+ruff, `uv lock --check`, the full suite, the golden check, the GT coverage page check and the ML contract check; `release-chain` runs `release.py check` on `main`.
 
 | Change touches | Run |
 |:---|:---|

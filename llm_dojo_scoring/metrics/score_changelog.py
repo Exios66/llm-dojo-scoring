@@ -155,6 +155,26 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         ),
         "rescore_required": False,
     },
+    {
+        # Fifth 0.29.0 change set (new metrics only; no existing value moves).
+        "version": "0.29.0",
+        "metric_ids": (
+            "ml.intake.doc_type_accuracy",
+            "ml.intake.doc_type_macro_f1",
+            "ml.intake.doc_type_ece",
+            "ml.intake.subclass_accuracy",
+            "ml.intake.subclass_macro_f1",
+            "ml.intake.subclass_ece",
+            "ml.intake.fast_path_coverage",
+            "ml.intake.selective_risk",
+            "ml.intake.selective_risk_upper",
+        ),
+        "change": (
+            "New metrics: intake classifier accuracy, macro F1, calibration and "
+            "fast-path risk (ml.score_intake_model). No existing metric value changes."
+        ),
+        "rescore_required": False,
+    },
 )
 
 
