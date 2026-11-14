@@ -339,8 +339,9 @@ def _labelled_label_pairs(expected: Any, predicted: Any) -> tuple[Any, Any]:
     A blank expected label (``None``, ``""``, ``"nan"``, ``"none"``…) is not
     ground truth, so its pair is dropped. Returns ``(None, None)`` when no
     labelled pair is left; a missing prediction for a labelled pair becomes
-    ``""`` (a miss). Lists of unequal length pass through unchanged so the
-    content scorer raises its usual length error.
+    ``""`` (a miss). Lists of unequal length, and a scalar prediction for
+    several expected labels, pass through unchanged so the content scorer raises
+    its usual length error.
     """
     from ..schemas import gt_metadata as _gtm
 
@@ -349,11 +350,14 @@ def _labelled_label_pairs(expected: Any, predicted: Any) -> tuple[Any, Any]:
     if isinstance(expected, (list, tuple)):
         if not expected:
             return None, None
-        preds = (
-            list(predicted)
-            if isinstance(predicted, (list, tuple))
-            else [predicted] * len(expected)
-        )
+        if isinstance(predicted, (list, tuple)):
+            preds = list(predicted)
+        elif predicted is None or len(expected) == 1:
+            preds = [predicted] * len(expected)
+        else:
+            # One scalar for several labels is not an answer to each of them:
+            # leave it for the content scorer's length error.
+            return expected, predicted
         if len(preds) != len(expected):
             return expected, predicted
         kept = [
@@ -370,7 +374,10 @@ def _labelled_label_pairs(expected: Any, predicted: Any) -> tuple[Any, Any]:
 
 
 def _merger_gold_from_labels(
-    row: dict[str, Any], scoped: dict[str, Any], subclass: Any
+    row: dict[str, Any],
+    scoped: dict[str, Any],
+    subclass: Any,
+    field_map: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Extraction gold a Hub merger row's MAUD labels give, for the keys it lacks.
 
@@ -380,7 +387,10 @@ def _merger_gold_from_labels(
     MAUD questions gets gold: a pending / absent / empty label map, or a bare
     subclass, stays unlabelled (unscorable) rather than scoring a lone
     ``merger_consideration``. A key the row already carries (non-empty) or whose
-    ``gt_presence`` status is absent is never overwritten or invented.
+    ``gt_presence`` status is absent is never overwritten or invented. With a
+    non-empty *field_map* (the caller's or the suite's active field map) only keys
+    inside it are returned, so a caller who scopes ``field_types`` is not charged
+    for derived fields outside that scope.
     """
     from ..schemas import gt_metadata as gtm
     from ..schemas.maud_schema import hub_merger_expected_fields
@@ -396,6 +406,7 @@ def _merger_gold_from_labels(
         for key, value in derived.items()
         if gtm.is_empty_value(scoped.get(key))
         and presence.get(key) not in gtm.ABSENT_PRESENCE_STATUSES
+        and (not field_map or key in field_map)
     }
 
 
@@ -411,6 +422,36 @@ def _canonical_maud_line(line: Any) -> Any:
 
     parsed = parse_maud_clause(line) if isinstance(line, str) else None
     return f"{parsed[0]}: {parsed[1]}" if parsed else line
+
+
+def _maud_lines_all_ambiguous(lines: Any) -> bool:
+    """True when the MAUD scorer calls every question in these gold lines ambiguous.
+
+    Such a ``maud_clauses`` field is unscorable: the generic fuzzy matcher must not
+    score the same lines in its place. Gold that names no question at all is not
+    ambiguous (it stays with the generic matcher).
+    """
+    from .content_scoring import parse_maud_labels, score_maud_extraction
+
+    if not isinstance(lines, (list, tuple)) or not lines:
+        return False
+    return bool(score_maud_extraction(parse_maud_labels(list(lines)), {}).get("gt_ambiguous"))
+
+
+def _n_unparsed_maud_entries(lines: Any) -> int:
+    """Nonempty predicted clause entries that :func:`parse_maud_labels` cannot read."""
+    from .content_scoring import _span_lines, parse_maud_labels
+
+    if not isinstance(lines, list):
+        return 0
+    count = 0
+    for entry in lines:
+        for item in _span_lines(entry):
+            if item is None or (isinstance(item, str) and not item.strip()):
+                continue
+            if not parse_maud_labels([item]):
+                count += 1
+    return count
 
 
 def _score_maud_clauses_by_question(
@@ -445,12 +486,17 @@ def _score_maud_clauses_by_question(
         pred_lines = []
     if isinstance(pred_lines, list):
         pred_lines = [_canonical_maud_line(line) for line in pred_lines]
-    scored = score_maud_extraction(list(exp_lines), pred_lines)
+    # Both sides are one document each: a list of clause objects must not be read
+    # as a batch of documents and paired with the gold lines by position.
+    pred_labels = parse_maud_labels(pred_lines)
+    scored = score_maud_extraction(parse_maud_labels(list(exp_lines)), pred_labels)
     n_expected = scored.get("n_questions") or 0
     if not n_expected:
         return
     exact = round((scored.get("maud_question_accuracy") or 0.0) * n_expected)
-    n_predicted = len(parse_maud_labels(pred_lines))
+    # A nonempty entry the parser rejects (free text, no question) is a prediction
+    # that matched nothing, the same as a wrong answer.
+    n_predicted = len(pred_labels) + _n_unparsed_maud_entries(pred_lines)
     precision = exact / n_predicted if n_predicted else 0.0
     recall = exact / n_expected
     f1 = 2 * precision * recall / (precision + recall) if exact else 0.0
@@ -910,7 +956,11 @@ class ScoringSuite:
                 subclass=_subclass_for(index),
             )
             if doc_class == "merger_agreement":
-                scoped.update(_merger_gold_from_labels(value, scoped, _subclass_for(index)))
+                scoped.update(
+                    _merger_gold_from_labels(value, scoped, _subclass_for(index), ftypes)
+                )
+                if _maud_lines_all_ambiguous(scoped.get("maud_clauses")):
+                    del scoped["maud_clauses"]  # unscorable gold is no gold
             return scoped
 
         scoped_to_empty = False
