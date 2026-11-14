@@ -9,6 +9,7 @@ from __future__ import annotations
 import ast
 import json
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -126,7 +127,6 @@ def _fixture_payload(scanned: bool) -> dict:
         "generated_from": {
             "MAIL": {
                 "label": "MAIL",
-                "path": "/x",
                 "ref": None,
                 "commit": None,
                 "scanned": scanned,
@@ -196,3 +196,264 @@ def test_check_still_reports_real_drift(monkeypatch, tmp_path, capsys):
     _redirect_fixture(monkeypatch, tmp_path, _fixture_payload(scanned=True), fresh)
     assert audit.main(["--check"]) == 1
     assert "consumer surface drift" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------------------
+# --only CODES / checkout locations / provenance without local paths
+# ---------------------------------------------------------------------------
+
+
+def _site(repo: str, file: str = "a.py", line: int = 1) -> dict:
+    """One recorded consumer site."""
+    return {"repo": repo, "file": file, "line": line}
+
+
+def _meta(label: str, scanned: bool = True, commit: str | None = "c" * 40) -> dict:
+    """A ``generated_from`` entry as recorded (repo code and commit, no path)."""
+    return {
+        "label": label,
+        "ref": "main" if scanned else None,
+        "commit": commit if scanned else None,
+        "scanned": scanned,
+        "reason": None if scanned else "path does not exist",
+        "files_scanned": 3 if scanned else 0,
+    }
+
+
+def _surface(sites_by_name: dict, *, mail_sites=None) -> dict:
+    """A payload with top-level names, one module attr, one dispatch key and one patch."""
+    payload = _fixture_payload(scanned=True)
+    payload["generated_from"] = {"MAIL": _meta("MAIL"), "SBX": _meta("SBX"), "EDA": _meta("EDA")}
+    payload["top_level"] = {
+        name: {"kind": "function", "in_all": True, "defined_in": "m", "consumers": sites}
+        for name, sites in sites_by_name.items()
+    }
+    payload["modules"] = {
+        "scoring.suites": {
+            "legacy": True,
+            "attrs": {
+                "get_suite": {"consumers": mail_sites or [], "private": False, "defined_in": "scoring.suites"}
+            },
+        }
+    }
+    payload["dispatch"] = {
+        "get_suite": {
+            "dynamic": [],
+            "literals": {"sorter": mail_sites or []},
+            "supported": ["sorter"],
+        }
+    }
+    payload["patches"] = [{**s, "target": "llm_dojo_scoring.x"} for s in (mail_sites or [])]
+    payload["scores"] = {"aliases": {}, "registry_ids": [], "visualizer_reads": {}}
+    return payload
+
+
+def test_merge_rescans_only_the_requested_codes_and_leaves_the_rest(monkeypatch):
+    """Sites of other consumers survive; sites of requested codes are replaced by the rescan."""
+    existing = _surface(
+        {
+            "shared": [_site("MAIL", "old.py"), _site("EDA", "eda.py")],
+            "gone": [_site("MAIL", "old.py")],
+            "eda_only": [_site("EDA", "eda.py")],
+        },
+        mail_sites=[_site("MAIL", "old.py"), _site("EDA", "eda.py", 9)],
+    )
+    fresh = _surface({"shared": [_site("MAIL", "new.py")], "added": [_site("MAIL", "new.py")]},
+                     mail_sites=[_site("MAIL", "new.py")])
+    fresh["generated_from"] = {"MAIL": _meta("MAIL", commit="d" * 40)}
+
+    merged = audit.merge_fixture(existing, fresh, {"MAIL"})
+
+    assert [s["file"] for s in merged["top_level"]["shared"]["consumers"]] == ["eda.py", "new.py"]
+    assert "gone" not in merged["top_level"]  # its only consumer was a rescanned code
+    assert merged["top_level"]["eda_only"] == existing["top_level"]["eda_only"]
+    assert [s["file"] for s in merged["top_level"]["added"]["consumers"]] == ["new.py"]
+    attr = merged["modules"]["scoring.suites"]["attrs"]["get_suite"]["consumers"]
+    assert sorted((s["repo"], s["file"]) for s in attr) == [("EDA", "eda.py"), ("MAIL", "new.py")]
+    literal = merged["dispatch"]["get_suite"]["literals"]["sorter"]
+    assert sorted((s["repo"], s["file"]) for s in literal) == [("EDA", "eda.py"), ("MAIL", "new.py")]
+    assert [p["file"] for p in merged["patches"]] == ["eda.py", "new.py"]
+    assert merged["generated_from"]["MAIL"]["commit"] == "d" * 40
+    assert merged["generated_from"]["SBX"] == existing["generated_from"]["SBX"]
+    assert merged["generated_from"]["EDA"] == existing["generated_from"]["EDA"]
+
+
+def test_merge_with_no_changes_reproduces_the_fixture():
+    """Rescanning the same sources gives back exactly the recorded fixture."""
+    existing = _surface({"x": [_site("MAIL"), _site("SBX")]}, mail_sites=[_site("MAIL"), _site("SBX")])
+    fresh = _surface({"x": [_site("MAIL")]}, mail_sites=[_site("MAIL")])
+    fresh["generated_from"] = {"MAIL": existing["generated_from"]["MAIL"]}
+    assert audit.merge_fixture(existing, fresh, {"MAIL"}) == existing
+
+
+def test_only_checks_just_the_requested_codes(monkeypatch, tmp_path, capsys):
+    """``--only MAIL`` ignores a pinned checkout (EDA) that is unavailable here."""
+    pinned = _surface({"x": [_site("EDA"), _site("MAIL")]}, mail_sites=[_site("MAIL")])
+    fresh = _surface({"x": [_site("MAIL")]}, mail_sites=[_site("MAIL")])
+    fresh["generated_from"] = {"MAIL": pinned["generated_from"]["MAIL"]}
+    _redirect_fixture(monkeypatch, tmp_path, pinned, fresh)
+    monkeypatch.setattr(audit, "build_fixture", lambda *a, **k: json.loads(json.dumps(fresh)))
+
+    assert audit.main(["--only", "MAIL", "--check"]) == 0
+    assert "OK" in capsys.readouterr().out
+
+
+def test_only_exits_2_when_a_requested_checkout_is_missing(monkeypatch, tmp_path, capsys):
+    """A requested code that cannot be scanned is exit 2 for both ``--check`` and ``--write``."""
+    pinned = _surface({"x": [_site("MAIL")]}, mail_sites=[_site("MAIL")])
+    fixture = _redirect_fixture(monkeypatch, tmp_path, pinned, pinned)
+    fresh = _surface({}, mail_sites=[])
+    fresh["generated_from"] = {"MAIL": _meta("MAIL", scanned=False)}
+    monkeypatch.setattr(audit, "build_fixture", lambda *a, **k: json.loads(json.dumps(fresh)))
+    before = fixture.read_text(encoding="utf-8")
+
+    assert audit.main(["--only", "MAIL", "--check"]) == 2
+    assert audit.main(["--only", "MAIL", "--write"]) == 2
+    assert fixture.read_text(encoding="utf-8") == before
+    assert "MAIL" in capsys.readouterr().err
+
+
+def test_only_rejects_unknown_codes(capsys):
+    """An unknown consumer code is a usage error (exit 2)."""
+    assert audit.main(["--only", "NOPE", "--check"]) == 2
+    assert "NOPE" in capsys.readouterr().err
+
+
+def test_root_rejects_unknown_codes_before_scanning_or_writing(monkeypatch, tmp_path, capsys):
+    """A mistyped ``--root`` code is a usage error: it must not silently scan the default checkout."""
+    pinned = _surface({"x": [_site("MAIL")]}, mail_sites=[_site("MAIL")])
+    fixture = _redirect_fixture(monkeypatch, tmp_path, pinned, pinned)
+
+    def _must_not_scan(*args, **kwargs):
+        """Fail the test if the audit starts scanning despite the bad ``--root`` code."""
+        raise AssertionError("scanned despite an unknown --root code")
+
+    monkeypatch.setattr(audit, "build_fixture", _must_not_scan)
+    before = fixture.read_text(encoding="utf-8")
+
+    for argv in (
+        ["--only", "MAIL", "--root", "MAL=/x", "--write"],
+        ["--root", "MAL=/x", "--check"],
+    ):
+        assert audit.main(argv) == 2
+        err = capsys.readouterr().err
+        assert "MAL" in err and "MAIL" in err  # names the bad code and the known ones
+    assert fixture.read_text(encoding="utf-8") == before
+
+
+def test_only_write_refreshes_requested_codes_and_keeps_the_others(monkeypatch, tmp_path):
+    """``--only MAIL --write`` rewrites the fixture with the merge result."""
+    pinned = _surface({"keep": [_site("EDA")], "x": [_site("MAIL", "old.py")]},
+                      mail_sites=[_site("MAIL", "old.py")])
+    fresh = _surface({"x": [_site("MAIL", "new.py")]}, mail_sites=[_site("MAIL", "new.py")])
+    fresh["generated_from"] = {"MAIL": pinned["generated_from"]["MAIL"]}
+    fixture = _redirect_fixture(monkeypatch, tmp_path, pinned, fresh)
+    monkeypatch.setattr(audit, "build_fixture", lambda *a, **k: json.loads(json.dumps(fresh)))
+    # ``keep`` is synthetic: classify it as the record says, as the real package would a live name.
+    monkeypatch.setattr(audit, "_classify_top_level", lambda name, index: ("function", "m"))
+
+    assert audit.main(["--only", "MAIL", "--write"]) == 0
+
+    written = json.loads(fixture.read_text(encoding="utf-8"))
+    kept = dict(written["top_level"]["keep"])
+    # ``in_all`` is re-read from the real package's ``__all__``, which lacks the synthetic name.
+    assert kept.pop("in_all") is False
+    assert kept == {k: v for k, v in pinned["top_level"]["keep"].items() if k != "in_all"}
+    assert [s["file"] for s in written["top_level"]["x"]["consumers"]] == ["new.py"]
+
+
+def test_root_flag_overrides_the_checkout_location(tmp_path, monkeypatch):
+    """``--root CODE=PATH`` locates a checkout without environment variables."""
+    root = tmp_path / "mail"
+    root.mkdir()
+    (root / "a.py").write_text("a = 1\n", encoding="utf-8")
+    monkeypatch.delenv("MAILROOM_ROOT", raising=False)
+    spec = next(s for s in audit.REPOS if s.label == "MAIL")
+    files, meta = audit.scan_repo(spec, {"MAIL": str(root)})
+    assert files == {"a.py": "a = 1\n"}
+    assert meta["scanned"] is True
+
+
+def test_scan_provenance_has_a_repo_code_and_commit_but_no_local_path(tmp_path, monkeypatch):
+    """``generated_from`` identifies a checkout by code and commit, never by filesystem path."""
+    root = tmp_path / "consumer"
+    _make_git_repo(root)
+    (root / "app.py").write_text("x = 1\n", encoding="utf-8")
+    _git(root, "add", "app.py")
+    _git(root, "commit", "-q", "-m", "init")
+    monkeypatch.setenv("AUDIT_TEST_ROOT", str(root))
+    _, meta = audit.scan_repo(audit.RepoSpec("T", "unused", "AUDIT_TEST_ROOT"))
+    assert meta["label"] == "T" and len(meta["commit"]) == 40
+    assert "path" not in meta
+    assert str(tmp_path) not in json.dumps(meta)
+
+
+def test_default_checkout_locations_are_siblings_not_developer_paths():
+    """No built-in default points at a developer's home directory."""
+    for spec in audit.REPOS:
+        assert Path(spec.default_path).parent == audit.REPO_ROOT.parent, spec.label
+        assert spec.default_path.endswith(("local-mailroom-sandbox", "llm-mailroom", "Mailroom-Corpus-EDA",
+                                           "eval-environment", "mailroom-ml", "The-Mailroom"))
+
+
+def test_committed_fixture_records_no_local_paths():
+    """The pinned fixture holds repo codes and commits only."""
+    fixture = audit.FIXTURE_PATH.read_text(encoding="utf-8")
+    assert "/Users/" not in fixture
+    for label, meta in json.loads(fixture)["generated_from"].items():
+        assert "path" not in meta, label
+
+
+def test_partial_merge_keeps_a_module_the_rescanned_consumer_dropped():
+    """Direct ``import llm_dojo_scoring.<m>`` sites are not recorded, so a partial rescan never drops a module (#136 review)."""
+    existing = _surface({}, mail_sites=[_site("MAIL", "old.py")])
+    fresh = _surface({}, mail_sites=[])
+    fresh["modules"] = {}
+    fresh["generated_from"] = {"MAIL": _meta("MAIL", commit="d" * 40)}
+    merged = audit.merge_fixture(existing, fresh, {"MAIL"})
+    assert merged["modules"]["scoring.suites"]["attrs"] == {}
+
+
+def test_partial_merge_reclassifies_retained_root_names():
+    """A name kept for an unrescanned consumer gets its kind and home from the current package."""
+    existing = _surface({"eda_only": [_site("EDA", "eda.py")]}, mail_sites=[_site("MAIL")])
+    fresh = _surface({}, mail_sites=[_site("MAIL")])
+    fresh["generated_from"] = {"MAIL": existing["generated_from"]["MAIL"]}
+    existing["top_level"]["eda_only"]["in_all"] = True
+    merged = audit.merge_fixture(
+        existing, fresh, {"MAIL"}, classify=lambda name: ("missing", None), exported=set()
+    )
+    assert merged["top_level"]["eda_only"]["kind"] == "missing"
+    assert merged["top_level"]["eda_only"]["defined_in"] is None
+    assert merged["top_level"]["eda_only"]["in_all"] is False
+
+
+def test_only_check_rejects_a_retained_name_the_package_no_longer_exports(monkeypatch, tmp_path, capsys):
+    """``--only MAIL --check`` fails when an unrescanned consumer's root import no longer resolves."""
+    pinned = _surface({"x": [_site("EDA"), _site("MAIL")]}, mail_sites=[_site("MAIL")])
+    fresh = _surface({}, mail_sites=[_site("MAIL")])
+    fresh["generated_from"] = {"MAIL": pinned["generated_from"]["MAIL"]}
+    _redirect_fixture(monkeypatch, tmp_path, pinned, fresh)
+    monkeypatch.setattr(audit, "build_fixture", lambda *a, **k: json.loads(json.dumps(fresh)))
+    monkeypatch.setattr(audit, "_classify_top_level", lambda name, index: ("missing", None))
+    assert audit.main(["--only", "MAIL", "--check"]) == 2
+    assert "x" in capsys.readouterr().err
+
+
+def test_only_naming_every_consumer_takes_the_full_rescan_path(monkeypatch, tmp_path):
+    """``--only`` with every consumer code rescans like no ``--only``, so stale module keys drop (#136 review)."""
+    pinned = _surface({}, mail_sites=[_site("MAIL", "old.py")])
+    fresh = _surface({}, mail_sites=[])
+    fresh["modules"] = {}
+    _redirect_fixture(monkeypatch, tmp_path, pinned, fresh)
+    calls: list[dict] = []
+
+    def build(**kwargs):
+        """Record how the script asked for the fresh scan."""
+        calls.append(kwargs)
+        return json.loads(json.dumps(fresh))
+
+    monkeypatch.setattr(audit, "build_fixture", build)
+    every = ",".join(spec.label for spec in audit.REPOS)
+    audit.main(["--only", every, "--check"])
+    assert calls and "specs" not in calls[0]

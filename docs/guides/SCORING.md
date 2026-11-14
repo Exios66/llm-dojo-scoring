@@ -288,7 +288,7 @@ Field-micro F1 over (field, value) events (ACE / CoNLL / SemEval slot filling)
 - **ground_truth:** `required`
 - **units:** `float[0,1]` · **aggregation:** `mean`
 - **citation:** ACE / CoNLL / SemEval slot filling; TP requires typed score ≥ 1.0. F1 is van Rijsbergen β=1.
-- **inclusion:** Skipped when expected is empty/null. Empty GT field values are not FN. List F1 is None if no list fields.
+- **inclusion:** Skipped when expected is empty/null. Empty GT field values are not FN. List F1 is None if no list fields. A schema field the GT does not label is excluded on both sides (a value there is not an FP); with no labelled field the suite reports P/R/F1/F2 as null.
 
 ### `extraction_f2` (T0)
 

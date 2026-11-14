@@ -8,11 +8,10 @@ The docs are grouped by purpose. The package layout itself is described in
 | Doc | Read it for |
 |:---|:---|
 | [`guides/SCORING.md`](guides/SCORING.md) | How every score is computed: field types, entity lists, classification, factuality audit, task keys |
-| [`guides/COMPARABILITY.md`](guides/COMPARABILITY.md) | Scorer-release guards, the release ledger, and `dojo-rescore` |
+| [`guides/COMPARABILITY.md`](guides/COMPARABILITY.md) | Scorer-release guards and the release ledger |
 | [`guides/PUBLIC_API.md`](guides/PUBLIC_API.md) | The supported surface other repos rely on, from the consumer scan |
 | [`guides/MIGRATION.md`](guides/MIGRATION.md) | Moving a pipeline project onto the Dojo; the v0.26.0 subpackage layout |
 | [`guides/PROMPTS.md`](guides/PROMPTS.md) | The importable prompt catalog and frozen eval-environment lineage |
-| [`guides/GRID_REPORTS.md`](guides/GRID_REPORTS.md) | Specialist grid reports for local → Modal GPU studies |
 | [`guides/UPDATE_AWARENESS.md`](guides/UPDATE_AWARENESS.md) | Opt-in release discovery and `dojo-version` |
 | [`guides/RELEASES.md`](guides/RELEASES.md) | Cutting and publishing a release with `scripts/release.py` |
 
@@ -21,6 +20,7 @@ The docs are grouped by purpose. The package layout itself is described in
 | Doc | Covers |
 |:---|:---|
 | [`schemas/EXTRACTION_SCHEMAS.md`](schemas/EXTRACTION_SCHEMAS.md) | Live extraction schemas for the five mailroom-dataset classes, including the CMS source-table mapping |
+| [`schemas/GT_COVERAGE.md`](schemas/GT_COVERAGE.md) | Generated: per-field ground-truth coverage and unused vocabulary values at the pinned dataset revision |
 | [`schemas/GT_METADATA.md`](schemas/GT_METADATA.md) | Hub `gt_fields` parsing, `gt_presence` and per-class label scoping |
 | [`schemas/CUAD_SCHEMA.md`](schemas/CUAD_SCHEMA.md) | CUAD: 41 categories, families, questions, JSON Schema |
 | [`schemas/MAUD_SCHEMA.md`](schemas/MAUD_SCHEMA.md) | MAUD: the 22 questions, allowed answers and grammar |
@@ -36,6 +36,12 @@ The docs are grouped by purpose. The package layout itself is described in
 | [`contracts/SANDBOX_SCORING.md`](contracts/SANDBOX_SCORING.md) | Sandbox MAUD/CUAD rubrics and the v0.26.0 contract truth corrections |
 | [`contracts/REVIEWER_SCORING.md`](contracts/REVIEWER_SCORING.md) | Decision/LLM reviewer records, risk bounds, calibration, routing, and cost |
 | [`contracts/ARCHIVE_SCORING.md`](contracts/ARCHIVE_SCORING.md) | The archivist scoring block and audit row |
+
+## Analysis: measured evidence behind a change
+
+| Doc | Covers |
+|:---|:---|
+| [`analysis/2026-11-production-surface.md`](analysis/2026-11-production-surface.md) | Production slim-down (#66): CI diagnosis, consumer usage, keep/delete/hold with line counts, ground-truth coverage, issue ledger, test durations, phase-2 roadmap |
 
 ## History: proposals and status records
 

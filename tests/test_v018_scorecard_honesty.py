@@ -8,7 +8,6 @@ from llm_dojo_scoring import compare_serving, get_suite
 from llm_dojo_scoring.scoring.content_scoring import score_maud_extraction
 from llm_dojo_scoring.analysis.cost import estimate_for_record, tokens_summary
 from llm_dojo_scoring.scoring.extraction_metrics import extraction_binary_metrics
-from llm_dojo_scoring.analysis.export import validate_comparison_export
 from llm_dojo_scoring.analysis.failure_modes import classify_extraction_failure
 from llm_dojo_scoring.metrics.scorecard_honesty import (
     IncomparableMetricsError,
@@ -318,21 +317,3 @@ def test_modal_serving_kind_not_local():
     assert len(unknown) == 1
 
 
-def test_provenance_export_refusal():
-    """Refuse comparison export when the two legs use different draw seeds."""
-    left = stamp_provenance(
-        {},
-        dataset_revision="ed7576b",
-        split="eval",
-        draw_seed="seed-a",
-        prompt_id="contracts_specialist_v30",
-        metric_id="pipeline.extraction.overall",
-        serving_kind="modal",
-        model_id="qwen/qwen3.7-flash",
-    )
-    right = stamp_provenance(
-        left,
-        draw_seed="seed-b",
-    )
-    with pytest.raises(ProvenanceExportError):
-        validate_comparison_export(left, right)

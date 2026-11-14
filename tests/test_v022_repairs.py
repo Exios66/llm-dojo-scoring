@@ -15,7 +15,6 @@ from llm_dojo_scoring.pipeline.archive import (
 )
 from llm_dojo_scoring.metrics.emitter import Emitter
 from llm_dojo_scoring.scoring.field_scoring import embed_texts, score_extraction
-from llm_dojo_scoring.analysis.grid import build_grid_report, specialist_grid_rows
 from llm_dojo_scoring.metrics.registry import get_registry
 from llm_dojo_scoring.metrics.scorecard_honesty import (
     _CLASS_METRIC_IDS,
@@ -327,22 +326,6 @@ def test_itt_denominator_excludes_unscorable_docs():
     assert itt["quality_mean_itt"] == pytest.approx(2 / 3, abs=1e-3)
 
 
-def test_grid_rows_leave_unscorable_documents_out_of_quality():
-    """Track unscorable documents separately without lowering specialist grid quality."""
-    docs = [
-        {"experiment": "e1", "specialist": "insurance_claim", "score": 0.9, "ok": True},
-        {"experiment": "e1", "specialist": "insurance_claim", "score": 0.0,
-         "status": "unscorable", "ok": True},
-        {"experiment": "e1", "specialist": "contract", "score": 0.0,
-         "scores": {"status": "unscorable"}},
-    ]
-    rows = {r["specialist"]: r for r in specialist_grid_rows(docs)}
-    assert rows["insurance_claim"]["score"] == pytest.approx(0.9)
-    assert rows["insurance_claim"]["n_unscorable"] == 1
-    assert rows["contract"]["score"] is None
-    assert rows["contract"]["quality_status"] == "unproven"
-
-
 # ---- field scoring -------------------------------------------------------
 
 
@@ -414,15 +397,6 @@ def test_registry_applies_every_suite_metric_to_its_agent():
             if not reg.get(metric).applies_to(suite.profile.name):
                 gaps.append((suite.profile.name, metric))
     assert gaps == []
-
-
-def test_specialist_grid_markdown_shows_unproven():
-    """Render an unproven verdict explicitly in specialist grid Markdown."""
-    md = build_grid_report(
-        documents=[{"experiment": "e1", "specialist": "contract", "status": "unscorable"}],
-        experiments=[{"name": "e1"}],
-    )
-    assert "unproven" in md
 
 
 def test_scoring_doc_field_tables_match_default_field_types():
@@ -595,19 +569,6 @@ def test_emit_drops_a_quality_metric_id_stamp_and_none_values():
         cmp, emitter=Emitter(sinks=[]), provenance={"local": stamp, "api": stamp}
     )
     assert card["dashboard"]["ttft_seconds"]["local"] == pytest.approx(0.2)
-
-
-def test_grid_score_level_unscorable_wins_over_run_status():
-    """Count unscorable score payloads even when the enclosing run says completed."""
-    rows = specialist_grid_rows(
-        documents=[
-            {"experiment": "e1", "specialist": "contract", "status": "completed",
-             "scores": {"status": "unscorable"}, "score": 0.0},
-            {"experiment": "e1", "specialist": "contract", "status": "Unscorable"},
-        ],
-        experiments=[{"name": "e1"}],
-    )
-    assert rows[0]["n_unscorable"] == 2
 
 
 def test_archive_accepts_a_canonical_id_as_method():

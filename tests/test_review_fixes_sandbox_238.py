@@ -9,10 +9,8 @@ import pytest
 
 from llm_dojo_scoring import get_suite
 from llm_dojo_scoring.analysis import calibration
-from llm_dojo_scoring.analysis.grid import _cell
 from llm_dojo_scoring.metrics.emitter import _emit_provenance
 from llm_dojo_scoring.metrics.scorecard_honesty import ProvenanceExportError
-from llm_dojo_scoring.scoring.rescore import RescoreError, rescore_file, rescore_records
 
 PROV = {
     "dataset_revision": "r1",
@@ -64,28 +62,6 @@ def test_usd_units_require_cost_basis_in_any_case(units):
         _emit_provenance("reviewer_cost_per_accepted_usd", units, PROV, require=True)
 
 
-def test_markdown_cell_escapes_html():
-    """Untrusted names cannot inject raw HTML into the Markdown report."""
-    assert _cell("<script>x</script>") == "&lt;script&gt;x&lt;/script&gt;"
-
-
-def test_rescore_records_skips_non_mapping_rows():
-    """A ``None`` or list row is recorded as a skip instead of aborting the batch."""
-    out = rescore_records([None, ["x"]])
-    assert [s["index"] for s in out["skipped"]] == [0, 1]
-    assert all("not an object" in s["reason"] for s in out["skipped"])
-
-
-def test_rescore_file_refuses_to_overwrite_its_input(tmp_path):
-    """``--out`` equal to ``--items`` would destroy the raw predictions."""
-    items = tmp_path / "items.jsonl"
-    original = json.dumps({"item_id": "a"}) + "\n"
-    items.write_text(original, encoding="utf-8")
-    with pytest.raises(RescoreError, match="must differ"):
-        rescore_file(items, out_path=items)
-    assert items.read_text(encoding="utf-8") == original
-
-
 def test_batch_score_carries_headline_scope():
     """``ScoringSuite.score`` passes the class and field scores to the honest aggregate."""
     suite = get_suite("corporate_record")
@@ -124,43 +100,6 @@ def test_spearman_keeps_large_integers_distinct():
 
     big = 2**53
     assert spearman([big, big + 1, big + 2, big + 3], [1, 2, 3, 4]) == 1.0
-
-
-def test_rescore_file_refuses_a_hard_link_to_the_items(tmp_path):
-    """A hard link to the items file is the same file: refuse before truncating it."""
-    import os
-
-    from llm_dojo_scoring.scoring.rescore import RescoreError, rescore_file
-
-    items = tmp_path / "items.jsonl"
-    items.write_text("{}\n")
-    link = tmp_path / "alias.jsonl"
-    os.link(items, link)
-    with pytest.raises(RescoreError, match="must differ"):
-        rescore_file(items, out_path=link)
-    assert items.read_text() == "{}\n"
-
-
-def test_rescore_file_replaces_the_output_without_touching_a_linked_inode(tmp_path, monkeypatch):
-    """The output is renamed into place, so a hard link made after the check survives."""
-    import os
-
-    from llm_dojo_scoring.scoring import rescore
-
-    items = tmp_path / "items.jsonl"
-    items.write_text("{}\n")
-    out = tmp_path / "out.jsonl"
-    real = rescore.rescore_records
-
-    def link_then_score(*args, **kwargs):
-        """Create the hard link between the identity check and the write."""
-        os.link(items, out)  # the race: the target becomes the items after the check
-        return real(*args, **kwargs)
-
-    monkeypatch.setattr(rescore, "rescore_records", link_then_score)
-    rescore.rescore_file(items, out_path=out)
-    assert items.read_text() == "{}\n"
-    assert not out.samefile(items)
 
 
 def test_rank_correlations_take_integers_beyond_float_range():

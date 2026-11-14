@@ -28,7 +28,6 @@ _TOP_LEVEL = (
     "LocalManifestSink",
     "ScoreRecord",
     "DEFAULT_FIELD_TYPES",
-    "LEGACY_FULL_EXTRACTION_FIELD_TYPES",
     "accuracy",
     "bootstrap_ci",
     "classify_serving_kind",
@@ -86,7 +85,6 @@ _MODULE_ATTRS: dict[str, tuple[str, ...]] = {
         "record_date",
         "utc_now",
     ),
-    "export": ("extraction_columns", "sorter_columns", "write_codebook", "write_workbook"),
     "extraction_metrics": ("extraction_binary_metrics",),
     "archive": (
         "score_archive_block",
@@ -130,7 +128,6 @@ _MODULE_ATTRS: dict[str, tuple[str, ...]] = {
     ),
     "suites": (
         "DEFAULT_FIELD_TYPES",
-        "LEGACY_FULL_EXTRACTION_FIELD_TYPES",
         "get_suite",
     ),
     "tasks": ("contracteval_metrics", "contracteval_score", "get_jaccard"),

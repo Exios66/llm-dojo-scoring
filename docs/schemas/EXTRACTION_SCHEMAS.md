@@ -1,16 +1,23 @@
-# Entity extraction schemas — mailroom-dataset (Dojo v0.20.0; registry v0.26.0)
+# Entity extraction schemas — mailroom-dataset (Dojo v0.28.1)
 
 Pared live field maps for the **five primary document types** in
 [`Lucius-Morningstar/mailroom-dataset`](https://huggingface.co/datasets/Lucius-Morningstar/mailroom-dataset)
-(`ground_truth` config, Hub tag **v9.2** — same 3,302 rows as the v9 GT-closure pin `46a4d3c2` and v9.1; most experiments ran on v9.1, **3,302** rows:
+(`ground_truth` config, Hub tag **v9.3** = commit `ccd040f6`, the revision `schemas/data/extraction_status.json`
+is frozen from and llm-mailroom pins; the same **3,302** rows as v9.2, v9.1 and the v9 GT-closure pin `46a4d3c2`:
 2,979 train / 323 test). Authority is the dojo live roster, not the
 retired specialists.
 
+**Where the field lists live.** One hand-edited table, `llm_dojo_scoring/schemas/doc_classes.py`
+(`DOC_CLASSES`), holds each class's fields and scorer types; `DEFAULT_FIELD_TYPES`,
+`CORPUS_EXTRACTION_FIELDS`, the rosters and the other field sets derive from it. Which of those
+fields the dataset actually labels (and so scores today) is generated from the pinned dataset:
+[`GT_COVERAGE.md`](GT_COVERAGE.md), `extraction_schemas.scoreable_fields(<class>)`.
+
 | Pin | Value |
 |---|---|
-| Package | `llm-dojo-scoring` **v0.20.0** |
-| Field maps | `DEFAULT_FIELD_TYPES` ≡ `CORPUS_EXTRACTION_FIELDS` ≡ taxonomy fixture `tests/fixtures/taxonomy_field_types.json` |
-| Taxonomy blob | llm-mailroom `src/config/taxonomy.yaml` SHA-1 `911ca16469045dc6dd16aed81671f6e8d8769223` |
+| Package | `llm-dojo-scoring` **v0.28.1** |
+| Field maps | `schemas/doc_classes.py` (`DOC_CLASSES`) is the one hand-edited table. `scoring.suites.DEFAULT_FIELD_TYPES` (class → field → type) is derived from it, and for the five live classes it must equal the taxonomy fixture `tests/fixtures/taxonomy_field_types.json`. `schemas.corpus.CORPUS_EXTRACTION_FIELDS` is a projection of the same registry to field names only (class → tuple of names), not a type map |
+| Taxonomy blob | llm-mailroom `src/config/taxonomy.yaml` blob SHA-1 `44e0ab59b6b705aed4c1939b5e85ed8499e38d0a` (the fixture's `authority_blob_sha1`) |
 | Frozen prompts | `get_prompt(<agent>, family="production_prompts")` — eval-environment v1, frozen 2026-09-26T05:09:29+00:00 |
 | Live classes | `contract` · `merger_agreement` · `corporate_record` · `correspondence` · `insurance_claim` |
 | Not live | `unknown` (routing only) · `court_opinion` / `due_diligence` / `compliance_filing` (retired; zero corpus rows) |
@@ -38,7 +45,7 @@ get_prompt("contracts_specialist", family="production_prompts").text
 | `corporate_record` | 450 | 13.6% | SEC EDGAR S-1/8-K exhibits | `CorporateRecordExtraction` / `corporate_records_specialist` |
 | `correspondence` | 1,000 | 30.3% | Enron (dedup pool) | `CorrespondenceExtraction` / `correspondence_specialist` |
 | `insurance_claim` | 1,100 | 33.3% | CMS DE-SynPUF + GNOTHEIA + BDR + INSURBIAS | `InsuranceClaimExtraction` / `insurance_claims_specialist` |
-| **total** | **3,302** | 100% | | **58 field slots** across the five maps |
+| **total** | **3,302** | 100% | | **75 field slots** across the five maps (17 + 21 + 9 + 11 + 17) |
 
 91 EX-10 contracts are triage-only (`cuad_clause_labels` =
 `pending_annotation`) and stay **unscorable** until clause backfill.
@@ -136,7 +143,9 @@ Insurance; Covenant Not To Sue; Third Party Beneficiary.
 
 **GT extras (not schema keys):** `expected_subclass`,
 `cuad_clause_labels` → category-presence scorer. 91 EX-10 rows remain
-`unscorable`.
+`unscorable`. The CUAD-derived fields the coverage page lists as scored count
+through clause presence (`cuad.clause_presence.micro_f1`), not as separate
+field scores; field-micro P/R/F1/F2 on a presence-only row are null.
 
 **Allowed `metric_id`:** `pipeline.extraction.overall`,
 `cuad.clause_presence.micro_f1`, `pipeline.extraction.field_micro_f1` /
@@ -201,7 +210,9 @@ subclass table: [`MAUD_SCHEMA.md`](MAUD_SCHEMA.md) (`llm_dojo_scoring.schemas.ma
 Ambiguous collapsed GT is `unscorable` on those keys, not a guessed match.
 
 **GT extras:** `expected_subclass`, `maud_clause_labels`. MAUD-only rows
-still score the content metric.
+still score the content metric: their headline `metric_id` is
+`maud.question.micro_accuracy`, and field-micro P/R/F1/F2 are null (no
+extraction field is labelled).
 
 **Allowed `metric_id`:** `pipeline.extraction.overall`,
 `maud.question.micro_accuracy`, `maud.clause_presence.rate`,
@@ -384,7 +395,7 @@ consistency is degenerate on GT-shaped predictions.
 
 ---
 
-## Cross-class rules (v0.20.0)
+## Cross-class rules
 
 1. **One schema per document.** Fill only that class's keys. Foreign keys
    (`claim_number` on a letter, `sender` on a claim) are out of schema.
@@ -397,8 +408,15 @@ consistency is degenerate on GT-shaped predictions.
    `communication_type` / `claim_type` after reading the text.
 4. **Hub union GT.** `parse_gt_fields` + `scoring_gt_fields(..., drop_unmapped=True)`
    before scoring. `not_applicable` / `schema_documented_absence` /
-   `pending_annotation` are never required events. Passing the class-label
-   string as GT fails closed (`gt_wrong_schema`).
+   `pending_annotation` are never required events: the first two are blanked
+   (labelled empty), a pending field is dropped (unlabelled). Passing the class-label
+   string as GT fails closed (`gt_wrong_schema`). A schema field the GT does
+   not label, or marks `pending_annotation`, is excluded from field-micro
+   P/R/F1 on both sides (a value there is not a false positive); a value on a
+   field labelled empty (`not_applicable`, `schema_documented_absence`), or an
+   off-schema key, is. A CMS row's `adjuster` / `denial_reasons` stay labelled
+   empty whatever their status (CMS documents them absent). A blank or literal `"nan"` `content_topic` /
+   `sentiment_label` is not a label and emits no topic / sentiment score.
 5. **Perfect-prediction replay** (both splits, 3,302 rows, 19,924
    extraction events): 0 FN / 0 FP / 0 spurious fills; 91 triage-only
    contracts stay `unscorable`.
@@ -464,7 +482,7 @@ a **document-type schema** plus a **schema per subtype**: 25 contract families,
 from llm_dojo_scoring import extraction_schema, iter_extraction_schemas, schema_coverage
 
 pde = extraction_schema("insurance_claim", "pde")      # any corpus surface works too
-pde.schema_id                    # "insurance_claim/pde@v9.2.1"
+pde.schema_id                    # "insurance_claim/pde@v9.3"
 pde.scored_fields                # fields that count when the row labels them
 pde.documented_absent_fields     # ("adjuster", "denial_reasons")
 pde.pending_fields               # ("claim_checklist",)
@@ -472,11 +490,13 @@ pde.json_schema()                # strict, typed object for guided decoding
 extraction_schema("contract", "License_Agreements").salient   # CUAD categories
 ```
 
-Each field has a status read from the v9.2.1 `ground_truth` rows (Hub branch
-`corporate-labels-v9.2.1` @ `0a2f8292`: v9.2 plus the corporate relabel), frozen in
+Each field has a status read from the v9.3 `ground_truth` rows (Hub tag `v9.3` @
+`ccd040f6`, the revision llm-mailroom pins; its per-field statuses equal those of
+v9.2.1, which added the corporate relabel), frozen in
 `llm_dojo_scoring/schemas/data/extraction_status.json` by
-`scripts/build_extraction_status.py`. The source revision is in the file and in
-`extraction_status_source()`.
+`scripts/build_extraction_status.py --from-hub`. The source revision is in the file and in
+`extraction_status_source()`. The populated count behind every status is in the generated
+[`GT_COVERAGE.md`](GT_COVERAGE.md).
 
 | Status | Meaning | Example |
 |---|---|---|
@@ -488,7 +508,7 @@ Each field has a status read from the v9.2.1 `ground_truth` rows (Hub branch
 | `pending_annotation` | in the live map, not labelled yet | correspondence `sender`, corporate entities, `claim_checklist` |
 | `not_applicable` | GT marks it n/a for the class | merger `intent` |
 
-What v9.2.1 labels, per class:
+What v9.3 labels, per class:
 
 - **contract**: CUAD clause labels give the six metadata fields and
   `cuad_clauses` for 22 families. Most `consulting`, `ip` and `supply` rows are
@@ -496,7 +516,7 @@ What v9.2.1 labels, per class:
 - **merger_agreement**: `maud_clauses` (MAUD labels) and
   `merger_consideration` (the subtype). The other five fields are pending.
 - **corporate_record**: `intent`, `subject_matter`, `keywords`, `record_type`
-  (the subtype) and, from the v9.2.1 relabel, `entity_name` (the EDGAR
+  (the subtype) and, since the v9.2.1 relabel, `entity_name` (the EDGAR
   registrant: 92% of rows; `scored` on seven subtypes, `partial` on articles,
   bylaws and rights instruments). `filing_number` is `not_applicable` except on
   articles and charter amendments; on `subsidiary_list`, `signatories` and

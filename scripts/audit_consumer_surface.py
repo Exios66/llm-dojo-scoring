@@ -10,11 +10,19 @@ Usage::
 
     uv run --python 3.12 python scripts/audit_consumer_surface.py --check
     uv run --python 3.12 python scripts/audit_consumer_surface.py --write
+    uv run python scripts/audit_consumer_surface.py --only MAIL,SBX --write
 
 ``--check`` (the default) regenerates the manifest in memory and exits 1 when
 the pinned surface drifts from the fixture.  ``--write`` refreshes the fixture.
 Both exit 2, without touching the fixture, when a checkout the fixture pins as
 scanned is unavailable on this machine.
+
+``--only CODES`` rescans just those consumer codes (``MAIL``, ``SBX``, ...) and
+leaves every other consumer's recorded entries untouched; it exits 2 only when a
+*requested* checkout is missing.  A checkout is found, in order, through
+``--root CODE=PATH``, the code's environment variable, or the sibling directory
+of this repository (``../llm-mailroom`` ...).  The fixture records each checkout
+by repo code and commit, never by a local filesystem path.
 """
 
 from __future__ import annotations
@@ -28,6 +36,7 @@ import os
 import subprocess
 import sys
 from collections import defaultdict
+from collections.abc import Callable, Collection
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
@@ -82,38 +91,37 @@ class RepoSpec:
     git_tree: bool = False
 
 
+def _sibling(name: str) -> str:
+    """Default checkout location: a directory next to this repository."""
+    return str(REPO_ROOT.parent / name)
+
+
 REPOS = (
     RepoSpec(
         "SBX",
-        "/Users/morningstar/.t3/worktrees/local-mailroom-sandbox/t3-65a57387",
+        _sibling("local-mailroom-sandbox"),
         "SANDBOX_ROOT",
         ref="origin/main",
         git_tree=True,
     ),
-    RepoSpec("MAIL", "/tmp/llm-mailroom-check", "MAILROOM_ROOT"),
-    RepoSpec(
-        "EDA",
-        "/Users/morningstar/.t3/worktrees/constellation-readmes/Mailroom-Corpus-EDA",
-        "CORPUS_EDA_ROOT",
-    ),
-    RepoSpec(
-        "EE",
-        "/Users/morningstar/Digital-Mailroom/packages/eval-environment",
-        "EVAL_ENVIRONMENT_ROOT",
-    ),
-    RepoSpec(
-        "ML",
-        "/Users/morningstar/.t3/worktrees/constellation-readmes/mailroom-ml",
-        "MAILROOM_ML_ROOT",
-    ),
-    RepoSpec(
-        "TMR",
-        "/Users/morningstar/Digital-Mailroom/packages/The-Mailroom",
-        "THE_MAILROOM_ROOT",
-    ),
+    RepoSpec("MAIL", _sibling("llm-mailroom"), "MAILROOM_ROOT"),
+    RepoSpec("EDA", _sibling("Mailroom-Corpus-EDA"), "CORPUS_EDA_ROOT"),
+    RepoSpec("EE", _sibling("eval-environment"), "EVAL_ENVIRONMENT_ROOT"),
+    RepoSpec("ML", _sibling("mailroom-ml"), "MAILROOM_ML_ROOT"),
+    RepoSpec("TMR", _sibling("The-Mailroom"), "THE_MAILROOM_ROOT"),
 )
 
 Site = tuple[str, str, int]
+
+#: Starting point for ``--only`` when no fixture exists yet.
+_EMPTY_FIXTURE: dict[str, Any] = {
+    "generated_from": {},
+    "top_level": {},
+    "modules": {},
+    "dispatch": {},
+    "scores": {},
+    "patches": [],
+}
 _MISSING = object()
 
 
@@ -210,13 +218,19 @@ def _read_git_tree(root: Path, ref: str) -> dict[str, str]:
     return files
 
 
-def scan_repo(spec: RepoSpec) -> tuple[dict[str, str], dict[str, Any]]:
-    """Read one consumer checkout and return its source plus provenance."""
-    override = os.environ.get(spec.env_var)
+def scan_repo(
+    spec: RepoSpec, overrides: dict[str, str] | None = None
+) -> tuple[dict[str, str], dict[str, Any]]:
+    """Read one consumer checkout and return its source plus provenance.
+
+    The checkout is found through ``overrides`` (``--root``), then the code's
+    environment variable, then its default.  The provenance names the repo code
+    and the commit; the local path is deliberately not recorded.
+    """
+    override = (overrides or {}).get(spec.label) or os.environ.get(spec.env_var)
     root = Path(override).expanduser() if override else Path(spec.default_path)
     meta: dict[str, Any] = {
         "label": spec.label,
-        "path": str(root),
         "ref": None,
         "commit": None,
         "scanned": False,
@@ -247,8 +261,7 @@ def scan_repo(spec: RepoSpec) -> tuple[dict[str, str], dict[str, Any]]:
         # untracked scratch files never leak into the pinned surface.
         ref = spec.ref or "HEAD"
         files = _read_git_tree(root, ref)
-        branch, _ = _head_metadata(root)
-        meta["ref"] = spec.ref or branch
+        meta["ref"] = spec.ref or "HEAD"
         meta["commit"] = _git_rev(root, ref)
     else:
         files = _read_filesystem_tree(root)
@@ -777,15 +790,17 @@ def build_scores(tmr_files: dict[str, str] | None) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def build_fixture() -> dict[str, Any]:
-    """Scan every configured consumer and return the manifest payload."""
+def build_fixture(
+    specs: tuple[RepoSpec, ...] | None = None, overrides: dict[str, str] | None = None
+) -> dict[str, Any]:
+    """Scan the configured consumers (all by default) and return the manifest payload."""
     index = PackageIndex()
     surface = Surface(index)
     generated_from: dict[str, dict[str, Any]] = {}
     tmr_files: dict[str, str] | None = None
 
-    for spec in REPOS:
-        files, meta = scan_repo(spec)
+    for spec in REPOS if specs is None else specs:
+        files, meta = scan_repo(spec, overrides)
         generated_from[spec.label] = meta
         if spec.label == "TMR" and meta["scanned"]:
             tmr_files = files
@@ -814,6 +829,145 @@ def build_fixture() -> dict[str, Any]:
                 surface.patches, key=lambda item: (item[0], item[1], item[2], item[3])
             )
         ],
+    }
+
+
+def _site_sort_key(site: dict[str, Any]) -> tuple[Any, ...]:
+    """Order recorded sites the way ``_sites`` writes them."""
+    return (site["repo"], site["file"], site["line"], site.get("expression", ""))
+
+
+def _merge_sites(
+    existing: list[dict[str, Any]], fresh: list[dict[str, Any]], only: set[str]
+) -> list[dict[str, Any]]:
+    """Keep the recorded sites of consumers not rescanned, add the rescanned ones."""
+    kept = [site for site in existing if site["repo"] not in only]
+    return sorted(kept + list(fresh), key=_site_sort_key)
+
+
+def _merge_named(
+    existing: dict[str, Any], fresh: dict[str, Any], only: set[str], key: str
+) -> dict[str, Any]:
+    """Merge ``{name: {..., key: [sites]}}`` tables; names left without sites are dropped."""
+    merged: dict[str, Any] = {}
+    for name in sorted(set(existing) | set(fresh)):
+        sites = _merge_sites(
+            existing.get(name, {}).get(key, []), fresh.get(name, {}).get(key, []), only
+        )
+        if not sites:
+            continue
+        entry = dict(fresh[name]) if name in fresh else dict(existing[name])
+        entry[key] = sites
+        merged[name] = entry
+    return merged
+
+
+def _merge_modules(
+    existing: dict[str, Any], fresh: dict[str, Any], only: set[str]
+) -> dict[str, Any]:
+    """Merge the per-module attribute tables."""
+    merged: dict[str, Any] = {}
+    for module in sorted(set(existing) | set(fresh)):
+        old, new = existing.get(module), fresh.get(module)
+        attrs = _merge_named(
+            (old or {}).get("attrs", {}), (new or {}).get("attrs", {}), only, "consumers"
+        )
+        # A module the rescanned consumers stopped using is kept with what remains: direct
+        # ``import llm_dojo_scoring.<module>`` sites are not recorded, so an unrescanned
+        # consumer may still import it. A full rescan (no ``--only``, or ``--only`` naming every
+        # consumer) drops it.
+        kept_attrs = any(
+            site["repo"] not in only
+            for attr in (old or {}).get("attrs", {}).values()
+            for site in attr["consumers"]
+        )
+        legacy = bool((new or {}).get("legacy") or (old or {}).get("legacy") and kept_attrs)
+        merged[module] = {"legacy": legacy, "attrs": attrs}
+    return merged
+
+
+def _reclassified(
+    merged: dict[str, Any],
+    fresh: dict[str, Any],
+    classify: Callable[[str], tuple[str, str | None]] | None,
+    exported: Collection[str] | None = None,
+) -> dict[str, Any]:
+    """Re-read ``kind`` / ``defined_in`` / ``in_all`` of root names kept only for unrescanned consumers."""
+    for name, entry in merged.items():
+        if name in fresh:
+            continue
+        if classify is not None:
+            entry["kind"], entry["defined_in"] = classify(name)
+        if exported is not None:
+            entry["in_all"] = name in exported
+    return merged
+
+
+def merge_fixture(
+    existing: dict[str, Any],
+    fresh: dict[str, Any],
+    only: set[str],
+    classify: Callable[[str], tuple[str, str | None]] | None = None,
+    exported: Collection[str] | None = None,
+) -> dict[str, Any]:
+    """Combine a fresh scan of the ``only`` codes with the recorded fixture.
+
+    Every consumer outside ``only`` keeps its recorded sites; the requested ones
+    are replaced by the rescan.  Package-derived facts (``supported``, aliases)
+    come from the fresh scan.  ``classify(name) -> (kind, defined_in)`` re-reads a
+    retained root name against the current package, so a removed export shows up
+    as ``kind == "missing"`` instead of keeping its stale record; ``exported`` (the
+    package's ``__all__``) refreshes their ``in_all`` the same way.
+    """
+    generated_from = {
+        label: {key: value for key, value in meta.items() if key != "path"}
+        for label, meta in existing.get("generated_from", {}).items()
+        if label not in only
+    }
+    generated_from.update(
+        {label: meta for label, meta in fresh["generated_from"].items() if label in only}
+    )
+
+    dispatch: dict[str, Any] = {}
+    for func, new in fresh["dispatch"].items():
+        old = existing.get("dispatch", {}).get(func, {"dynamic": [], "literals": {}})
+        literals = _merge_named(
+            {k: {"s": v} for k, v in old["literals"].items()},
+            {k: {"s": v} for k, v in new["literals"].items()},
+            only,
+            "s",
+        )
+        dispatch[func] = {
+            "dynamic": _merge_sites(old["dynamic"], new["dynamic"], only),
+            "literals": {k: v["s"] for k, v in literals.items()},
+            "supported": new["supported"],
+        }
+
+    scores = dict(fresh["scores"])
+    if "TMR" not in only:
+        reads = existing.get("scores", {}).get("visualizer_reads", {})
+        scores["visualizer_reads"] = reads
+        aliases = scores["aliases"]
+        scores["registry_ids"] = sorted(set(reads) | set(aliases) | set(aliases.values()))
+
+    patches = [p for p in existing.get("patches", []) if p["repo"] not in only]
+    patches += fresh["patches"]
+    return {
+        "schema_version": fresh["schema_version"],
+        "generated_by": fresh["generated_by"],
+        "generated_from": dict(sorted(generated_from.items())),
+        "top_level": _reclassified(
+            _merge_named(existing.get("top_level", {}), fresh["top_level"], only, "consumers"),
+            fresh["top_level"],
+            classify,
+            exported,
+        ),
+        "modules": _merge_modules(existing.get("modules", {}), fresh["modules"], only),
+        "dispatch": dispatch,
+        "scores": scores,
+        "patches": sorted(
+            patches, key=lambda p: (p["repo"], p["file"], p["line"], p["target"])
+        ),
     }
 
 
@@ -874,23 +1028,113 @@ def _lost_checkouts(existing: dict[str, Any] | None, data: dict[str, Any]) -> li
     )
 
 
+def _parse_roots(values: list[str]) -> dict[str, str]:
+    """Parse repeated ``--root CODE=PATH`` options."""
+    roots: dict[str, str] = {}
+    for value in values:
+        code, sep, path = value.partition("=")
+        if not sep or not path:
+            raise SystemExit(f"--root expects CODE=PATH, got {value!r}")
+        roots[code] = path
+    return roots
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run the audit: refresh the fixture or check it for drift."""
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--write", action="store_true", help="rewrite the fixture")
     mode.add_argument("--check", action="store_true", help="check for drift (default)")
+    parser.add_argument(
+        "--only",
+        metavar="CODES",
+        help="comma-separated consumer codes to rescan (e.g. MAIL,SBX); others stay as recorded",
+    )
+    parser.add_argument(
+        "--root",
+        action="append",
+        default=[],
+        metavar="CODE=PATH",
+        help="checkout location for a consumer code (overrides its environment variable)",
+    )
     args = parser.parse_args(argv)
 
-    data = build_fixture()
-    _print_coverage(data)
-    text = _dump(data)
-    counts = f"{len(data['top_level'])} top-level names, {len(data['modules'])} modules"
+    known = {spec.label: spec for spec in REPOS}
+    only: set[str] | None = None
+    if args.only is not None:
+        only = {code.strip() for code in args.only.split(",") if code.strip()}
+        unknown = sorted(only - set(known))
+        if unknown or not only:
+            print(
+                f"unknown consumer code(s): {', '.join(unknown) or '(none given)'}; "
+                f"known: {', '.join(sorted(known))}",
+                file=sys.stderr,
+            )
+            return 2
+        if only == set(known):
+            # Every consumer is rescanned, so nothing can still need an old key: take the
+            # full-rescan path, which rebuilds the surface and drops stale modules.
+            only = None
+    overrides = _parse_roots(args.root)
+    bad_roots = sorted(set(overrides) - set(known))
+    if bad_roots:
+        print(
+            f"unknown consumer code(s) in --root: {', '.join(bad_roots)}; "
+            f"known: {', '.join(sorted(known))}",
+            file=sys.stderr,
+        )
+        return 2
+
+    kwargs: dict[str, Any] = {}
+    if only is not None:
+        kwargs["specs"] = tuple(spec for spec in REPOS if spec.label in only)
+    if overrides:
+        kwargs["overrides"] = overrides
+    data = build_fixture(**kwargs)
 
     existing: dict[str, Any] | None = None
     if FIXTURE_PATH.is_file():
         existing = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
-    lost = _lost_checkouts(existing, data)
+
+    if only is not None:
+        unavailable = sorted(
+            code for code in only if not data["generated_from"].get(code, {}).get("scanned")
+        )
+        if unavailable:
+            print(
+                "requested checkouts are unavailable here: "
+                + ", ".join(unavailable)
+                + " (use --root CODE=PATH or the *_ROOT environment variables)",
+                file=sys.stderr,
+            )
+            return 2
+        _print_coverage(data)
+        index = PackageIndex()
+        data = merge_fixture(
+            existing or _EMPTY_FIXTURE,
+            data,
+            only,
+            classify=lambda name: _classify_top_level(name, index),
+            exported=set(getattr(index.package, "__all__", ())),
+        )
+        gone = sorted(name for name, entry in data["top_level"].items() if entry["kind"] == "missing")
+        if gone:
+            print(
+                "recorded consumers import root names the package no longer has: "
+                + ", ".join(gone),
+                file=sys.stderr,
+            )
+            return 2
+        lost: list[str] = []
+    else:
+        _print_coverage(data)
+        lost = _lost_checkouts(existing, data)
+        data["generated_from"] = {
+            label: {key: value for key, value in meta.items() if key != "path"}
+            for label, meta in data["generated_from"].items()
+        }
+    text = _dump(data)
+    counts = f"{len(data['top_level'])} top-level names, {len(data['modules'])} modules"
 
     if args.write:
         if lost:

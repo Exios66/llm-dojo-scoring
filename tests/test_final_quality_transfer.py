@@ -5,7 +5,6 @@ from llm_dojo_scoring import get_suite
 from llm_dojo_scoring.scoring.field_support import pilot_ground_truth_scores, schema_gt_support, field_audit_support
 from llm_dojo_scoring.pipeline.pilot_summary import pilot_classification_summary
 from llm_dojo_scoring.pipeline.pilot_labels import pilot_subclass_match, normalize_sorter_token, normalize_inventory_label
-from llm_dojo_scoring.pipeline.sandbox_agent_scoring import label_match, contains_match, reporter_keys
 from llm_dojo_scoring.metrics.scorecard_honesty import aggregate_quality_honest
 from llm_dojo_scoring.pipeline.pipeline_scoring import score_exact_classification
 
@@ -81,18 +80,6 @@ def test_subclass_tokens_and_asymmetric_support():
     assert pilot_subclass_match('corporate_record', 'alien', sorter_token='other', expected_token='other') is True
     assert pilot_subclass_match('insurance_claim', 'auto', sorter_token=None, expected_token='auto', loose_predicted='') is False
     assert normalize_inventory_label('Attorney demand document', ('demand','attorney_demand'), {}) == 'attorney_demand'
-
-
-def test_sandbox_rubrics_keep_literal_blank_case_and_key_quirks():
-    """Case-sensitive classes, lowercase labels without strip, literal substring keys."""
-    assert label_match('', '') == 1.
-    assert label_match('contract', 'CONTRACT') == 0.
-    assert label_match('OK', 'ok', lowercase=True) == 1.
-    assert label_match(' ok', 'ok', lowercase=True) == 0.
-    assert contains_match('', ' ') == 1.
-    assert contains_match('foo', 'FOOBAR') == 1.
-    assert reporter_keys({'x': 'SUMMARY confidence'}, ['summary','confidence']) == {'match': 1., 'missing': ['summary','confidence'], 'keys': ['x']}
-    assert reporter_keys({}, ['summary']) == {'match': 0., 'missing': ['summary']}
 
 
 def test_honest_aggregate_known_zero_mixed_and_no_gt():

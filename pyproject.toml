@@ -31,18 +31,12 @@ embeddings = [
     "sentence-transformers>=3.0",
     "openai>=1.30",
 ]
-# Backward-compatible alias — jellyfish is now a core dependency.
-jellyfish = ["jellyfish>=1.0"]
-# dojo-sync / LangfuseSink / PhoenixClient. Matches mailroom core tracing +
-# entity[tracing] (langfuse floor is >=2.50; mailroom uses >=2.50, entity >=3).
+# LangfuseSink (metrics/emitter.py). Matches mailroom core tracing (langfuse >=2.50).
 tracing = [
     "langfuse>=2.50",
-    "arize-phoenix>=4.0",
-    "python-dotenv>=1.0",
-    "opentelemetry-sdk>=1.20",
-    "opentelemetry-exporter-otlp-proto-http>=1.20",
 ]
-dev = ["pytest>=8.0", "pytest-mock>=3.14"]
+# jsonschema + pydantic: the schema-contract tests skip silently without them.
+dev = ["pytest>=8.0", "pytest-mock>=3.14", "jsonschema>=4.0", "pydantic>=2.0"]
 # MAUD catalog generation/replay against the pinned Hub dataset
 # (scripts/gen_maud_catalog.py, scripts/verify_gt_penalties.py).
 catalog = [
@@ -56,10 +50,6 @@ all = [
 
 [project.scripts]
 dojo-version = "llm_dojo_scoring.integrations.update_awareness:main"
-dojo-analyze = "llm_dojo_scoring.cli:analyze_main"
-dojo-export = "llm_dojo_scoring.cli:export_main"
-dojo-rescore = "llm_dojo_scoring.cli:rescore_main"
-dojo-sync = "llm_dojo_scoring.cli:sync_main"
 
 [tool.setuptools.packages.find]
 where = ["."]
