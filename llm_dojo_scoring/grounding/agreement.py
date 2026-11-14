@@ -2,7 +2,10 @@
 
 A **paired check** is one candidate that an agent and people both decided:
 
-* only latest confirmations count, and ``unsure`` from either side is left out;
+* the agent's side is its blind verdict: its latest confirmation from before people
+  first decided the candidate (later revisions never rewrite a pair);
+* people's side is their latest confirmations; ``unsure`` from either side is left
+  out (a person whose latest word is ``unsure`` no longer counts);
 * the human verdict is the people's shared verdict; when people disagree with each
   other the candidate has no human truth and is not paired;
 * an agent ``valid`` that people also call ``valid`` but with a different value
@@ -19,15 +22,21 @@ the human's ``confirmed_at``, :func:`reviewer_agreement` reports:
 * **Cohen's κ** — agreement beyond chance, ``None`` unless both raters used both
   verdicts;
 * the same counts per ``doc_class.field``.
+
+Pairs with the same human time are ordered by candidate id, so the window edge is
+deterministic. The precision bound is unrounded (``analysis.bootstrap.wilson_ci``
+rounds to four decimals, which could lift 0.94998 to a 0.95 bar), and its
+denominator is ``n_agent_valid``, not ``n_checked``: the gate's ``trust_min_n``
+counts ``valid`` verdicts, the only pairs that carry precision evidence.
 """
 
 from __future__ import annotations
 
+import math
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from typing import Any, Iterable, Mapping
 
-from ..analysis.bootstrap import wilson_ci
 from ..config import get_settings
 from ..metrics.emitter import ScoreRecord
 from .audit import SCHEMA_VERSION
@@ -75,35 +84,72 @@ def _decisive(confirmations: Iterable[Confirmation], kind: str) -> list[Confirma
     return [c for c in confirmations if c.reviewer_kind == kind and c.verdict in (VALID, HALLUCINATED)]
 
 
+def _wilson_lower(successes: int, n: int, z: float = 1.96) -> float:
+    """Unrounded Wilson score lower bound of ``successes / n`` (``n >= 1``).
+
+    The same formula as ``analysis.bootstrap.wilson_ci``, which rounds to four
+    decimals: a gate must not let 0.94998 round up to a 0.95 bar.
+    """
+    p = successes / n
+    z2 = z * z
+    centre = (p + z2 / (2 * n)) / (1 + z2 / n)
+    margin = z * math.sqrt(p * (1 - p) / n + z2 / (4 * n * n)) / (1 + z2 / n)
+    return max(0.0, centre - margin)
+
+
 def paired_checks(ledger: ConfirmationLedger, *, as_of: float | None = None) -> list[PairedCheck]:
     """Every agent/human pair in the ledger, ordered by the human's ``confirmed_at``.
 
-    With ``as_of``, only confirmations made at or before it count, so the pairs
-    are those known at that time. A pair's ``human_confirmed_at`` is the latest of
-    the people's deciding confirmations: when the human truth was settled.
+    The human truth is people's latest decisive verdicts. The agent's side is its
+    **blind** verdict: its latest confirmation made before people first decided the
+    candidate, both earlier in the ledger and no later in ``confirmed_at``. A
+    revision after people decided never rewrites the pair (an agent shown the human
+    verdict cannot erase its miss), and a backdated record that arrived after the
+    human one does not count. No blind decisive verdict, no pair.
+
+    With ``as_of``, only confirmations made at or before it count. A pair is dated
+    by the latest of people's deciding confirmations (when the truth was settled).
     """
+    confirmations = [c for c in ledger.confirmations if as_of is None or c.confirmed_at <= as_of]
     if as_of is not None:
-        ledger = ConfirmationLedger(
-            candidates=ledger.candidates,
-            confirmations=tuple(c for c in ledger.confirmations if c.confirmed_at <= as_of),
-        )
+        ledger = ConfirmationLedger(candidates=ledger.candidates, confirmations=tuple(confirmations))
+    first_human: dict[str, tuple[int, float]] = {}
+    for position, c in enumerate(confirmations):
+        if c.reviewer_kind == HUMAN and c.verdict in (VALID, HALLUCINATED) and c.candidate_id not in first_human:
+            first_human[c.candidate_id] = (position, c.confirmed_at)
+    blind: dict[tuple[str, str], Confirmation] = {}
+    for position, c in enumerate(confirmations):
+        if c.reviewer_kind != AGENT or c.candidate_id not in first_human:
+            continue
+        human_position, human_at = first_human[c.candidate_id]
+        if position > human_position or c.confirmed_at > human_at:
+            continue
+        key = (c.candidate_id, c.reviewer_id)
+        if key not in blind or c.confirmed_at >= blind[key].confirmed_at:
+            blind[key] = c
+    agents_by_candidate: dict[str, list[Confirmation]] = defaultdict(list)
+    for (cid, _), c in blind.items():
+        if c.verdict in (VALID, HALLUCINATED):
+            agents_by_candidate[cid].append(c)
+
     pairs: list[PairedCheck] = []
     for cid, by_reviewer in ledger.latest().items():
+        if cid not in agents_by_candidate:
+            continue
         candidate = ledger.candidates[cid]
 
         def vouched(c: Confirmation) -> str:
             """The value a confirmation vouches for, as compared text."""
             return _text(candidate.value if c.corrected_value is None else c.corrected_value)
 
-        latest = list(by_reviewer.values())
-        humans = _decisive(latest, HUMAN)
+        humans = _decisive(by_reviewer.values(), HUMAN)
         if not humans or len({c.verdict for c in humans}) > 1:
             continue  # no human verdict, or people disagree: no truth to pair with
         human_values = {vouched(c) for c in humans}
         if humans[0].verdict == VALID and len(human_values) > 1:
             continue  # people agree it is valid but not on the value
         human_at = max(c.confirmed_at for c in humans)
-        for agent in _decisive(latest, AGENT):
+        for agent in agents_by_candidate[cid]:
             human_verdict = humans[0].verdict
             if human_verdict == VALID and agent.verdict == VALID and vouched(agent) not in human_values:
                 human_verdict = HALLUCINATED  # people did not confirm the agent's value
@@ -135,10 +181,10 @@ class AgreementCounts:
 
     @property
     def valid_precision_lower_95(self) -> float | None:
-        """Wilson 95% lower bound of :attr:`valid_precision` (``analysis.bootstrap.wilson_ci``)."""
+        """Unrounded Wilson 95% lower bound of :attr:`valid_precision` (what the gate compares)."""
         if not self.n_agent_valid:
             return None
-        return wilson_ci(self.valid_precision, self.n_agent_valid)["lo"]
+        return _wilson_lower(self.n_valid_confirmed, self.n_agent_valid)
 
     @property
     def agreement(self) -> float | None:

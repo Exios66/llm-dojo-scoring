@@ -275,7 +275,13 @@ claimed_amount grounded 2 157461380899
 (`reviewer_id`) said. `paired_checks(ledger, *, as_of=None)` pairs, per candidate, each
 agent's latest decisive verdict with people's:
 
-- only latest confirmations count; `unsure` from either side is left out;
+- the agent's side is its **blind** verdict: its latest confirmation from before people
+  first decided the candidate (earlier in the ledger and no later in time). A revision
+  after people decided never rewrites the pair, so an agent shown the human verdict
+  cannot erase its miss, and a backdated record that arrived after the human one does
+  not count;
+- people's side is their latest confirmations; `unsure` from either side is left out
+  (a person whose latest word is `unsure` no longer counts);
 - people must agree with each other (same verdict and, for `valid`, the same value),
   or the candidate has no human truth and is not paired;
 - `human_verdict` is people's verdict on the value the agent vouched for: an agent
@@ -285,12 +291,13 @@ agent's latest decisive verdict with people's:
 
 `reviewer_agreement(ledger, *, window=None, as_of=None)` returns a `ReviewerAgreement`
 per agent over its latest `window` pairs (default `grounding.trust_window`), ordered by
-the human's time, with `overall` and `by_field` (`"doc_class.field"`) `AgreementCounts`:
+the human's time (ties by candidate id), with `overall` and `by_field`
+(`"doc_class.field"`) `AgreementCounts`:
 
 | Id | Tier | Value |
 | --- | --- | --- |
 | `grounding_reviewer_valid_precision` | 1 | of the agent's `valid` verdicts, the share people also call valid with the same value |
-| `grounding_reviewer_valid_precision_lower_95` | 1 | Wilson 95% lower bound of that share (`analysis.bootstrap.wilson_ci`, four decimals): the number the trust gate compares with `trust_bar` |
+| `grounding_reviewer_valid_precision_lower_95` | 1 | Wilson 95% lower bound of that share, **unrounded** (`wilson_ci`'s four-decimal rounding could lift 0.94998 to a 0.95 bar): the number the trust gate compares with `trust_bar`. Its denominator, and the count `trust_min_n` applies to, is `n_agent_valid` |
 | `grounding_reviewer_agreement` | 2 | share of pairs with the same verdict |
 | `grounding_reviewer_kappa` | 2 | Cohen's κ; `None` unless both the agent and people used both verdicts |
 | `grounding_reviewer_n_checked` | 3 | pairs in the window |

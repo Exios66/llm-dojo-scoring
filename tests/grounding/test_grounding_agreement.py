@@ -153,3 +153,39 @@ def test_agents_are_separate_and_score_records():
     assert [r.value for r in v2] == [None, None, 0.0, None, 1]
     assert v2[0].metadata == {"scope": "reviewer", "reviewer_id": "boss@v2", "window": 200, "denominator": 0}
     assert agreements["boss@v1"].as_dict()["schema_version"] == 1
+
+
+def test_wilson_bound_is_unrounded_below_the_bar():
+    """169 of 172 is just under 0.95; rounding to four decimals would make it pass."""
+    from llm_dojo_scoring.analysis.bootstrap import wilson_ci
+
+    counts = AgreementCounts(n_checked=172, n_agent_valid=172, n_valid_confirmed=169, n_agree=169,
+                             n_human_valid=169)
+    assert counts.valid_precision_lower_95 < 0.95
+    assert wilson_ci(169 / 172, 172)["lo"] == 0.95
+    assert counts.valid_precision_lower_95 == pytest.approx(0.94998, abs=1e-5)
+
+
+def test_revision_after_people_decided_keeps_the_miss():
+    """An agent that changes its mind after the human verdict cannot erase its miss."""
+    c = _candidates(1)
+    ledger = _ledger(c, [(0, "agent", "boss@v1", "valid", 1), (0, "human", "human:a", "hallucinated", 5),
+                         (0, "agent", "boss@v1", "hallucinated", 10)])
+    counts = reviewer_agreement(ledger)["boss@v1"].overall
+    assert (counts.n_agent_valid, counts.n_valid_confirmed, counts.n_agree) == (1, 0, 0)
+
+
+def test_backdated_or_late_agent_verdicts_are_not_blind():
+    """A verdict made after people decided, or arriving after them backdated, is not paired."""
+    c = _candidates(2)
+    ledger = _ledger(c, [(0, "human", "human:a", "valid", 5), (0, "agent", "boss@v1", "valid", 6),
+                         (1, "human", "human:a", "valid", 5), (1, "agent", "boss@v1", "valid", 1)])
+    assert paired_checks(ledger) == []
+
+
+def test_human_whose_latest_word_is_unsure_no_longer_counts():
+    """A person who withdraws to unsure leaves the candidate without human truth."""
+    c = _candidates(1)
+    ledger = _ledger(c, [(0, "agent", "boss@v1", "valid", 1), (0, "human", "human:a", "valid", 5),
+                         (0, "human", "human:a", "unsure", 9)])
+    assert paired_checks(ledger) == []

@@ -298,15 +298,15 @@ METRIC_META: dict[str, dict[str, str]] = {
         "Precision of an agent's 'valid' confirmations against human spot-checks "
         "(grounding.agreement.reviewer_agreement): a hit is a value people also call "
         "valid with the same value (casefolded, whitespace collapsed).",
-        "Latest confirmations only; unsure verdicts and candidates people disagree on "
-        "are left out; per reviewer_id over its latest trust_window paired checks; "
+        "The agent's blind verdict (its latest from before people first decided) against "
+        "people's latest; unsure verdicts and candidates people disagree on are left out; per reviewer_id over its latest trust_window paired checks; "
         "None when the agent made no paired 'valid' verdict.",
         "required",
     ),
     "grounding_reviewer_valid_precision_lower_95": _m(
-        "Wilson score 95% lower bound (analysis.bootstrap.wilson_ci, rounded to four "
-        "decimals) of grounding_reviewer_valid_precision; the trust gate compares it "
-        "with grounding.trust_bar.",
+        "Wilson score 95% lower bound of grounding_reviewer_valid_precision, unrounded "
+        "(the formula of analysis.bootstrap.wilson_ci without its four-decimal "
+        "rounding); the trust gate compares it with grounding.trust_bar.",
         "Same pairs as grounding_reviewer_valid_precision; None when it is None.",
         "required",
     ),
