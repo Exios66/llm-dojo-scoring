@@ -88,7 +88,7 @@ Modules are grouped into subpackages; only entry points sit at the root. The ful
 | `pipeline/` | The llm-mailroom pipeline contract (`mailroom`), intake clerk, pilot labels, verdicts, `archive` (audit-row hash, byte-identical to llm-mailroom's), sandbox rubrics |
 | `metrics/` | `registry` (every score name → tier T0–T3), `profiles`, `bundles`, `emitter` (`ScoreRecord`, JSONL / Langfuse routing), `scorecard_honesty`, `score_changelog` |
 | `analysis/` | `bootstrap`, `calibration`, `diagnostics`, `failure_modes`, `experiment`, `serving`, `cost` |
-| `grounding/` | Unlabelled-value grounding, a separate pass after scoring: `verdicts`, `selection`, `audit`, `summary`, `candidates`, `ledger`, `labels`, `io`, `agreement` (`docs/contracts/GROUNDING.md`). Nothing on the scoring path imports it. |
+| `grounding/` | Unlabelled-value grounding, a separate pass after scoring: `verdicts`, `selection`, `audit`, `summary`, `candidates`, `ledger`, `labels`, `io`, `agreement`, `trust` (`docs/contracts/GROUNDING.md`). Nothing on the scoring path imports it. |
 | `integrations/` | `update_awareness` (`dojo-version`) |
 | `prompts/` | Importable prompt catalog and the frozen eval-environment lineage |
 

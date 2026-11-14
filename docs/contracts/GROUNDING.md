@@ -14,9 +14,9 @@ golden baseline. It is deterministic, network-free, makes no LLM calls, writes n
 and never stores document text.
 
 Status (0.31.0): pieces 1 and 2 (verdicts and rates; review candidates, the
-confirmation ledger and valid labels with provenance), the reviewer-trust settings and
-agent agreement with human spot-checks. The trust gate and spot-check sampling follow in
-stacked PRs
+confirmation ledger and valid labels with provenance), the reviewer-trust settings,
+agent agreement with human spot-checks and the trust gate. Spot-check sampling follows in
+a stacked PR
 (`docs/superpowers/plans/2026-11-14-unlabelled-value-grounding-piece-3.md`); see the design
 (`docs/superpowers/specs/2026-11-14-unlabelled-value-grounding-design.md`) and tracker
 Exios66/llm-dojo-scoring#146. Consumers: none yet (`hold` in
@@ -205,8 +205,9 @@ function of the ledger, recomputed every time. `certainty_floor` defaults to the
 | Agents say `valid`, none with enough certainty | pending `below_certainty_floor` |
 
 Without a gate no agent is trusted, so only human-confirmed labels come out. A gate is any
-object with `trusted_snapshot_id(ledger, reviewer_id, at) -> str | None` (`TrustGate`
-in piece 3). A later human `hallucinated` removes a label agents made; labels of a
+object with `trusted_snapshot_id(ledger, reviewer_id, at) -> str | None` (`TrustGate`,
+see "Trust gate" below). Given no `certainty_floor`, `derive_valid_labels` uses the
+gate's `certainty_floor` when it has one, else the setting. A later human `hallucinated` removes a label agents made; labels of a
 `previous` export that are not derived now are returned as `withdrawn`.
 
 `ValidLabel` (JSON, `schema_version: 1`): `doc_id`, `doc_class`, `field`, `item_index`,
@@ -306,6 +307,53 @@ A rate with a zero denominator is `None`. `agreement_score_records(agreements, *
 run_id=None)` emits the five metrics per reviewer with `metadata.reviewer_id`,
 `metadata.window` and `metadata.denominator`.
 
+## Trust gate
+
+`grounding/trust.py`. `TrustGate(bar=None, min_n=None, window=None, certainty_floor=None)`
+takes its defaults from the `grounding` settings and validates them together
+(`ValueError` on a bad value). An agent (`reviewer_id`) is **trusted** at time `t` when,
+over its latest `window` pairs known at `t` (`reviewer_agreement(..., as_of=t)`):
+
+- it said `valid` at least `min_n` times (`n_agent_valid ≥ min_n`), and
+- the unrounded Wilson lower bound of its valid precision is at least `bar`.
+
+With the defaults a perfect record passes only from 73 checked `valid` verdicts: the
+bound of `n/n` is `1 / (1 + 1.96²/n)`, 0.9287 at 50 and 0.9500 at 73.
+
+Trust is judged **as of each agent confirmation's `confirmed_at`**, never
+retroactively. `TrustGate.history(ledger)` replays the ledger at each distinct time a
+person confirmed something (the only times a pair can appear or change) and returns a
+`GateSnapshot` whenever an agent's numbers change, ordered by `effective_at`. A
+snapshot is in force from its `effective_at` (inclusive) until that agent's next one.
+
+| Rule | Effect |
+| --- | --- |
+| New `reviewer_id` (a new boss prompt version, a new JEV release) | no pairs, no snapshot: untrusted |
+| `human:` reviewer id | never gated (`trusted_snapshot_id` is `None`) |
+| People later withdraw every pair (latest word `unsure`, or they disagree) | an empty, untrusted snapshot |
+| Same evidence under the same thresholds | the same `snapshot_id` |
+
+`GateSnapshot` (JSON, `schema_version: 1`): `snapshot_id`, `reviewer_id`,
+`effective_at`, `trusted`, `bar`, `min_n`, `window`, `window_start`, `window_end`,
+`n_checked`, `n_agent_valid`, `n_valid_confirmed`, `valid_precision`,
+`valid_precision_lower_95`. `snapshot_id` is the sha256 of the reviewer id, the
+thresholds, the window bounds, the counts and `trusted`.
+
+- `trusted_snapshot_id(ledger, reviewer_id, at)` is the `TrustLookup` that
+  `derive_valid_labels` calls: the id of the snapshot in force at `at` if it is trusted,
+  else `None`. `snapshot_at(ledger, reviewer_id, at)` returns the snapshot itself.
+- **Regression guard:** `regressions(ledger, labels)` returns a `Regression` for each
+  untrusted snapshot that follows a trusted one: `failed` (that snapshot), `passing`
+  (the ids of the passing run before it) and `labels` (the `trusted_agent` labels whose
+  `gate_snapshot_id` is in that run), for a person to re-review. Those labels are not
+  withdrawn automatically: they were trusted when made, and a human `hallucinated`
+  removes one.
+
+The Dojo stores nothing: the caller keeps the ledger, and every snapshot can be
+recomputed from it. `history` is cached per ledger object (ledgers are immutable) and
+recomputes only the candidates a person touched at each step; a test checks it against
+the plain replay of `reviewer_agreement` as of every time.
+
 ## Settings
 
 `config.GroundingSettings`, the `grounding` section of `Settings`, holds the tunable
@@ -314,7 +362,7 @@ thresholds. Only `grounding/` reads it, so no value here can move a headline sco
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `trust_bar` | 0.95 | Wilson lower bound an agent's `valid` precision must reach to be trusted |
-| `trust_min_n` | 50 | paired human checks needed before an agent can be trusted |
+| `trust_min_n` | 50 | `valid` verdicts with a human check (`n_agent_valid`) an agent needs before it can be trusted |
 | `trust_window` | 200 | most recent paired checks the gate looks at (at least `trust_min_n`) |
 | `certainty_floor` | 0.9 | least certainty an agent's `valid` needs to count |
 | `spot_check_rate` | 0.10 | share of each agent's confirmations sampled for people |
@@ -343,3 +391,4 @@ ignored. Updates change `get_settings().grounding` in place.
 | `grounding/labels.py` | `ValidLabel`, `LabelDerivation`, `derive_valid_labels`, `label_score_records`, `TrustLookup` |
 | `grounding/io.py` | `read_jsonl`, `write_jsonl` |
 | `grounding/agreement.py` | `PairedCheck`, `paired_checks`, `AgreementCounts`, `ReviewerAgreement`, `reviewer_agreement`, `agreement_score_records` |
+| `grounding/trust.py` | `TrustGate`, `GateSnapshot`, `Regression` |
