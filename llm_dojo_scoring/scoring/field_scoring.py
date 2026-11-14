@@ -482,7 +482,10 @@ _TENS_WORDS = ("twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty
 _NOT_COMPOUND = r"(?<![-\w])" + "".join(rf"(?<!{t}\s)" for t in _TENS_WORDS)
 #: "thirty   second", "twenty\n\nfirst": a run of whitespace after a tens word is one space, so the
 #: compound guard and ``_ORD_WORD`` read it as they read the single-space form.
-_TENS_GAP_RE = re.compile(r"\b(" + "|".join(_TENS_WORDS) + r")\s{2,}", re.IGNORECASE | re.ASCII)
+#: Unicode ``\s`` on purpose: the scan itself is ASCII-only, so a line or paragraph separator
+#: (U+2028, U+2029, U+0085, U+001C-U+001F), which NFKC leaves alone, becomes a plain space here,
+#: as it does on the value side (``_WS_RE``).
+_TENS_GAP_RE = re.compile(r"\b(" + "|".join(_TENS_WORDS) + r")\s+", re.IGNORECASE)
 _DAY_NUMBER = r"\d{1,2}(?:st|nd|rd|th)?"
 
 
