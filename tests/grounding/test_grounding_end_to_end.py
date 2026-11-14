@@ -60,6 +60,8 @@ def test_spot_checked_agent_earns_trust_and_its_later_verdicts_become_labels(tmp
     # Round 1: the boss confirms the first 30; every one is sent to people.
     write_jsonl([_agent(cid, 10.0) for cid in ids[:30]], path)
     ledger = ingest_confirmations(read_jsonl(path), candidates, now=1e6)
+    default = select_spot_checks(ledger)  # 10% drawn, topped up to 20 (nothing checked yet)
+    assert len(default) == 20 and set(default) <= set(ids[:30])
     sample = select_spot_checks(ledger, rate=1.0, min_per_agent=0)
     assert sample == sorted(ids[:30])
     write_jsonl([_human(cid, 20.0 + i) for i, cid in enumerate(sample)], path, append=True)

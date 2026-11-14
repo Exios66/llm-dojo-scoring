@@ -331,10 +331,12 @@ def select_spot_checks(
     agent is ``valid`` or ``hallucinated`` and that no person has decided yet (a person
     whose latest word is ``unsure`` has not decided). Each gets a fixed draw in
     ``[0, 1)`` from ``sha256([seed, reviewer_id, candidate_id])``; a draw below ``rate``
-    is sampled, so a candidate's selection never changes as the ledger grows. When that
-    gives an agent fewer than ``min_per_agent``, its lowest remaining draws top it up (or
-    all its eligible candidates, if fewer). A candidate sampled for several agents is
-    listed once.
+    is sampled, so that part of the sample never changes as the ledger grows. When the
+    agent's paired checks in its latest ``trust_window`` plus its drawn candidates are
+    fewer than ``min_per_agent``, its lowest remaining draws top it up (or all its
+    eligible candidates, if fewer). The top-up can change as candidates arrive, so a
+    caller keeps its own record of what it sent. A candidate sampled for several agents
+    is listed once.
 
     ``rate`` and ``min_per_agent`` default to ``grounding.spot_check_rate`` and
     ``grounding.spot_check_min_per_agent`` and are validated like them; ``seed`` must
@@ -342,11 +344,12 @@ def select_spot_checks(
     """
     overrides = {key: value for key, value in (
         ("spot_check_rate", rate), ("spot_check_min_per_agent", min_per_agent)) if value is not None}
-    checked = replace(get_settings().grounding, **overrides)
-    checked.validate()
+    settings = replace(get_settings().grounding, **overrides).coerced()
     if isinstance(seed, bool) or not isinstance(seed, int):
         raise ValueError(f"seed must be a whole number, got {seed!r}")
-    rate, minimum = float(checked.spot_check_rate), int(checked.spot_check_min_per_agent)
+    rate, minimum = settings.spot_check_rate, settings.spot_check_min_per_agent
+    checked = {reviewer_id: result.overall.n_checked
+               for reviewer_id, result in reviewer_agreement(ledger).items()}
     eligible: dict[str, list[str]] = defaultdict(list)
     for cid, by_reviewer in ledger.latest().items():
         if _decisive(by_reviewer.values(), HUMAN):
@@ -357,5 +360,6 @@ def select_spot_checks(
     for reviewer_id, cids in eligible.items():
         ranked = sorted(cids, key=lambda cid: (_draw(seed, reviewer_id, cid), cid))
         drawn = [cid for cid in ranked if _draw(seed, reviewer_id, cid) < rate]
-        chosen.update(ranked[:max(len(drawn), minimum)])
+        top_up = max(0, minimum - checked.get(reviewer_id, 0) - len(drawn))
+        chosen.update(ranked[:len(drawn) + top_up])
     return sorted(chosen)

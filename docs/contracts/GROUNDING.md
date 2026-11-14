@@ -321,17 +321,20 @@ returns the candidate ids to send to people, in candidate-id order:
 - per agent, the eligible candidates are those whose latest confirmation by that agent
   is `valid` or `hallucinated` and that no person has decided yet (a latest `unsure`
   is not a decision);
-- each gets a fixed draw in `[0, 1)` from `sha256([seed, reviewer_id, candidate_id])`,
-  and a draw below `rate` is sampled, so a candidate's selection does not change as the
-  ledger grows or between runs;
-- an agent with fewer than `min_per_agent` sampled is topped up with its lowest
-  remaining draws (all its eligible candidates if there are fewer);
+- each gets a fixed draw in `[0, 1)` from `sha256([seed, reviewer_id, candidate_id])`
+  (the first 64 bits of the JSON list's digest), and a draw below `rate` is sampled; that
+  part of the sample does not change as the ledger grows or between runs;
+- when the agent's paired checks in its latest `trust_window` plus its drawn candidates
+  are fewer than `min_per_agent`, its lowest remaining draws top it up (all its eligible
+  candidates if there are fewer). Checks people already made count, so calling again
+  after they answered does not add another 20. The top-up can change as candidates
+  arrive, so a caller keeps its own record of what it sent;
 - a candidate sampled for several agents is listed once.
 
 `rate` and `min_per_agent` default to `grounding.spot_check_rate` (0.10) and
 `grounding.spot_check_min_per_agent` (20) and are validated like them (`ValueError`);
-`seed` must be a whole number. The minimum applies to each call, not to a window: a
-caller that samples in batches decides how often to call it.
+`seed` must be a whole number. Precision counts every paired check, including ones a
+person made without being asked, not only sampled ones.
 
 ## Trust gate
 
