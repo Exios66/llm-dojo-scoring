@@ -299,7 +299,7 @@ the human's time (ties by candidate id), with `overall` and `by_field`
 | `grounding_reviewer_valid_precision` | 1 | of the agent's `valid` verdicts, the share people also call valid with the same value |
 | `grounding_reviewer_valid_precision_lower_95` | 1 | Wilson 95% lower bound of that share, **unrounded** (`wilson_ci`'s four-decimal rounding could lift 0.94998 to a 0.95 bar): the number the trust gate compares with `trust_bar`. Its denominator, and the count `trust_min_n` applies to, is `n_agent_valid` |
 | `grounding_reviewer_agreement` | 2 | share of pairs with the same verdict |
-| `grounding_reviewer_kappa` | 2 | Cohen's κ; `None` unless both the agent and people used both verdicts |
+| `grounding_reviewer_kappa` | 2 | Cohen's κ, with people's side read as their verdict on the value the agent vouched for (a corrected value counts as `hallucinated`); `None` unless both sides used both verdicts |
 | `grounding_reviewer_n_checked` | 3 | pairs in the window |
 
 A rate with a zero denominator is `None`. `agreement_score_records(agreements, *, agent,
