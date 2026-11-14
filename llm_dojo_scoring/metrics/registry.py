@@ -747,6 +747,39 @@ metrics:
     applicable_agents: [SPECIALISTS]
     aggregation: sum
     source: "grounding.labels.label_score_records"
+  grounding_reviewer_valid_precision:
+    tier: 1
+    description: "Share of an agent's 'valid' confirmations that human spot-checks also confirm (same value)"
+    applicable_agents: [SPECIALISTS]
+    aggregation: none
+    source: "grounding.agreement.reviewer_agreement"
+    notes: "per reviewer_id over its latest trust_window paired checks; metadata.reviewer_id"
+  grounding_reviewer_valid_precision_lower_95:
+    tier: 1
+    description: "Wilson 95% lower bound of grounding_reviewer_valid_precision; the number the trust gate compares with trust_bar"
+    applicable_agents: [SPECIALISTS]
+    aggregation: none
+    source: "grounding.agreement.reviewer_agreement"
+  grounding_reviewer_agreement:
+    tier: 2
+    description: "Share of an agent's paired checks where human spot-checks give the agent's verdict"
+    applicable_agents: [SPECIALISTS]
+    aggregation: none
+    source: "grounding.agreement.reviewer_agreement"
+  grounding_reviewer_kappa:
+    tier: 2
+    description: "Cohen's kappa between an agent's and human spot-checks' valid/hallucinated verdicts"
+    applicable_agents: [SPECIALISTS]
+    aggregation: none
+    source: "grounding.agreement.reviewer_agreement"
+    notes: "None unless both raters used both verdicts"
+  grounding_reviewer_n_checked:
+    tier: 3
+    units: count
+    description: "Paired agent/human checks in an agent's agreement window"
+    applicable_agents: [SPECIALISTS]
+    aggregation: sum
+    source: "grounding.agreement.reviewer_agreement"
   completeness_label:
     tier: 2
     description: "Categorical completeness label (complete/partial/incomplete)"
