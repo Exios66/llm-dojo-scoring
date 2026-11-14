@@ -96,3 +96,35 @@ def test_id_matches_whole_runs_only(value, text, expected):
 def test_pre_pr_review_boundary_cases(ftype, value, text, expected):
     """An id part inside a prefixed run grounds; a spaced lone letter is not a money scale."""
     assert value_verdict(ftype, value, text)[0] == expected
+
+
+@pytest.mark.parametrize(("value", "text", "expected"), [
+    ("2024-03-03", "Effective 2024-03-03.", "grounded"),
+    ("2024-03-03", "Effective 2024/03/03.", "grounded"),
+    ("2024-03-03", "Effective 2024.03.03.", "grounded"),
+    ("2024-03-03", "Signed March 3rd, 2024.", "grounded"),
+    ("2024-03-03", "Signed Mar. 3rd, 2024.", "grounded"),
+    ("2024-03-03", "Signed 3 March 2024.", "grounded"),
+    ("2024-03-03", "Signed 3rd of March, 2024.", "grounded"),
+    ("2024-03-03", "Made this 3rd day of March, 2024.", "grounded"),
+    ("2024-03-03", "Signed Sunday, 3 March 2024.", "grounded"),
+    ("2024-03", "dated March 2024", "grounded"),
+    ("2024-03", "dated 03/2024", "grounded"),
+    ("March 3", "Signed on March 3.", "grounded"),
+    ("March 3", "Signed on the 3rd of March.", "grounded"),
+    ("March 3", "Signed on March 3, 2024.", "grounded"),
+    ("March the 3rd, 2024", "Effective 2024-03-03.", "grounded"),
+    ("2024-03-03", "Signed on March 3.", "not_found"),
+    ("2024-03-03", "dated March 2024", "not_found"),
+    ("2024-03-04", "Effective 2024-03-03.", "not_found"),
+    ("May 5", "you may 5 times", "not_found"),
+    ("2024-03-01", "INV-2024-0301", "not_found"),
+    ("2024-03", "Ref 2024-03-0001", "not_found"),
+    ("2003-01-02", "see v1.2.3 for details", "not_found"),
+    ("2034-01-02", "version 1.2.34 was released", "not_found"),
+    ("March 3", "March 3,000 units shipped", "not_found"),
+    ("March 3", "In March we met 3 times", "not_found"),
+])
+def test_date_verdict_reads_every_written_date_form(value, text, expected):
+    """A date is grounded by the document's date in any common written form, never by an id."""
+    assert value_verdict("date", value, text)[0] == expected, (value, text)
