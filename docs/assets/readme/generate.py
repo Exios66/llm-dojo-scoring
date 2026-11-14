@@ -7,7 +7,7 @@
 `_art.py` is the shared kit (identical in every constellation repo); this file
 owns only this repository's labels, scene and facts. Facts are backed by the
 README and the source: `DEFAULT_PROFILES` (27), `BUILTIN_BUNDLES` (11), the
-T0-T3 metric tiers in `registry.py`, the four console scripts in `pyproject.toml`,
+T0-T3 metric tiers in `registry.py`, the console script in `pyproject.toml`,
 and the Wilson interval for 2/3 at z = 1.96 computed below.
 Standard library only, deterministic output.
 """
@@ -26,7 +26,7 @@ HERO = {
     'kicker': 'THE MAILROOM CONSTELLATION · THE SCORING ENGINE',
     'tagline': 'Score the extraction, not the vibes — field-aware metrics, honest intervals, failures explained.',
     'eyebrow': 'FIELD-TYPE-AWARE · DETERMINISTIC CORE · BOOTSTRAP + WILSON INTERVALS · FAILURE MODES',
-    'caption': 'one engine for the pipeline and the sandbox · optional Langfuse and Phoenix sinks · no API key to score',
+    'caption': 'one engine for the pipeline and the sandbox · optional Langfuse sink · no API key to score',
     'alt': 'Animated banner: expected and predicted document classes are compared pair by pair (two match, one '
            'does not) and the exact-match score of two thirds is shown with its Wilson confidence interval.',
     'tagline_lines': ['Score the extraction, not the vibes —', 'field-aware, honest, explained.'],
@@ -35,26 +35,23 @@ HERO = {
     'mobile_note': 'deterministic core · no API key needed',
 }
 STATS = [('27', 'agent profiles', art.SKY), ('11', 'task bundles', art.VIOLET), ('T0–T3', 'metric tiers', art.LIME),
-         ('4', 'command-line tools', art.PINK), ('CIs', 'bootstrap + Wilson', art.AMBER),
+         ('1', 'command-line tool', art.PINK), ('CIs', 'bootstrap + Wilson', art.AMBER),
          ('Offline', 'core needs no API key', art.GREEN)]
 STAGES = [('Task suite', 'get_suite(...)', 'per-agent contract'),
           ('Normalize', 'align fields or labels', 'date · money · id · name'),
           ('Compare', 'score_extraction', 'score_task'),
           ('Metrics', 'P · R · F1 · F2', 'exact match · per class'),
           ('Uncertainty', 'bootstrap_ci', 'Wilson · delta tests'),
-          ('Explain', 'failure modes', 'dojo-analyze · -export')]
+          ('Explain', 'failure modes', 'summarize_failures')]
 SIDE = [('Pipeline', 'imports the suites', 'llm-mailroom'),
         ('Sandbox', 'vendored snapshot', 'local-mailroom-sandbox'),
         ('Langfuse', 'LangfuseSink emitter', 'optional · inert if unset'),
-        ('Phoenix', 'OTLP probe + reader', 'optional · local'),
-        ('Workbooks', 'dojo-sync', 'live traces → workbook')]
+        ('Releases', 'dojo-version', 'update awareness')]
 TERMINAL = [('cmd', 'git clone https://github.com/Exios66/llm-dojo-scoring.git'),
             ('cmd', 'cd llm-dojo-scoring && pip install -e ".[dev]"'),
             ('note', '# core scoring is offline: no model, API key or tracing service'),
             ('cmd', 'dojo-version --check --offline --json'),
             ('note', '# which Dojo is loaded, and what is released'),
-            ('cmd', 'dojo-analyze Sorter_Experiment_Results.xlsx --target 0.94 --min-n 100'),
-            ('note', '# → a markdown report and PNG plots next to the workbook'),
             ('cmd', 'python -m pytest')]
 
 
@@ -67,12 +64,12 @@ def wilson(successes: int, n: int, z: float = 1.96) -> tuple[float, float]:
     return centre - half, centre + half
 
 TUI_GAUGES = [('agent profiles', '27', None, art.SKY), ('task bundles', '11', None, art.VIOLET),
-              ('metric tiers', 'T0 → T3', None, art.LIME), ('CLI tools', '4', None, art.PINK),
+              ('metric tiers', 'T0 → T3', None, art.LIME), ('CLI tool', '1', None, art.PINK),
               ('core needs', 'no API key', None, art.GREEN)]
-TUI_LOG = [('info', 'dojo-analyze --target 0.94 --min-n 100'), ('ok', 'score_task exact match 2 / 3'),
+TUI_LOG = [('info', 'score_task(expected, predicted)'), ('ok', 'score_task exact match 2 / 3'),
            ('info', 'Wilson 95% interval 0.21–0.94'), ('warn', 'n = 3: the interval is wide, trust it'),
-           ('ok', 'report + plots beside the workbook')]
-TUI_STATUS = 'deterministic core · offline · optional Langfuse and Phoenix sinks'
+           ('ok', 'summarize_failures: what went wrong')]
+TUI_STATUS = 'deterministic core · offline · optional Langfuse sink'
 
 
 def scene() -> str:
@@ -116,7 +113,7 @@ def scene() -> str:
 def build() -> dict[str, str]:
     """Return every generated asset keyed by file name."""
     flow_desc = ('Ground truth and predictions enter a task suite, are normalized and aligned, compared, turned into '
-                 'metrics and intervals, then explained; the pipeline, sandbox and optional sinks plug into it.')
+                 'metrics and intervals, then explained; the pipeline, sandbox and optional Langfuse sink plug into it.')
     return {
         'hero.svg': art.hero(HERO, scene),
         'hero-mobile.svg': art.hero(HERO, mobile=True),
@@ -127,11 +124,11 @@ def build() -> dict[str, str]:
                                     desc=flow_desc, side_color=art.SKY),
         'constellation.svg': art.constellation('llm-dojo-scoring'),
         'constellation-mobile.svg': art.constellation('llm-dojo-scoring', mobile=True),
-        'tui.svg': art.tui('~/llm-dojo-scoring — dojo-analyze', TUI_GAUGES, TUI_LOG, TUI_STATUS,
-                           'Dashboard: what the scoring engine ships (27 agent profiles, 11 task bundles, tiers T0 to T3, four command-line tools) and a sample run with its Wilson interval.', left='REGISTRY', right='SAMPLE RUN'),
+        'tui.svg': art.tui('~/llm-dojo-scoring — dojo-version', TUI_GAUGES, TUI_LOG, TUI_STATUS,
+                           'Dashboard: what the scoring engine ships (27 agent profiles, 11 task bundles, tiers T0 to T3, one command-line tool) and a sample run with its Wilson interval.', left='REGISTRY', right='SAMPLE RUN'),
         'terminal.svg': art.terminal('~/llm-dojo-scoring — zsh', TERMINAL,
-                                     'Animated terminal: clone, install, check the Dojo version offline, analyze a '
-                                     'workbook and run the tests.'),
+                                     'Animated terminal: clone, install, check the Dojo version offline and run '
+                                     'the tests.'),
     }
 
 

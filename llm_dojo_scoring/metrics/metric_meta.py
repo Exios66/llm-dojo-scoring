@@ -61,7 +61,9 @@ _EXTRACT_SKIP = (
     "are not FN; correctly-empty pairs credit 1.0 on the empty-field contract "
     "(#20) and never enter archive overall_score. ERROR_PREFIX predictions "
     "are dropped by the suite. entity_list F1 is None when the document has "
-    "no list fields."
+    "no list fields. A schema field the GT does not label is excluded on both "
+    "sides (a value there is not an FP); with no labelled field the suite "
+    "reports field-micro P/R/F1/F2 as null."
 )
 
 _SUBCLASS = (
@@ -282,6 +284,30 @@ METRIC_META: dict[str, dict[str, str]] = {
         "at field_scoring.score_extraction, which does not emit this name.",
         "Not computed in this package as of 0.11.0 — honesty gap, not a scorer. "
         "Do not treat a missing key as 0.0.",
+        "required",
+    ),
+    "grounding_not_found_rate": _m(
+        "Document-grounding check of unlabelled values (grounding.verdicts.value_verdict): "
+        "token containment for names and text, any-format date and amount match, "
+        "identifier matched as whole adjacent alphanumeric parts; closed-vocabulary labels are unverifiable.",
+        "Only predicted values on fields the GT does not label (key absent or "
+        "pending_annotation); None when no audited value was checkable.",
+        "structural",
+    ),
+    "grounding_reviewer_valid_precision": _m(
+        "Precision of an agent's 'valid' confirmations against human spot-checks "
+        "(grounding.agreement.reviewer_agreement): a hit is a value people also call "
+        "valid with the same value (casefolded, whitespace collapsed).",
+        "The agent's blind verdict (its latest from before people first decided) against "
+        "people's latest; unsure verdicts and candidates people disagree on are left out; per reviewer_id over its latest trust_window paired checks; "
+        "None when the agent made no paired 'valid' verdict.",
+        "required",
+    ),
+    "grounding_reviewer_valid_precision_lower_95": _m(
+        "Wilson score 95% lower bound of grounding_reviewer_valid_precision, unrounded "
+        "(the formula of analysis.bootstrap.wilson_ci without its four-decimal "
+        "rounding); the trust gate compares it with grounding.trust_bar.",
+        "Same pairs as grounding_reviewer_valid_precision; None when it is None.",
         "required",
     ),
     "verified_precision": _m(

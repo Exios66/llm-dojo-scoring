@@ -132,6 +132,54 @@ def test_score_changelog_can_filter_one_metric():
     assert changes[0]["version"] == "0.26.0"
 
 
+def test_score_changelog_0_29_0_moves_field_micro_precision():
+    """The #133 money fix can turn a FP+FN into a TP, so precision moves too."""
+    changes = score_changes_for_metric(
+        "pipeline.extraction.field_micro_precision", "0.28.0", "0.29.0"
+    )
+    assert {entry["version"] for entry in changes} == {"0.29.0"}
+    assert any("#133" in entry["change"] for entry in changes)
+
+
+_FACTUALITY_NAMES = (
+    "hallucination_rate",
+    "verified_precision",
+    "extraction_hallucination_rate",
+    "extraction_overall_verified_precision",
+    "extraction_verified_precision",
+)
+
+
+def test_score_changelog_0_31_0_moves_the_factuality_metrics():
+    """The date-scan fix (#147) moves the audit's verified/hallucination numbers.
+
+    The ledger is queried with the metric_id the emitter stamps, which for these unmapped
+    registry names is ``registry:<name>`` (scorecard_honesty._METRIC_ID_BY_NAME has no entry).
+    """
+    from llm_dojo_scoring.metrics.emitter import _emit_provenance
+
+    for name in _FACTUALITY_NAMES:
+        stamped = _emit_provenance(name, "ratio", None, require=False)["metric_id"]
+        changes = score_changes_for_metric(stamped, "0.30.0", "0.31.0")
+        assert {entry["version"] for entry in changes} == {"0.31.0"}, (name, stamped)
+        assert all("#147" in entry["change"] and entry["rescore_required"] for entry in changes)
+
+
+def test_score_changelog_ids_are_ids_the_emitter_stamps():
+    """Every ledger id is a canonical id or a ``registry:`` id: a bare registry name never matches."""
+    from llm_dojo_scoring.metrics.score_changelog import SCORE_CHANGELOG
+    from llm_dojo_scoring.metrics.scorecard_honesty import _METRIC_ID_BY_NAME
+
+    stampable = set(_METRIC_ID_BY_NAME.values())
+    for entry in SCORE_CHANGELOG:
+        for metric_id in entry["metric_ids"]:
+            assert metric_id in stampable or metric_id.startswith("registry:"), (
+                entry["version"], metric_id,
+            )
+    bare = [n for n in _FACTUALITY_NAMES if score_changes_for_metric(n, "0.30.0", "0.31.0")]
+    assert bare == [], "the ledger lists a bare name the emitter never stamps"
+
+
 def test_score_changelog_handles_reversed_and_invalid_versions():
     """Reversing the pair is harmless; missing or junk releases yield nothing."""
     assert score_changes_between("0.26.0", "0.24.0") == score_changes_between(
