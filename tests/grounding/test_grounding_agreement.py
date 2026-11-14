@@ -292,6 +292,18 @@ def test_floor_counts_checks_people_already_made():
     assert second == drawn_only  # the window already holds 20+ checks: no top-up
 
 
+
+def test_floor_is_capped_at_the_trust_window():
+    """A floor above trust_window would never be met (only the window counts): it is capped there."""
+    configure(grounding__trust_min_n=1, grounding__trust_window=5)
+    c = _candidates(40)
+    rows = _agent_rows(40)
+    first = select_spot_checks(_ledger(c, rows), rate=0.0, min_per_agent=20)
+    assert len(first) == 5
+    index = {x.candidate_id: i for i, x in enumerate(c)}
+    rows += [(index[cid], "human", "human:a", "valid", 1000) for cid in first]
+    assert select_spot_checks(_ledger(c, rows), rate=0.0, min_per_agent=20) == []
+
 def test_draws_are_pinned_and_shared_candidates_listed_once():
     """The draw is a fixed function of (seed, reviewer, candidate); a candidate two agents decided appears once."""
     assert _draw(0, "boss@v1", "abc") == _draw_expected(0, "boss@v1", "abc") == 0.5334060011203018

@@ -16,7 +16,7 @@ and never stores document text.
 Status (0.31.0): pieces 1 and 2 (verdicts and rates; review candidates, the
 confirmation ledger and valid labels with provenance), the reviewer-trust settings,
 agent agreement with human spot-checks, spot-check sampling and the trust gate: the whole
-loop from audit to labels (piece 3 landed as four stacked PRs,
+loop from audit to labels (piece 3 is split across four stacked PRs,
 `docs/superpowers/plans/2026-11-14-unlabelled-value-grounding-piece-3.md`); see the design
 (`docs/superpowers/specs/2026-11-14-unlabelled-value-grounding-design.md`) and tracker
 Exios66/llm-dojo-scoring#146. Consumers: none yet (`hold` in
@@ -327,7 +327,8 @@ returns the candidate ids to send to people, in candidate-id order:
 - when the agent's paired checks in its latest `trust_window` plus its drawn candidates
   are fewer than `min_per_agent`, its lowest remaining draws top it up (all its eligible
   candidates if there are fewer). Checks people already made count, so calling again
-  after they answered does not add another 20. The top-up can change as candidates
+  after they answered does not add another 20. The floor is capped at `trust_window`,
+  the most paired checks that can count toward it. The top-up can change as candidates
   arrive, so a caller keeps its own record of what it sent;
 - a candidate sampled for several agents is listed once.
 
