@@ -64,8 +64,8 @@ Format based on Keep a Changelog; versioning is SemVer.
   never invents a second date), an em dash in a range and a stray closing bracket, so a
   prediction and a label in those forms score as the same date. A test pins that the value
   reader and the document scan read the same forms (one deliberate exception, "March 3 24").
-  The scan is linear on hostile text (bounded gaps, per-group lookaheads; guarded by a 0.5 s test
-  on 200 KB). Trade-offs that remain are listed in `docs/contracts/GROUNDING.md` ("Dates"): a
+  The scan is linear on hostile text (bounded gaps, per-group lookaheads; guarded by a test that the
+  scan of 200 KB takes under 8 times its first quarter). Trade-offs that remain are listed in `docs/contracts/GROUNDING.md` ("Dates"): a
   version with no version word (`1.2.34`), `1/2000`, a timestamp `12.30.45`, an 8-digit
   `YYYYMMDD` SKU, "12 March Road", "Theresa May 5", "March 3, 24 hours" and "4 March 15" read as
   dates.
