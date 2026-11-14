@@ -161,6 +161,10 @@ def test_score_changelog_0_29_0_names_the_date_reader():
         "pipeline.extraction.field_micro_f1",
         "pipeline.extraction.field_micro_precision",
         "pipeline.extraction.field_micro_recall",
+        # sandbox_scoring._same_date decides cuad_effective_from_agreement.
+        "cuad.sandbox_category_detection.micro_f1",
+        "cuad.sandbox_category_detection.micro_precision",
+        "cuad.sandbox_category_detection.micro_recall",
     ):
         changes = score_changes_for_metric(metric_id, "0.28.1", "0.29.0")
         assert [entry["version"] for entry in changes] == ["0.29.0"], metric_id

@@ -67,6 +67,9 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         # Shipped in the v0.29.0 tag (f95c318); recorded after the release.
         "version": "0.29.0",
         "metric_ids": (
+            "cuad.sandbox_category_detection.micro_f1",
+            "cuad.sandbox_category_detection.micro_precision",
+            "cuad.sandbox_category_detection.micro_recall",
             "pipeline.extraction.overall",
             "pipeline.extraction.field_micro_f1",
             "pipeline.extraction.field_micro_f2",
@@ -78,9 +81,14 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
             "sides state are compared, so a yearless or dayless GT scores the same in "
             "every run year; a prediction stating a year against a yearless GT scores at "
             "most 0.67; the 45-day window applies only to fully dated pairs; two-digit "
-            "years use a fixed pivot (69-99 -> 1900s). Fully dated pairs that parse on "
-            "both sides do not move, except a day that is a substring of the other "
-            "('11 August 2014' vs '1 August 2014': 1.0 -> 0.67)."
+            "years use a fixed pivot (69-99 -> 1900s). Day ranges, a comma glued to the "
+            "year and weekday names also parse differently, and a day that is a substring "
+            "of the other is no longer a match ('11 August 2014' vs '1 August 2014': "
+            "1.0 -> 0.67); other fully dated pairs that parse on both sides do not move. "
+            "The sandbox CUAD check that an Effective Date equals the Agreement Date "
+            "compares stated components, so a yearless agreement date no longer matches a "
+            "dated prediction (cuad_fp can move). Diagnostics date R^2 and date_mae_days "
+            "skip partial dates (no canonical metric_id covers them)."
         ),
         "rescore_required": True,
     },

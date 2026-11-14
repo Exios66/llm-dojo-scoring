@@ -229,7 +229,8 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
 - Ledger only, no score change: `SCORE_CHANGELOG` gains the `0.29.0` entry for #134 (date
   scoring no longer reads the clock), which shipped in the v0.29.0 tag without one. A
   comparison of a 0.28.1 run with a 0.29.0 or later run now names it for
-  `pipeline.extraction.overall` and the field-micro metrics. The five 0.30.0 change sets
+  `pipeline.extraction.overall`, the field-micro metrics and the sandbox CUAD category
+  detection metrics (`cuad.sandbox_category_detection.*`). The five 0.30.0 change sets
   are labelled `0.30.0` (they were labelled `0.29.0`, a tag that does not contain them).
 - Tooling only, no score change (review on #136): `scripts/consumer_closure.py` expands a consumer
   `import *` (root `__all__`, module or package) and exits 2 when a consumer file does not parse;
