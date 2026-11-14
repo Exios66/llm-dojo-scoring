@@ -82,7 +82,7 @@
     },
     "grounding.agreement": {
       "decision": "hold",
-      "lines": 307,
+      "lines": 310,
       "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
     },
     "grounding.audit": {
@@ -102,7 +102,7 @@
     },
     "grounding.labels": {
       "decision": "hold",
-      "lines": 236,
+      "lines": 243,
       "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
     },
     "grounding.ledger": {
@@ -118,6 +118,11 @@
     "grounding.summary": {
       "decision": "hold",
       "lines": 150,
+      "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
+    },
+    "grounding.trust": {
+      "decision": "hold",
+      "lines": 263,
       "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
     },
     "grounding.verdicts": {
