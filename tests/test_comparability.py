@@ -132,12 +132,16 @@ def test_score_changelog_can_filter_one_metric():
     assert changes[0]["version"] == "0.26.0"
 
 
-def test_score_changelog_0_29_0_moves_field_micro_precision():
-    """The #133 money fix can turn a FP+FN into a TP, so precision moves too."""
+def test_score_changelog_0_30_0_moves_field_micro_precision():
+    """The #133 money fix can turn a FP+FN into a TP, so precision moves too.
+
+    The fix ships in 0.30.0 (0.29.0 is skipped), so the ledger names 0.30.0: a
+    run stamped 0.28.1 and one stamped 0.30.0 must find it.
+    """
     changes = score_changes_for_metric(
-        "pipeline.extraction.field_micro_precision", "0.28.0", "0.29.0"
+        "pipeline.extraction.field_micro_precision", "0.28.1", "0.30.0"
     )
-    assert {entry["version"] for entry in changes} == {"0.29.0"}
+    assert {entry["version"] for entry in changes} == {"0.30.0"}
     assert any("#133" in entry["change"] for entry in changes)
 
 
