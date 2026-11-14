@@ -519,8 +519,9 @@ What v9.3 labels, per class:
   `cuad_clauses` for 22 families. Most `consulting`, `ip` and `supply` rows are
   still `pending_annotation`. `contract_value` has no source.
 - **merger_agreement**: `maud_clauses` (MAUD labels) and
-  `merger_consideration` (the `Type of Consideration` label, else the subtype). The other
-  five fields are pending.
+  `merger_consideration` (the `Type of Consideration` label, else the subtype). Of the
+  other 19 fields, 16 are pending and three (`intent`, `subject_matter`,
+  `keywords`) are `not_applicable`.
 - **corporate_record**: `intent`, `subject_matter`, `keywords`, `record_type`
   (the subtype) and, since the v9.2.1 relabel, `entity_name` (the EDGAR
   registrant: 92% of rows; `scored` on seven subtypes, `partial` on articles,
