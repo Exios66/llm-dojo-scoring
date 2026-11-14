@@ -719,18 +719,34 @@
   },
   "insurance_claim__outpatient__spurious__no_cms_source_table": {
    "plain": {
-    "field_map_sha": "e7ae9d6bb6658fcb401d99b1798187dcd17be961688c5429c521d5dc71b0a4e9"
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "field_map_sha": "e7ae9d6bb6658fcb401d99b1798187dcd17be961688c5429c521d5dc71b0a4e9",
+    "fp": 0
    },
    "with_subclass": {
-    "field_map_sha": "e7ae9d6bb6658fcb401d99b1798187dcd17be961688c5429c521d5dc71b0a4e9"
+    "extraction_f1": 1.0,
+    "extraction_f2": 1.0,
+    "extraction_precision": 1.0,
+    "field_map_sha": "e7ae9d6bb6658fcb401d99b1798187dcd17be961688c5429c521d5dc71b0a4e9",
+    "fp": 0
    }
   },
   "insurance_claim__pde__mixed__no_cms_source_table": {
    "plain": {
-    "field_map_sha": "e7ae9d6bb6658fcb401d99b1798187dcd17be961688c5429c521d5dc71b0a4e9"
+    "extraction_f1": 0.9091,
+    "extraction_f2": 0.862,
+    "extraction_precision": 1.0,
+    "field_map_sha": "e7ae9d6bb6658fcb401d99b1798187dcd17be961688c5429c521d5dc71b0a4e9",
+    "fp": 0
    },
    "with_subclass": {
-    "field_map_sha": "e7ae9d6bb6658fcb401d99b1798187dcd17be961688c5429c521d5dc71b0a4e9"
+    "extraction_f1": 0.9091,
+    "extraction_f2": 0.862,
+    "extraction_precision": 1.0,
+    "field_map_sha": "e7ae9d6bb6658fcb401d99b1798187dcd17be961688c5429c521d5dc71b0a4e9",
+    "fp": 0
    }
   },
   "insurance_claim__pde__predicted_cms_table_only_pred": {
@@ -924,7 +940,7 @@
    }
   }
  },
- "dojo_version": "0.28.0",
+ "dojo_version": "0.28.1",
  "payload": {
   "contract__agency__partial__Agency_Agreements": {
    "fields": {
@@ -1006,6 +1022,12 @@
    "extraction_f2": 0.8974,
    "extraction_precision": 1.0
   },
+  "contract__ip__no_ground_truth": {
+   "extraction_f1": null,
+   "extraction_f2": null,
+   "extraction_precision": null,
+   "extraction_recall": null
+  },
   "contract__joint_venture__partial__Joint_Venture": {
    "fields": {
     "ambiguous_fields": [
@@ -1035,6 +1057,12 @@
     }
    },
    "overall_extraction_score": 0.6875
+  },
+  "contract__license__cuad_labels_none_predicted": {
+   "extraction_f1": null,
+   "extraction_f2": null,
+   "extraction_precision": null,
+   "extraction_recall": null
   },
   "contract__license__spurious__License_Agreements": {
    "extraction_f1": 1.0,
@@ -1086,6 +1114,12 @@
    "extraction_f2": 0.8974,
    "extraction_precision": 1.0
   },
+  "contract__service__cuad_labels_good": {
+   "extraction_f1": null,
+   "extraction_f2": null,
+   "extraction_precision": null,
+   "extraction_recall": null
+  },
   "contract__service__partial__Service": {
    "fields": {
     "ambiguous_fields": [
@@ -1121,10 +1155,22 @@
    "extraction_f2": 1.0,
    "extraction_precision": 1.0
   },
+  "contract__supply__cuad_labels_as_dict": {
+   "extraction_f1": null,
+   "extraction_f2": null,
+   "extraction_precision": null,
+   "extraction_recall": null
+  },
   "contract__supply__mixed__Supply": {
    "extraction_f1": 0.9333,
    "extraction_f2": 0.8974,
    "extraction_precision": 1.0
+  },
+  "corporate_record__bylaws__no_ground_truth": {
+   "extraction_f1": null,
+   "extraction_f2": null,
+   "extraction_precision": null,
+   "extraction_recall": null
   },
   "correspondence__memo__partial": {
    "fields": {
@@ -1173,6 +1219,12 @@
     }
    },
    "overall_extraction_score": 0.8
+  },
+  "correspondence__other__no_ground_truth": {
+   "extraction_f1": null,
+   "extraction_f2": null,
+   "extraction_precision": null,
+   "extraction_recall": null
   },
   "correspondence__press_release__partial": {
    "fields": {
@@ -1295,6 +1347,40 @@
    },
    "overall_extraction_score": 0.6861
   },
+  "insurance_claim__outpatient__spurious__no_cms_source_table": {
+   "extraction_f1": 1.0,
+   "extraction_f2": 1.0,
+   "extraction_precision": 1.0
+  },
+  "insurance_claim__pde__mixed__no_cms_source_table": {
+   "extraction_f1": 0.9091,
+   "extraction_f2": 0.862,
+   "extraction_precision": 1.0
+  },
+  "insurance_claim__property__no_ground_truth": {
+   "extraction_f1": null,
+   "extraction_f2": null,
+   "extraction_precision": null,
+   "extraction_recall": null
+  },
+  "merger_agreement__all_cash__maud_labels_partial": {
+   "extraction_f1": null,
+   "extraction_f2": null,
+   "extraction_precision": null,
+   "extraction_recall": null
+  },
+  "merger_agreement__all_cash__no_ground_truth": {
+   "extraction_f1": null,
+   "extraction_f2": null,
+   "extraction_precision": null,
+   "extraction_recall": null
+  },
+  "merger_agreement__all_stock__maud_labels_colon_question": {
+   "extraction_f1": null,
+   "extraction_f2": null,
+   "extraction_precision": null,
+   "extraction_recall": null
+  },
   "merger_agreement__all_stock__partial": {
    "extraction_f1": 0.5333,
    "extraction_f2": 0.4762,
@@ -1339,6 +1425,18 @@
     }
    },
    "overall_extraction_score": 0.5556
+  },
+  "merger_agreement__mixed_cash_stock__maud_object_clauses": {
+   "extraction_f1": null,
+   "extraction_f2": null,
+   "extraction_precision": null,
+   "extraction_recall": null
+  },
+  "merger_agreement__other__maud_labels_no_clause_keys": {
+   "extraction_f1": null,
+   "extraction_f2": null,
+   "extraction_precision": null,
+   "extraction_recall": null
   },
   "merger_agreement__other__mixed": {
    "extraction_f1": 0.875,
