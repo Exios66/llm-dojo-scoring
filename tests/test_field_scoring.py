@@ -1766,3 +1766,135 @@ _HOSTILE_ROUND4 = [
 def test_document_date_scan_stays_linear_on_overlapping_and_unicode_text(hostile):
     """The overlapping scan and the digit normalisation keep the scan linear on 200 KB."""
     _assert_scan_is_linear(hostile)
+
+
+# Round 5 (#147 review): compact pre-1900 dates, ordinal ranges, compound ordinals across whitespace runs
+@pytest.mark.parametrize(
+    "pred, doc",
+    [
+        ("1899-03-03", "Effective 18990303."),
+        ("1800-01-31", "Effective 18000131."),
+        ("2099-12-31", "Effective 20991231."),
+        ("2024-03-03", "Effective 20240303."),
+    ],
+)
+def test_compact_date_reads_the_whole_supported_century_range(pred, doc):
+    """A compact YYYYMMDD reads for 1800-2099, like every other form (GROUNDING.md)."""
+    assert fs._date_grounded_in_doc(fs._parse_date_parts(pred), doc), (pred, doc)
+
+
+@pytest.mark.parametrize(
+    "pred, doc",
+    [
+        ("1799-03-03", "Effective 17990303."),  # before 1800
+        ("2100-03-03", "Effective 21000303."),  # after 2099
+        ("1899-03-03", "order 118990303"),  # inside a longer digit run
+        ("1899-03-03", "id 189903031234"),
+        ("1899-03-03", "no 18990303-A"),
+        ("1899-02-30", "Effective 18990230."),  # not a date
+    ],
+)
+def test_compact_date_outside_the_range_or_inside_an_id_is_not_read(pred, doc):
+    """Widening the century keeps the guards against ids, long digit runs and non-dates."""
+    assert not fs._date_grounded_in_doc(fs._parse_date_parts(pred), doc), (pred, doc)
+
+
+_ORDINAL_RANGE_GROUNDED = [
+    ("2024-03-03", "March 3rd through 5th, 2024"),
+    ("2024-03-05", "March 3rd through 5th, 2024"),
+    ("2024-03-01", "March 1st to 3d, 2024"),
+    ("2024-03-03", "March 1st to 3d, 2024"),
+    ("2024-03-02", "March 2nd-4th, 2024"),
+    ("2024-03-04", "March 2nd-4th, 2024"),
+    ("2024-03-03", "3rd through 5th March 2024"),
+    ("2024-03-05", "3rd through 5th of March, 2024"),
+    ("2024-03-03", "3d through 5d of March, 2024"),
+    ("2024-03-30", "March 30th-April 2nd, 2024"),
+    ("2024-04-02", "March 30th-April 2nd, 2024"),
+    ("2024-03-03", "March 3rd\u20135th, 2024"),
+    ("March 3", "held March 3rd through 5th"),
+    ("March 5", "held March 3rd through 5th"),
+    ("March 5", "held 3rd to 5th March"),
+    ("June 30", "held March 1st to June 30th"),
+]
+
+
+@pytest.mark.parametrize("pred, doc", _ORDINAL_RANGE_GROUNDED)
+def test_range_with_ordinal_suffixes_reads_both_ends(pred, doc):
+    """"March 3rd through 5th, 2024" states March 3 and March 5, like "March 3 through 5, 2024"."""
+    assert fs._date_grounded_in_doc(fs._parse_date_parts(pred), doc), (pred, doc)
+
+
+@pytest.mark.parametrize("pred, doc", _ORDINAL_RANGE_GROUNDED)
+def test_range_with_ordinal_suffixes_grounds_through_the_factuality_audit(pred, doc):
+    """The public audit path agrees: a date in an ordinal range is verified in the document."""
+    assert fs.audit_scalar_field("date", pred, None, doc)["verified_in_doc"] == 1, (pred, doc)
+
+
+@pytest.mark.parametrize(
+    "pred, doc",
+    [
+        ("2024-03-04", "March 3rd through 5th, 2024"),  # the middle is not stated
+        ("2024-03-04", "3rd through 5th March 2024"),
+        ("2023-03-03", "March 3rd through 5th, 2024"),  # the year must agree
+        ("2024-03-03", "March 3rd through 5th"),  # year-less never grounds a year
+        ("March 4", "March 3rd through 5th"),
+    ],
+)
+def test_range_with_ordinal_suffixes_does_not_ground_the_middle_or_a_wrong_year(pred, doc):
+    """An ordinal range states its two ends only, and a year-less one states no year."""
+    assert not fs._date_grounded_in_doc(fs._parse_date_parts(pred), doc), (pred, doc)
+
+
+_GAPS = [
+    "   ", "\t\t\t", "\n\n\n\n", " \t \n ", "\u00a0\u00a0\u00a0", " " * 40,
+    # separators NFKC keeps: one is enough to split the words on the ASCII-only scan
+    "\u2028", "\u2029\u2029", "\x85\x85", "\x1c\x1c", " \u2028 ",
+]
+
+
+@pytest.mark.parametrize("gap", _GAPS, ids=[repr(g)[:12] for g in _GAPS])
+@pytest.mark.parametrize("tens", ["twenty", "thirty", "Fifty"])
+def test_compound_ordinal_is_no_day_across_any_whitespace_run(tens, gap):
+    """"thirty   second of March" names no day; its tail is never read as the 2nd."""
+    doc = f"{tens}{gap}second of March 2024"
+    assert not fs._date_grounded_in_doc(date(2024, 3, 2), doc), repr(doc)
+    assert not fs._date_grounded_in_doc(fs._DateParts(None, 3, 2), doc), repr(doc)
+
+
+@pytest.mark.parametrize("gap", _GAPS, ids=[repr(g)[:12] for g in _GAPS])
+def test_twenty_first_across_a_whitespace_run_reads_like_the_single_space_form(gap):
+    """"twenty   first of March 2024" is the 21st and never the 1st, exactly as with one space."""
+    for doc in ("twenty first of March 2024", f"twenty{gap}first of March 2024"):
+        assert fs._date_grounded_in_doc(date(2024, 3, 21), doc), repr(doc)
+        assert not fs._date_grounded_in_doc(date(2024, 3, 1), doc), repr(doc)
+
+
+@pytest.mark.parametrize("glue", ["x_", "2", "\u00e9"])
+def test_compound_ordinal_glued_to_a_word_reads_like_the_single_space_form(glue):
+    """A tens word glued to the word before it still guards its tail, whatever the gap."""
+    for gap in (" ", "   ", "\n\n"):
+        doc = f"{glue}thirty{gap}second of March 2024"
+        assert not fs._date_grounded_in_doc(date(2024, 3, 2), doc), repr(doc)
+
+
+def test_compound_ordinal_whitespace_run_matches_the_prediction_side():
+    """The prediction side already collapses whitespace; the document scan now agrees with it."""
+    assert fs._parse_date_parts("twenty   first of March 2024") == fs._parse_date_parts("twenty first of March 2024")
+    assert fs._parse_date_parts("thirty   second of March 2024") == fs._parse_date_parts("thirty second of March 2024")
+
+
+_HOSTILE_ROUND5 = [
+    "twenty" + " " * 200_000 + "first of March 2024",
+    "twenty   " * 40_000,
+    "thirty\n\n second of March " * 10_000,
+    "March 3rd through " * 15_000,
+    "3rd-" * 50_000,
+    "18990303" * 25_000,
+]
+
+
+@pytest.mark.parametrize("hostile", _HOSTILE_ROUND5, ids=[f"round5_{i}" for i in range(len(_HOSTILE_ROUND5))])
+def test_document_date_scan_stays_linear_on_ordinal_ranges_and_whitespace_runs(hostile):
+    """The widened prefilter and the whitespace normalisation keep the scan linear."""
+    _assert_scan_is_linear(hostile)

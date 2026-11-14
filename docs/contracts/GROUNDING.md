@@ -83,7 +83,7 @@ ignored:
 
 | Form | Examples |
 | --- | --- |
-| ISO and year-first numeric | `2024-03-03`, `2024/03/03`, `2024.03.03`, `2024-03-03T10:30:00Z`, `2024-Mar-03`, compact `20240303` |
+| ISO and year-first numeric | `2024-03-03`, `2024/03/03`, `2024.03.03`, `2024-03-03T10:30:00Z`, `2024-Mar-03`, compact `20240303` and `18990303` (compact years run 1800 to 2099 too) |
 | numeric with a year last | `3/24/2006`, `04-01-06`, `13.04.2024`, `03.04.24`, `3.4.24`, a dotted range `12.31.99-12.31.99` |
 | month-first prose | `March 3, 2024`, `Mar. 3rd, 2024`, `March 3 2024`, `March the 3rd, 2024`, `may 3, 2024`, `March 3rd of 2024`, `March, 3 2024`, `March 3d, 2024` |
 | day-first prose | `3 March 2024`, `3rd of March, 2024`, `03-Mar-2024`, `3rd-March-2024`, `3/Mar/2024`, `the 3rd day of March, 2024` (also OCR splits such as `18t h day of`, and "the month of": `3rd day of the month of March, 2024`) |
@@ -94,14 +94,14 @@ ignored:
 | year-first prose | `2024 March 3`, `2024, March 3rd` |
 | month and year | `March 2024`, `March of 2024`, `Mar-2024`, `2024-03`, `03/2024`, `3/2024` |
 | month and day, no year | `March 3`, `3rd of March`, `twenty-first of June` |
-| day ranges | `March 3-5, 2024`, `3-5 March 2024`, `March 3 to 5, 2024`, `March 3 through 5, 2024`, `March 30-April 2, 2024`, and year-less `March 1 to June 30` |
+| day ranges | `March 3-5, 2024`, `3-5 March 2024`, `March 3 to 5, 2024`, `March 3 through 5, 2024`, `March 3rd through 5th, 2024`, `March 30-April 2, 2024`, and year-less `March 1 to June 30` |
 
 Digits written full-width or in another script (`２０２４-０３-０３`) are folded to ASCII (NFKC
 and a decimal map) on the document and on the value, as are no-break and other Unicode spaces.
 
 Ordinal words run from `first` to `thirty-first` (hyphen or space). They count only as a whole
 day: `thirty-second`, `forty-first` and `fifty-third` name no day (a bare `second` or `third`
-after a tens word is not read either). A day written twice, `3rd (third)`, is that day; when the
+after a tens word is not read either, however much whitespace separates the two words). A day written twice, `3rd (third)`, is that day; when the
 two disagree (`3rd (fourth)`) the day is not read, and the month and year still are. Spelled-out
 years are `two thousand [and] ...` and `nineteen ...` / `eighteen ...`.
 Document years run from 1800 to 2099 in every form (so `1/1000` is a fraction, not a date).
@@ -166,7 +166,8 @@ Lookalikes that do read as a date (trade-offs for reading everything above):
 
 - a dotted version with small parts that has no version or section word before it (`1.2.34`,
   `10.12.15`), and one written as a range (`1.2.34-1.2.35`);
-- a timestamp `12.30.45`, an eight-digit number that is a valid `YYYYMMDD` (a SKU), a fraction in
+- a timestamp `12.30.45`, an eight-digit number that is a valid `YYYYMMDD` from 1800 to 2099 (a SKU, or a
+  claim or Bates number such as `18450317`, even after "Claim No."), a fraction in
   the 1800 to 2099 range (`1/2000` is January 2000);
 - a month name followed by a number: `Dec 25 units`, `12 March Road`, a capitalised "May" or "March"
   next to a number ("Theresa May 5"), `March 3, 24 hours` (March 3, 2024), `4 March 15 people`
