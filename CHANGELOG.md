@@ -17,6 +17,69 @@ Format based on Keep a Changelog; versioning is SemVer.
   them (a CMS row's `supporting_documents` items are `cms_doc_ref`). A separate pass: nothing on the
   scoring path imports it, and the headline, field-micro and golden scores are unchanged.
   Contract: `docs/contracts/GROUNDING.md`. No consumer imports it yet (`hold`).
+- **Score change: dates in the document are read in every common written form** (tracker
+  #146, #147). The factuality audit and the grounding verdicts decide whether the document
+  states a predicted date by scanning it for dates. The old scan read `d/m/y` numeric (with
+  `-`, `/` or `.`), "Month D, YYYY" (any case) and "Dth day of Month, YYYY", each only with a
+  word boundary on both sides, so it also read dotted `3.4.24`, a date before `@`, `-` or `/`
+  (`01/01/2024-12/31/2024`, `Filed 3/1/2024-Smith`) and the end of "March 30-April 2, 2024". The
+  scan now also reads ISO and year-first numeric (`2024-03-03`, `2024/03/03`, `2024.03.03`,
+  `2024-03-03T10:30:00Z`, `2024-Mar-03`, compact `20240303`, an ISO interval joined by `/`),
+  month-first prose with an ordinal, "the", a comma after the month, "of" before the year or no
+  comma ("Mar. 3rd, 2024", "March the 3rd, 2024", "March, 3 2024", "March 3rd of 2024"), day-first
+  prose ("3 March 2024", "3rd of March, 2024", "03-Mar-2024", "3rd-March-2024", "3/Mar/2024",
+  "3rd day of the month of March, 2024"), glued `03MAR2024` and `3MAR24`, two-digit-year prose
+  ("31 Dec 23", "Mar 3, 24", "March 3rd, '24"), the legal "3d", spelled-out days and years ("this
+  third day of March, two thousand twenty-four", "the Thirty-first day of December, 2024",
+  "twenty-first of June 2024", "May twenty-fourth, 2024"), "in the year of our Lord 2024", a day
+  written twice ("the 3rd (third) day of March, 2024"; "3rd (fourth)" names no day), year-first
+  prose ("2024 March 3"), month and year ("March 2024", "March of 2024", "Mar-2024", "2024-03",
+  "03/2024", "3/2024"), month and day with no year ("March 3", "3rd of March"), and day ranges
+  where the document states both ends ("March 3-5, 2024", "3 to 5 March 2024", "March 3 through 5,
+  2024", "March 30-April 2, 2024", year-less "March 1 to June 30", dotted "12.31.99-12.31.99").
+  Digits in other scripts and full-width digits are folded to ASCII, on the document and on the
+  value. Every start position is tried, so a number in front of a month ("Item 4 March 15, 2024")
+  no longer hides the full date.
+  A complete date may touch punctuation, `_`, `@` or a letter after it and may follow `_`, `-`,
+  `/` or a space (`contract_3-1-2024.pdf`, `3/1/2024_v2`, `Filed 3/1/2024-Smith` all read; the old
+  scan read the last one but not the first two), but it does not start right after a letter or
+  digit (`HO3-12-2020`, `A1-12-2020` are ids). The rule is unchanged: every component the
+  prediction states must be stated by the document date and equal, so a year-less document
+  date never grounds a prediction that states a year, and a full document date grounds a
+  partial prediction that agrees. Ambiguous numeric `03/04/2024` stays month-first and the
+  two-digit-year pivot is unchanged. Not dates: ids (`INV-2024-0301`, `2024-03-0001`), phone
+  numbers, money (`March 3,000`), the modal verb "may", a month word with no number, years
+  outside 1800 to 2099 (`1/1000`), "thirty-second of March", a dotted span right after a version
+  word ("v", "version", "ver", "release", "build", "rev", with an optional "notes", colon or
+  spaces: `Version: 1.2.34`) or a section word (Section, Sec., §, ¶, Clause, Article, Art.,
+  Paragraph, Para., Rule, Item, Part, Schedule, Exhibit: `Section 3.1.20`), and a numeric month
+  and year alone after Case, No., Number, #, Ordinance, Resolution, Policy, Claim, Docket, Ref,
+  RFC, Pub. L., ext., Room, Invoice, Inv. or a section word (`Case No. 03-2024`; a full date
+  such as `Policy dated 03/12/2020` still reads). A bare `1.2.34` with no such word still reads
+  as January 2, 2034, because `3.4.24` must read. The old scan also read "5 days after the first
+  day of March 2024" as March 5, and "version 1.2.34" as January 2, 2034; it no longer does.
+  On the interpretation side `_parse_date_parts` now reads spelled-out days and years, "in the
+  year of our Lord", the legal "3d", "the month of", an article before a day, "in March of
+  2024", a day word after the month, "March 3 to 5, 2024" (as its first day, since a single value
+  never invents a second date), an em dash in a range and a stray closing bracket, so a
+  prediction and a label in those forms score as the same date. A test pins that the value
+  reader and the document scan read the same forms (one deliberate exception, "March 3 24").
+  The scan is linear on hostile text (bounded gaps, per-group lookaheads; guarded by a 0.5 s test
+  on 200 KB). Trade-offs that remain are listed in `docs/contracts/GROUNDING.md` ("Dates"): a
+  version with no version word (`1.2.34`), `1/2000`, a timestamp `12.30.45`, an 8-digit
+  `YYYYMMDD` SKU, "12 March Road", "Theresa May 5", "March 3, 24 hours" and "4 March 15" read as
+  dates.
+  **Metrics that move** on unchanged predictions: `verified_in_doc`, `verified_precision`
+  and `hallucination_rate` of the factuality audit (`audit_scalar_field`, per field and as
+  the run means `verified_precision`, `hallucination_rate`, `extraction_hallucination_rate`,
+  `extraction_overall_verified_precision`), up for dates the document writes in a newly read
+  form and down for the false matches removed; the grounding verdict of a `date` value
+  (`grounding_not_found_rate`, new in this same release, so it has no earlier value to
+  compare). The date field score moves only for the forms `_parse_date_parts` newly reads
+  (spelled-out, "the", "in the year", "3d", brackets, ranges), so `pipeline.extraction.*` can move
+  on those. Goldens are unchanged (no golden case carries document text). Consumers:
+  `llm-mailroom` and the sandbox vendor snapshot get new factuality numbers on the next pin
+  bump; no public name changes. Contract: `docs/contracts/GROUNDING.md` ("Dates").
 - `grounding/candidates.py`, `ledger.py`, `labels.py`, `io.py`: every audited value becomes a
   review candidate with a stable id and a priority; confirmations from a person or an agent
   are validated into an append-only ledger (rejects kept with a reason); valid labels are
