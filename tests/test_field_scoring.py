@@ -1240,6 +1240,31 @@ def test_the_same_date_in_the_newly_read_forms_scores_one(pred, label):
     assert fs._date_match_similarity(pred, label) == 1.0
 
 
+
+def _assert_scan_is_linear(text: str) -> None:
+    """The document scan grows linearly with its input, on any machine.
+
+    A wall-clock budget is machine-dependent (CI runners are slower than a laptop), so
+    the guard compares the scan on a quarter of ``text`` with the scan on all of it:
+    linear growth is about 4x, catastrophic backtracking 16x or more. A generous
+    absolute ceiling still catches a scan that explodes outright.
+    """
+
+    def best(sample: str, runs: int) -> float:
+        """The fastest of ``runs`` uncached scans of ``sample``."""
+        times = []
+        for _ in range(runs):
+            fs._document_dates.cache_clear()
+            start = time.perf_counter()
+            fs._document_dates(sample)
+            times.append(time.perf_counter() - start)
+        return min(times)
+
+    quarter = best(text[: len(text) // 4], 3)
+    full = best(text, 2)
+    assert full < 5.0, f"scan took {full:.2f}s on {len(text)} chars"
+    assert full < 8 * quarter + 0.05, f"superlinear: {quarter:.3f}s on a quarter, {full:.3f}s on all"
+
 _HOSTILE = [
     "March" + " " * 200_000 + "x",
     "March 3" + " " * 200_000 + "x",
@@ -1260,10 +1285,7 @@ _HOSTILE = [
 @pytest.mark.parametrize("hostile", _HOSTILE, ids=[f"hostile{i}" for i in range(len(_HOSTILE))])
 def test_document_date_scan_is_linear_on_hostile_text(hostile):
     """Long runs of spaces, separators or near-dates never make the scan quadratic."""
-    fs._document_dates.cache_clear()
-    start = time.perf_counter()
-    fs._document_dates(hostile)
-    assert time.perf_counter() - start < 0.5
+    _assert_scan_is_linear(hostile)
 
 
 # ---------------------------------------------------------------------------
@@ -1476,11 +1498,8 @@ _HOSTILE_ROUND3 = [
 
 @pytest.mark.parametrize("hostile", _HOSTILE_ROUND3, ids=[f"round3_{i}" for i in range(len(_HOSTILE_ROUND3))])
 def test_document_date_scan_stays_linear_on_the_new_forms(hostile):
-    """The new forms keep the scan under the same 0.5 s budget on 200 KB."""
-    fs._document_dates.cache_clear()
-    start = time.perf_counter()
-    fs._document_dates(hostile)
-    assert time.perf_counter() - start < 0.5
+    """The new forms keep the scan linear on 200 KB."""
+    _assert_scan_is_linear(hostile)
 
 
 # ---------------------------------------------------------------------------
@@ -1745,8 +1764,5 @@ _HOSTILE_ROUND4 = [
 
 @pytest.mark.parametrize("hostile", _HOSTILE_ROUND4, ids=[f"round4_{i}" for i in range(len(_HOSTILE_ROUND4))])
 def test_document_date_scan_stays_linear_on_overlapping_and_unicode_text(hostile):
-    """The overlapping scan and the digit normalisation keep the 0.5 s budget on 200 KB."""
-    fs._document_dates.cache_clear()
-    start = time.perf_counter()
-    fs._document_dates(hostile)
-    assert time.perf_counter() - start < 0.5
+    """The overlapping scan and the digit normalisation keep the scan linear on 200 KB."""
+    _assert_scan_is_linear(hostile)

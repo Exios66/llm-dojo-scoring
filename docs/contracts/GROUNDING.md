@@ -147,7 +147,8 @@ Rules that decide what is a date:
 - A year-less range (`March 1 to June 30`, `March 3-5`) states both its ends without a year; like
   every year-less date it grounds no value that states a year. It uses the partial-date guards.
 - Every gap inside a date is bounded (30 whitespace characters), so scanning is linear:
-  200 KB of hostile text scans in under 0.5 s (a test guards it).
+  The scan grows linearly with the text: a test checks that 200 KB of hostile text takes
+  under 8 times as long as its first quarter (quadratic backtracking would be 16 times).
 
 Not read, so the value is `not_found` (fix in the scanner if you hit one): ISO basic with a
 time (`20240303T1030`; with a colon it reads), compact dates inside a longer run (`INV20240303`),
