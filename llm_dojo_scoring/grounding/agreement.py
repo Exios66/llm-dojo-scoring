@@ -338,7 +338,8 @@ def select_spot_checks(
     is sampled, so that part of the sample never changes as the ledger grows. When the
     agent's paired checks in its latest ``trust_window`` plus its drawn candidates are
     fewer than ``min_per_agent``, its lowest remaining draws top it up (or all its
-    eligible candidates, if fewer). The top-up can change as candidates arrive, so a
+    eligible candidates, if fewer). The floor is capped at ``trust_window``, the most
+    paired checks that can count toward it. The top-up can change as candidates arrive, so a
     caller keeps its own record of what it sent. A candidate sampled for several agents
     is listed once.
 
@@ -351,7 +352,8 @@ def select_spot_checks(
     settings = replace(get_settings().grounding, **overrides).coerced()
     if isinstance(seed, bool) or not isinstance(seed, int):
         raise ValueError(f"seed must be a whole number, got {seed!r}")
-    rate, minimum = settings.spot_check_rate, settings.spot_check_min_per_agent
+    rate = settings.spot_check_rate
+    minimum = min(settings.spot_check_min_per_agent, settings.trust_window)
     checked = {reviewer_id: result.overall.n_checked
                for reviewer_id, result in reviewer_agreement(ledger).items()}
     eligible: dict[str, list[str]] = defaultdict(list)
