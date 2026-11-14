@@ -88,7 +88,9 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
             "The sandbox CUAD check that an Effective Date equals the Agreement Date "
             "compares stated components, so a yearless agreement date no longer matches a "
             "dated prediction (cuad_fp can move). Diagnostics date R^2 and date_mae_days "
-            "skip partial dates (no canonical metric_id covers them)."
+            "skip partial dates (no canonical metric_id covers them). In date-list matching "
+            "and audit_scalar_field / audit_list_field, a dated prediction is no longer a "
+            "match for a yearless label."
         ),
         "rescore_required": True,
     },
