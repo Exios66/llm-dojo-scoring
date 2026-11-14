@@ -21,33 +21,43 @@ Format based on Keep a Changelog; versioning is SemVer.
   #146, #147). The factuality audit and the grounding verdicts decide whether the document
   states a predicted date by scanning it for dates, and the scan found only three shapes
   (`d/m/y` numeric, "Month D, YYYY", "Dth day of Month, YYYY"). It now also reads ISO and
-  year-first numeric (`2024-03-03`, `2024/03/03`, `2024.03.03`, `2024-03-03T10:30:00Z`),
-  month-first prose with an ordinal, "the", no comma or a period ("Mar. 3rd, 2024",
-  "March the 3rd, 2024"), day-first prose ("3 March 2024", "3rd of March, 2024",
-  "03-Mar-2024"), month and year ("March 2024", "2024-03", "03/2024") and month and day
-  with no year ("March 3", "3rd of March"). A weekday prefix is ignored. The rule is
-  unchanged: every component the prediction states must be stated by the document date and
-  equal, so a year-less document date never grounds a prediction that states a year, and a
-  full document date grounds a partial prediction that agrees. Ambiguous numeric
-  `03/04/2024` stays month-first and the two-digit-year pivot is unchanged. Ids
-  (`INV-2024-0301`, `2024-03-0001`), phone numbers, versions (`1.2.34`), money
-  (`March 3,000`), the modal verb "may" and a month word with no number are not dates; a
-  document span inside a longer alphanumeric, hyphenated or dotted run is not either. The
-  old scan also read "5 days after the first day of March 2024" as March 5; it no longer
-  does. On the interpretation side `_parse_date_parts` now drops an article before a day
-  ("March the 3rd, 2024", "the 3rd of March 2024") and a stray closing bracket, so a
-  prediction and a label in those forms score as the same date.
+  year-first numeric (`2024-03-03`, `2024/03/03`, `2024.03.03`, `2024-03-03T10:30:00Z`,
+  `2024-Mar-03`, compact `20240303`), month-first prose with an ordinal, "the", no comma or
+  a period, in any case ("Mar. 3rd, 2024", "March the 3rd, 2024", "may 3, 2024"),
+  day-first prose ("3 March 2024", "3rd of March, 2024", "03-Mar-2024"), spelled-out days
+  and years ("this third day of March, two thousand twenty-four", "the Thirty-first day of
+  December, 2024", "twenty-first of June 2024"), "in the year of our Lord 2024", year-first
+  prose ("2024 March 3"), month and year ("March 2024", "March of 2024", "Mar-2024",
+  "2024-03", "03/2024", "3/2024"), month and day with no year ("March 3", "3rd of March"),
+  unpadded dotted `3.4.24`, and day ranges ("March 3-5, 2024", "3 to 5 March 2024",
+  "March 3 through 5, 2024", "March 30-April 2, 2024"), where the document states both ends.
+  Complete dates may touch punctuation, so `01/01/2024-12/31/2024`,
+  `March 1, 2024/March 1, 2025` and `contract_3-1-2024.pdf` read, as they did before. The rule is unchanged: every component the
+  prediction states must be stated by the document date and equal, so a year-less document
+  date never grounds a prediction that states a year, and a full document date grounds a
+  partial prediction that agrees. Ambiguous numeric `03/04/2024` stays month-first and the
+  two-digit-year pivot is unchanged. Ids (`INV-2024-0301`, `2024-03-0001`), phone numbers,
+  versions (`version 1.2.34`), money (`March 3,000`), the modal verb "may" and a month word
+  with no number are not dates. The old scan also read "5 days after the first day of March
+  2024" as March 5 and `1.2.34` as January 2, 2034; it no longer does. On the interpretation
+  side `_parse_date_parts` now reads spelled-out days and years, "in the year of our Lord",
+  an article before a day, "in March of 2024", "March 3 to 5, 2024" (as its first day, since
+  a single value never invents a second date) and a stray closing bracket, so a prediction
+  and a label in those forms score as the same date. The scan is linear on hostile text
+  (bounded gaps, a digit/word prefilter; guarded by a timing test). Trade-offs that remain
+  are listed in `docs/contracts/GROUNDING.md` ("Dates"): a version like `Section 3.2.15`,
+  `1/2000` and an 8-digit `YYYYMMDD` number read as dates.
   **Metrics that move** on unchanged predictions: `verified_in_doc`, `verified_precision`
   and `hallucination_rate` of the factuality audit (`audit_scalar_field`, per field and as
   the run means `verified_precision`, `hallucination_rate`, `extraction_hallucination_rate`,
   `extraction_overall_verified_precision`), up for dates the document writes in a newly read
   form and down for the false matches removed; the grounding verdict of a `date` value
   (`grounding_not_found_rate`, new in this same release, so it has no earlier value to
-  compare). The date field score moves only for the article and bracket forms above, so
-  `pipeline.extraction.*` can move on those. Goldens are unchanged (no golden case carries
-  document text). Consumers: `llm-mailroom` and the sandbox vendor snapshot get new factuality
-  numbers on the next pin bump; no public name changes. Contract:
-  `docs/contracts/GROUNDING.md` ("Dates").
+  compare). The date field score moves only for the forms `_parse_date_parts` newly reads
+  (spelled-out, "the", "in the year", brackets, ranges), so `pipeline.extraction.*` can move
+  on those. Goldens are unchanged (no golden case carries document text). Consumers:
+  `llm-mailroom` and the sandbox vendor snapshot get new factuality numbers on the next pin
+  bump; no public name changes. Contract: `docs/contracts/GROUNDING.md` ("Dates").
 <!-- end 0.31.0 -->
 
 - `schemas/doc_classes.py`: one hand-edited registry (`DOC_CLASSES`, `DocClass`, `field_types()`,
