@@ -110,13 +110,6 @@ Format based on Keep a Changelog; versioning is SemVer.
   embed the revision, so their values change from `<class>@v9.2.1` to `<class>@v9.3`. The golden
   baseline `tests/fixtures/golden/scores.json` was rewritten for those five labels only; no score
   value moved.
-- Production prompts re-vendored from llm-mailroom `19203eac` (#179's merge commit) with
-  `scripts/sync_production_prompts.py`. `get_prompt("sorter")` is now `sorter_condensed_v5`
-  (a bylaw amendment is `bylaws`, agreeing with the 0.28.1 sorter guide), replacing
-  `sorter_v15`; the other production bodies are unchanged and only their `source_commit`
-  moves. `tests/test_prompt_lineage.py` keeps the historical `sorter_v4` → `sorter_v14`
-  check by pinning the v14 body's sha256, and pins production to `sorter_condensed_v5`.
-
 ### Removed
 
 Production slim-down (#66). `scripts/consumer_closure.py` computes everything llm-mailroom,
@@ -233,6 +226,23 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
   (`freeze_goldens.py --check` exit 0); `SCORE_CHANGELOG` gains a 0.30.0 entry for
   `pipeline.extraction.overall` and the field-micro `f1`, `f2`, `precision` and `recall`
   (the #133 money fix can turn a false positive plus a false negative into a true positive).
+- Tooling only, no score change (review on #136): `scripts/consumer_closure.py` expands a consumer
+  `import *` (root `__all__`, module or package) and exits 2 when a consumer file does not parse;
+  `audit_consumer_surface.py` rejects an unknown `--root` code; `GT_COVERAGE.md` counts
+  `cms_source_table` on CMS subtypes only and says CUAD/MAUD counts are source-container coverage.
+
+## [0.29.0] - 2026-11-14
+### Changed
+
+- Production prompts re-vendored from llm-mailroom `19203eac` (#179's merge commit) with
+  `scripts/sync_production_prompts.py`. `get_prompt("sorter")` is now `sorter_condensed_v5`
+  (a bylaw amendment is `bylaws`, agreeing with the 0.28.1 sorter guide), replacing
+  `sorter_v15`; the other production bodies are unchanged and only their `source_commit`
+  moves. `tests/test_prompt_lineage.py` keeps the historical `sorter_v4` → `sorter_v14`
+  check by pinning the v14 body's sha256, and pins production to `sorter_condensed_v5`.
+
+### Fixed
+
 - Date scoring no longer reads the clock (#134, split from llm-mailroom#195).
   `field_scoring._parse_date` handed `dateutil` the bare text, and `dateutil` fills every
   component the text omits from today's date: the CUAD-style "18th day of August" got the
@@ -312,10 +322,6 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
   **Consumers:** this changes scores `llm-mailroom` and the sandbox report, so `llm-mailroom`
   needs a Dojo pin bump (`bump_dojo_scoring.py`) and the sandbox a vendor refresh once this
   is released. No public name changed.
-- Tooling only, no score change (review on #136): `scripts/consumer_closure.py` expands a consumer
-  `import *` (root `__all__`, module or package) and exits 2 when a consumer file does not parse;
-  `audit_consumer_surface.py` rejects an unknown `--root` code; `GT_COVERAGE.md` counts
-  `cms_source_table` on CMS subtypes only and says CUAD/MAUD counts are source-container coverage.
 
 ## [0.28.1] - 2026-11-07
 ### Changed
