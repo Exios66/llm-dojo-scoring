@@ -163,7 +163,8 @@ Lookalikes that do read as a date (trade-offs for reading everything above):
 
 - a dotted version with small parts that has no version or section word before it (`1.2.34`,
   `10.12.15`), and one written as a range (`1.2.34-1.2.35`);
-- a timestamp `12.30.45`, an eight-digit number that is a valid `YYYYMMDD` (a SKU), a fraction in
+- a timestamp `12.30.45`, an eight-digit number that is a valid `YYYYMMDD` from 1800 to 2099 (a SKU, or a
+  claim or Bates number such as `18450317`, even after "Claim No."), a fraction in
   the 1800 to 2099 range (`1/2000` is January 2000);
 - a month name followed by a number: `Dec 25 units`, `12 March Road`, a capitalised "May" or "March"
   next to a number ("Theresa May 5"), `March 3, 24 hours` (March 3, 2024), `4 March 15 people`
