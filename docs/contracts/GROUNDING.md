@@ -78,40 +78,61 @@ each read by the same parser; a weekday prefix ("Sunday, March 3, 2024") is igno
 
 | Form | Examples |
 | --- | --- |
-| ISO and year-first numeric | `2024-03-03`, `2024/03/03`, `2024.03.03`, `2024-03-03T10:30:00Z` |
-| numeric with a year last | `3/24/2006`, `04-01-06`, `13.04.2024`, `03.04.24` |
-| month-first prose | `March 3, 2024`, `Mar. 3rd, 2024`, `March 3 2024`, `March the 3rd, 2024` |
-| day-first prose | `3 March 2024`, `3rd of March, 2024`, `the 3rd day of March, 2024`, `03-Mar-2024` |
-| month and year | `March 2024`, `Mar. 2024`, `2024-03`, `03/2024` |
-| month and day, no year | `March 3`, `3rd of March` |
+| ISO and year-first numeric | `2024-03-03`, `2024/03/03`, `2024.03.03`, `2024-03-03T10:30:00Z`, `2024-Mar-03`, compact `20240303` |
+| numeric with a year last | `3/24/2006`, `04-01-06`, `13.04.2024`, `03.04.24`, `3.4.24` |
+| month-first prose | `March 3, 2024`, `Mar. 3rd, 2024`, `March 3 2024`, `March the 3rd, 2024`, `may 3, 2024` |
+| day-first prose | `3 March 2024`, `3rd of March, 2024`, `03-Mar-2024`, `the 3rd day of March, 2024` (also OCR splits such as `18t h day of`) |
+| spelled-out days and years | `this third day of March, 2024`, `the Thirty-first day of December, 2024`, `twenty-first of June 2024`, `first of March 2024`, `3rd day of March, two thousand twenty-four`, `3rd day of March, in the year of our Lord 2024` |
+| year-first prose | `2024 March 3`, `2024, March 3rd` |
+| month and year | `March 2024`, `March of 2024`, `Mar-2024`, `2024-03`, `03/2024`, `3/2024` |
+| month and day, no year | `March 3`, `3rd of March`, `twenty-first of June` |
+| day ranges | `March 3-5, 2024`, `3-5 March 2024`, `March 3 to 5, 2024`, `March 3 through 5, 2024`, `March 30-April 2, 2024` |
 
-Rules that keep a date-shaped string from becoming a date:
+Ordinal words run from `first` to `thirty-first` (hyphen or space); spelled-out years are
+`two thousand [and] ...` (2000 to 2099) and `nineteen ...` / `eighteen ...` (1800s and 1900s).
+
+Rules that decide what is a date:
 
 - A date states what it writes and nothing more. A year-less document date ("signed on
-  March 3") never grounds a value that states a year, and a month-and-year never
-  grounds a day. A full document date does ground a partial value that agrees ("March 3",
-  "2024-03").
+  March 3") never grounds a value that states a year, and a month and year never grounds a
+  day. A full document date does ground a partial value that agrees ("March 3", "2024-03").
+- A day range states both its ends and nothing between: `March 3-5, 2024` grounds March 3
+  and March 5, 2024, not March 4. A value that is itself a range ("March 3-5, 2024") is
+  read as its first day, so it is grounded when the document states that day.
 - An ambiguous numeric date is month-first: `03/04/2024` is March 4, so it grounds
   `2024-03-04`, not `2024-04-03`. A first or second number above 12 is the day. A
   two-digit year uses the fixed pivot (00 to 68 is 2000 to 2068, 69 to 99 is 1969 to 1999).
   The clock is never read.
-- A span inside a longer alphanumeric, hyphenated, slashed or dotted run is not a date
-  (`INV-2024-0301`, `2024-03-0001`, `415-505-2024`, `1.2.34`), nor is one after `#`, `@`,
-  a currency sign or `+`. Numbers must be in calendar range.
-- "May" is a month only when capitalised ("you may 5 times" is not May 5). A decimal or
-  thousands group after a day (`March 3,000`, `March 3.50`) is an amount.
-- Numeric month-and-year needs a zero-padded month (`03/2024`, not `3/2024`), so `1/2000`
-  stays a fraction. Dots between numbers need a four-digit year, or two-digit day, month
-  and year.
+- A complete date (day, month and a four-digit year, or numeric with a two-digit year after
+  dashes or slashes) may touch punctuation, `_`, `@` or a letter, so ranges
+  (`01/01/2024-12/31/2024`, `March 1, 2024/March 1, 2025`, `2024-03-01/2024-03-10`) and file
+  names (`contract_3-1-2024.pdf`) read, and both ends of a range are read. It may not touch
+  a digit: `2024-03-0001` is an identifier. The other forms (month and year, month and
+  day, compact, dotted two-digit year) must stand alone: a span inside a longer alphanumeric,
+  hyphenated, slashed or dotted run is not a date (`INV-2024-0301`, `415-505-2024`), nor is one
+  after `#`, `@`, a currency sign or `+`. Numbers must be in calendar range.
+- "May" and "March" are months in a partial date (month and year, month and day) only when
+  capitalised: "you may 5 times" is not May 5. With a day and a year ("may 3, 2024") any
+  case reads. A decimal or thousands group after a day (`March 3,000`, `March 3.50`) is an
+  amount.
+- A dotted two-digit year (`3.4.24`) is a date, except right after "v", "version", "ver",
+  "release", "build" or "rev" (`version 1.2.34` is not).
+- Every gap inside a date is bounded (30 whitespace characters), so scanning is linear:
+  200 KB of hostile text scans in under 0.5 s (a test guards it).
 
-Not read, so the value is `not_found` (fix in the scanner if you hit one): day ranges
-(`March 3-5, 2024`), an ISO interval joined by a slash (`2024-03-03/2024-03-10`; joined
-by an en dash it reads), compact `20240303`, year-first prose (`2024 March 3`), a lowercase
-"may", month names in other languages, spelled-out days ("third of March"), "the month of
-March 2024", and quarters or fiscal years. Lookalikes that do read as a date: a version
-written with two-digit parts (`10.12.15`), a padded month-year reference number
-(`INV 03/2024`) and a month name followed by a number ("Dec 25 units"). The headline
-factuality audit (`audit_scalar_field`) uses the same matcher, so these verdicts and its
+Not read, so the value is `not_found` (fix in the scanner if you hit one): ISO basic with a
+time ("20240303T1030"), compact dates inside a longer run (`INV20240303`), `3-2024`
+(unpadded month with a dash), lowercase "may" or "march" in a partial date, month names in
+other languages, cardinal day words ("twenty-one of June"), `March 3 and 5, 2024`, a
+second date glued after a dotted two-digit year (`3.4.24-3.5.24`), `Q1 2024`, fiscal years
+and ISO week dates. "The month of March 2024" reads as "March 2024".
+
+Lookalikes that do read as a date (trade-offs for reading everything above): a dotted
+version with small parts that is not preceded by one of the version words (`Section 3.2.15`
+is March 2, 2015); a month-and-year reference number (`INV 03/2024`) and a fraction
+(`1/2000`); an eight-digit number that is a valid `YYYYMMDD`; a month name followed by a
+number ("Dec 25 units"); a complete date inside an invoice number (`INV-2024-03-01`). The
+headline factuality audit (`audit_scalar_field`) uses the same matcher, so these verdicts and its
 `verified_in_doc`, `hallucination_rate` and `verified_precision` read a document's dates
 identically (tracked on Exios66/llm-dojo-scoring#146 and #147). A new field type
 is one entry in `grounding/verdicts.py:_RULES`.
