@@ -289,7 +289,7 @@ METRIC_META: dict[str, dict[str, str]] = {
     "grounding_not_found_rate": _m(
         "Document-grounding check of unlabelled values (grounding.verdicts.value_verdict): "
         "token containment for names and text, any-format date and amount match, "
-        "normalized identifier substring; closed-vocabulary labels are unverifiable.",
+        "identifier matched as whole adjacent alphanumeric parts; closed-vocabulary labels are unverifiable.",
         "Only predicted values on fields the GT does not label (key absent or "
         "pending_annotation); None when no audited value was checkable.",
         "structural",
