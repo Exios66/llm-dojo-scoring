@@ -68,6 +68,14 @@ def test_nan_is_refused(tmp_path):
     assert not path.exists()
 
 
+def test_new_files_are_owner_only(tmp_path):
+    """A file created by either path is readable by its owner only."""
+    replaced, appended = tmp_path / "a.jsonl", tmp_path / "b.jsonl"
+    write_jsonl([{"n": 1}], replaced)
+    write_jsonl([{"n": 1}], appended, append=True)
+    assert {p.stat().st_mode & 0o777 for p in (replaced, appended)} == {0o600}
+
+
 def test_replace_keeps_permissions(tmp_path):
     """Replacing a file keeps its mode."""
     path = tmp_path / "out.jsonl"

@@ -155,7 +155,9 @@ turns every audit record into a `ReviewCandidate`, whatever its verdict:
   text with whitespace collapsed for anything else or anything its type cannot parse.
   So re-running gives the same ids, `$1,250.00` and `1250 USD` are one candidate (as are
   `$1250` and `€1250`, and ids `1.2` and `12`: the forms are deliberately coarse), a
-  credit `-1250` is another, and a list item keeps its id when the list is reordered. A value seen twice is one candidate
+  credit `-1250` is another, and a list item keeps its id when the list is reordered.
+  Known limitation: because the currency is not kept, a value that swaps only the
+  currency of an already-audited amount on the same field is not a separate candidate. A value seen twice is one candidate
   (the first audit wins). An audit without `doc_id` raises `ValueError`.
 - **Order.** `priority` is 0 for `not_found`, 1 for `unverifiable`, 2 for `grounded`;
   candidates come sorted by priority, then fields with more candidates first, then
