@@ -99,7 +99,9 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         "change": (
             "Field-micro P/R/F1/F2 exclude a schema field the ground truth does not "
             "label on both sides (a correct value there was a false positive); an "
-            "off-schema key, or a value on a field labelled empty, is still one. A row "
+            "off-schema key, or a value on a field labelled empty (not_applicable, "
+            "schema_documented_absence), is still one; a pending_annotation field is "
+            "unlabelled and a value on it is not a false positive. A row "
             "with no labelled extraction field (presence-only CUAD, MAUD-only merger, "
             "no GT) gets them as null from the suite and doc scorers, not 0.0. A MAUD-only merger payload's "
             "headline metric_id is maud.question.micro_accuracy (overall is null). "

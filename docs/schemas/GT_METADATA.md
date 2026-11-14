@@ -22,12 +22,14 @@ before scoring (`ScoringSuite._score_extraction`). It guarantees:
    giant string element.
 2. **Absent fields are never required events.** `gt_presence` values
    `not_applicable`, `schema_documented_absence`, and `pending_annotation`
-   (label backfill not yet run) are replaced with `""`
-   (`ABSENT_PRESENCE_STATUSES`) — including stale non-empty values attached
-   to a pending field — and no presence expectations are derived from a
-   pending `cuad_clause_labels`. A model that correctly emits nothing for
-   them is not penalized; filling one is still a spurious fill (FP), which is
-   the honest signal.
+   (label backfill not yet run) never score (`ABSENT_PRESENCE_STATUSES`) —
+   including stale non-empty values attached to a pending field — and no
+   presence expectations are derived from a pending `cuad_clause_labels`.
+   `not_applicable` and `schema_documented_absence` are replaced with `""`
+   (labelled empty): a model that correctly emits nothing is not penalized,
+   and filling one is a spurious fill (FP), which is the honest signal.
+   `pending_annotation` is *unlabelled*, so `scoring_gt_fields` drops the key
+   and field-micro excludes it on both sides: a value there is not an FP.
 3. **Only the document type's own label set is scored.** When the row carries
    `gt_presence` (the Hub contract), fields are scoped to that suite's
    extraction schema plus the content differentiators its extras can score.

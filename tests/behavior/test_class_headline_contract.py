@@ -202,6 +202,73 @@ def test_value_on_a_field_labelled_empty_is_a_false_positive():
     assert payload["extraction_precision"] < 1.0
 
 
+def _with_presence(gt_fields: str, field: str, status: str) -> str:
+    """The same Hub row with ``field`` blanked and ``gt_presence`` giving it ``status``."""
+    row = json.loads(gt_fields)
+    row[field] = ""
+    row["gt_presence"] = json.dumps({field: status})
+    return json.dumps(row)
+
+
+@pytest.mark.parametrize(("status", "is_false_positive"), [
+    ("pending_annotation", False),
+    ("not_applicable", True),
+    ("schema_documented_absence", True),
+])
+def test_value_on_a_pending_field_is_not_a_false_positive(status, is_false_positive):
+    """Only a field the dataset has not labelled yet is excluded from field-micro.
+
+    ``not_applicable`` and ``schema_documented_absence`` are labelled empty, so a
+    stated value is still a false positive; ``pending_annotation`` is unlabelled.
+    """
+    gt = _with_presence(CORRESPONDENCE_GT, "sender", status)
+    filled = score("correspondence", gt,
+                   {**CORRESPONDENCE_ORACLE, "sender": "Avery Example"}, "email")
+    silent = score("correspondence", gt, CORRESPONDENCE_ORACLE, "email")
+    assert filled["overall_score"] == silent["overall_score"] == 1.0
+    assert silent["extraction_precision"] == silent["extraction_f1"] == 1.0
+    if is_false_positive:
+        assert filled["extraction_precision"] < 1.0
+        assert filled["extraction_f1"] < 1.0
+    else:
+        assert filled["extraction_precision"] == 1.0
+        assert filled["extraction_f1"] == 1.0
+
+
+@pytest.mark.parametrize(("status", "is_false_positive"), [
+    ("pending_annotation", False),
+    ("not_applicable", True),
+    ("schema_documented_absence", True),
+])
+def test_batch_value_on_a_pending_field_follows_the_single_document_rule(status, is_false_positive):
+    """A batch of Hub rows excludes a pending field and keeps the others labelled empty."""
+    pending = _with_presence(CORRESPONDENCE_GT, "sender", status)
+    payload = get_suite("correspondence").score_document(
+        [CORRESPONDENCE_GT, pending],
+        [CORRESPONDENCE_ORACLE, {**CORRESPONDENCE_ORACLE, "sender": "Avery Example"}],
+        doc_subclass="email",
+    )
+    assert payload["extraction_recall"] == 1.0
+    if is_false_positive:
+        assert payload["extraction_precision"] < 1.0
+    else:
+        assert payload["extraction_precision"] == 1.0
+        assert payload["extraction_f1"] == 1.0
+
+
+@pytest.mark.parametrize(("status", "is_false_positive"), [
+    ("pending_annotation", False),
+    ("not_applicable", True),
+])
+def test_value_on_a_pending_cms_adjuster_is_not_a_false_positive(status, is_false_positive):
+    """The CMS documented-absent ``adjuster`` follows the same pending rule."""
+    labels = {"claim_type": "carrier", "claim_number": "CLM-0002", "intent": "claim_submission",
+              "subject_matter": "Carrier claim.", "keywords": ["carrier claim"]}
+    gt = _with_presence(hub_row(**labels), "adjuster", status)
+    payload = score("insurance_claim", gt, {**labels, "adjuster": "Casey Example"}, "carrier")
+    assert (payload["extraction_precision"] < 1.0) is is_false_positive
+
+
 def test_off_schema_key_is_still_a_false_positive():
     """A key that is not in the class schema at all still lowers precision."""
     payload = score("correspondence", CORRESPONDENCE_GT,
