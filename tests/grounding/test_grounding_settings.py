@@ -66,6 +66,7 @@ def test_taxonomy_block_is_applied():
     ({"trust_min_n": 2.5}, "trust_min_n must be a whole number"),
     ({"spot_check_min_per_agent": -1}, "spot_check_min_per_agent must be a whole number >= 0"),
     ({"trust_window": 10}, "trust_window (10) must be at least grounding.trust_min_n (50)"),
+    ({"trust_min_n": 0}, "trust_min_n must be at least 1"),
 ])
 def test_bad_block_raises_and_keeps_old_values(block, message):
     """A bad value raises ValueError naming it, and nothing in the block is applied."""
@@ -148,3 +149,13 @@ def test_configure_whole_section_is_validated(value):
     assert get_settings().grounding == GroundingSettings()
     configure(grounding=GroundingSettings(trust_bar=0.8))
     assert get_settings().grounding.trust_bar == 0.8
+
+
+def test_updates_are_in_place():
+    """A kept reference to the grounding section sees later updates."""
+    section = get_settings().grounding
+    configure(grounding__trust_bar=0.9)
+    configure_from_taxonomy({"grounding": {"trust_min_n": 10}})
+    configure(grounding=GroundingSettings(spot_check_rate=0.5))
+    assert get_settings().grounding is section
+    assert section.spot_check_rate == 0.5

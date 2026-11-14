@@ -18,7 +18,7 @@ from __future__ import annotations
 import math
 import numbers
 import os
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field, fields, replace
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -371,12 +371,24 @@ class GroundingSettings:
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                 raise ValueError(f"grounding.{name} must be a whole number >= 0, got {value!r}")
+        if self.trust_min_n < 1:
+            raise ValueError(f"grounding.trust_min_n must be at least 1, got {self.trust_min_n!r}")
         if self.trust_window < self.trust_min_n:
             raise ValueError(
                 f"grounding.trust_window ({self.trust_window}) must be at least "
                 f"grounding.trust_min_n ({self.trust_min_n})"
             )
         return self
+
+
+def _assign_grounding(settings: "Settings", validated: GroundingSettings) -> None:
+    """Copy validated values onto ``settings.grounding`` in place.
+
+    In place, like ``field_scoring`` and ``trace_knobs``, so a reference kept from
+    ``get_settings().grounding`` sees the new values.
+    """
+    for spec in fields(GroundingSettings):
+        setattr(settings.grounding, spec.name, getattr(validated, spec.name))
 
 
 #: The ``grounding:`` YAML keys and how each is coerced.
@@ -544,7 +556,7 @@ def _apply_dict(settings: Settings, data: dict[str, Any]) -> None:
             }
     if doc_class_field_types:
         settings.doc_class_field_types.update(doc_class_field_types)
-    settings.grounding = grounding
+    _assign_grounding(settings, grounding)
 
 
 @lru_cache(maxsize=1)
@@ -669,7 +681,8 @@ def configure(**overrides: Any) -> Settings:
     (``grounding=GroundingSettings(...)`` and every ``grounding__…`` key) are
     coerced and validated together before anything is set, so
     ``configure(grounding__trust_min_n=300, grounding__trust_window=400)`` works in
-    either order and a bad value changes nothing.
+    either order and a bad grounding value changes nothing (as before, a bad
+    non-grounding key fails after the overrides before it were applied).
     """
     settings = get_settings()
     grounding = settings.grounding
@@ -696,7 +709,7 @@ def configure(**overrides: Any) -> Settings:
                 raise AttributeError(f"unknown setting {key}")
         else:
             setattr(settings, key, value)
-    settings.grounding = grounding
+    _assign_grounding(settings, grounding)
     return settings
 
 
