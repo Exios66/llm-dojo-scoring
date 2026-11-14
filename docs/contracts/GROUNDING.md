@@ -14,8 +14,9 @@ golden baseline. It is deterministic, network-free, makes no LLM calls, writes n
 and never stores document text.
 
 Status (0.31.0): pieces 1 and 2 (verdicts and rates; review candidates, the
-confirmation ledger and valid labels with provenance) and the reviewer-trust settings.
-Agent agreement, the trust gate and spot-check sampling follow in stacked PRs
+confirmation ledger and valid labels with provenance), the reviewer-trust settings and
+agent agreement with human spot-checks. The trust gate and spot-check sampling follow in
+stacked PRs
 (`docs/superpowers/plans/2026-11-14-unlabelled-value-grounding-piece-3.md`); see the design
 (`docs/superpowers/specs/2026-11-14-unlabelled-value-grounding-design.md`) and tracker
 Exios66/llm-dojo-scoring#146. Consumers: none yet (`hold` in
@@ -268,6 +269,36 @@ claimed_amount grounded 2 157461380899
 {'c61ae340aca866de…': 'agent_untrusted'}
 ```
 
+## Agent agreement (piece 3)
+
+`grounding/agreement.py` measures how often people confirm what each agent
+(`reviewer_id`) said. `paired_checks(ledger, *, as_of=None)` pairs, per candidate, each
+agent's latest decisive verdict with people's:
+
+- only latest confirmations count; `unsure` from either side is left out;
+- people must agree with each other (same verdict and, for `valid`, the same value),
+  or the candidate has no human truth and is not paired;
+- `human_verdict` is people's verdict on the value the agent vouched for: an agent
+  `valid` on a value people corrected to something else counts as `hallucinated`;
+- with `as_of`, only confirmations made at or before it count; a pair is dated by the
+  latest deciding human confirmation.
+
+`reviewer_agreement(ledger, *, window=None, as_of=None)` returns a `ReviewerAgreement`
+per agent over its latest `window` pairs (default `grounding.trust_window`), ordered by
+the human's time, with `overall` and `by_field` (`"doc_class.field"`) `AgreementCounts`:
+
+| Id | Tier | Value |
+| --- | --- | --- |
+| `grounding_reviewer_valid_precision` | 1 | of the agent's `valid` verdicts, the share people also call valid with the same value |
+| `grounding_reviewer_valid_precision_lower_95` | 1 | Wilson 95% lower bound of that share (`analysis.bootstrap.wilson_ci`, four decimals): the number the trust gate compares with `trust_bar` |
+| `grounding_reviewer_agreement` | 2 | share of pairs with the same verdict |
+| `grounding_reviewer_kappa` | 2 | Cohen's κ; `None` unless both the agent and people used both verdicts |
+| `grounding_reviewer_n_checked` | 3 | pairs in the window |
+
+A rate with a zero denominator is `None`. `agreement_score_records(agreements, *, agent,
+run_id=None)` emits the five metrics per reviewer with `metadata.reviewer_id`,
+`metadata.window` and `metadata.denominator`.
+
 ## Settings
 
 `config.GroundingSettings`, the `grounding` section of `Settings`, holds the tunable
@@ -304,3 +335,4 @@ ignored. Updates change `get_settings().grounding` in place.
 | `grounding/ledger.py` | `Confirmation`, `ConfirmationReject`, `ConfirmationLedger`, `ingest_confirmations` |
 | `grounding/labels.py` | `ValidLabel`, `LabelDerivation`, `derive_valid_labels`, `label_score_records`, `TrustLookup` |
 | `grounding/io.py` | `read_jsonl`, `write_jsonl` |
+| `grounding/agreement.py` | `PairedCheck`, `paired_checks`, `AgreementCounts`, `ReviewerAgreement`, `reviewer_agreement`, `agreement_score_records` |

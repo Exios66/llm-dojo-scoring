@@ -1,0 +1,155 @@
+"""Agent agreement with human spot-checks: pairing, valid precision, Wilson bound, kappa."""
+
+from __future__ import annotations
+
+import pytest
+from grounding_inputs import DOC_TEXT
+
+from llm_dojo_scoring.config import clear_settings_cache, configure
+from llm_dojo_scoring.grounding.agreement import (
+    METRIC_IDS,
+    AgreementCounts,
+    agreement_score_records,
+    paired_checks,
+    reviewer_agreement,
+)
+from llm_dojo_scoring.grounding.audit import audit_unlabelled_values
+from llm_dojo_scoring.grounding.candidates import review_candidates
+from llm_dojo_scoring.grounding.ledger import ingest_confirmations
+
+
+def _candidates(n):
+    """``n`` synthetic candidates on one field, ``doc-0`` … ``doc-{n-1}``."""
+    audits = []
+    for i in range(n):
+        audits += audit_unlabelled_values({}, {"adjuster": f"Robin Example {i}"},
+                                          doc_class="insurance_claim", doc_text=DOC_TEXT, doc_id=f"doc-{i}")
+    return review_candidates(audits)
+
+
+def _ledger(candidates, rows):
+    """A ledger from ``(index, kind, reviewer, verdict, at, extra)`` rows."""
+    records = []
+    for index, kind, reviewer, verdict, at, *extra in rows:
+        record = {"candidate_id": candidates[index].candidate_id, "verdict": verdict,
+                  "reviewer_kind": kind, "reviewer_id": reviewer, "confirmed_at": at}
+        if kind == "agent":
+            record["certainty"] = 0.95
+        record.update(extra[0] if extra else {})
+        records.append(record)
+    ledger = ingest_confirmations(records, candidates)
+    assert ledger.rejects == ()
+    return ledger
+
+
+@pytest.fixture(autouse=True)
+def _fresh_settings():
+    """Every test starts on default settings."""
+    clear_settings_cache()
+    yield
+    clear_settings_cache()
+
+
+def test_pairs_need_a_human_truth():
+    """Unsure, human disagreement and agent-only candidates are not paired."""
+    c = _candidates(4)
+    ledger = _ledger(c, [
+        (0, "agent", "boss@v1", "valid", 1), (0, "human", "human:a", "valid", 5),
+        (1, "agent", "boss@v1", "valid", 1), (1, "human", "human:a", "unsure", 5),
+        (2, "agent", "boss@v1", "valid", 1), (2, "human", "human:a", "valid", 5),
+        (2, "human", "human:b", "hallucinated", 6),
+        (3, "agent", "boss@v1", "unsure", 1), (3, "human", "human:a", "valid", 5),
+    ])
+    (pair,) = paired_checks(ledger)
+    assert (pair.candidate_id, pair.agent_verdict, pair.human_verdict) == (c[0].candidate_id, "valid", "valid")
+    assert pair.field == "insurance_claim.adjuster"
+
+
+def test_valid_with_a_different_value_is_a_miss():
+    """An agent valid on a value people corrected counts against the agent."""
+    c = _candidates(1)
+    ledger = _ledger(c, [(0, "agent", "boss@v1", "valid", 1),
+                         (0, "human", "human:a", "valid", 5, {"corrected_value": "Robin Other"})])
+    (pair,) = paired_checks(ledger)
+    assert (pair.human_verdict, pair.agrees) == ("hallucinated", False)
+    assert reviewer_agreement(ledger)["boss@v1"].overall.valid_precision == 0.0
+
+
+def test_matching_correction_is_a_hit():
+    """An agent correction equal to people's (case and spacing aside) is a hit."""
+    c = _candidates(1)
+    ledger = _ledger(c, [(0, "agent", "boss@v1", "valid", 1, {"corrected_value": "robin  other"}),
+                         (0, "human", "human:a", "valid", 5, {"corrected_value": "Robin Other"})])
+    assert paired_checks(ledger)[0].agrees
+
+
+def test_counts_precision_wilson_and_kappa():
+    """Precision is over the agent's valid verdicts; kappa needs both verdicts on both sides."""
+    c = _candidates(10)
+    rows = []
+    # agent valid ×8: people confirm 6, reject 2; agent hallucinated ×2: people agree once.
+    for i, (agent, human) in enumerate([("valid", "valid")] * 6 + [("valid", "hallucinated")] * 2
+                                       + [("hallucinated", "hallucinated"), ("hallucinated", "valid")]):
+        rows += [(i, "agent", "jev-1", agent, i), (i, "human", "human:a", human, 100 + i)]
+    result = reviewer_agreement(_ledger(c, rows))["jev-1"]
+    counts = result.overall
+    assert (counts.n_checked, counts.n_agent_valid, counts.n_valid_confirmed, counts.n_agree) == (10, 8, 6, 7)
+    assert counts.valid_precision == 0.75
+    assert counts.valid_precision_lower_95 == pytest.approx(0.4093, abs=1e-4)
+    assert counts.agreement == 0.7
+    # p_o = 0.7; p_e = (8*7 + 2*3) / 100 = 0.62; kappa = 0.08 / 0.38
+    assert counts.kappa == pytest.approx(0.08 / 0.38)
+    assert (result.window_start, result.window_end) == (100, 109)
+    assert set(result.by_field) == {"insurance_claim.adjuster"}
+
+
+def test_kappa_none_without_both_verdicts_and_empty_counts():
+    """Kappa is None when a rater used one verdict; empty counts give None rates."""
+    assert AgreementCounts(n_checked=3, n_agent_valid=3, n_valid_confirmed=3, n_agree=3,
+                           n_human_valid=3).kappa is None
+    empty = AgreementCounts()
+    assert (empty.valid_precision, empty.valid_precision_lower_95, empty.agreement, empty.kappa) == (
+        None, None, None, None)
+
+
+def test_window_keeps_latest_by_human_time_and_follows_settings():
+    """Only the latest ``window`` pairs count, ordered by the human's time; default from settings."""
+    c = _candidates(5)
+    rows = []
+    for i in range(5):
+        rows += [(i, "agent", "boss@v1", "valid", 1),
+                 (i, "human", "human:a", "hallucinated" if i < 2 else "valid", 50 - i)]
+    ledger = _ledger(c, rows)
+    assert reviewer_agreement(ledger, window=3)["boss@v1"].overall.valid_precision == 1.0 / 3
+    assert reviewer_agreement(ledger)["boss@v1"].overall.n_checked == 5
+    configure(grounding__trust_min_n=1, grounding__trust_window=2)
+    latest_two = reviewer_agreement(ledger)["boss@v1"]
+    assert (latest_two.window, latest_two.overall.n_checked, latest_two.overall.n_valid_confirmed) == (2, 2, 0)
+    with pytest.raises(ValueError, match="window"):
+        reviewer_agreement(ledger, window=0)
+
+
+def test_as_of_sees_only_what_was_known():
+    """With as_of, later confirmations (agent or human) are ignored."""
+    c = _candidates(2)
+    ledger = _ledger(c, [(0, "agent", "boss@v1", "valid", 1), (0, "human", "human:a", "valid", 10),
+                         (1, "agent", "boss@v1", "valid", 1), (1, "human", "human:a", "hallucinated", 20),
+                         (1, "human", "human:a", "valid", 30)])
+    assert reviewer_agreement(ledger, as_of=5) == {}
+    assert reviewer_agreement(ledger, as_of=25)["boss@v1"].overall.valid_precision == 0.5
+    assert reviewer_agreement(ledger)["boss@v1"].overall.valid_precision == 1.0
+
+
+def test_agents_are_separate_and_score_records():
+    """Each reviewer_id is reported alone; records carry reviewer_id and denominators."""
+    c = _candidates(1)
+    ledger = _ledger(c, [(0, "agent", "boss@v1", "valid", 1), (0, "agent", "boss@v2", "hallucinated", 1),
+                         (0, "human", "human:a", "valid", 5)])
+    agreements = reviewer_agreement(ledger)
+    assert list(agreements) == ["boss@v1", "boss@v2"]
+    records = agreement_score_records(agreements, agent="insurance_claims_specialist", run_id="r1")
+    assert [r.metric for r in records] == list(METRIC_IDS) * 2
+    v2 = [r for r in records if r.metadata["reviewer_id"] == "boss@v2"]
+    assert [r.value for r in v2] == [None, None, 0.0, None, 1]
+    assert v2[0].metadata == {"scope": "reviewer", "reviewer_id": "boss@v2", "window": 200, "denominator": 0}
+    assert agreements["boss@v1"].as_dict()["schema_version"] == 1
