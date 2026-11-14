@@ -72,9 +72,12 @@ money parser; the money and identifier boundary rules are this module's own. Per
 work is cached (the last eight documents per cache), so auditing many values of one
 document scans it once.
 
-Known limitation: dates use the shared date matcher, which does not read ordinal
-suffixes, so `2024-03-03` against "March 3rd, 2024" is `not_found`. Fixing that matcher
-would change headline scores, so it is out of scope here. A new field type
+Known limitation: dates use the shared date matcher, which only reads document dates
+that state a year and does not read ordinal suffixes. So `March 3` against "Signed on
+March 3." is `not_found` (it is grounded by "March 3, 2024"), `2024-03` against "dated
+March 2024" is `not_found`, and `2024-03-03` against "March 3rd, 2024" is `not_found`.
+The headline factuality audit uses the same matcher, so fixing it changes headline scores
+and is out of scope here (tracked on Exios66/llm-dojo-scoring#146). A new field type
 is one entry in `grounding/verdicts.py:_RULES`.
 
 ## Metrics
@@ -179,9 +182,9 @@ A confirmation is one reviewer's verdict on one candidate (JSON, `schema_version
 | Field | Rule |
 | --- | --- |
 | `candidate_id` | must name a known candidate |
-| `verdict` | `valid`, `hallucinated` or `unsure` |
+| `verdict` | `valid`, `hallucinated` or `unsure`. `valid` without a `corrected_value` needs a candidate value that is non-blank text or a finite number (a predicted `false` or object cannot become a label as it is) |
 | `reviewer_kind` | `human` or `agent` |
-| `reviewer_id` | non-blank. A human's starts with `human:` (`human:<opaque id>`) and an agent's never does (`boss@<prompt version>`, `jev-<version>`), so an agent cannot pass as a person. A new agent version is a new reviewer |
+| `reviewer_id` | non-blank. A human's starts with `human:` (`human:<opaque id>`) and an agent's never does (`boss@<prompt version>`, `jev-<version>`), so a record that labels an agent as a person (or the reverse) is rejected. A new agent version is a new reviewer |
 | `confirmed_at` | Unix time (a finite number), at most a day ahead of ingest time (`now`, default the clock) |
 | `certainty` | agents: required, in `[0, 1]`; humans: must be absent |
 | `corrected_value` | optional; non-blank text or a finite number; becomes the label's value |
@@ -194,6 +197,11 @@ reason, never dropped. The ledger is append-only: `ledger.extend(records)` retur
 ledger, nothing is edited or deleted, and a change of mind is a new confirmation. Only
 each reviewer's **latest** confirmation per candidate counts (`ledger.latest()`; on equal
 `confirmed_at` the one ingested later wins).
+
+**Trust boundary.** The ledger checks that a record is well formed, not who wrote it:
+`reviewer_kind` and `reviewer_id` are what the writer says. Whatever appends to the
+ledger file (the review tray) must authenticate people and set `reviewer_kind: "human"`
+only for them; anyone who can write the file can write a `human:` record.
 
 ## Valid labels (piece 2)
 
@@ -226,7 +234,7 @@ latest confirmation: `reviewer_kind`, `reviewer_id`, `verdict`, `certainty`,
 `io.write_jsonl(items, path, append=False)` and `io.read_jsonl(path)` move every record
 type to and from local JSONL files. A replace is atomic and keeps an existing file's
 permissions; an append first closes a torn last line; an unserialisable record or NaN
-raises before anything is written; a bad line on read raises, naming the line. There is
+raises before anything is written; a bad line on read (not JSON, not an object, or a `NaN` or `Infinity`) raises, naming the line. There is
 no locking: one writer per file at a time. Nothing is written to a hosted store.
 
 | Id | Tier | Value |
