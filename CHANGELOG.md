@@ -42,8 +42,9 @@ Format based on Keep a Changelog; versioning is SemVer.
   trust when it falls below the bar. With the defaults a perfect record passes from 73 checks.
   `derive_valid_labels` takes the gate's `certainty_floor` when given none.
 - `grounding.agreement.select_spot_checks`: which agent-decided candidates to send to people.
-  A fixed per-agent draw from the candidate id, sampled below `spot_check_rate` and topped up
-  to `spot_check_min_per_agent`, so the sample is reproducible and stable as the ledger grows.
+  A fixed per-agent draw from the candidate id, sampled below `spot_check_rate`, so that part
+  of the sample is reproducible and stable as the ledger grows; topped up to
+  `spot_check_min_per_agent` counting the checks people already made in the window.
   `docs/contracts/GROUNDING.md` now walks the whole loop, from audit to labels.
 <!-- end 0.31.0 -->
 
