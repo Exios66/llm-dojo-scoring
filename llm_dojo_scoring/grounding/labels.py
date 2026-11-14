@@ -179,8 +179,9 @@ def derive_valid_labels(
 
     ``gate`` decides which agents were trusted when they confirmed; ``None`` trusts
     no agent. ``certainty_floor`` defaults to the gate's ``certainty_floor`` when it has
-    one, else ``get_settings().grounding.certainty_floor`` (0.9 unless configured). ``previous`` is an earlier export: its labels not derived now are
-    returned as ``withdrawn``. Outputs are in candidate-id order.
+    one, else ``get_settings().grounding.certainty_floor`` (0.9 unless configured).
+    ``previous`` is an earlier export: its labels not derived now are returned as
+    ``withdrawn``. Outputs are in candidate-id order.
     """
     if certainty_floor is None:
         certainty_floor = getattr(gate, "certainty_floor", None)
