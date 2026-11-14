@@ -395,6 +395,88 @@ metrics:
     citation: "Every accept must have text, an eligible reviewer label, no causes, a cutoff, and agreement unless the sorter was below its low band."
     inclusion: "Always defined; 0 means every accepted row passed the rule."
     ground_truth: structural
+  # Intake classifier (ml/metrics.py): the mailroom-ml fast path.
+  ml_intake_doc_type_accuracy:
+    tier: 1
+    description: "Intake classifier document-class accuracy"
+    applicable_agents: [INTAKE]
+    aggregation: mean
+    source: "ml.score_intake_model"
+    citation: "Exact match of the predicted class with the dataset class."
+    inclusion: "None when no record has a gold class."
+    ground_truth: required
+  ml_intake_doc_type_macro_f1:
+    tier: 1
+    description: "Intake classifier document-class macro F1"
+    applicable_agents: [INTAKE]
+    aggregation: mean
+    source: "ml.score_intake_model"
+    citation: "Unweighted one-vs-rest macro F1 over the gold classes (classification.macro_prf)."
+    inclusion: "None when no record has a gold class."
+    ground_truth: required
+  ml_intake_doc_type_ece:
+    tier: 1
+    description: "Calibration error of the class head"
+    applicable_agents: [INTAKE]
+    aggregation: mean
+    source: "ml.score_intake_model"
+    citation: "Equal-width 10-bin ECE of doc_type_confidence against class correctness (analysis.calibration)."
+    inclusion: "None when no scored record carries a confidence in [0, 1]."
+    ground_truth: required
+  ml_intake_subclass_accuracy:
+    tier: 1
+    description: "Intake classifier subclass accuracy"
+    applicable_agents: [INTAKE]
+    aggregation: mean
+    source: "ml.score_intake_model"
+    citation: "Subclass right only when the class is right and the predicted subclass normalizes (normalize_corpus_subclass, gold class) to the gold one."
+    inclusion: "None when no scored record has a gold subclass."
+    ground_truth: required
+  ml_intake_subclass_macro_f1:
+    tier: 1
+    description: "Intake classifier subclass macro F1"
+    applicable_agents: [INTAKE]
+    aggregation: mean
+    source: "ml.score_intake_model"
+    citation: "Macro F1 over gold class/subclass pairs, after the same normalization."
+    inclusion: "None when no scored record has a gold subclass."
+    ground_truth: required
+  ml_intake_subclass_ece:
+    tier: 1
+    description: "Calibration error of the subclass head"
+    applicable_agents: [INTAKE]
+    aggregation: mean
+    source: "ml.score_intake_model"
+    citation: "Equal-width 10-bin ECE of subclass_confidence against subclass correctness."
+    inclusion: "None when no subclass-scored record carries a confidence in [0, 1]."
+    ground_truth: required
+  ml_intake_fast_path_coverage:
+    tier: 1
+    description: "Share of documents the model answered without the LLM sorter"
+    applicable_agents: [INTAKE]
+    aggregation: mean
+    source: "ml.score_intake_model"
+    citation: "fast_path records over scored records."
+    inclusion: "None when no record has a gold class."
+    ground_truth: structural
+  ml_intake_selective_risk:
+    tier: 1
+    description: "Error rate of fast-path answers"
+    applicable_agents: [INTAKE]
+    aggregation: mean
+    source: "ml.score_intake_model"
+    citation: "Fast-path records whose class, or gold-labelled subclass, is wrong, over fast-path records."
+    inclusion: "None when no record took the fast path."
+    ground_truth: required
+  ml_intake_selective_risk_upper:
+    tier: 1
+    description: "Wilson upper bound of the fast-path error rate"
+    applicable_agents: [INTAKE]
+    aggregation: mean
+    source: "ml.score_intake_model"
+    citation: "Upper end of the Wilson score interval (z = 1.96 by default) of selective_risk; the value a release gate holds under its error budget."
+    inclusion: "None when no record took the fast path."
+    ground_truth: required
   # Decision lanes (scoring/decision_lanes.py): judge, arbiter, boss, review tray.
   judge_verdict_accuracy:
     tier: 1
