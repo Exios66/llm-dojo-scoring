@@ -79,3 +79,15 @@ def test_money_counts_only_document_numbers_that_read_as_money(value, text, expe
 def test_id_matches_whole_runs_only(value, text, expected):
     """An identifier never matches inside a longer run, and very short ids are unverifiable."""
     assert value_verdict("id", value, text)[0] == expected
+
+
+@pytest.mark.parametrize(("ftype", "value", "text", "expected"), [
+    ("id", "12345", "Invoice INV-12345 due", "grounded"),
+    ("id", "12345", "Invoice No.12345 due", "grounded"),
+    ("id", "INV-2024-0001", "ref inv 2024 0001", "grounded"),
+    ("money", "5000000", "see Exhibit 5 M today", "not_found"),
+    ("money", "5000000", "a budget of 5M", "grounded"),
+])
+def test_pre_pr_review_boundary_cases(ftype, value, text, expected):
+    """An id part inside a prefixed run grounds; a spaced lone letter is not a money scale."""
+    assert value_verdict(ftype, value, text)[0] == expected

@@ -1,1 +1,1 @@
-"""Unlabelled-value grounding: verdicts, rates, review candidates and label provenance."""
+"""Unlabelled-value grounding: per-value verdicts, selection, audit records and rates."""
