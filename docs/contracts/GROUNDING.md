@@ -13,8 +13,9 @@ run it after scoring, and nothing on the scoring path imports it
 golden baseline. It is deterministic, network-free, makes no LLM calls, writes no files
 and never stores document text.
 
-Status: piece 1 of 3 (0.31.0). Review candidates, the confirmation ledger, label
-provenance and the agent trust gate follow; see the design
+Status: pieces 1 and 2 of 3 (0.31.0): verdicts and rates, then review candidates, the
+confirmation ledger and valid labels with provenance. The agent trust gate follows; see
+the design
 (`docs/superpowers/specs/2026-11-14-unlabelled-value-grounding-design.md`) and tracker
 Exios66/llm-dojo-scoring#146. Consumers: none yet (`hold` in
 `docs/analysis/data/consumer_closure.json`); llm-mailroom wiring follows the release.
@@ -149,6 +150,130 @@ grounding_unverifiable_rate 0.3333333333333333 3 {'value': 0.0, 'denominator': 1
 grounding_n_audited 3 3 {'value': 1, 'denominator': 1}
 ```
 
+## Review candidates (piece 2)
+
+A value found in the text is still not a label. `grounding/candidates.py:review_candidates`
+turns every audit record into a `ReviewCandidate`, whatever its verdict:
+
+- **Id.** `candidate_id` is the sha256 of `[doc_id, field, normal form, doc_text_sha256]`
+  (JSON-encoded). The normal form is the field type's own: the signed parsed amount with
+  two decimals for money (the currency is not kept), `year-month-day` (`?` for an unstated part) for dates, the
+  casefolded text without whitespace, `-`, `/` or `.` for identifiers, and casefolded
+  text with whitespace collapsed for anything else or anything its type cannot parse.
+  So re-running gives the same ids, `$1,250.00` and `1250 USD` are one candidate (as are
+  `$1250` and `€1250`, and ids `1.2` and `12`: the forms are deliberately coarse), a
+  credit `-1250` is another, and a list item keeps its id when the list is reordered.
+  Known limitation: because the currency is not kept, a value that swaps only the
+  currency of an already-audited amount on the same field is not a separate candidate. A value seen twice is one candidate
+  (the first audit wins). An audit without `doc_id` raises `ValueError`.
+- **Order.** `priority` is 0 for `not_found`, 1 for `unverifiable`, 2 for `grounded`;
+  candidates come sorted by priority, then fields with more candidates first, then
+  document, field and item. The Dojo exports the order; the consumer owns the queue.
+
+## Confirmations and the ledger (piece 2)
+
+A confirmation is one reviewer's verdict on one candidate (JSON, `schema_version: 1`):
+
+| Field | Rule |
+| --- | --- |
+| `candidate_id` | must name a known candidate |
+| `verdict` | `valid`, `hallucinated` or `unsure` |
+| `reviewer_kind` | `human` or `agent` |
+| `reviewer_id` | non-blank. A human's starts with `human:` (`human:<opaque id>`) and an agent's never does (`boss@<prompt version>`, `jev-<version>`), so an agent cannot pass as a person. A new agent version is a new reviewer |
+| `confirmed_at` | Unix time (a finite number), at most a day ahead of ingest time (`now`, default the clock) |
+| `certainty` | agents: required, in `[0, 1]`; humans: must be absent |
+| `corrected_value` | optional; non-blank text or a finite number; becomes the label's value |
+| `note` | optional text |
+
+`ingest_confirmations(records, candidates)` validates records (mappings, for example from
+`io.read_jsonl`, or `Confirmation` objects) into a `ConfirmationLedger`. A record that
+fails a rule is kept in `ledger.rejects` as a `ConfirmationReject` with its position and
+reason, never dropped. The ledger is append-only: `ledger.extend(records)` returns a new
+ledger, nothing is edited or deleted, and a change of mind is a new confirmation. Only
+each reviewer's **latest** confirmation per candidate counts (`ledger.latest()`; on equal
+`confirmed_at` the one ingested later wins).
+
+## Valid labels (piece 2)
+
+`derive_valid_labels(ledger, gate=None, *, certainty_floor=0.9, previous=())` is a pure
+function of the ledger, recomputed every time. Per candidate, on latest confirmations:
+
+| Situation | Outcome |
+| --- | --- |
+| Any human said `valid` or `hallucinated` | **Humans decide.** All `valid` with the same value (text equal after casefolding and collapsing whitespace; `$1,250.00` and `1250` differ) → label, `validity_basis: "human"`. All `hallucinated` → `rejected`. Otherwise → conflict `humans_disagree` |
+| Only `unsure` from everyone | pending `only_unsure` (a human `unsure` never validates or blocks) |
+| No human verdict; agents say only `hallucinated` | pending `agent_hallucinated` |
+| Agents disagree (`valid` and `hallucinated`, or different values, compared as for humans) | conflict `agents_disagree`, for a person to settle |
+| Agents say `valid`; at least one was trusted by the gate as of its `confirmed_at`, with `certainty ≥ certainty_floor` | label, `validity_basis: "trusted_agent"`, `gate_snapshot_id` of the earliest such agent |
+| Agents say `valid` with enough certainty, none trusted | pending `agent_untrusted` |
+| Agents say `valid`, none with enough certainty | pending `below_certainty_floor` |
+
+Without a gate no agent is trusted, so only human-confirmed labels come out. A gate is any
+object with `trusted_snapshot_id(ledger, reviewer_id, at) -> str | None` (`TrustGate`
+in piece 3). A later human `hallucinated` removes a label agents made; labels of a
+`previous` export that are not derived now (same candidate and same value) are returned
+as `withdrawn`, so a later correction to another value withdraws the old one.
+
+`ValidLabel` (JSON, `schema_version: 1`): `doc_id`, `doc_class`, `field`, `item_index`,
+`value`, `source_candidate_id`, `extractor`, `doc_text_sha256`, `confirmed_by` (every
+latest confirmation: `reviewer_kind`, `reviewer_id`, `verdict`, `certainty`,
+`confirmed_at`), `validity_basis` and `gate_snapshot_id`. `LabelDerivation` holds
+`labels`, `rejected`, `conflicts` and `pending` (candidate id → reason) and `withdrawn`.
+
+`io.write_jsonl(items, path, append=False)` and `io.read_jsonl(path)` move every record
+type to and from local JSONL files. A replace is atomic and keeps an existing file's
+permissions; an append first closes a torn last line; an unserialisable record or NaN
+raises before anything is written; a bad line on read raises, naming the line. There is
+no locking: one writer per file at a time. Nothing is written to a hosted store.
+
+| Id | Tier | Value |
+| --- | --- | --- |
+| `grounding_n_candidates` | 3 | candidates exported |
+| `grounding_n_valid_labels` | 3 | valid labels; `metadata.by_basis` splits `human` / `trusted_agent` |
+| `grounding_n_label_conflicts` | 3 | conflicts; `metadata.by_reason` |
+
+`labels.label_score_records(candidates, derivation, *, agent, run_id=None)` emits them
+for the run.
+
+```python
+from llm_dojo_scoring.grounding.audit import audit_unlabelled_values
+from llm_dojo_scoring.grounding.candidates import review_candidates
+from llm_dojo_scoring.grounding.labels import derive_valid_labels
+from llm_dojo_scoring.grounding.ledger import ingest_confirmations
+
+doc_text = "Claim AB-12/34 filed March 3, 2024 by Acme Holdings for 1250 dollars."
+audits = audit_unlabelled_values(
+    {"claim_number": "AB-12/34"},
+    {"claimed_amount": "$1,250.00", "adjuster": "Robin Example"},
+    doc_class="insurance_claim", doc_text=doc_text, doc_id="doc-1", run_id="run-1")
+candidates = review_candidates(audits)          # adjuster (not_found) first
+for c in candidates:
+    print(c.field, c.verdict, c.priority, c.candidate_id[:12])
+amount, adjuster = candidates[1], candidates[0]
+ledger = ingest_confirmations([
+    {"candidate_id": amount.candidate_id, "verdict": "valid", "reviewer_kind": "human",
+     "reviewer_id": "human:r1", "confirmed_at": 1767225600},
+    {"candidate_id": adjuster.candidate_id, "verdict": "valid", "reviewer_kind": "agent",
+     "reviewer_id": "boss@v3", "certainty": 0.97, "confirmed_at": 1767225600},
+    {"candidate_id": "unknown", "verdict": "valid", "reviewer_kind": "human",
+     "reviewer_id": "human:r1", "confirmed_at": 1767225600},
+], candidates)
+print([r.reason for r in ledger.rejects])
+result = derive_valid_labels(ledger)            # no gate: no agent is trusted
+print([(l.field, l.value, l.validity_basis) for l in result.labels])
+print(result.pending)
+```
+
+Output (run on this release; the last id shortened):
+
+```
+adjuster not_found 0 c61ae340aca8
+claimed_amount grounded 2 157461380899
+["unknown candidate_id 'unknown'"]
+[('claimed_amount', '$1,250.00', 'human')]
+{'c61ae340aca866de…': 'agent_untrusted'}
+```
+
 ## Modules
 
 | Module | Owns |
@@ -157,3 +282,7 @@ grounding_n_audited 3 3 {'value': 1, 'denominator': 1}
 | `grounding/selection.py` | `unlabelled_fields`, `UNLABELLED_STATUSES`: the audited set |
 | `grounding/audit.py` | `UnlabelledValueAudit`, `audit_unlabelled_values` |
 | `grounding/summary.py` | `GroundingCounts`, `GroundingSummary`, `summarize_grounding`, `grounding_score_records`, `METRIC_IDS` |
+| `grounding/candidates.py` | `ReviewCandidate`, `candidate_id`, `normalized_value`, `review_candidates`, `PRIORITY` |
+| `grounding/ledger.py` | `Confirmation`, `ConfirmationReject`, `ConfirmationLedger`, `ingest_confirmations` |
+| `grounding/labels.py` | `ValidLabel`, `LabelDerivation`, `derive_valid_labels`, `label_score_records`, `TrustLookup` |
+| `grounding/io.py` | `read_jsonl`, `write_jsonl` |

@@ -17,6 +17,12 @@ Format based on Keep a Changelog; versioning is SemVer.
   them (a CMS row's `supporting_documents` items are `cms_doc_ref`). A separate pass: nothing on the
   scoring path imports it, and the headline, field-micro and golden scores are unchanged.
   Contract: `docs/contracts/GROUNDING.md`. No consumer imports it yet (`hold`).
+- `grounding/candidates.py`, `ledger.py`, `labels.py`, `io.py`: every audited value becomes a
+  review candidate with a stable id and a priority; confirmations from a person or an agent
+  are validated into an append-only ledger (rejects kept with a reason); valid labels are
+  derived from it with full provenance (human confirmation, or a trusted agent with enough
+  certainty), with conflicts, pending reasons and withdrawals listed. New tier-3 counts:
+  `grounding_n_candidates`, `grounding_n_valid_labels`, `grounding_n_label_conflicts`.
 <!-- end 0.31.0 -->
 
 - `schemas/doc_classes.py`: one hand-edited registry (`DOC_CLASSES`, `DocClass`, `field_types()`,
