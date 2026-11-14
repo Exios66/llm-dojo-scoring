@@ -61,6 +61,11 @@ def test_verdicts_constant_lists_every_outcome():
     ("12,000", "the sum of 12,000 is due", "grounded"),
     ("99.50", "fee of 99.50", "grounded"),
     (True, "owes $1", "unverifiable"),
+    ("500", "Total: $ 500", "grounded"),
+    ("500", "Total: \u20ac 500", "grounded"),
+    ("500", "Total: USD  500", "grounded"),
+    ("500", "Total: 500  dollars", "grounded"),
+    ("500", "Total: $\n500", "not_found"),
 ])
 def test_money_counts_only_document_numbers_that_read_as_money(value, text, expected):
     """A day, a year or a phone digit group never grounds an amount; spelled scales do."""

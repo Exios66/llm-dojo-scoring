@@ -16,6 +16,7 @@ from llm_dojo_scoring.grounding.agreement import (
 from llm_dojo_scoring.grounding.audit import audit_unlabelled_values
 from llm_dojo_scoring.grounding.candidates import review_candidates
 from llm_dojo_scoring.grounding.ledger import ingest_confirmations
+from llm_dojo_scoring.metrics.emitter import Emitter
 
 
 def _candidates(n):
@@ -147,12 +148,26 @@ def test_agents_are_separate_and_score_records():
                          (0, "human", "human:a", "valid", 5)])
     agreements = reviewer_agreement(ledger)
     assert list(agreements) == ["boss@v1", "boss@v2"]
-    records = agreement_score_records(agreements, agent="insurance_claims_specialist", run_id="r1")
+    records = agreement_score_records(agreements, run_id="r1")
     assert [r.metric for r in records] == list(METRIC_IDS) * 2
     v2 = [r for r in records if r.metadata["reviewer_id"] == "boss@v2"]
+    assert {r.agent for r in v2} == {"boss@v2"}
     assert [r.value for r in v2] == [None, None, 0.0, None, 1]
     assert v2[0].metadata == {"scope": "reviewer", "reviewer_id": "boss@v2", "window": 200, "denominator": 0}
     assert agreements["boss@v1"].as_dict()["schema_version"] == 1
+
+
+def test_each_reviewer_has_its_own_scorecard():
+    """Through the emitter, one reviewer's precision never hides behind another's."""
+    c = _candidates(2)
+    ledger = _ledger(c, [(0, "agent", "boss@v1", "valid", 1), (0, "human", "human:a", "valid", 2),
+                         (1, "agent", "boss@v2", "valid", 1), (1, "human", "human:a", "hallucinated", 2)])
+    records = agreement_score_records(reviewer_agreement(ledger), run_id="r1")
+    emitter = Emitter(sinks=[], require_provenance=False)
+    for r in records:
+        emitter.emit_score(r.agent, r.doc_id, r.metric, r.value, r.metadata, r.run_id)
+    assert emitter.get_scorecard("boss@v1", "r1")["grounding_reviewer_valid_precision"] == 1.0
+    assert emitter.get_scorecard("boss@v2", "r1")["grounding_reviewer_valid_precision"] == 0.0
 
 
 def test_wilson_bound_is_unrounded_below_the_bar():
