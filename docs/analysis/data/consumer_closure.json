@@ -33,27 +33,27 @@
     "analysis": {
       "decision": "keep",
       "lines": 1,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface"
     },
     "analysis.bootstrap": {
       "decision": "keep",
       "lines": 150,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "analysis.calibration": {
       "decision": "keep",
       "lines": 396,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface"
     },
     "analysis.cost": {
       "decision": "keep",
       "lines": 178,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "analysis.diagnostics": {
       "decision": "keep",
       "lines": 326,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "analysis.experiment": {
       "decision": "keep",
@@ -68,12 +68,37 @@
     "analysis.serving": {
       "decision": "keep",
       "lines": 1557,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "config": {
       "decision": "keep",
       "lines": 626,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "grounding": {
+      "decision": "hold",
+      "lines": 1,
+      "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
+    },
+    "grounding.audit": {
+      "decision": "hold",
+      "lines": 138,
+      "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
+    },
+    "grounding.selection": {
+      "decision": "hold",
+      "lines": 76,
+      "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
+    },
+    "grounding.summary": {
+      "decision": "hold",
+      "lines": 150,
+      "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
+    },
+    "grounding.verdicts": {
+      "decision": "hold",
+      "lines": 210,
+      "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
     },
     "integrations": {
       "decision": "hold",
@@ -107,7 +132,7 @@
     },
     "metrics.metric_meta": {
       "decision": "keep",
-      "lines": 607,
+      "lines": 615,
       "reason": "imported by kept metrics.registry"
     },
     "metrics.profiles": {
@@ -118,22 +143,37 @@
     "metrics.pruning": {
       "decision": "keep",
       "lines": 97,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "metrics.registry": {
       "decision": "keep",
-      "lines": 1380,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "lines": 1609,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "metrics.score_changelog": {
       "decision": "keep",
-      "lines": 158,
+      "lines": 258,
       "reason": "imported by kept analysis.serving"
     },
     "metrics.scorecard_honesty": {
       "decision": "keep",
-      "lines": 1151,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "lines": 1176,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "ml": {
+      "decision": "hold",
+      "lines": 21,
+      "reason": "ML contract package mailroom-ml vendors as JSON, never imports (stacked on Dojo #142)"
+    },
+    "ml.contract": {
+      "decision": "hold",
+      "lines": 95,
+      "reason": "label and intake contract behind ml/data/ml_contract.json for mailroom-ml (stacked on Dojo #142)"
+    },
+    "ml.metrics": {
+      "decision": "hold",
+      "lines": 192,
+      "reason": "intake-classifier scorecard for mailroom-ml evaluation reports (stacked on Dojo #142)"
     },
     "pipeline": {
       "decision": "keep",
@@ -143,37 +183,37 @@
     "pipeline.archive": {
       "decision": "keep",
       "lines": 1120,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface, contract_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface, contract_surface"
     },
     "pipeline.intake": {
       "decision": "keep",
       "lines": 417,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "pipeline.mailroom": {
       "decision": "keep",
       "lines": 318,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "pipeline.pilot_labels": {
       "decision": "keep",
       "lines": 172,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "pipeline.pilot_summary": {
       "decision": "keep",
       "lines": 51,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "pipeline.pipeline_scoring": {
       "decision": "keep",
       "lines": 202,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "pipeline.pipeline_verdict": {
       "decision": "keep",
       "lines": 35,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "pipeline.sandbox_schema_adherence": {
       "decision": "keep",
@@ -188,7 +228,12 @@
     "prompts": {
       "decision": "keep",
       "lines": 187,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "prompts.alignment": {
+      "decision": "hold",
+      "lines": 84,
+      "reason": "guard that each specialist prompt asks for the fields the schema scores; no consumer imports it, CI runs it (stacked on Dojo #143)"
     },
     "prompts.lineage": {
       "decision": "keep",
@@ -213,7 +258,7 @@
     "schemas.corpus": {
       "decision": "keep",
       "lines": 525,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "schemas.correspondence_gt_audit": {
       "decision": "hold",
@@ -237,7 +282,7 @@
     },
     "schemas.extraction_schemas": {
       "decision": "keep",
-      "lines": 572,
+      "lines": 583,
       "reason": "consumer import: MAIL@origin/claude/howdy-n8vcc1"
     },
     "schemas.gt_metadata": {
@@ -248,7 +293,7 @@
     "schemas.intents": {
       "decision": "keep",
       "lines": 224,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "schemas.maud": {
       "decision": "keep",
@@ -257,13 +302,13 @@
     },
     "schemas.maud_schema": {
       "decision": "keep",
-      "lines": 1139,
+      "lines": 1289,
       "reason": "consumer import: SBX, consumer_surface"
     },
     "schemas.schema_contract": {
       "decision": "keep",
       "lines": 106,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "schemas.scored_enums": {
       "decision": "keep",
@@ -273,7 +318,7 @@
     "schemas.sorter_guide": {
       "decision": "keep",
       "lines": 235,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "schemas.v10_rows": {
       "decision": "hold",
@@ -293,7 +338,7 @@
     "scoring.agent_rubrics": {
       "decision": "keep",
       "lines": 70,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "scoring.asr": {
       "decision": "keep",
@@ -313,12 +358,17 @@
     "scoring.content_scoring": {
       "decision": "keep",
       "lines": 788,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface"
+    },
+    "scoring.decision_lanes": {
+      "decision": "hold",
+      "lines": 650,
+      "reason": "judge/arbiter/boss/review-tray scorecards; llm-mailroom wires its decision export next (stacked on Dojo #140)"
     },
     "scoring.doc_scorers": {
       "decision": "keep",
       "lines": 44,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface, contract_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface, contract_surface"
     },
     "scoring.doc_scorers.base": {
       "decision": "keep",
@@ -342,7 +392,7 @@
     },
     "scoring.doc_scorers.correspondence": {
       "decision": "keep",
-      "lines": 54,
+      "lines": 57,
       "reason": "imported by kept scoring.doc_scorers"
     },
     "scoring.doc_scorers.dispatch": {
@@ -377,28 +427,28 @@
     },
     "scoring.field_scoring": {
       "decision": "keep",
-      "lines": 1892,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "lines": 2356,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "scoring.field_support": {
       "decision": "keep",
       "lines": 48,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "scoring.legalbench_scoring": {
       "decision": "keep",
       "lines": 168,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "scoring.reviewer": {
       "decision": "keep",
       "lines": 1030,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface"
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface"
     },
     "scoring.suites": {
       "decision": "keep",
-      "lines": 1650,
-      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+      "lines": 1808,
+      "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "scoring.tasks": {
       "decision": "keep",
@@ -467,6 +517,70 @@
       "schemas.corpus",
       "schemas.cuad_schema",
       "schemas.extraction_schemas",
+      "schemas.intents",
+      "schemas.schema_contract",
+      "schemas.sorter_guide",
+      "scoring.agent_rubrics",
+      "scoring.content_scoring",
+      "scoring.doc_scorers",
+      "scoring.field_scoring",
+      "scoring.field_support",
+      "scoring.legalbench_scoring",
+      "scoring.reviewer",
+      "scoring.suites"
+    ],
+    "MAIL@origin/claude/vibrant-sagan-fltg8i": [
+      "analysis",
+      "analysis.bootstrap",
+      "analysis.calibration",
+      "analysis.cost",
+      "analysis.diagnostics",
+      "analysis.serving",
+      "config",
+      "metrics.pruning",
+      "metrics.registry",
+      "metrics.scorecard_honesty",
+      "pipeline.archive",
+      "pipeline.intake",
+      "pipeline.mailroom",
+      "pipeline.pilot_labels",
+      "pipeline.pilot_summary",
+      "pipeline.pipeline_scoring",
+      "pipeline.pipeline_verdict",
+      "prompts",
+      "schemas.corpus",
+      "schemas.intents",
+      "schemas.schema_contract",
+      "schemas.sorter_guide",
+      "scoring.agent_rubrics",
+      "scoring.content_scoring",
+      "scoring.doc_scorers",
+      "scoring.field_scoring",
+      "scoring.field_support",
+      "scoring.legalbench_scoring",
+      "scoring.reviewer",
+      "scoring.suites"
+    ],
+    "MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes": [
+      "analysis",
+      "analysis.bootstrap",
+      "analysis.calibration",
+      "analysis.cost",
+      "analysis.diagnostics",
+      "analysis.serving",
+      "config",
+      "metrics.pruning",
+      "metrics.registry",
+      "metrics.scorecard_honesty",
+      "pipeline.archive",
+      "pipeline.intake",
+      "pipeline.mailroom",
+      "pipeline.pilot_labels",
+      "pipeline.pilot_summary",
+      "pipeline.pipeline_scoring",
+      "pipeline.pipeline_verdict",
+      "prompts",
+      "schemas.corpus",
       "schemas.intents",
       "schemas.schema_contract",
       "schemas.sorter_guide",
@@ -670,6 +784,14 @@
     "MAIL@origin/claude/howdy-n8vcc1": {
       "commit": "1f06ff19924ad9b0a60bbf8db3bbc58ca13ae79f",
       "files_scanned": 376
+    },
+    "MAIL@origin/claude/vibrant-sagan-fltg8i": {
+      "commit": "4aa34186ee962c38f7e0ad42c000f674b3f302dc",
+      "files_scanned": 374
+    },
+    "MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes": {
+      "commit": "10596605b947a5f47f40ae38d33b2367de227171",
+      "files_scanned": 375
     },
     "MAIL@origin/stack/01-audit-storage": {
       "commit": "a6863c0b22288e56590af95bafb1a6fd27e3e316",
