@@ -53,6 +53,11 @@ mapping or list item is checked by its string values (`{"name": "Bob Co"}` as `B
 
 ## Verdicts
 
+Each value is checked by its field type as the headline types it: the class registry's
+type, with `scoring.field_scoring.CMS_ROW_FIELD_TYPES` on a CMS row (so
+`supporting_documents` items there are `cms_doc_ref`, not names). A list field is
+checked item by item with its item type.
+
 | Field type | `grounded` when | Otherwise |
 | --- | --- | --- |
 | `name`, `free_text` (and unknown types) | at least `field_scoring.verification_token_coverage` (default 0.7) of the value's content tokens appear in the document | `not_found`; `unverifiable` when the value has no content tokens |
@@ -209,8 +214,10 @@ function of the ledger, recomputed every time. `certainty_floor` defaults to the
 Without a gate no agent is trusted, so only human-confirmed labels come out. A gate is any
 object with `trusted_snapshot_id(ledger, reviewer_id, at) -> str | None` (`TrustGate`,
 see "Trust gate" below). Given no `certainty_floor`, `derive_valid_labels` uses the
-gate's `certainty_floor` when it has one, else the setting. A later human `hallucinated` removes a label agents made; labels of a
-`previous` export that are not derived now are returned as `withdrawn`.
+gate's `certainty_floor` when it has one, else the setting. A later human `hallucinated`
+removes a label agents made; labels of a `previous` export that are not derived now (same
+candidate and same value) are returned as `withdrawn`, so a later correction to another
+value withdraws the old one.
 
 `ValidLabel` (JSON, `schema_version: 1`): `doc_id`, `doc_class`, `field`, `item_index`,
 `value`, `source_candidate_id`, `extractor`, `doc_text_sha256`, `confirmed_by` (every

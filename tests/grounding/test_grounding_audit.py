@@ -88,3 +88,14 @@ def test_mapping_and_list_items_are_checked_by_their_values():
     assert [(r.value, r.verdict) for r in records] == [
         ("Acme Holdings", "grounded"), ("Acme Holdings", "grounded"), ("Globex", "not_found"),
     ]
+
+
+def test_cms_row_supporting_documents_use_the_cms_doc_ref_rule():
+    """On a CMS row the headline's CMS field types apply, so items are cms_doc_ref, not names."""
+    text = "Carrier claim. Supporting: provider NPI 5040521237 and NDC 00703051002."
+    predicted = {"supporting_documents": ["NPI 5040521237", "NPI 504052"]}
+    cms = audit_unlabelled_values({"cms_source_table": "carrier", "claim_number": "1"}, predicted,
+                                  doc_class="insurance_claim", doc_text=text)
+    assert [(r.field_type, r.verdict) for r in cms] == [("cms_doc_ref", "grounded"), ("cms_doc_ref", "not_found")]
+    plain = audit_unlabelled_values({"claim_number": "1"}, predicted, doc_class="insurance_claim", doc_text=text)
+    assert {r.field_type for r in plain} == {"name"}

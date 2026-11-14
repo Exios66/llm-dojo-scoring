@@ -134,6 +134,16 @@ def test_withdrawn_lists_previous_labels_not_derived_again():
     assert derive(agent("valid"), gate=gate, previous=before).withdrawn == ()
 
 
+
+def test_correction_to_another_value_withdraws_the_old_value():
+    """A label whose value a later correction changed is withdrawn; the new value is a label."""
+    before = derive(human("valid", corrected_value="Dana Smith")).labels
+    after = derive(human("valid", corrected_value="Dana Smith"),
+                   human("valid", at=200, corrected_value="Dana Smyth"), previous=before)
+    assert [label.value for label in after.withdrawn] == ["Dana Smith"]
+    assert derive(human("valid", corrected_value="Dana Smith"), previous=before).withdrawn == ()
+
+
 def test_round_trip_and_score_records():
     """Labels round-trip through as_dict, and the run counts are emitted."""
     result = derive(human("valid"))
