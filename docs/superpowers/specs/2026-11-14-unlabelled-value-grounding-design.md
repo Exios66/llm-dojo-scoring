@@ -407,6 +407,8 @@ Extension points, so later work is additive:
 
 ## 12. Constellation sequencing
 
+Tracked in Exios66/llm-dojo-scoring#146.
+
 The mailroom side cannot start until both release lines are clear. Order:
 
 1. **Dojo 0.30.0** — land the open stack onto `v0.30.0` (#140, #142, #143, #144; #145 is
