@@ -262,7 +262,9 @@ write_jsonl(items, path) / read_jsonl(path)  # grounding/io.py, local files only
   to send to humans. Default rate 10% per agent, minimum 20 per agent per window;
   configurable.
 - **Agreement:** for every candidate confirmed by both an agent and a human, agreement =
-  same verdict (`valid`/`hallucinated`; `unsure` from either side excluded). Report per
+  same verdict (`valid`/`hallucinated`; `unsure` from either side excluded). The agent
+  side is its blind verdict (its latest from before people first decided), so a later
+  revision cannot erase a miss. Report per
   `reviewer_id`: n, agreement rate, Wilson 95% lower bound, per-field breakdown, and
   Cohen's κ where both classes occur.
 - **Trust gate:** the bar is measured on the **precision of the agent's `valid`
