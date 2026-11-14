@@ -37,10 +37,16 @@ So these are **never** audited, because the headline already judges them:
 - a field labelled empty: `not_applicable`, `schema_documented_absence`, or a blank GT
   value with no presence status (owner decision, 2026-11-14);
 - `adjuster` and `denial_reasons` on a CMS insurance row (labelled empty by the CMS
-  source schema, whatever their status).
+  source schema, whatever their status). A row is CMS by the headline's own test,
+  `scoring.field_scoring.expected_cms_source_table`: a `cms_source_table` the GT carries
+  or that `doc_subclass` implies, and no `claim_type` other than `health`.
+
+`predicted` must be a mapping of field to value (`TypeError` otherwise); GT that
+`scoring_gt_fields` cannot parse raises its error.
 
 The selection rule lives only in `grounding/selection.py:unlabelled_fields`. A list field
-(`entity_list…`) is audited item by item; each item gets its own record and verdict.
+(`entity_list…`) is audited item by item; each item gets its own record and verdict. A
+mapping or list item is checked by its string values (`{"name": "Bob Co"}` as `Bob Co`).
 
 ## Verdicts
 
@@ -48,13 +54,15 @@ The selection rule lives only in `grounding/selection.py:unlabelled_fields`. A l
 | --- | --- | --- |
 | `name`, `free_text` (and unknown types) | at least `field_scoring.verification_token_coverage` (default 0.7) of the value's content tokens appear in the document | `not_found`; `unverifiable` when the value has no content tokens |
 | `date` | the document states the same date in any format (partial dates agree on every stated part) | `not_found`; text that is not a date uses the token rule |
-| `money` | the document states the same amount (within half a cent) whatever its symbols, separators, currency words or K/M/B suffix | `not_found`; `unverifiable` when the value is not an amount |
-| `id`, `cms_doc_ref` | the value is a substring of the document after casefolding and removing whitespace, `-`, `/` and `.` | `not_found` |
+| `money` | the document states the same amount (within half a cent, sign ignored) as money: with a currency symbol or word, a scale (`K`/`M`/`B` or `thousand`/`million`/`billion`), a thousands separator or two decimals. Bare integers in the text (a day, a year, a phone digit group) never count | `not_found`; `unverifiable` when the value is not an amount |
+| `id`, `cms_doc_ref` | after casefolding and removing whitespace, `-`, `/` and `.`, the value equals one identifier-like run of the text or up to four adjacent runs (`CLM 0001` matches `CLM-0001`); never a fragment of a longer run (`12` does not match inside `2012`) | `not_found`; `unverifiable` when shorter than three characters |
 | `label` | never: a closed-vocabulary label is inferred, not quoted | always `unverifiable` |
 
-Missing or blank document text makes every verdict `unverifiable`. The matchers are the
-factuality audit's own (`scoring/field_scoring.py`), so a value grounded here is grounded
-there. A new field type is one entry in `grounding/verdicts.py:_RULES`.
+Missing or blank document text makes every verdict `unverifiable`. Names, text and dates
+reuse the factuality audit's matchers (`scoring/field_scoring.py`); amounts reuse its
+money parser; the money and identifier boundary rules are this module's own. Per-document
+work is cached, so auditing many values of one document scans it once. A new field type
+is one entry in `grounding/verdicts.py:_RULES`.
 
 ## Metrics
 

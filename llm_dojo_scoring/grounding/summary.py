@@ -15,7 +15,7 @@ from typing import Any, Iterable
 
 from ..metrics.emitter import ScoreRecord
 from .audit import SCHEMA_VERSION, UnlabelledValueAudit
-from .verdicts import GROUNDED, NOT_FOUND, UNVERIFIABLE
+from .verdicts import GROUNDED, NOT_FOUND, UNVERIFIABLE, VERDICTS
 
 NOT_FOUND_RATE = "grounding_not_found_rate"
 UNVERIFIABLE_RATE = "grounding_unverifiable_rate"
@@ -94,11 +94,17 @@ class GroundingSummary:
 
 
 def summarize_grounding(audits: Iterable[UnlabelledValueAudit]) -> GroundingSummary:
-    """Count verdicts overall, per class and per field (keys sorted for stable output)."""
+    """Count verdicts overall, per class and per field (keys sorted for stable output).
+
+    A record whose verdict is not one of :data:`~.verdicts.VERDICTS` raises
+    ``ValueError`` rather than silently leaving the counts short.
+    """
     overall: Counter = Counter()
     by_class: dict[str, Counter] = defaultdict(Counter)
     by_field: dict[tuple[str, str], Counter] = defaultdict(Counter)
     for audit in audits:
+        if audit.verdict not in VERDICTS:
+            raise ValueError(f"unknown grounding verdict {audit.verdict!r}; expected one of {VERDICTS}")
         overall[audit.verdict] += 1
         by_class[audit.doc_class][audit.verdict] += 1
         by_field[(audit.doc_class, audit.field)][audit.verdict] += 1

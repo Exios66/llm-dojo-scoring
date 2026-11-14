@@ -19,6 +19,7 @@ from ..schemas.gt_metadata import (
     parse_gt_fields,
     scoring_gt_fields,
 )
+from ..scoring.field_scoring import expected_cms_source_table
 
 ABSENT = "absent"
 PENDING_ANNOTATION = "pending_annotation"
@@ -42,13 +43,22 @@ def unlabelled_fields(
     insurance row's ``adjuster`` / ``denial_reasons`` are labelled empty by the CMS
     source schema, whatever their status. Fields come in registry order.
 
+    A row is a CMS row by the headline's own test
+    (:func:`~llm_dojo_scoring.scoring.field_scoring.expected_cms_source_table`): a
+    ``cms_source_table`` carried by the GT or derived from ``doc_subclass``, and no
+    ``claim_type`` other than ``health``.
+
     ``gt_row`` is a Hub ``gt_fields`` value (JSON string or mapping) or a plain field
-    dict. An unknown ``doc_class`` raises ``KeyError`` from the registry.
+    dict; unparseable GT raises like :func:`scoring_gt_fields`. ``predicted`` must be a
+    mapping (``TypeError`` otherwise). An unknown ``doc_class`` raises ``KeyError``.
     """
+    if not isinstance(predicted, Mapping):
+        raise TypeError(f"predicted must be a mapping of field -> value, got {type(predicted).__name__}")
     types = field_types(doc_class)
-    scoped = scoring_gt_fields(gt_row, field_types=types, doc_type=doc_class, subclass=doc_subclass)
+    scoped = scoring_gt_fields(gt_row, field_types=types, extra_keys=(CMS_SOURCE_TABLE_KEY,),
+                               doc_type=doc_class, subclass=doc_subclass)
     presence = gt_presence_map(parse_gt_fields(gt_row))
-    is_cms_row = not is_empty_value(scoped.get(CMS_SOURCE_TABLE_KEY))
+    is_cms_row = expected_cms_source_table(doc_class, scoped) is not None
     out: dict[str, str] = {}
     for name in types:
         if name in scoped or is_empty_value(predicted.get(name)):
