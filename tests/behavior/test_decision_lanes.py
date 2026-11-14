@@ -512,6 +512,7 @@ def test_approve_as_is_with_field_edits_counts_as_a_human_change_in_every_lane()
     assert boss["metrics"]["needless_review_rate"] == 0.0
 
     def arbiter(decision: str) -> dict[str, Any]:
+        """Arbiter card for one ruling on the edited approve_as_is row."""
         return score_arbiter_lane([_approved_with_edits(arbiters=[{"ran": True, "decision": decision}])])
 
     assert arbiter("accept_with_caveats")["by_decision"]["accept_with_caveats"] == {"wrong": 1}
@@ -526,11 +527,13 @@ def test_approve_as_is_with_field_edits_counts_as_a_human_change_in_every_lane()
 
 
 def test_a_clean_approve_as_is_is_still_not_a_change():
+    """Without field edits, approve_as_is stays a no-change resolution."""
     clean = {"gold": {"human_resolution": "approve_as_is"}, "boss": {"decision": "approved"}}
     assert score_boss_lane([clean])["metrics"]["wrongful_approve_rate"] == 0.0
 
 
 def _two_attempts(second: float | None) -> dict[str, Any]:
+    """Attempt 1 scored 0.95; attempt 2 scored ``second``; accepted and judged complete."""
     return {
         "extraction": [
             {"attempt": 1, "doc_type": DOC_TYPE, "extraction_score": 0.95},
@@ -553,6 +556,7 @@ def test_a_final_attempt_without_a_score_is_not_graded_by_an_earlier_one():
 
 
 def test_the_last_attempt_still_grades_when_it_is_scored():
+    """A scored final attempt grades the decision as before."""
     arbiter = score_arbiter_lane([_two_attempts(0.2)])
     assert arbiter["n_scored"] == 1
     assert arbiter["metrics"]["wrongful_accept_rate"] == 1.0  # accepted a 0.2 final extraction
