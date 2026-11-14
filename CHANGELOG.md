@@ -4,6 +4,8 @@ All notable changes to `llm-dojo-scoring` are documented here.
 Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
+
+## [0.30.0] - 2026-11-14
 ### Added
 
 - `prompts/alignment.py` and `docs/prompts/PROMPT_CHANGELOG.md`: a guard that each production
