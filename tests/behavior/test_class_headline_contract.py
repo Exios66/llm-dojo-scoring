@@ -84,11 +84,14 @@ MERGER_GT = hub_row(
         "Fiduciary exception": {"answer": "Yes", "category": "Deal Protection"},
     },
 )
+#: The labels give two answered questions; the row's subclass (``all_cash`` in
+#: ``LIVE_CLASS_ROWS``) gives ``merger_consideration``. Both are extraction gold.
 MERGER_ORACLE = {
     "maud_clauses": [
         "Absence of Litigation Closing Condition: Pending",
         "Fiduciary exception: Yes",
     ],
+    "merger_consideration": "all_cash",
 }
 
 CORPORATE_LABELS = {
@@ -141,7 +144,7 @@ LIVE_CLASS_ROWS = [
     ("contract", "License_Agreements", CONTRACT_GT, CONTRACT_ORACLE,
      "cuad.clause_presence.micro_f1"),
     ("merger_agreement", "all_cash", MERGER_GT, MERGER_ORACLE,
-     "maud.question.micro_accuracy"),
+     "pipeline.extraction.overall"),
     ("corporate_record", "bylaws", CORPORATE_GT, CORPORATE_ORACLE,
      "pipeline.extraction.overall"),
     ("correspondence", "email", CORRESPONDENCE_GT, CORRESPONDENCE_ORACLE,
@@ -323,12 +326,13 @@ def test_labelled_topic_still_scores_a_wrong_prediction():
     assert payload["sentiment_accuracy"] == 1.0
 
 
-def test_maud_only_merger_has_null_field_micro():
-    """MAUD-only merger GT scores no extraction field: P/R/F1 are null, not 0.0."""
+def test_merger_labels_are_extraction_gold_with_field_micro():
+    """MAUD labels give merger extraction gold, so field-micro P/R/F1 are real numbers."""
     payload = score("merger_agreement", MERGER_GT, MERGER_ORACLE, "all_cash")
+    assert payload["maud_question_accuracy"] == 1.0
     for key in ("extraction_precision", "extraction_recall",
                 "extraction_f1", "extraction_f2"):
-        assert payload[key] is None, key
+        assert payload[key] == 1.0, key
 
 
 @pytest.mark.parametrize(("subclass", "record_type"), [
@@ -359,17 +363,17 @@ def test_batch_payloads_follow_the_single_document_rules():
     merger = get_suite("merger_agreement").score_document(
         [MERGER_GT, MERGER_GT], [MERGER_ORACLE, MERGER_ORACLE], doc_subclass="all_cash"
     )
-    assert merger["metric_id"] == "maud.question.micro_accuracy"
+    assert merger["metric_id"] == "pipeline.extraction.overall"
     assert merger["maud_question_accuracy"] == 1.0
-    assert merger["extraction_f1"] is None
+    assert merger["extraction_f1"] == 1.0
 
     stray = hub_row(claim_type="property")
     with_unscorable = get_suite("merger_agreement").score_document(
         [MERGER_GT, stray], [MERGER_ORACLE, {"intent": "acquisition"}], doc_subclass="all_cash"
     )
-    assert with_unscorable["metric_id"] == "maud.question.micro_accuracy"
-    assert with_unscorable["extraction_precision"] is None
-    assert with_unscorable["extraction_f1"] is None
+    assert with_unscorable["metric_id"] == "pipeline.extraction.overall"
+    assert with_unscorable["n_unscorable"] == 1
+    assert with_unscorable["extraction_f1"] == 1.0
 
     nan_gt = hub_row(**CORRESPONDENCE_LABELS, content_topic="nan", sentiment_label="nan")
     letters = get_suite("correspondence").score_document(
@@ -457,3 +461,40 @@ def test_cms_blank_list_items_are_silence(omitted, with_field_map):
         doc_class="insurance_claim",
     )
     assert counts["fp"] == 0
+
+
+def test_scalar_label_prediction_is_not_repeated_across_a_batch():
+    """One scalar prediction against several expected labels keeps the scorer's length error."""
+    from llm_dojo_scoring.scoring.suites import _labelled_label_pairs
+
+    assert _labelled_label_pairs(["a", "b"], "a") == (["a", "b"], "a")
+    with pytest.raises(ValueError, match="length"):
+        get_suite("correspondence").score(
+            [CORRESPONDENCE_GT, CORRESPONDENCE_GT], [CORRESPONDENCE_ORACLE, CORRESPONDENCE_ORACLE],
+            expected_topic=["a", "b"], predicted_topic="a", doc_subclass=["email", "email"],
+        )
+    # One expected label and one scalar prediction is still a pair (blank labels still drop).
+    assert _labelled_label_pairs(["a"], "a") == (["a"], ["a"])
+    assert _labelled_label_pairs(["nan"], "a") == (None, None)
+    # A missing prediction stays a per-row miss.
+    assert _labelled_label_pairs(["a", "b"], None) == (["a", "b"], ["", ""])
+
+
+@pytest.mark.parametrize("raw", ["nan", "", None])
+def test_per_document_scorer_agrees_with_the_suite_on_a_blank_label(raw):
+    """``doc_scorers.score_document`` skips a blank topic / sentiment label like ``ScoringSuite``."""
+    from llm_dojo_scoring.scoring.doc_scorers.dispatch import score_document
+
+    gt = json.loads(hub_row(**CORRESPONDENCE_LABELS, content_topic="", sentiment_label=""))
+    gt.update(content_topic=raw, sentiment_label=raw)
+    prediction = {**CORRESPONDENCE_ORACLE, "content_topic": "legal", "sentiment_label": "positive"}
+    payload = score_document("correspondence", prediction, gt, doc_subclass="email")
+    for key in ("content_topic_accuracy", "content_topic_f1_macro",
+                "sentiment_accuracy", "sentiment_f1_macro"):
+        assert payload.get(key) is None, key
+    labelled = score_document(
+        "correspondence", {**prediction, "content_topic": "legal"},
+        {**gt, "content_topic": "legal", "sentiment_label": "positive"}, doc_subclass="email",
+    )
+    assert labelled["content_topic_accuracy"] == 1.0
+    assert labelled["sentiment_accuracy"] == 1.0
