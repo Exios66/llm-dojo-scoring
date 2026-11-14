@@ -28,6 +28,13 @@ PENDING_ANNOTATION = "pending_annotation"
 UNLABELLED_STATUSES: tuple[str, ...] = (ABSENT, PENDING_ANNOTATION)
 
 
+def is_cms_row(gt_row: Any, *, doc_class: str, doc_subclass: str | None = None) -> bool:
+    """Whether the headline scores this row as a CMS row (``expected_cms_source_table``)."""
+    scoped = scoring_gt_fields(gt_row, field_types=field_types(doc_class), extra_keys=(CMS_SOURCE_TABLE_KEY,),
+                               doc_type=doc_class, subclass=doc_subclass)
+    return expected_cms_source_table(doc_class, scoped) is not None
+
+
 def unlabelled_fields(
     gt_row: Any,
     predicted: Mapping[str, Any],

@@ -15,8 +15,8 @@ from typing import Any, Mapping
 
 from ..schemas.doc_classes import field_types
 from ..schemas.gt_metadata import is_empty_value, parse_json_container
-from ..scoring.field_scoring import LIST_PREFIX, is_entity_list
-from .selection import unlabelled_fields
+from ..scoring.field_scoring import CMS_ROW_FIELD_TYPES, LIST_PREFIX, is_entity_list
+from .selection import is_cms_row, unlabelled_fields
 from .verdicts import value_verdict
 
 #: Version of the record shape written by ``as_dict``; bump it on any shape change.
@@ -104,9 +104,13 @@ def audit_unlabelled_values(
     Records come in registry field order; a list field gives one record per
     non-empty item (``item_index`` set; a mapping or list item is checked by its string
     values), a scalar one record (``item_index=None``). ``predicted`` must be a mapping
-    (``TypeError``) and an unknown ``doc_class`` raises ``KeyError``.
+    (``TypeError``) and an unknown ``doc_class`` raises ``KeyError``. On a CMS row the
+    headline's ``CMS_ROW_FIELD_TYPES`` apply (``supporting_documents`` items are
+    ``cms_doc_ref``), as in scoring.
     """
-    types = field_types(doc_class)
+    types = dict(field_types(doc_class))
+    if is_cms_row(gt_row, doc_class=doc_class, doc_subclass=doc_subclass):
+        types.update({k: v for k, v in CMS_ROW_FIELD_TYPES.items() if k in types})
     selected = unlabelled_fields(gt_row, predicted, doc_class=doc_class, doc_subclass=doc_subclass)
     digest = _text_sha256(doc_text)
     now = time.time()
