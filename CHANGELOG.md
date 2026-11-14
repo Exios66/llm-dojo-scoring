@@ -90,6 +90,11 @@ Format based on Keep a Changelog; versioning is SemVer.
   `grounding_n_candidates`, `grounding_n_valid_labels`, `grounding_n_label_conflicts`.
   `io.read_jsonl` rejects `NaN` and `Infinity`, as the writer does; a `valid` verdict on a
   value that is not text or a number (a predicted `false`) needs a `corrected_value`.
+- `config.GroundingSettings` (`Settings.grounding`, a `grounding:` YAML or taxonomy block,
+  `configure(grounding__…)`): reviewer-trust thresholds (`trust_bar`, `trust_min_n`,
+  `trust_window`, `certainty_floor`, `spot_check_rate`, `spot_check_min_per_agent`), validated
+  on every change. `derive_valid_labels` now reads its default certainty floor from it (0.9,
+  unchanged). Only `grounding/` reads these; no score moves.
 <!-- end 0.31.0 -->
 
 - `prompts/alignment.py` and `docs/prompts/PROMPT_CHANGELOG.md`: a guard that each production
