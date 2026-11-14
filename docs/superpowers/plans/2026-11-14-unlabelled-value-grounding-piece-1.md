@@ -27,8 +27,7 @@ imports `grounding/`.
 This plan implements §6.2 and §7. The layout and names are fixed by §11, and the order
 of work across repos by §12. Pieces 2 and 3 get their own plans after this piece lands.
 
-**Tracker:** the master tracker issue on `Exios66/llm-dojo-scoring` (linked from the
-spec's §12 once opened).
+**Tracker:** Exios66/llm-dojo-scoring#146.
 
 ## Global Constraints
 
@@ -325,7 +324,7 @@ def test_verdicts_constant_lists_every_outcome():
 **Files:**
 - Test: `tests/grounding/test_grounding_isolation.py`
 - Modify: `scripts/consumer_closure.py`. Add this to `HOLD`:
-  `"grounding": "unlabelled-value grounding (0.31.0); mailroom wiring follows, see the tracker issue"`
+  `"grounding": "unlabelled-value grounding (0.31.0); mailroom wiring follows, tracker #146"`
 - Modify: `docs/analysis/data/consumer_closure.json`. Regenerate it with the script;
   never edit it by hand.
 - Create: `docs/contracts/GROUNDING.md`. Mirror the section order of
