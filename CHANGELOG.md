@@ -82,6 +82,14 @@ Format based on Keep a Changelog; versioning is SemVer.
   on those. Goldens are unchanged (no golden case carries document text). Consumers:
   `llm-mailroom` and the sandbox vendor snapshot get new factuality numbers on the next pin
   bump; no public name changes. Contract: `docs/contracts/GROUNDING.md` ("Dates").
+- `grounding/candidates.py`, `ledger.py`, `labels.py`, `io.py`: every audited value becomes a
+  review candidate with a stable id and a priority; confirmations from a person or an agent
+  are validated into an append-only ledger (rejects kept with a reason); valid labels are
+  derived from it with full provenance (human confirmation, or a trusted agent with enough
+  certainty), with conflicts, pending reasons and withdrawals listed. New tier-3 counts:
+  `grounding_n_candidates`, `grounding_n_valid_labels`, `grounding_n_label_conflicts`.
+  `io.read_jsonl` rejects `NaN` and `Infinity`, as the writer does; a `valid` verdict on a
+  value that is not text or a number (a predicted `false`) needs a `corrected_value`.
 <!-- end 0.31.0 -->
 
 - `prompts/alignment.py` and `docs/prompts/PROMPT_CHANGELOG.md`: a guard that each production

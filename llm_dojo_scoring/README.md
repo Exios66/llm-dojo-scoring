@@ -65,6 +65,7 @@ llm_dojo_scoring/
 | | `serving`, `cost` | Local-vs-API serving, token cost |
 | **`grounding/`** | `verdicts`, `selection` | One value against the document; which fields are unlabelled |
 | | `audit`, `summary` | Per-value records; unlabelled-value rates as `ScoreRecord`s (`docs/contracts/GROUNDING.md`) |
+| | `candidates`, `ledger`, `labels`, `io` | Review candidates; append-only confirmations; valid labels with provenance; local JSONL |
 | **`ml/`** | `contract` | `ml_contract()`: the label and intake tables `mailroom-ml` vendors as `ml/data/ml_contract.json` |
 | | `metrics` | `score_intake_model`: accuracy, macro F1, ECE, fast-path coverage and risk |
 | **`integrations/`** | `update_awareness` | `dojo-version` release awareness |
