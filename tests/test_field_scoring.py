@@ -1265,3 +1265,221 @@ def test_document_date_scan_is_linear_on_hostile_text(hostile):
     start = time.perf_counter()
     fs._document_dates(hostile)
     assert time.perf_counter() - start < 0.5
+
+
+# ---------------------------------------------------------------------------
+# Round 3: compound ordinals, version words, year range, dotted ranges,
+# double-spelled contract form, year-less ranges
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "doc",
+    [
+        "thirty-second of March 2024",
+        "forty-first of June 2024",
+        "fifty-third of March 2024",
+        "thirty second of March 2024",
+        "the Thirty-Second day of March, 2024",
+        "forty-first day of June, 2024",
+    ],
+)
+def test_an_impossible_ordinal_word_names_no_day(doc):
+    """"thirty-second" is not the bare word "second": no day is read from it."""
+    assert all(parts.day is None for parts in fs._document_dates(doc)), doc
+    got = fs._parse_date_parts(doc)
+    assert got is None or got.day is None, doc
+
+
+def test_a_possible_compound_ordinal_is_still_read():
+    """"twenty-first" and "thirty first" are days."""
+    assert fs._date_grounded_in_doc(fs._parse_date_parts("2024-06-21"), "twenty-first of June 2024")
+    assert fs._date_grounded_in_doc(fs._parse_date_parts("2024-12-31"), "thirty first of December 2024")
+    assert tuple(fs._parse_date_parts("twenty-first day of June")) == (None, 6, 21)
+
+
+@pytest.mark.parametrize(
+    "doc",
+    [
+        "Version: 1.2.34",
+        "version:1.2.34",
+        "Release notes 1.2.34",
+        "Release Notes: 1.2.34",
+        "Build: 1.2.34",
+        "rev 1.2.34",
+        "v 1.2.34",
+        "see build 1.2.34-1.2.35",
+        "Version: 1.2.34-1.2.35",
+    ],
+)
+def test_a_version_number_is_not_a_date(doc):
+    """A dotted two-digit-year span after a version word is a version, with a colon or a notes word."""
+    assert not fs._date_grounded_in_doc(fs._parse_date_parts("2034-01-02"), doc), doc
+    assert not fs._date_grounded_in_doc(fs._parse_date_parts("2035-01-02"), doc), doc
+
+
+@pytest.mark.parametrize(
+    "parts, doc",
+    [
+        (fs._DateParts(1000, 1, None), "a 1/1000 inch tolerance"),
+        (fs._DateParts(1234, 5, 6), "code 1234-05-06 here"),
+        (fs._DateParts(1700, 3, 3), "dated March 3, 1700"),
+    ],
+)
+def test_years_outside_1800_to_2099_are_not_document_dates(parts, doc):
+    """A fraction such as 1/1000 or a year before 1800 is not a date."""
+    assert not fs._date_grounded_in_doc(parts, doc), doc
+
+
+@pytest.mark.parametrize(
+    "pred, doc",
+    [
+        ("2000-01", "one 1/2000 share"),  # documented trade-off: unpadded month/year reads as a date
+        ("2024-03", "see Section 3/2024"),  # documented trade-off
+        ("1899-03-03", "dated March 3, 1899"),
+        ("2099-03", "due 03/2099"),
+    ],
+)
+def test_year_range_and_unpadded_month_year_trade_off(pred, doc):
+    """Pins the documented trade-off: 1800-2099 reads, including an unpadded month and year."""
+    assert fs._date_grounded_in_doc(fs._parse_date_parts(pred), doc), (pred, doc)
+
+
+@pytest.mark.parametrize(
+    "pred, doc",
+    [
+        ("1999-12-31", "12.31.99-12.31.99"),
+        ("2024-03-04", "3.4.24-3.5.24"),
+        ("2024-03-05", "3.4.24-3.5.24"),
+        ("2024-03-04", "from 3.4.24\u20133.5.24 inclusive"),
+    ],
+)
+def test_both_ends_of_a_dotted_two_digit_year_range_are_read(pred, doc):
+    """A range of dotted two-digit-year dates reads both ends (the old scan did)."""
+    assert fs._date_grounded_in_doc(fs._parse_date_parts(pred), doc), (pred, doc)
+
+
+@pytest.mark.parametrize(
+    "pred, doc",
+    [
+        ("2024-03-03", "the 3rd (third) day of March, 2024"),
+        ("2024-03-03", "this third (3rd) day of March, 2024"),
+        ("2024-03-01", "first (1st) of March 2024"),
+        ("2024-03-01", "the first (1st) day of March, 2024"),
+        ("2024-12-31", "the Thirty-first (31st) day of December, 2024"),
+        ("March 3", "the 3rd (third) day of March"),
+        ("2024-03", "the 3rd (fourth) day of March, 2024"),  # the day is dropped, the month and year stay
+    ],
+)
+def test_double_spelled_contract_date_is_read_when_both_forms_agree(pred, doc):
+    """"3rd (third)" is one day; when the two forms disagree the day is not read."""
+    assert fs._date_grounded_in_doc(fs._parse_date_parts(pred), doc), (pred, doc)
+
+
+@pytest.mark.parametrize(
+    "pred, doc",
+    [
+        ("2024-03-03", "the 3rd (fourth) day of March, 2024"),
+        ("2024-03-04", "the 3rd (fourth) day of March, 2024"),
+        ("March 3", "the 3rd (fourth) day of March"),
+        ("March 4", "the 3rd (fourth) day of March"),
+        ("2024-03-03", "this third (4th) day of March, 2024"),
+    ],
+)
+def test_double_spelled_date_that_disagrees_names_no_day(pred, doc):
+    """When the number and the word disagree neither is the day."""
+    assert not fs._date_grounded_in_doc(fs._parse_date_parts(pred), doc), (pred, doc)
+
+
+@pytest.mark.parametrize(
+    "text, parts",
+    [
+        ("the 3rd (third) day of March, 2024", (2024, 3, 3)),
+        ("this third (3rd) day of March, 2024", (2024, 3, 3)),
+        ("first (1st) of March 2024", (2024, 3, 1)),
+        ("the 3rd (fourth) day of March, 2024", (2024, 3, None)),
+        ("the 3rd (fourth) day of March", (None, 3, None)),
+    ],
+)
+def test_parse_date_parts_reads_the_double_spelled_form(text, parts):
+    """The reader agrees with the scan on "3rd (third)" and on a disagreement."""
+    got = fs._parse_date_parts(text)
+    assert (None if got is None else tuple(got)) == parts, text
+
+
+@pytest.mark.parametrize(
+    "pred, label",
+    [
+        ("the 3rd (third) day of March, 2024", "2024-03-03"),
+        ("this third (3rd) day of March, 2024", "2024-03-03"),
+        ("first (1st) of March 2024", "2024-03-01"),
+    ],
+)
+def test_double_spelled_date_scores_one_against_the_iso_label(pred, label):
+    """A contract's double-spelled date is the same date as its ISO form."""
+    assert fs.score_date_field(pred, label) == 1.0
+    assert fs.score_date_field(label, pred) == 1.0
+
+
+def test_double_spelled_date_that_disagrees_is_not_a_full_match():
+    """"3rd (fourth)" names no day, so it cannot be a full match for either."""
+    assert fs.score_date_field("the 3rd (fourth) day of March, 2024", "2024-03-03") < 1.0
+
+
+@pytest.mark.parametrize(
+    "pred, doc",
+    [
+        ("March 1", "held March 1 to June 30"),
+        ("June 30", "held March 1 to June 30"),
+        ("March 1", "held March 1 - June 30."),
+        ("June 30", "held March 1 through June 30"),
+        ("March 5", "held March 3-5"),
+        ("March 3", "held March 3-5"),
+        ("March 5", "held 3 to 5 March"),
+    ],
+)
+def test_year_less_range_reads_both_ends_without_a_year(pred, doc):
+    """"March 1 to June 30" states both days, year-less, as "... June 30, 2024" states them with a year."""
+    assert fs._date_grounded_in_doc(fs._parse_date_parts(pred), doc), (pred, doc)
+
+
+@pytest.mark.parametrize(
+    "pred, doc",
+    [
+        ("2024-03-01", "held March 1 to June 30"),  # year-less never grounds a year
+        ("March 15", "held March 1 to June 30"),  # the middle is not stated
+        ("March 4", "held March 3-5"),
+    ],
+)
+def test_year_less_range_does_not_ground_a_year_or_its_middle(pred, doc):
+    """A year-less range grounds neither a year nor a day between its ends."""
+    assert not fs._date_grounded_in_doc(fs._parse_date_parts(pred), doc), (pred, doc)
+
+
+def test_parse_date_parts_reads_a_year_less_range_as_its_first_day():
+    """A single value reads a year-less range as its first day, like the dated one."""
+    assert tuple(fs._parse_date_parts("March 1 to June 30")) == (None, 3, 1)
+    assert tuple(fs._parse_date_parts("March 1 - June 30")) == (None, 3, 1)
+
+
+_HOSTILE_ROUND3 = [
+    "3.4.24 " * 28_000,
+    "12.31.99-" * 22_000,
+    "version 1.2.34 " * 13_000,
+    "third (3rd) " * 16_000,
+    "third (" + " " * 200_000 + "x",
+    "March 1 to " * 18_000,
+    "March 1 to June 30 " * 10_000,
+    "thirty second " * 14_000,
+    "3rd (" * 40_000,
+    "March 3-" * 25_000,
+]
+
+
+@pytest.mark.parametrize("hostile", _HOSTILE_ROUND3, ids=[f"round3_{i}" for i in range(len(_HOSTILE_ROUND3))])
+def test_document_date_scan_stays_linear_on_the_new_forms(hostile):
+    """The new forms keep the scan under the same 0.5 s budget on 200 KB."""
+    fs._document_dates.cache_clear()
+    start = time.perf_counter()
+    fs._document_dates(hostile)
+    assert time.perf_counter() - start < 0.5

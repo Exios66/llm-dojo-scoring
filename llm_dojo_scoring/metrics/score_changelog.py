@@ -132,7 +132,7 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
             "days and years, month and year, month and day, day ranges; #147): the "
             "factuality audit's verified_in_doc / verified_precision / hallucination_rate "
             "move for date fields, and the old scan's false matches (\"5 days after the "
-            "first day of March 2024\", \"1.2.34\") are gone. A date written with an "
+            "first day of March 2024\", \"version 1.2.34\") are gone. A date written with an "
             "article, a spelled-out day or year, \"in the year of our Lord\", a range "
             "(read as its first day) or a stray bracket now reads, so a date field score "
             "and the field-micro metrics can move on those predictions."
