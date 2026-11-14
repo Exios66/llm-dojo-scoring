@@ -105,7 +105,8 @@ class TrustGate:
     """Decides, from the ledger alone, which agents were trusted and when.
 
     Thresholds default to ``get_settings().grounding`` (``trust_bar``,
-    ``trust_min_n``, ``trust_window``, ``certainty_floor``) and are validated together.
+    ``trust_min_n``, ``trust_window``, ``certainty_floor``), are validated together and
+    are read-only afterwards (``history`` is cached per ledger).
     ``certainty_floor`` is not part of trust; :func:`derive_valid_labels` uses it when
     given this gate and no floor of its own.
     """
@@ -119,11 +120,31 @@ class TrustGate:
             ("certainty_floor", certainty_floor)) if value is not None}
         checked: GroundingSettings = replace(base, **overrides)
         checked.validate()
-        self.bar: float = checked.trust_bar
-        self.min_n: int = checked.trust_min_n
-        self.window: int = checked.trust_window
-        self.certainty_floor: float = checked.certainty_floor
+        self._bar = float(checked.trust_bar)
+        self._min_n = int(checked.trust_min_n)
+        self._window = int(checked.trust_window)
+        self._certainty_floor = float(checked.certainty_floor)
         self._cache: tuple[ConfirmationLedger, tuple[GateSnapshot, ...]] | None = None
+
+    @property
+    def bar(self) -> float:
+        """Least unrounded Wilson lower bound of valid precision (read-only)."""
+        return self._bar
+
+    @property
+    def min_n(self) -> int:
+        """Least checked ``valid`` verdicts (read-only)."""
+        return self._min_n
+
+    @property
+    def window(self) -> int:
+        """Latest paired checks per agent the gate looks at (read-only)."""
+        return self._window
+
+    @property
+    def certainty_floor(self) -> float:
+        """Least certainty an agent ``valid`` needs to count (read-only)."""
+        return self._certainty_floor
 
     def __repr__(self) -> str:
         """The thresholds, for logs."""
@@ -137,7 +158,8 @@ class TrustGate:
         trusted = counts.n_agent_valid >= self.min_n and lower is not None and lower >= self.bar
         identity = {
             "reviewer_id": reviewer_id, "bar": self.bar, "min_n": self.min_n, "window": self.window,
-            "window_start": agreement.window_start, "window_end": agreement.window_end,
+            "window_start": None if agreement.window_start is None else float(agreement.window_start),
+            "window_end": None if agreement.window_end is None else float(agreement.window_end),
             "n_checked": counts.n_checked, "n_agent_valid": counts.n_agent_valid,
             "n_valid_confirmed": counts.n_valid_confirmed, "trusted": trusted,
         }
