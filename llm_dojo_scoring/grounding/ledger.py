@@ -149,6 +149,10 @@ def _validate(
     problem = _correction_problem(record.get("corrected_value"))
     if problem:
         return None, problem
+    if (record["verdict"] == VALID and record.get("corrected_value") is None
+            and _correction_problem(candidates[cid].value) is not None):
+        return None, ("the candidate's value is not text or a finite number; "
+                      "a valid verdict needs a corrected_value")
     note = record.get("note")
     if note is not None and not isinstance(note, str):
         return None, "note must be text"

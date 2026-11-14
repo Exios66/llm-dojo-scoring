@@ -83,3 +83,12 @@ def test_replace_keeps_permissions(tmp_path):
     path.chmod(0o644)
     write_jsonl([{"n": 1}], path)
     assert path.stat().st_mode & 0o777 == 0o644
+
+
+@pytest.mark.parametrize("constant", ["NaN", "Infinity", "-Infinity"])
+def test_nan_and_infinity_are_not_json(tmp_path, constant):
+    """NaN and infinities are not JSON: the reader refuses them, as the writer does."""
+    path = tmp_path / "bad.jsonl"
+    path.write_text(f'{{"a": 1}}\n{{"confirmed_at": {constant}}}\n', encoding="utf-8")
+    with pytest.raises(ValueError, match=rf":2: not valid JSON \(.*{constant}"):
+        read_jsonl(path)
