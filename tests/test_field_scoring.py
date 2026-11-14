@@ -1,6 +1,7 @@
 """Field-scoring tests: scalar scorers, entity lists, factuality audit, and
 composite score_extraction (ported behavior)."""
 
+import time
 from datetime import date
 
 import pytest
@@ -973,7 +974,6 @@ _DOC_DATE_NOT_GROUNDED = [
     ("March 3", "see Section 3 and the March report"),
     ("March 3", "In March we met 3 times"),
     ("March 12", "page 12 of the March report"),
-    ("2000-01", "one 1/2000 share"),  # a fraction: numeric month-year needs a padded month
     # a month word with no number next to it
     ("2024-03", "The march of the 2024 team"),
 ]
@@ -1065,3 +1065,203 @@ def test_the_same_date_in_two_formats_scores_one(pred, label):
 def test_parse_date_parts_reads_every_written_form(text, parts):
     """_parse_date_parts states exactly the components the text writes."""
     assert tuple(fs._parse_date_parts(text)) == parts
+
+
+# ---------------------------------------------------------------------------
+# Round 2: ranges and joined dates, more written forms
+# ---------------------------------------------------------------------------
+
+#: A complete date (day, month, four-digit year) may touch punctuation or letters.
+_JOINED_DATES = [
+    ("Term: 01/01/2024-12/31/2024", ["2024-01-01", "2024-12-31"]),
+    ("from March 1, 2024-March 1, 2025", ["2024-03-01", "2025-03-01"]),
+    ("March 1, 2024/February 28, 2025", ["2024-03-01", "2025-02-28"]),
+    ("3/1/2024-3/5/2024", ["2024-03-01", "2024-03-05"]),
+    ("3/1/2024\u20133/5/2024", ["2024-03-01", "2024-03-05"]),
+    ("2024-03-01/2024-03-10", ["2024-03-01", "2024-03-10"]),
+    ("2024-03-01\u20132024-03-10", ["2024-03-01", "2024-03-10"]),
+    ("3 March 2024-5 March 2024", ["2024-03-03", "2024-03-05"]),
+    ("Filed 3/1/2024-Smith v. Jones", ["2024-03-01"]),
+    ("3/1/2024/Rev", ["2024-03-01"]),
+    ("3/1/2024@10am", ["2024-03-01"]),
+    ("3/1/2024_v2", ["2024-03-01"]),
+    ("contract_3-1-2024.pdf", ["2024-03-01"]),
+    ("Smith3/1/2024", ["2024-03-01"]),
+    ("3/1/24-3/5/24", ["2024-03-01", "2024-03-05"]),
+]
+
+
+@pytest.mark.parametrize("doc, dates", _JOINED_DATES)
+def test_complete_dates_touching_punctuation_are_all_read(doc, dates):
+    """Both ends of a range, and a date glued to a filename or id suffix, are read."""
+    for iso in dates:
+        assert fs._date_grounded_in_doc(fs._parse_date_parts(iso), doc), (iso, doc)
+        assert fs.audit_scalar_field("date", iso, "", doc)["verified_in_doc"] == 1, (iso, doc)
+
+
+_MORE_GROUNDED = [
+    # lowercase "may" with a day and a year
+    ("2024-05-03", "signed may 3, 2024."),
+    ("2024-05-03", "signed 3 may 2024."),
+    # unpadded dotted day, month and two-digit year
+    ("2024-03-04", "dated 3.4.24 by the parties"),
+    # spelled-out days, hyphen or space, with a "this" or "the"
+    ("2024-03-03", "Made this third day of March, 2024, between"),
+    ("2024-12-31", "on the Thirty-first day of December, 2024."),
+    ("2024-06-21", "on twenty-first of June 2024"),
+    ("2024-06-21", "the twenty first day of June, 2024"),
+    ("2024-03-01", "on first of March 2024"),
+    ("2024-03-02", "the second day of March 2024"),
+    ("2024-03-12", "the twelfth of March 2024"),
+    ("2024-03-30", "the thirtieth day of March 2024"),
+    ("2024-03-03", "this 3rd day of March in the year 2024"),
+    ("2024-03-03", "3rd day of March, in the year of our Lord 2024"),
+    ("2024-03-03", "3rd day of March, A.D. 2024"),
+    # spelled-out years
+    ("2024-03-03", "this third day of March, two thousand twenty-four"),
+    ("2024-03-03", "the 3rd day of March, Two Thousand and Twenty Four"),
+    ("1999-03-03", "3rd day of March, nineteen ninety-nine"),
+    ("2000-03-03", "3rd day of March two thousand"),
+    # month and year
+    ("2024-03", "due March of 2024"),
+    ("2024-03", "due in March of 2024"),
+    ("2024-03", "due Mar-2024"),
+    ("2024-03", "due 3/2024"),
+    ("March 2024", "due 3/2024"),
+    # year-first prose
+    ("2024-03-03", "dated 2024 March 3"),
+    ("2024-03-03", "dated 2024, March 3rd"),
+    ("2024-03-03", "dated 2024-Mar-03"),
+    # compact
+    ("2024-03-03", "Effective 20240303."),
+    ("2024-03-03", "Effective (20240303)"),
+    # day ranges: the document states every day it names
+    ("2024-03-03", "held March 3-5, 2024"),
+    ("2024-03-05", "held March 3-5, 2024"),
+    ("2024-03-03", "held March 3\u20135, 2024"),
+    ("2024-03-05", "held March 3\u20135, 2024"),
+    ("2024-03-03", "held 3-5 March 2024"),
+    ("2024-03-05", "held 3-5 March 2024"),
+    ("2024-03-03", "held March 3 to 5, 2024"),
+    ("2024-03-05", "held March 3 to 5, 2024"),
+    ("2024-03-03", "held March 3 through 5, 2024"),
+    ("2024-03-05", "held March 3 through 5, 2024"),
+    ("2024-03-30", "held March 30-April 2, 2024"),
+    ("2024-04-02", "held March 30-April 2, 2024"),
+    ("2024-04-05", "held March 1 to April 5, 2024"),
+]
+
+_MORE_NOT_GROUNDED = [
+    ("2024-03-04", "held March 3-5, 2024"),  # a range names its two ends, not the days between
+    ("2024-03-04", "held 3-5 March 2024"),
+    ("2024-05-05", "you may 5 times in 2024"),
+    ("May 5", "you may 5 times"),
+    ("2034-01-02", "build 1.2.34 is ready"),
+    ("2034-01-02", "version 1.2.34 was released"),
+    ("2024-03-03", "order 120240303"),  # inside a longer digit run
+    ("2024-03-03", "id 202403031234"),
+    ("2024-03-03", "no 20240303-A"),  # compact needs to stand alone
+    ("2024-02-30", "Effective 20240230."),  # not a date
+    ("2024-03-02", "the second Monday of March 2024"),  # a weekday is not a day
+    ("2024-03-03", "the third quarter of March 2024"),
+]
+
+
+@pytest.mark.parametrize("pred, doc", _MORE_GROUNDED)
+def test_more_written_forms_ground_the_prediction(pred, doc):
+    """Spelled-out days and years, month-of-year, year-first, compact and range forms read."""
+    assert fs._date_grounded_in_doc(fs._parse_date_parts(pred), doc), (pred, doc)
+    assert fs.audit_scalar_field("date", pred, "", doc)["verified_in_doc"] == 1, (pred, doc)
+
+
+@pytest.mark.parametrize("pred, doc", _MORE_NOT_GROUNDED)
+def test_more_look_alikes_do_not_ground_the_prediction(pred, doc):
+    """A range's middle, a modal verb, a version or a longer digit run is not the date."""
+    assert not fs._date_grounded_in_doc(fs._parse_date_parts(pred), doc), (pred, doc)
+
+
+@pytest.mark.parametrize(
+    "text, parts",
+    [
+        ("this third day of March, 2024", (2024, 3, 3)),
+        ("the Thirty-first day of December, 2024", (2024, 12, 31)),
+        ("twenty-first of June 2024", (2024, 6, 21)),
+        ("the twenty first day of June, 2024", (2024, 6, 21)),
+        ("first of March 2024", (2024, 3, 1)),
+        ("third of March", (None, 3, 3)),
+        ("3rd day of March, two thousand twenty-four", (2024, 3, 3)),
+        ("3rd day of March, nineteen ninety-nine", (1999, 3, 3)),
+        ("3rd day of March two thousand", (2000, 3, 3)),
+        ("this 3rd day of March in the year 2024", (2024, 3, 3)),
+        ("3rd day of March, in the year of our Lord 2024", (2024, 3, 3)),
+        ("3rd day of March, A.D. 2024", (2024, 3, 3)),
+        ("in March of 2024", (2024, 3, None)),
+        ("March 3 to 5, 2024", (2024, 3, 3)),  # a prediction states a range's first day
+        ("March 3 through 5, 2024", (2024, 3, 3)),
+        ("3 to 5 March 2024", (2024, 3, 3)),
+        ("March 30-April 2, 2024", (2024, 3, 30)),
+        ("March 3-5, 2024", (2024, 3, 3)),
+        ("may 3, 2024", (2024, 5, 3)),
+        ("3.4.24", (2024, 3, 4)),
+        ("2024 March 3", (2024, 3, 3)),
+        ("20240303", (2024, 3, 3)),
+    ],
+)
+def test_parse_date_parts_reads_spelled_out_and_range_forms(text, parts):
+    """The reader states exactly what the text writes, including spelled-out days and years."""
+    got = fs._parse_date_parts(text)
+    assert (None if got is None else tuple(got)) == parts, text
+
+
+def test_a_weekday_between_an_ordinal_word_and_the_month_is_not_a_day():
+    """"second Monday of March 2024" names no day of the month."""
+    got = fs._parse_date_parts("the second Monday of March 2024")
+    assert got is None or got.day is None
+
+
+@pytest.mark.parametrize(
+    "pred, label",
+    [
+        ("this third day of March, 2024", "2024-03-03"),
+        ("twenty-first of June 2024", "2024-06-21"),
+        ("3rd day of March, two thousand twenty-four", "2024-03-03"),
+        ("this 3rd day of March in the year 2024", "2024-03-03"),
+        ("in March of 2024", "2024-03"),
+        ("3.4.24", "2024-03-04"),
+        ("may 3, 2024", "2024-05-03"),
+        ("20240303", "2024-03-03"),
+        ("2024 March 3", "2024-03-03"),
+        ("March 3 to 5, 2024", "2024-03-03"),
+    ],
+)
+def test_the_same_date_in_the_newly_read_forms_scores_one(pred, label):
+    """A prediction and a label in different written forms score as the same date."""
+    assert fs.score_date_field(pred, label) == 1.0
+    assert fs.score_date_field(label, pred) == 1.0
+    assert fs._date_match_similarity(pred, label) == 1.0
+
+
+_HOSTILE = [
+    "March" + " " * 200_000 + "x",
+    "March 3" + " " * 200_000 + "x",
+    "March 3," + " " * 200_000 + "x",
+    "3" + " " * 200_000 + "March",
+    "3rd day of" + " " * 200_000 + "x",
+    "March 3-" + " " * 200_000 + "x",
+    "March " * 33_000,
+    "3 of " * 40_000 + "March",
+    "1/" * 100_000,
+    "2024-" * 40_000,
+    "20240303" * 25_000,
+    "third day of March, " * 10_000,
+    "a" * 200_000,
+]
+
+
+@pytest.mark.parametrize("hostile", _HOSTILE, ids=[f"hostile{i}" for i in range(len(_HOSTILE))])
+def test_document_date_scan_is_linear_on_hostile_text(hostile):
+    """Long runs of spaces, separators or near-dates never make the scan quadratic."""
+    fs._document_dates.cache_clear()
+    start = time.perf_counter()
+    fs._document_dates(hostile)
+    assert time.perf_counter() - start < 0.5
