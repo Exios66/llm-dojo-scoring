@@ -17,7 +17,7 @@ the human's ``confirmed_at``, :func:`reviewer_agreement` reports:
 
 * **valid precision** — of the values the agent called ``valid``, the share people
   also called valid (with the same value), and its Wilson 95% lower bound. This is
-  the number that gates trust (owner decision; the gate is ``grounding/trust.py``);
+  the number that gates trust (owner decision; the gate itself lands in piece 3c);
 * **agreement** — the share of paired checks with the same verdict;
 * **Cohen's κ** — agreement beyond chance, ``None`` unless both raters used both
   verdicts;
@@ -102,7 +102,8 @@ def paired_checks(ledger: ConfirmationLedger, *, as_of: float | None = None) -> 
 
     The human truth is people's latest decisive verdicts. The agent's side is its
     **blind** verdict: its latest confirmation made before people first decided the
-    candidate, both earlier in the ledger and no later in ``confirmed_at``. A
+    candidate: earlier in the ledger than the first human decision to arrive, and no
+    later in ``confirmed_at`` than the earliest human decision time. A
     revision after people decided never rewrites the pair (an agent shown the human
     verdict cannot erase its miss), and a backdated record that arrived after the
     human one does not count. No blind decisive verdict, no pair.
@@ -113,10 +114,12 @@ def paired_checks(ledger: ConfirmationLedger, *, as_of: float | None = None) -> 
     confirmations = [c for c in ledger.confirmations if as_of is None or c.confirmed_at <= as_of]
     if as_of is not None:
         ledger = ConfirmationLedger(candidates=ledger.candidates, confirmations=tuple(confirmations))
-    first_human: dict[str, tuple[int, float]] = {}
+    first_human: dict[str, tuple[int, float]] = {}  # earliest arrival, earliest time
     for position, c in enumerate(confirmations):
-        if c.reviewer_kind == HUMAN and c.verdict in (VALID, HALLUCINATED) and c.candidate_id not in first_human:
-            first_human[c.candidate_id] = (position, c.confirmed_at)
+        if c.reviewer_kind == HUMAN and c.verdict in (VALID, HALLUCINATED):
+            seen = first_human.get(c.candidate_id)
+            first_human[c.candidate_id] = (position, c.confirmed_at) if seen is None else (
+                seen[0], min(seen[1], c.confirmed_at))
     blind: dict[tuple[str, str], Confirmation] = {}
     for position, c in enumerate(confirmations):
         if c.reviewer_kind != AGENT or c.candidate_id not in first_human:

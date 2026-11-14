@@ -189,3 +189,11 @@ def test_human_whose_latest_word_is_unsure_no_longer_counts():
     ledger = _ledger(c, [(0, "agent", "boss@v1", "valid", 1), (0, "human", "human:a", "valid", 5),
                          (0, "human", "human:a", "unsure", 9)])
     assert paired_checks(ledger) == []
+
+
+def test_backdated_late_human_record_moves_the_cutoff_back():
+    """The blind cutoff is the earliest human decision time, even if that record arrived later."""
+    c = _candidates(1)
+    ledger = _ledger(c, [(0, "agent", "boss@v1", "valid", 5), (0, "human", "human:a", "valid", 10),
+                         (0, "human", "human:b", "valid", 3)])
+    assert paired_checks(ledger) == []
