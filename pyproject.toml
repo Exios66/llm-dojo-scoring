@@ -58,7 +58,7 @@ include = ["llm_dojo_scoring*"]
 exclude = ["packages*"]
 
 [tool.setuptools.package-data]
-llm_dojo_scoring = ["prompts/*.yaml", "prompts/*.json", "prompts/templates/*.md", "schemas/data/*.json", "ml/data/*.json"]
+llm_dojo_scoring = ["prompts/*.yaml", "prompts/*.json", "prompts/data/*.json", "prompts/templates/*.md", "schemas/data/*.json", "ml/data/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

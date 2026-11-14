@@ -48,6 +48,7 @@ def steps(tier: str, junit: str | None = None) -> list[Step]:
         ("goldens", [py, "scripts/freeze_goldens.py", "--check"]),
         ("gt-coverage", [py, "scripts/render_gt_coverage.py", "--check"]),
         ("ml-contract", [py, "scripts/export_ml_contract.py", "--check"]),
+        ("prompt-changelog", [py, "scripts/render_prompt_changelog.py", "--check"]),
     ]
 
 
