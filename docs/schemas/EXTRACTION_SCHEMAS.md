@@ -214,8 +214,9 @@ categorical (no text spans), so they convert to extraction gold the way CUAD
 labels feed a contract (`maud_schema.hub_merger_expected_fields`): `maud_clauses`
 is one `'<Question>: <Hub class>'` line per **answered** question (catalog order,
 verbatim Hub class; an answer or question the catalog does not know is kept as
-written; blank and `nan` answers are not labels) and `merger_consideration` is the
-`Type of Consideration` answer's token, else the subtype's (`other` is never gold).
+written; blank and `nan` answers are not labels, and neither is a question the MAUD
+scorer calls ambiguous: a `gt_ambiguous` flag or several distinct answers) and
+`merger_consideration` is the `Type of Consideration` answer's token, else the subtype's (`other` is never gold).
 `maud_clauses` is scored question by question (a wrong answer is a miss, bullets /
 case / quotes are tolerated), so it equals `maud_question_accuracy` on the same
 row. A pending, not-applicable or empty label map gives no gold and the row is

@@ -868,18 +868,44 @@ def maud_clauses_to_answers(lines: Iterable[str]) -> dict[str, str]:
     return out
 
 
-def _label_answer(record: object) -> str:
-    """One Hub ``maud_clause_labels`` record -> its answer text (``""`` when unanswered).
+def _label_answer(question: str, record: object) -> str:
+    """One Hub ``maud_clause_labels`` record -> its answer text.
 
-    A record is ``{"answer": ..., "category": ...}`` (or a bare answer). A list
-    answer is the Hub's multi-label form and is joined with ``", "``; blank,
-    ``None``, ``"nan"`` and empty containers are unanswered.
+    A record is ``{"answer": ..., "category": ...}`` (or a bare answer). Blank,
+    ``None``, ``"nan"`` and empty containers are unanswered (``""``). A record
+    the MAUD content scorer treats as ambiguous also returns ``""``, so it never
+    becomes gold: an explicit ``gt_ambiguous`` / ``ambiguous`` flag, a list of
+    several distinct answers (the Hub's multi-label form, as a list or as JSON
+    text) and a slash-collapsed answer that is not itself a catalog class
+    (:func:`~llm_dojo_scoring.metrics.scorecard_honesty.detect_maud_gt_ambiguity`).
+    A list that repeats one answer is that answer.
     """
-    answer = record.get("answer") if isinstance(record, Mapping) else record
-    answer = parse_json_container(answer)
+    from ..metrics.scorecard_honesty import detect_maud_gt_ambiguity
+
+    mapping = record if isinstance(record, Mapping) else None
+    if mapping is not None and (mapping.get("gt_ambiguous") or mapping.get("ambiguous")):
+        return ""
+    answer = parse_json_container(mapping.get("answer") if mapping is not None else record)
     if isinstance(answer, (list, tuple)):
-        answer = ", ".join(str(item).strip() for item in answer if not _blank_answer(item))
-    return "" if _blank_answer(answer) else str(answer).strip()
+        distinct: dict[str, str] = {}
+        for item in answer:
+            if not _blank_answer(item):
+                distinct.setdefault(str(item).strip().casefold(), str(item).strip())
+        if len(distinct) > 1:
+            return ""
+        answer = next(iter(distinct.values()), "")
+    if _blank_answer(answer):
+        return ""
+    text = str(answer).strip()
+    valid = mapping.get("valid_classes") if mapping is not None else None
+    if isinstance(valid, str):
+        valid = [valid]
+    probe: dict[str, Any] = {"answer": text}
+    if isinstance(valid, (list, tuple)):
+        probe["valid_classes"] = [str(item) for item in valid if not _blank_answer(item)]
+    if detect_maud_gt_ambiguity({str(question).strip(): probe}):
+        return ""
+    return text
 
 
 def _blank_answer(value: object) -> bool:
@@ -917,7 +943,9 @@ def hub_merger_expected_fields(
         (the lenient rule of :func:`maud_answers_to_clauses`), because the Hub is
         the ground truth: dropping it would score the model as right for omitting
         a labelled answer. Blank, missing and ``"nan"`` answers are not labels; the Hub class
-        ``"None"`` is an answer and stays gold.
+        ``"None"`` is an answer and stays gold. A question the MAUD content scorer treats as
+        ambiguous (flagged ``gt_ambiguous``, or holding several distinct answers) is
+        skipped, so it stays unscored there and here (:func:`_label_answer`).
     ``merger_consideration``
         The subclass token of the row's ``Type of Consideration`` answer,
         falling back to *subclass* (then the row's own ``expected_subclass``).
@@ -937,7 +965,7 @@ def hub_merger_expected_fields(
     answers: list[tuple[str, str]] = []
     if isinstance(labels, Mapping):
         for question, record in labels.items():
-            answer = _label_answer(record)
+            answer = _label_answer(str(question), record)
             if answer:
                 answers.append((str(question).strip(), answer))
     order = {q.name: i for i, q in enumerate(MAUD_QUESTIONS)}
