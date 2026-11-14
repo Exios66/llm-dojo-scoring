@@ -1846,7 +1846,11 @@ def test_range_with_ordinal_suffixes_does_not_ground_the_middle_or_a_wrong_year(
     assert not fs._date_grounded_in_doc(fs._parse_date_parts(pred), doc), (pred, doc)
 
 
-_GAPS = ["   ", "\t\t\t", "\n\n\n\n", " \t \n ", "\u00a0\u00a0\u00a0", " " * 40]
+_GAPS = [
+    "   ", "\t\t\t", "\n\n\n\n", " \t \n ", "\u00a0\u00a0\u00a0", " " * 40,
+    # separators NFKC keeps: one is enough to split the words on the ASCII-only scan
+    "\u2028", "\u2029\u2029", "\x85\x85", "\x1c\x1c", " \u2028 ",
+]
 
 
 @pytest.mark.parametrize("gap", _GAPS, ids=[repr(g)[:12] for g in _GAPS])
