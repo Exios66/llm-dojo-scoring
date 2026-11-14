@@ -10,7 +10,8 @@ import llm_dojo_scoring
 from llm_dojo_scoring._layout import LEGACY_MODULES
 
 PKG_DIR = Path(llm_dojo_scoring.__file__).parent
-SUBPACKAGES = {"schemas", "scoring", "pipeline", "metrics", "analysis", "integrations", "prompts"}
+SUBPACKAGES = {"schemas", "scoring", "pipeline", "metrics", "analysis", "integrations", "prompts",
+               "grounding"}
 
 
 @pytest.mark.parametrize("name", sorted(LEGACY_MODULES))
