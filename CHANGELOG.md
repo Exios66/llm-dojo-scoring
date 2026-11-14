@@ -113,7 +113,10 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
   field-micro excludes it on both sides (a correspondence row with a pending `sender` and a stated
   sender scored precision 0.75 / F1 0.8571; now 1.0 / 1.0). `not_applicable` and
   `schema_documented_absence` still blank the field, so a stated value there stays a false positive.
-  No signature changed; `scoring_gt_fields` output differs only by omitting pending keys.
+  Exception: on a CMS insurance row, `adjuster` and `denial_reasons` stay labelled empty whatever
+  their status (the CMS source schema documents them absent), so a stated value there is still a
+  false positive. No signature changed; `scoring_gt_fields` output differs only by omitting
+  pending keys.
 - A row with no labelled extraction field (presence-only CUAD, MAUD-only merger, no GT) reports
   field-micro P/R/F1/F2 as null instead of 0.0, as the presence-only contract path already did.
 - A MAUD-only merger payload now names its headline: `metric_id` is

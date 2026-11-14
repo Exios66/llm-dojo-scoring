@@ -752,7 +752,8 @@ class ScoringSuite:
         # plus annotation stats and a stringified gt_presence map. Scope the
         # GT to THIS suite's class surface so fields that do not apply to the
         # document type (empty / not_applicable / schema_documented_absence /
-        # pending_annotation) are never required events, and parse the
+        # pending_annotation) are never required events (pending fields are
+        # dropped as unlabelled, the others blanked), and parse the
         # stringified JSON values ("[]", "{}", '["a", "b"]'). See
         # llm_dojo_scoring.schemas.gt_metadata.
         from ..schemas import gt_metadata as _gtm
@@ -785,7 +786,7 @@ class ScoringSuite:
             return row_subclass_kw if index is None else None
 
         def _scope_expected_one(value: Any, index: int | None = None) -> Any:
-            """Remove annotation keys and blank absent fields in a GT dictionary.
+            """Remove annotation keys and pending fields, and blank absent fields, in a GT dictionary.
 
             Apply :func:`scoring_gt_fields` to Hub metadata; preserve unmapped
             keys in plain dictionaries and return non-dict inputs unchanged.

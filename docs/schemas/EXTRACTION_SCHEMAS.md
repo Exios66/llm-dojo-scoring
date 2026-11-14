@@ -414,7 +414,8 @@ consistency is degenerate on GT-shaped predictions.
    not label, or marks `pending_annotation`, is excluded from field-micro
    P/R/F1 on both sides (a value there is not a false positive); a value on a
    field labelled empty (`not_applicable`, `schema_documented_absence`), or an
-   off-schema key, is. A blank or literal `"nan"` `content_topic` /
+   off-schema key, is. A CMS row's `adjuster` / `denial_reasons` stay labelled
+   empty whatever their status (CMS documents them absent). A blank or literal `"nan"` `content_topic` /
    `sentiment_label` is not a label and emits no topic / sentiment score.
 5. **Perfect-prediction replay** (both splits, 3,302 rows, 19,924
    extraction events): 0 FN / 0 FP / 0 spurious fills; 91 triage-only
