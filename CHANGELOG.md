@@ -17,6 +17,37 @@ Format based on Keep a Changelog; versioning is SemVer.
   them (a CMS row's `supporting_documents` items are `cms_doc_ref`). A separate pass: nothing on the
   scoring path imports it, and the headline, field-micro and golden scores are unchanged.
   Contract: `docs/contracts/GROUNDING.md`. No consumer imports it yet (`hold`).
+- **Score change: dates in the document are read in every common written form** (tracker
+  #146, #147). The factuality audit and the grounding verdicts decide whether the document
+  states a predicted date by scanning it for dates, and the scan found only three shapes
+  (`d/m/y` numeric, "Month D, YYYY", "Dth day of Month, YYYY"). It now also reads ISO and
+  year-first numeric (`2024-03-03`, `2024/03/03`, `2024.03.03`, `2024-03-03T10:30:00Z`),
+  month-first prose with an ordinal, "the", no comma or a period ("Mar. 3rd, 2024",
+  "March the 3rd, 2024"), day-first prose ("3 March 2024", "3rd of March, 2024",
+  "03-Mar-2024"), month and year ("March 2024", "2024-03", "03/2024") and month and day
+  with no year ("March 3", "3rd of March"). A weekday prefix is ignored. The rule is
+  unchanged: every component the prediction states must be stated by the document date and
+  equal, so a year-less document date never grounds a prediction that states a year, and a
+  full document date grounds a partial prediction that agrees. Ambiguous numeric
+  `03/04/2024` stays month-first and the two-digit-year pivot is unchanged. Ids
+  (`INV-2024-0301`, `2024-03-0001`), phone numbers, versions (`1.2.34`), money
+  (`March 3,000`), the modal verb "may" and a month word with no number are not dates; a
+  document span inside a longer alphanumeric, hyphenated or dotted run is not either. The
+  old scan also read "5 days after the first day of March 2024" as March 5; it no longer
+  does. On the interpretation side `_parse_date_parts` now drops an article before a day
+  ("March the 3rd, 2024", "the 3rd of March 2024") and a stray closing bracket, so a
+  prediction and a label in those forms score as the same date.
+  **Metrics that move** on unchanged predictions: `verified_in_doc`, `verified_precision`
+  and `hallucination_rate` of the factuality audit (`audit_scalar_field`, per field and as
+  the run means `verified_precision`, `hallucination_rate`, `extraction_hallucination_rate`,
+  `extraction_overall_verified_precision`), up for dates the document writes in a newly read
+  form and down for the false matches removed; the grounding verdict of a `date` value
+  (`grounding_not_found_rate`, new in this same release, so it has no earlier value to
+  compare). The date field score moves only for the article and bracket forms above, so
+  `pipeline.extraction.*` can move on those. Goldens are unchanged (no golden case carries
+  document text). Consumers: `llm-mailroom` and the sandbox vendor snapshot get new factuality
+  numbers on the next pin bump; no public name changes. Contract:
+  `docs/contracts/GROUNDING.md` ("Dates").
 <!-- end 0.31.0 -->
 
 - `schemas/doc_classes.py`: one hand-edited registry (`DOC_CLASSES`, `DocClass`, `field_types()`,
