@@ -756,7 +756,9 @@ and are pinned by `tests/test_maud_catalog.py`.
    for "exchange ratio / stock consideration language", "per-share cash and stock mix"
    and "election mechanics" *in `maud_clauses`*. Those lines are not
    `'<Question>: <class>'`; they become unknown extra questions (ignored by the MAUD
-   extras) but depress the `maud_clauses` field's token-F1.
+   extras) but depress the `maud_clauses` field's token-F1. The suites' question-by-question
+   rescore counts every such line, and any nonempty entry that reads as no question, as an
+   unmatched prediction: precision and F1 fall, the recall-based field score does not.
 4. **`maud_category_accuracy` is structurally 0.** Span predictions carry
    `category=""`, and the prompt format cannot carry a category. Not a model error.
 5. **Fixed — null mapping entries.** A top-level `{question: null}` is now
