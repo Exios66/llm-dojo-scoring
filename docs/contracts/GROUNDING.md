@@ -304,9 +304,13 @@ the human's time (ties by candidate id), with `overall` and `by_field`
 | `grounding_reviewer_kappa` | 2 | Cohen's κ, with people's side read as their verdict on the value the agent vouched for (a corrected value counts as `hallucinated`); `None` unless both sides used both verdicts |
 | `grounding_reviewer_n_checked` | 3 | pairs in the window |
 
-A rate with a zero denominator is `None`. `agreement_score_records(agreements, *, agent,
-run_id=None)` emits the five metrics per reviewer with `metadata.reviewer_id`,
-`metadata.window` and `metadata.denominator`.
+A rate with a zero denominator is `None`. `agreement_score_records(agreements, *,
+run_id=None)` emits the five metrics per reviewer, with `agent` set to the `reviewer_id`
+(the reviewer version is what is scored) and `metadata.reviewer_id`, `metadata.window`
+and `metadata.denominator`; the metrics apply to `ALL` agents for that reason.
+`Emitter.get_scorecard(reviewer_id, run_id)` then gives one reviewer's numbers: under a
+shared agent name it would aggregate by metric id alone and show only the last
+reviewer's precision.
 
 ## Settings
 
