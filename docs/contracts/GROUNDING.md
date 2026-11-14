@@ -289,7 +289,11 @@ Set them in the YAML config (`LLM_DOJO_SCORING_CONFIG`) or the taxonomy passed t
 `configure(grounding__trust_bar=0.97)` (or `configure(grounding=GroundingSettings(...))`).
 Values must be finite numbers: rates in `[0, 1]`, counts whole numbers of at least 0
 (`trust_min_n` at least 1, so no agent is trusted on zero checks), and
-`trust_window ≥ trust_min_n` (overrides passed together are checked together). A bad
+`trust_window ≥ trust_min_n` (overrides passed together are checked together). Every
+path coerces alike: `trust_min_n: 40.0` (YAML), `grounding__trust_min_n=40.0` and
+`grounding=GroundingSettings(trust_min_n=40.0)` all give `40`. A block that is not a
+mapping (`false`, `0`, `""` and `[]` included) is an error; `grounding: null` and
+`grounding: {}` change nothing. A bad
 grounding value raises `ValueError` before anything in that config file or taxonomy is
 applied, so every settings section keeps its old values; unknown keys in the block are
 ignored. Updates change `get_settings().grounding` in place.
