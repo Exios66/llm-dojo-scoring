@@ -1,6 +1,6 @@
 # Unlabelled-value grounding, review candidates and label provenance — design
 
-Status: owner decisions recorded; awaiting approval of the whole design · Date: 2026-11-14 · Target: the `v0.30.0` staging branch
+Status: approved 2026-11-14 · Release: 0.31.0 (after v0.30.0) · Date: 2026-11-14 · Target: the `v0.30.0` staging branch
 
 ## 1. Intent
 
@@ -105,17 +105,12 @@ into the scoreable content measured by the traditional headline metrics.
 
 ### 6.1 Module layout
 
-New subpackage `llm_dojo_scoring/grounding/` (structural separation from `scoring/`):
+New subpackage `llm_dojo_scoring/grounding/`, structurally separate from `scoring/`.
+One responsibility per module; §11 is the binding layout and naming table.
 
-| Module | Owns |
-|:--|:--|
-| `grounding/audit.py` | per-value verdicts and run-level rates (piece 1) |
-| `grounding/candidates.py` | candidate records, confirmations, provenance, valid-label export (piece 2) |
-| `grounding/agreement.py` | reviewer agreement vs human spot-checks, the trust gate, spot-check sampling (piece 3) |
-
-Nothing in `scoring/`, `metrics/emitter.py` or the suites imports `grounding/`. A test
-asserts that (import-graph check), which is how the "never touches headlines" promise
-is enforced by structure.
+Nothing in `scoring/`, `metrics/emitter.py`, the suites or the package root imports
+`grounding/`. A subprocess test asserts that, which is how the "never touches headlines"
+promise is enforced by structure rather than by convention.
 
 ### 6.2 Piece 1 — what is "unlabelled", and the verdicts
 
@@ -173,9 +168,9 @@ denominator):
 
 | Metric id | Value | Tier |
 |:--|:--|:--|
-| `grounding.unlabelled.not_found_rate` | `not_found / (grounded + not_found)` — the hallucination rate; `unverifiable` excluded from the denominator | CORE (1) |
-| `grounding.unlabelled.unverifiable_share` | `unverifiable / all audited` — how much the rate cannot see | DEEP (2) |
-| `grounding.unlabelled.n_audited` | count | LOG (3) |
+| `grounding_not_found_rate` | `not_found / (grounded + not_found)` — the hallucination rate; `unverifiable` excluded from the denominator | CORE (1) |
+| `grounding_unverifiable_rate` | `unverifiable / all audited` — how much the rate cannot see | DEEP (2) |
+| `grounding_n_audited` | count | LOG (3) |
 
 Each is also reported per `doc_class` and per `field` (metadata on the `ScoreRecord`,
 same metric id). Null, never 0.0, when the denominator is 0. The name deliberately
@@ -188,8 +183,8 @@ Public entry points (piece 1):
 audit_unlabelled_values(gt_row, predicted, *, doc_class, doc_text, doc_subclass=None,
                         field_types=None, run_id=None, doc_id=None, extractor=None)
     -> list[UnlabelledValueAudit]
-summarize_unlabelled_audits(audits) -> UnlabelledAuditSummary   # rates, per class, per field
-unlabelled_score_records(summary, *, agent, run_id) -> list[ScoreRecord]
+summarize_grounding(audits) -> GroundingSummary   # rates, per class, per field
+grounding_score_records(summary, *, agent, run_id) -> list[ScoreRecord]
 ```
 
 ### 6.3 Piece 2 — candidates, confirmations, provenance, valid labels
@@ -219,7 +214,7 @@ Validation: unknown `candidate_id`, missing `reviewer_id`, or an agent confirmat
 without `certainty` is rejected with a reason (never silently dropped).
 
 **The ledger is append-only.** Confirmations are never edited or deleted; a change of
-mind is a new confirmation. `valid_labels(...)` is a pure function of the whole ledger
+mind is a new confirmation. `derive_valid_labels(...)` is a pure function of the whole ledger
 plus the gate history, re-derived every time, so a withdrawal is simply the absence of a
 label on the next derivation (and is listed in a `withdrawn` section by comparing with a
 previous export, if one is passed).
@@ -253,10 +248,10 @@ an agent approved can be found and withdrawn later if its agreement falls.
 Public entry points (piece 2):
 
 ```python
-candidates_from_audits(audits) -> list[ReviewCandidate]
+review_candidates(audits) -> list[ReviewCandidate]
 ingest_confirmations(records, candidates) -> ConfirmationLedger   # validated, with rejects
-valid_labels(ledger, gate) -> list[ValidLabel]
-export_jsonl(items, path)  # helpers for candidates / valid labels (local file only)
+derive_valid_labels(ledger, gate) -> list[ValidLabel]
+write_jsonl(items, path) / read_jsonl(path)  # grounding/io.py, local files only
 ```
 
 ### 6.4 Piece 3 — agent agreement and the trust gate
@@ -278,15 +273,16 @@ export_jsonl(items, path)  # helpers for candidates / valid labels (local file o
 - **Trust over time:** trust is evaluated **as of each confirmation's `confirmed_at`**,
   never retroactively. `TrustGate.history(ledger)` replays the ledger in time order and
   returns serialisable `GateSnapshot`s (id = hash of reviewer id, window bounds and
-  numbers); `valid_labels(ledger, gate)` looks up the snapshot in force when each agent
+  numbers); `derive_valid_labels(ledger, gate)` looks up the snapshot in force when each agent
   confirmation was made. The Dojo stores nothing: the caller keeps the ledger (JSONL),
   and every snapshot can be recomputed from it.
 - **Regression guard (extra):** when a gate snapshot drops an agent below the bar, the
   snapshot lists every valid label whose `validity_basis` was that agent since its last
   passing snapshot, for re-review.
-- Agreement metrics are emitted as `grounding.reviewer.valid_precision` and
-  `grounding.reviewer.valid_precision_lower_bound` (CORE, the gated numbers) and
-  `grounding.reviewer.agreement` (DEEP, overall), with `reviewer_id` in metadata.
+- Agreement metrics are emitted as `grounding_reviewer_valid_precision` and
+  `grounding_reviewer_valid_precision_lower_95` (tier 1, the gated numbers),
+  `grounding_reviewer_agreement` and `grounding_reviewer_kappa` (tier 2) and
+  `grounding_reviewer_n_checked` (tier 3), with `reviewer_id` in metadata.
 
 Public entry points (piece 3):
 
@@ -322,11 +318,13 @@ TrustGate(bar=0.95, min_n=50, certainty_floor=0.9).history(ledger) -> list[GateS
 
 ## 8. Delivery
 
-Three stacked PRs onto `v0.30.0`, in order: piece 1 → piece 2 → piece 3. Each follows
-`.claude/rules/pr-flow.md` (score/metric work: three adversarial rounds, fresh pre-PR
-review, draft PR). No public names on the consumer surface change; new names are added
-under `grounding` and documented in `PUBLIC_API.md`. Follow-on (not this project):
-llm-mailroom wiring + boss/JEV confirm role + review UI; dataset ingestion.
+See §12 for the full order across the constellation. In the Dojo: three stacked PRs
+(piece 1 → piece 2 → piece 3), each following `.claude/rules/pr-flow.md` (new-metric
+work: three adversarial rounds, a fresh pre-PR review, a draft PR), released together as
+**0.31.0** after 0.30.0 is cut. The new modules stay `hold` in `consumer_closure` and
+are documented in `docs/contracts/GROUNDING.md` and the package README; they join
+`docs/guides/PUBLIC_API.md` and `tests/fixtures/consumer_surface.json` in the
+cross-repo bump that first imports them from llm-mailroom.
 
 ## 9. Left to the builder
 
@@ -355,3 +353,82 @@ decided the other two on 2026-11-14:
 2. **The trust bar is measured on the precision of the agent's `valid` verdicts**: of the
    values it called valid, the share humans also called valid, by Wilson lower bound.
    Overall agreement and κ are reported next to it but do not gate trust.
+
+## 11. Code organization and naming (binding)
+
+House conventions this follows: subpackage `__init__.py` holds only a one-line
+docstring (no re-exports); consumers map their own stores to input dataclasses, as
+`scoring.reviewer.ReviewRecord` does; metric ids are snake_case with a family prefix
+(`reviewer_*`, `extraction_*`, `legalbench_*`), counts are `<family>_n_<thing>` and
+one-sided bounds end `_lower_95` / `_upper_95`; contracts live in `docs/contracts/`;
+statistics reuse `analysis.bootstrap.wilson_ci`; settings live in `config.Settings`.
+
+| Path | Piece | Owns | Public names |
+|:--|:--|:--|:--|
+| `grounding/__init__.py` | 1 | docstring only | — |
+| `grounding/verdicts.py` | 1 | per-type check of one value against document text | `GROUNDED`, `NOT_FOUND`, `UNVERIFIABLE`, `VERDICTS`, `value_verdict` |
+| `grounding/selection.py` | 1 | which predicted fields are unlabelled (the one place the rule lives; reuses `scoring_gt_fields`) | `UNLABELLED_STATUSES`, `unlabelled_fields` |
+| `grounding/audit.py` | 1 | per-value audit records | `UnlabelledValueAudit`, `audit_unlabelled_values` |
+| `grounding/summary.py` | 1 | counts, rates, breakdowns, `ScoreRecord`s | `GroundingCounts`, `GroundingSummary`, `summarize_grounding`, `grounding_score_records` |
+| `grounding/io.py` | 2 | local JSONL read/write for every grounding record type | `read_jsonl`, `write_jsonl` |
+| `grounding/candidates.py` | 2 | review candidates, stable ids, priority | `ReviewCandidate`, `candidate_id`, `review_candidates` |
+| `grounding/ledger.py` | 2 | confirmations, validation, the append-only ledger | `Confirmation`, `ConfirmationReject`, `ConfirmationLedger`, `ingest_confirmations` |
+| `grounding/labels.py` | 2 | valid-label derivation, conflicts, withdrawals | `ValidLabel`, `LabelDerivation`, `derive_valid_labels` |
+| `grounding/agreement.py` | 3 | paired human/agent checks, precision of `valid`, κ, spot-check sampling | `ReviewerAgreement`, `reviewer_agreement`, `select_spot_checks` |
+| `grounding/trust.py` | 3 | the trust gate and its time-ordered snapshots, regression guard | `TrustGate`, `GateSnapshot` |
+| `config.py` (`GroundingSettings`, key `grounding`) | 3 | `trust_bar=0.95`, `trust_min_n=50`, `trust_window=200`, `certainty_floor=0.9`, `spot_check_rate=0.10`, `spot_check_min_per_agent=20` | — |
+| `tests/grounding/test_grounding_<module>.py` + `tests/grounding/conftest.py` | all | one test file per module; shared synthetic documents and Hub rows | — |
+| `docs/contracts/GROUNDING.md` | all | the contract: audited set, verdicts, metric ids, ledger and trust rules | — |
+
+Extension points, so later work is additive:
+
+- A new field type adds one row to the dispatch table in `verdicts.py` and one test row.
+- A new reviewer kind (e.g. a second decision model) needs no code: `reviewer_id` is
+  free text and every agent is gated by the same `TrustGate`.
+- A new export format adds a writer next to `io.py`; record types expose `as_dict()` /
+  `from_dict()` and never change shape without a `schema_version` bump (every record
+  carries `schema_version: 1`).
+
+**Metric ids** (registry, `aggregation` and units as listed):
+
+| Id | Tier | Units | Piece |
+|:--|:--|:--|:--|
+| `grounding_not_found_rate` | 1 | float[0,1] | 1 |
+| `grounding_unverifiable_rate` | 2 | float[0,1] | 1 |
+| `grounding_n_audited` | 3 | count | 1 |
+| `grounding_n_candidates` | 3 | count | 2 |
+| `grounding_n_valid_labels` | 3 | count | 2 |
+| `grounding_n_label_conflicts` | 3 | count | 2 |
+| `grounding_reviewer_valid_precision` | 1 | float[0,1] | 3 |
+| `grounding_reviewer_valid_precision_lower_95` | 1 | float[0,1] | 3 |
+| `grounding_reviewer_agreement` | 2 | float[0,1] | 3 |
+| `grounding_reviewer_kappa` | 2 | float[-1,1] | 3 |
+| `grounding_reviewer_n_checked` | 3 | count | 3 |
+
+## 12. Constellation sequencing
+
+The mailroom side cannot start until both release lines are clear. Order:
+
+1. **Dojo 0.30.0** — land the open stack onto `v0.30.0` (#140, #142, #143, #144; #145 is
+   the release PR), cut 0.30.0.
+2. **llm-mailroom catches up to 0.30.0** — #230 (pin at the trimmed Dojo stack) then
+   #231 (scoring fixes, stacked on #230), re-pinned to the 0.30.0 release commit;
+   the audit stack #226 → #227 → #229 (storage, diagnostics workbench, live audit row);
+   #222 (GT label workbook). #228 is a consolidation draft and #204 / #160 are held: not
+   prerequisites.
+3. **Dojo 0.31.0** — grounding pieces 1, 2, 3 (this design). Can be built in parallel
+   with step 2; lands after step 1.
+4. **llm-mailroom wiring** (separate design, after steps 2 and 3), building on what the
+   open PRs add:
+   - pin bump to 0.31.0 with `/dojo-bump`, plus the `/cross-repo-bump` walk (grounding
+     enters `PUBLIC_API.md` and `consumer_surface.json`; `consumer_closure` hold → keep);
+   - run the grounding pass in `src/graph/scoring_nodes.py` (#229) after extraction
+     scoring, behind a taxonomy flag, off by default;
+   - emit the rates through `src/audit/sinks/` (#229) and register the names in
+     `SCORE_CONFIGS`; persist audits and candidates in the audit storage (#226);
+   - human review: candidates exported to the GT label workbook (#222) and shown as a
+     queue in the diagnostics workbench (#227); confirmations read back into the ledger;
+   - boss and JEV "confirm this value" roles (a Langfuse-managed prompt registered in
+     `prompt_templates()`; JEV adapter emitting `certainty`);
+   - follow-ups: The-Mailroom schema mirror if spans change; sandbox vendor refresh.
+5. **mailroom-dataset ingestion** of exported valid labels, human-run, separate repo.
