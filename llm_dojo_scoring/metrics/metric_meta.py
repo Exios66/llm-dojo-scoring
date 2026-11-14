@@ -294,6 +294,22 @@ METRIC_META: dict[str, dict[str, str]] = {
         "pending_annotation); None when no audited value was checkable.",
         "structural",
     ),
+    "grounding_reviewer_valid_precision": _m(
+        "Precision of an agent's 'valid' confirmations against human spot-checks "
+        "(grounding.agreement.reviewer_agreement): a hit is a value people also call "
+        "valid with the same value (casefolded, whitespace collapsed).",
+        "The agent's blind verdict (its latest from before people first decided) against "
+        "people's latest; unsure verdicts and candidates people disagree on are left out; per reviewer_id over its latest trust_window paired checks; "
+        "None when the agent made no paired 'valid' verdict.",
+        "required",
+    ),
+    "grounding_reviewer_valid_precision_lower_95": _m(
+        "Wilson score 95% lower bound of grounding_reviewer_valid_precision, unrounded "
+        "(the formula of analysis.bootstrap.wilson_ci without its four-decimal "
+        "rounding); the trust gate compares it with grounding.trust_bar.",
+        "Same pairs as grounding_reviewer_valid_precision; None when it is None.",
+        "required",
+    ),
     "verified_precision": _m(
         "Precision restricted to doc-verifiable list items "
         "(field_scoring.audit_list_field token-coverage check).",
