@@ -226,6 +226,11 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
   (`freeze_goldens.py --check` exit 0); `SCORE_CHANGELOG` gains a 0.30.0 entry for
   `pipeline.extraction.overall` and the field-micro `f1`, `f2`, `precision` and `recall`
   (the #133 money fix can turn a false positive plus a false negative into a true positive).
+- Ledger only, no score change: `SCORE_CHANGELOG` gains the `0.29.0` entry for #134 (date
+  scoring no longer reads the clock), which shipped in the v0.29.0 tag without one. A
+  comparison of a 0.28.1 run with a 0.29.0 or later run now names it for
+  `pipeline.extraction.overall` and the field-micro metrics. The five 0.30.0 change sets
+  are labelled `0.30.0` (they were labelled `0.29.0`, a tag that does not contain them).
 - Tooling only, no score change (review on #136): `scripts/consumer_closure.py` expands a consumer
   `import *` (root `__all__`, module or package) and exits 2 when a consumer file does not parse;
   `audit_consumer_surface.py` rejects an unknown `--root` code; `GT_COVERAGE.md` counts
