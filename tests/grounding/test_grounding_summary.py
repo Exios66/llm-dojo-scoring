@@ -11,6 +11,7 @@ from llm_dojo_scoring.grounding.summary import (
     grounding_score_records,
     summarize_grounding,
 )
+from llm_dojo_scoring.metrics.emitter import Emitter
 from llm_dojo_scoring.metrics.registry import MetricTier, get_registry
 
 
@@ -70,17 +71,31 @@ def test_score_records_use_registered_ids_and_tiers():
         assert registry.get(record.metric).tier == expected_tiers[record.metric]
 
 
-def test_score_records_order_scope_and_denominator():
-    """Run records first, then class, then field; each carries its denominator."""
+def test_score_records_are_one_per_metric_with_slices_in_metadata():
+    """One run record per metric; class and field slices ride in its metadata."""
     summary = summarize_grounding([_audit("grounded"), _audit("not_found"), _audit("unverifiable")])
     records = grounding_score_records(summary, agent="specialist", run_id="r1")
-    assert [r.metadata["scope"] for r in records] == ["run"] * 3 + ["class"] * 3 + ["field"] * 3
+    assert [r.metric for r in records] == list(METRIC_IDS)
     run_rate = records[0]
-    assert (run_rate.metric, run_rate.value, run_rate.metadata["denominator"]) == (
-        "grounding_not_found_rate", 0.5, 2)
-    assert records[-1].metadata == {"scope": "field", "doc_class": "insurance_claim",
-                                    "field": "insurer", "denominator": 3}
+    assert (run_rate.metric, run_rate.value) == ("grounding_not_found_rate", 0.5)
+    assert run_rate.metadata == {
+        "scope": "run", "denominator": 2,
+        "by_class": {"insurance_claim": {"value": 0.5, "denominator": 2}},
+        "by_field": {"insurance_claim.insurer": {"value": 0.5, "denominator": 2}},
+    }
+    assert records[2].metadata["by_field"] == {"insurance_claim.insurer": {"value": 3, "denominator": 3}}
     assert all(r.run_id == "r1" and r.agent == "specialist" for r in records)
+
+
+def test_scorecard_reads_run_values_not_the_last_slice():
+    """Through the emitter, one audit counts once and the rate is the run's, not a field's."""
+    summary = summarize_grounding([_audit("grounded", field="insurer"), _audit("not_found", field="adjuster")])
+    emitter = Emitter(sinks=[], require_provenance=False)
+    for r in grounding_score_records(summary, agent="insurance_claims_specialist", run_id="r1"):
+        emitter.emit_score(r.agent, r.doc_id, r.metric, r.value, r.metadata, r.run_id)
+    card = emitter.get_scorecard("insurance_claims_specialist", "r1")
+    assert card["grounding_n_audited"] == 2
+    assert card["grounding_not_found_rate"] == 0.5
 
 
 def test_unknown_verdict_raises_instead_of_undercounting():

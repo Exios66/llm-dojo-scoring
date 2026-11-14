@@ -287,9 +287,15 @@ def _agreement_over(reviewer_id: str, pairs: list[PairedCheck], window: int) -> 
 
 
 def agreement_score_records(
-    agreements: Mapping[str, ReviewerAgreement], *, agent: str, run_id: str | None = None
+    agreements: Mapping[str, ReviewerAgreement], *, run_id: str | None = None
 ) -> list[ScoreRecord]:
-    """The five ``grounding_reviewer_*`` metrics per reviewer (``reviewer_id`` in metadata)."""
+    """The five ``grounding_reviewer_*`` metrics per reviewer.
+
+    Each reviewer's records carry ``agent=reviewer_id`` (and ``metadata.reviewer_id``):
+    the reviewer version is the thing scored, and ``Emitter.get_scorecard`` aggregates
+    one agent's records by metric id alone, so two reviewers under one agent name would
+    show only the last one's precision.
+    """
     records: list[ScoreRecord] = []
     for reviewer_id, result in agreements.items():
         counts = result.overall
@@ -301,7 +307,7 @@ def agreement_score_records(
             (N_CHECKED, counts.n_checked, counts.n_checked),
         )
         records += [
-            ScoreRecord(agent=agent, metric=metric, value=value, run_id=run_id,
+            ScoreRecord(agent=reviewer_id, metric=metric, value=value, run_id=run_id,
                         metadata={"scope": "reviewer", "reviewer_id": reviewer_id,
                                   "window": result.window, "denominator": denominator})
             for metric, value, denominator in values

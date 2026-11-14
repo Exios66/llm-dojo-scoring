@@ -18,6 +18,7 @@ from __future__ import annotations
 import math
 import numbers
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass, field, fields, replace
 from functools import lru_cache
 from pathlib import Path
@@ -361,6 +362,15 @@ class GroundingSettings:
     spot_check_rate: float = 0.10
     spot_check_min_per_agent: int = 20
 
+    def coerced(self) -> "GroundingSettings":
+        """A validated copy with every value coerced as the YAML block and overrides are.
+
+        ``trust_min_n=40.0`` becomes ``40`` and ``trust_bar=1`` becomes ``1.0``; a
+        non-finite, non-numeric or fractional whole-number value raises ``ValueError``.
+        """
+        return replace(self, **{key: _grounding_value(key, getattr(self, key))
+                                for key in _GROUNDING_KEYS}).validate()
+
     def validate(self) -> "GroundingSettings":
         """Raise ``ValueError`` naming the first out-of-range value; return ``self``."""
         for name in ("trust_bar", "certainty_floor", "spot_check_rate"):
@@ -614,14 +624,15 @@ def _grounding_value(key: str, value: Any) -> int | float:
 def _grounding_from_block(current: GroundingSettings, data: Any) -> GroundingSettings:
     """A validated copy of ``current`` with a ``grounding:`` block applied.
 
-    ``None`` or an empty block returns ``current``. A block that is not a mapping, a
-    non-numeric or out-of-range value raises ``ValueError``. Unknown keys are
+    ``None`` or an empty mapping returns ``current``. A block that is not a mapping
+    (``false``, ``0``, ``""`` and ``[]`` included), a non-numeric or out-of-range value
+    raises ``ValueError``. Unknown keys are
     ignored, as in the ``trace_knobs:`` block, so a newer consumer taxonomy never
     breaks an older Dojo.
     """
-    if not data:
+    if data is None:
         return current
-    if not isinstance(data, dict):
+    if not isinstance(data, Mapping):
         raise ValueError(f"the grounding block must be a mapping, got {type(data).__name__}")
     values = {key: _grounding_value(key, data[key]) for key in _GROUNDING_KEYS if key in data}
     return replace(current, **values).validate()
@@ -696,7 +707,7 @@ def configure(**overrides: Any) -> Settings:
     if unknown:
         raise AttributeError(f"unknown setting grounding__{unknown[0]}")
     values = {key: _grounding_value(key, value) for key, value in block.items()}
-    grounding = replace(grounding, **values).validate()
+    grounding = replace(grounding, **values).coerced()
     for key, value in overrides.items():
         if key == "grounding" or key.startswith("grounding__"):
             continue
