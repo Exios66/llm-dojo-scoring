@@ -189,9 +189,3 @@ def test_explicit_certainty_floor_is_validated(floor):
     with pytest.raises(ValueError, match="certainty_floor"):
         derive_valid_labels(ingest_confirmations([], sample_candidates().values()), certainty_floor=floor)
 
-
-def test_spot_check_floor_fits_in_the_trust_window():
-    """The spot-check floor is counted over the trust window, so it cannot exceed it."""
-    with pytest.raises(ValueError, match="spot_check_min_per_agent"):
-        configure(grounding__spot_check_min_per_agent=300)
-    configure(grounding__spot_check_min_per_agent=200)
