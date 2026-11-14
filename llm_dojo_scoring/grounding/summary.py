@@ -115,31 +115,36 @@ def summarize_grounding(audits: Iterable[UnlabelledValueAudit]) -> GroundingSumm
     )
 
 
-def _slice_records(
-    counts: GroundingCounts, scope: dict[str, Any], *, agent: str, run_id: str | None
-) -> list[ScoreRecord]:
-    """The three metrics for one slice, each tagged with its scope and denominator."""
-    values = (
+def _metric_values(counts: GroundingCounts) -> tuple[tuple[str, Any, int], ...]:
+    """``(metric, value, denominator)`` for one slice, in :data:`METRIC_IDS` order."""
+    return (
         (NOT_FOUND_RATE, counts.not_found_rate, counts.n_checkable),
         (UNVERIFIABLE_RATE, counts.unverifiable_rate, counts.n_audited),
         (N_AUDITED, counts.n_audited, counts.n_audited),
     )
-    return [
-        ScoreRecord(agent=agent, metric=metric, value=value, run_id=run_id,
-                    metadata={**scope, "denominator": denominator})
-        for metric, value, denominator in values
-    ]
 
 
 def grounding_score_records(
     summary: GroundingSummary, *, agent: str, run_id: str | None = None
 ) -> list[ScoreRecord]:
-    """``ScoreRecord`` s for the run, then each class, then each field."""
-    records = _slice_records(summary.overall, {"scope": "run"}, agent=agent, run_id=run_id)
+    """One ``ScoreRecord`` per metric for the run, with the slices in its metadata.
+
+    ``metadata`` holds ``scope: "run"``, the run ``denominator``, and ``by_class`` /
+    ``by_field`` (keys ``"doc_class.field"``) mapping each slice to its ``value`` and
+    ``denominator``. One record per metric keeps ``Emitter.get_scorecard``, which
+    aggregates by metric id alone, from summing a count over the slices or showing a
+    slice's rate as the run's.
+    """
+    slices: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
+        metric: {"by_class": {}, "by_field": {}} for metric in METRIC_IDS}
     for doc_class, counts in summary.by_class.items():
-        records += _slice_records(counts, {"scope": "class", "doc_class": doc_class},
-                                  agent=agent, run_id=run_id)
+        for metric, value, denominator in _metric_values(counts):
+            slices[metric]["by_class"][doc_class] = {"value": value, "denominator": denominator}
     for (doc_class, field), counts in summary.by_field.items():
-        records += _slice_records(counts, {"scope": "field", "doc_class": doc_class, "field": field},
-                                  agent=agent, run_id=run_id)
-    return records
+        for metric, value, denominator in _metric_values(counts):
+            slices[metric]["by_field"][f"{doc_class}.{field}"] = {"value": value, "denominator": denominator}
+    return [
+        ScoreRecord(agent=agent, metric=metric, value=value, run_id=run_id,
+                    metadata={"scope": "run", "denominator": denominator, **slices[metric]})
+        for metric, value, denominator in _metric_values(summary.overall)
+    ]
