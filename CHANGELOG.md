@@ -24,7 +24,8 @@ Format based on Keep a Changelog; versioning is SemVer.
   word boundary on both sides, so it also read dotted `3.4.24`, a date before `@`, `-` or `/`
   (`01/01/2024-12/31/2024`, `Filed 3/1/2024-Smith`) and the end of "March 30-April 2, 2024". The
   scan now also reads ISO and year-first numeric (`2024-03-03`, `2024/03/03`, `2024.03.03`,
-  `2024-03-03T10:30:00Z`, `2024-Mar-03`, compact `20240303`, an ISO interval joined by `/`),
+  `2024-03-03T10:30:00Z`, `2024-Mar-03`, compact `20240303` and compact pre-1900 `18990303` (years 1800 to
+  2099, like every other form), an ISO interval joined by `/`),
   month-first prose with an ordinal, "the", a comma after the month, "of" before the year or no
   comma ("Mar. 3rd, 2024", "March the 3rd, 2024", "March, 3 2024", "March 3rd of 2024"), day-first
   prose ("3 March 2024", "3rd of March, 2024", "03-Mar-2024", "3rd-March-2024", "3/Mar/2024",
@@ -36,7 +37,8 @@ Format based on Keep a Changelog; versioning is SemVer.
   prose ("2024 March 3"), month and year ("March 2024", "March of 2024", "Mar-2024", "2024-03",
   "03/2024", "3/2024"), month and day with no year ("March 3", "3rd of March"), and day ranges
   where the document states both ends ("March 3-5, 2024", "3 to 5 March 2024", "March 3 through 5,
-  2024", "March 30-April 2, 2024", year-less "March 1 to June 30", dotted "12.31.99-12.31.99").
+  2024", "March 30-April 2, 2024", year-less "March 1 to June 30", dotted "12.31.99-12.31.99"),
+  also with ordinal suffixes on either end ("March 3rd through 5th, 2024", "March 1st to 3d, 2024").
   Digits in other scripts and full-width digits are folded to ASCII, on the document and on the
   value. Every start position is tried, so a number in front of a month ("Item 4 March 15, 2024")
   no longer hides the full date.
@@ -49,7 +51,7 @@ Format based on Keep a Changelog; versioning is SemVer.
   partial prediction that agrees. Ambiguous numeric `03/04/2024` stays month-first and the
   two-digit-year pivot is unchanged. Not dates: ids (`INV-2024-0301`, `2024-03-0001`), phone
   numbers, money (`March 3,000`), the modal verb "may", a month word with no number, years
-  outside 1800 to 2099 (`1/1000`), "thirty-second of March", a dotted span right after a version
+  outside 1800 to 2099 (`1/1000`), "thirty-second of March" (also "thirty   second", across any run of whitespace), a dotted span right after a version
   word ("v", "version", "ver", "release", "build", "rev", with an optional "notes", colon or
   spaces: `Version: 1.2.34`) or a section word (Section, Sec., §, ¶, Clause, Article, Art.,
   Paragraph, Para., Rule, Item, Part, Schedule, Exhibit: `Section 3.1.20`), and a numeric month
