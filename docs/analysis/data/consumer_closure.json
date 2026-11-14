@@ -207,7 +207,7 @@
     },
     "prompts.alignment": {
       "decision": "hold",
-      "lines": 83,
+      "lines": 84,
       "reason": "guard that each specialist prompt asks for the fields the schema scores; no consumer imports it, CI runs it (stacked on Dojo #143)"
     },
     "prompts.lineage": {
