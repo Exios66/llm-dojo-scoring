@@ -395,6 +395,133 @@ metrics:
     citation: "Every accept must have text, an eligible reviewer label, no causes, a cutoff, and agreement unless the sorter was below its low band."
     inclusion: "Always defined; 0 means every accepted row passed the rule."
     ground_truth: structural
+  # Decision lanes (scoring/decision_lanes.py): judge, arbiter, boss, review tray.
+  judge_verdict_accuracy:
+    tier: 1
+    description: "Judge verdict accuracy against human or corpus gold"
+    applicable_agents: [judge]
+    aggregation: mean
+    source: "decision_lanes.score_judge_lane"
+    citation: "Exact match of the judge verdict with the gold verdict: human resolution (approve_as_is complete, correct partial, reject/reclassify incomplete), else the dataset extraction score read through the ambiguous band."
+    inclusion: "None when no judged row has gold. judge_error rows and rows without gold are unscored, never 0."
+    ground_truth: required
+  judge_verdict_macro_f1:
+    tier: 1
+    description: "Judge macro F1 over the gold verdict classes"
+    applicable_agents: [judge]
+    aggregation: mean
+    source: "decision_lanes.score_judge_lane"
+    citation: "Unweighted one-vs-rest macro F1 over the gold verdict classes (classification.macro_prf); gold as in judge_verdict_accuracy."
+    inclusion: "None when no judged row has gold."
+    ground_truth: required
+  judge_escalation_recall:
+    tier: 1
+    description: "Share of not-complete documents the judge did not call complete"
+    applicable_agents: [judge]
+    aggregation: mean
+    source: "decision_lanes.score_judge_lane"
+    citation: "Recall of the judge's escalation (verdict other than complete) over documents whose gold verdict is partial or incomplete."
+    inclusion: "None when no scored row has a not-complete gold verdict."
+    ground_truth: required
+  judge_false_escalation_rate:
+    tier: 1
+    description: "Share of complete documents the judge escalated"
+    applicable_agents: [judge]
+    aggregation: mean
+    source: "decision_lanes.score_judge_lane"
+    citation: "Complement of complete-class recall: gold complete, judge partial or incomplete."
+    inclusion: "None when no scored row has a complete gold verdict."
+    ground_truth: required
+  judge_error_rate:
+    tier: 1
+    description: "Share of judge runs that ended in judge_error"
+    applicable_agents: [judge]
+    aggregation: mean
+    source: "decision_lanes.score_judge_lane"
+    citation: "judge_error verdicts over every row the judge ran on; needs no gold."
+    inclusion: "None when the judge ran on no row."
+    ground_truth: structural
+  arbiter_decision_accuracy:
+    tier: 1
+    description: "Share of arbiter rulings that matched their outcome"
+    applicable_agents: [arbiter]
+    aggregation: mean
+    source: "decision_lanes.score_arbiter_lane"
+    citation: "Retry right when the next attempt's dataset score rose by epsilon; accept right when the person approved as is or the final score is at or above the high band; human_review right when the person changed the work or the final score is below the high band."
+    inclusion: "None when no ruling has gold. Rulings without gold are unscored, never 0."
+    ground_truth: required
+  arbiter_retry_usefulness:
+    tier: 1
+    description: "Share of retry_extraction rulings whose next attempt rose by at least epsilon"
+    applicable_agents: [arbiter]
+    aggregation: mean
+    source: "decision_lanes.score_arbiter_lane"
+    citation: "Dataset extraction score of attempt k+1 minus attempt k, at least epsilon (default 0.05), for a retry ruled on after attempt k."
+    inclusion: "None when no retry has the dataset score of both attempts."
+    ground_truth: required
+  arbiter_wrongful_accept_rate:
+    tier: 1
+    description: "Share of accept_with_caveats rulings that were wrong"
+    applicable_agents: [arbiter]
+    aggregation: mean
+    source: "decision_lanes.score_arbiter_lane"
+    citation: "Accept wrong when the person corrected, reclassified or rejected the work, or, with no resolution, the final dataset score is below the high band."
+    inclusion: "None when no accept ruling has gold."
+    ground_truth: required
+  arbiter_unnecessary_escalation_rate:
+    tier: 1
+    description: "Share of human_review rulings that were not needed"
+    applicable_agents: [arbiter]
+    aggregation: mean
+    source: "decision_lanes.score_arbiter_lane"
+    citation: "Escalation unnecessary when the person approved as is, or, with no resolution, the final dataset score is at or above the high band."
+    inclusion: "None when no human_review ruling has gold."
+    ground_truth: required
+  boss_wrongful_approve_rate:
+    tier: 1
+    description: "Share of audited boss approvals the person later changed or refused"
+    applicable_agents: [boss]
+    aggregation: mean
+    source: "decision_lanes.score_boss_lane"
+    citation: "Human outcome only: approved, then the person corrected, reclassified or rejected the document."
+    inclusion: "None when no approved row has a human resolution (row is no_boss_gold otherwise)."
+    ground_truth: required
+  boss_needless_review_rate:
+    tier: 1
+    description: "Share of boss review rulings the person approved as is"
+    applicable_agents: [boss]
+    aggregation: mean
+    source: "decision_lanes.score_boss_lane"
+    citation: "Human outcome only: review, then the person approved as is."
+    inclusion: "None when no review row has a human resolution."
+    ground_truth: required
+  review_tray_wasted_review_rate:
+    tier: 1
+    description: "Share of resolved reviews approved as is with no field corrections"
+    applicable_agents: [human_review]
+    aggregation: mean
+    source: "decision_lanes.score_review_tray"
+    citation: "A review that changed nothing: resolution approve_as_is and empty field_corrections."
+    inclusion: "None when no parked document is resolved."
+    ground_truth: structural
+  review_tray_correction_rate:
+    tier: 1
+    description: "Share of resolved reviews that corrected fields"
+    applicable_agents: [human_review]
+    aggregation: mean
+    source: "decision_lanes.score_review_tray"
+    citation: "Resolution correct over resolved reviews."
+    inclusion: "None when no parked document is resolved."
+    ground_truth: structural
+  review_tray_reject_rate:
+    tier: 1
+    description: "Share of resolved reviews that rejected the document"
+    applicable_agents: [human_review]
+    aggregation: mean
+    source: "decision_lanes.score_review_tray"
+    citation: "Resolution reject over resolved reviews."
+    inclusion: "None when no parked document is resolved."
+    ground_truth: structural
 
   # ===================== T1 — CORE =====================
   precision:
