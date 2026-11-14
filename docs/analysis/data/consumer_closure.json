@@ -127,7 +127,7 @@
     },
     "metrics.score_changelog": {
       "decision": "keep",
-      "lines": 157,
+      "lines": 158,
       "reason": "imported by kept analysis.serving"
     },
     "metrics.scorecard_honesty": {
@@ -242,7 +242,7 @@
     },
     "schemas.gt_metadata": {
       "decision": "keep",
-      "lines": 342,
+      "lines": 344,
       "reason": "consumer import: consumer_surface"
     },
     "schemas.intents": {
@@ -397,7 +397,7 @@
     },
     "scoring.suites": {
       "decision": "keep",
-      "lines": 1649,
+      "lines": 1650,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "scoring.tasks": {

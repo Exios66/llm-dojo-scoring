@@ -260,13 +260,36 @@ def test_batch_value_on_a_pending_field_follows_the_single_document_rule(status,
     ("pending_annotation", False),
     ("not_applicable", True),
 ])
-def test_value_on_a_pending_cms_adjuster_is_not_a_false_positive(status, is_false_positive):
-    """The CMS documented-absent ``adjuster`` follows the same pending rule."""
+def test_value_on_a_pending_non_cms_adjuster_follows_the_pending_rule(status, is_false_positive):
+    """On a non-CMS insurance row (``claim_type`` "carrier"), ``adjuster`` follows the pending rule."""
     labels = {"claim_type": "carrier", "claim_number": "CLM-0002", "intent": "claim_submission",
               "subject_matter": "Carrier claim.", "keywords": ["carrier claim"]}
     gt = _with_presence(hub_row(**labels), "adjuster", status)
     payload = score("insurance_claim", gt, {**labels, "adjuster": "Casey Example"}, "carrier")
     assert (payload["extraction_precision"] < 1.0) is is_false_positive
+
+
+@pytest.mark.parametrize("field, value", [
+    ("adjuster", "Casey Example"),
+    ("denial_reasons", ["late filing"]),
+])
+@pytest.mark.parametrize("status", [
+    "not_applicable", "schema_documented_absence", "pending_annotation",
+])
+def test_cms_documented_absent_field_stays_labelled_empty_whatever_its_status(status, field, value):
+    """A CMS row's ``adjuster`` / ``denial_reasons`` are empty by the CMS source schema.
+
+    The schema documents them absent on every CMS row, independent of the
+    annotation backfill, so even a ``pending_annotation`` status keeps them
+    labelled empty and a stated value stays a false positive.
+    """
+    labels = {"claim_type": "health", "claim_number": "CLM-0003", "intent": "claim_submission",
+              "subject_matter": "Carrier claim.", "keywords": ["carrier claim"]}
+    gt = _with_presence(hub_row(**labels), field, status)
+    silent = score("insurance_claim", gt, dict(labels), "carrier")
+    filled = score("insurance_claim", gt, {**labels, field: value}, "carrier")
+    assert silent["extraction_precision"] == 1.0
+    assert filled["extraction_precision"] < 1.0
 
 
 def test_off_schema_key_is_still_a_false_positive():

@@ -237,7 +237,9 @@ def scoring_gt_fields(
     * drops fields whose status is ``pending_annotation`` (the label backfill
       has not run): they are unlabelled, so field-micro excludes them on both
       sides and a value stated there is not a false positive. Blanking them
-      would make them look labelled empty;
+      would make them look labelled empty. (A CMS insurance row's
+      ``adjuster`` / ``denial_reasons`` are still labelled empty by the scorer:
+      the CMS source schema documents them absent, whatever their status);
     * for an ``insurance_claim`` row whose ``subclass`` (``expected_subclass``)
       is a CMS source table, adds the derived ``cms_source_table`` (#93): the
       published ``gt_fields`` never carry it. Non-CMS rows never get it, and a

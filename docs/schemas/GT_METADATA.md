@@ -30,6 +30,8 @@ before scoring (`ScoringSuite._score_extraction`). It guarantees:
    and filling one is a spurious fill (FP), which is the honest signal.
    `pending_annotation` is *unlabelled*, so `scoring_gt_fields` drops the key
    and field-micro excludes it on both sides: a value there is not an FP.
+   Exception: a CMS insurance row's `adjuster` / `denial_reasons` are empty by
+   the CMS source schema, so they stay labelled empty whatever their status.
 3. **Only the document type's own label set is scored.** When the row carries
    `gt_presence` (the Hub contract), fields are scoped to that suite's
    extraction schema plus the content differentiators its extras can score.
