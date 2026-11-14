@@ -15,6 +15,8 @@ local-mailroom-sandbox) can stop redefining them.
 
 from __future__ import annotations
 
+import math
+import numbers
 import os
 from dataclasses import dataclass, field, replace
 from functools import lru_cache
@@ -472,7 +474,12 @@ _SCALAR_KEYS = {
 
 
 def _apply_dict(settings: Settings, data: dict[str, Any]) -> None:
-    """Apply a raw config dict's ``field_scoring`` / ``trace_knobs`` / other blocks onto ``settings``."""
+    """Apply a raw config dict's ``field_scoring`` / ``trace_knobs`` / other blocks onto ``settings``.
+
+    The ``grounding:`` block is coerced and validated before anything is changed, so
+    a bad grounding value raises with every section untouched.
+    """
+    grounding = _grounding_from_block(settings.grounding, data.get("grounding"))
     fs = data.get("field_scoring") or {}
     fs_settings = settings.field_scoring
     if "ambiguous_band" in fs and isinstance(fs["ambiguous_band"], (list, tuple)) and len(fs["ambiguous_band"]) == 2:
@@ -504,10 +511,6 @@ def _apply_dict(settings: Settings, data: dict[str, Any]) -> None:
     tk = data.get("trace_knobs") or {}
     if tk:
         _apply_trace_knobs(settings.trace_knobs, tk)
-
-    gr = data.get("grounding") or {}
-    if gr:
-        _apply_grounding(settings, gr)
 
     if "subtype_equivalences" in data:
         settings.subtype_equivalences = [
@@ -541,6 +544,7 @@ def _apply_dict(settings: Settings, data: dict[str, Any]) -> None:
             }
     if doc_class_field_types:
         settings.doc_class_field_types.update(doc_class_field_types)
+    settings.grounding = grounding
 
 
 @lru_cache(maxsize=1)
@@ -575,25 +579,40 @@ def get_settings() -> Settings:
     return load_settings()
 
 
-def _apply_grounding(settings: Settings, data: dict[str, Any]) -> None:
-    """Apply a ``grounding:`` block; a non-numeric or out-of-range value raises ``ValueError``.
+def _grounding_value(key: str, value: Any) -> int | float:
+    """One ``grounding`` value coerced to its type, or ``ValueError`` naming the key.
 
-    Unknown keys are ignored, as in the ``trace_knobs:`` block, so a newer
-    consumer taxonomy never breaks an older Dojo. The block is applied to a copy and
-    validated before it replaces ``settings.grounding``, so a bad block leaves the
-    old values in place.
+    Any finite real number (Python or numpy) is accepted; a whole-number key needs an
+    integral value (``50`` or ``50.0``), and a bool is never a number here.
     """
-    updated = replace(settings.grounding)
-    for key, cast in _GROUNDING_KEYS.items():
-        if key not in data:
-            continue
-        value = data[key]
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise ValueError(f"grounding.{key} must be a number, got {value!r}")
-        if cast is int and value != int(value):
+    try:
+        finite = (not isinstance(value, bool) and isinstance(value, numbers.Real)
+                  and math.isfinite(value))
+    except OverflowError:  # an int too large for a float
+        finite = False
+    if not finite:
+        raise ValueError(f"grounding.{key} must be a finite number, got {value!r}")
+    if _GROUNDING_KEYS[key] is int:
+        if value != int(value):
             raise ValueError(f"grounding.{key} must be a whole number, got {value!r}")
-        setattr(updated, key, cast(value))
-    settings.grounding = updated.validate()
+        return int(value)
+    return float(value)
+
+
+def _grounding_from_block(current: GroundingSettings, data: Any) -> GroundingSettings:
+    """A validated copy of ``current`` with a ``grounding:`` block applied.
+
+    ``None`` or an empty block returns ``current``. A block that is not a mapping, a
+    non-numeric or out-of-range value raises ``ValueError``. Unknown keys are
+    ignored, as in the ``trace_knobs:`` block, so a newer consumer taxonomy never
+    breaks an older Dojo.
+    """
+    if not data:
+        return current
+    if not isinstance(data, dict):
+        raise ValueError(f"the grounding block must be a mapping, got {type(data).__name__}")
+    values = {key: _grounding_value(key, data[key]) for key in _GROUNDING_KEYS if key in data}
+    return replace(current, **values).validate()
 
 
 def _apply_trace_knobs(knobs: TraceKnobSettings, data: dict[str, Any]) -> None:
@@ -646,20 +665,38 @@ def configure(**overrides: Any) -> Settings:
     """Inline override path: ``configure(field_scoring__bipartite_match_threshold=0.7)``.
 
     Two-segment dotted keys mutate nested dataclasses; top-level keys set
-    attributes directly on the cached settings object.
+    attributes directly on the cached settings object. Grounding overrides
+    (``grounding=GroundingSettings(...)`` and every ``grounding__…`` key) are
+    coerced and validated together before anything is set, so
+    ``configure(grounding__trust_min_n=300, grounding__trust_window=400)`` works in
+    either order and a bad value changes nothing.
     """
     settings = get_settings()
+    grounding = settings.grounding
+    if "grounding" in overrides:
+        grounding = overrides["grounding"]
+        if not isinstance(grounding, GroundingSettings):
+            raise ValueError(f"grounding must be a GroundingSettings, got {type(grounding).__name__}")
+    block = {key.split("__", 1)[1]: value for key, value in overrides.items()
+             if key.startswith("grounding__")}
+    unknown = sorted(set(block) - set(_GROUNDING_KEYS))
+    if unknown:
+        raise AttributeError(f"unknown setting grounding__{unknown[0]}")
+    values = {key: _grounding_value(key, value) for key, value in block.items()}
+    grounding = replace(grounding, **values).validate()
     for key, value in overrides.items():
+        if key == "grounding" or key.startswith("grounding__"):
+            continue
         if "__" in key:
             section, attr = key.split("__", 1)
             obj = getattr(settings, section)
-            if not hasattr(obj, attr):
+            if hasattr(obj, attr):
+                setattr(obj, attr, value)
+            else:
                 raise AttributeError(f"unknown setting {key}")
-            if isinstance(obj, GroundingSettings):
-                replace(obj, **{attr: value}).validate()  # refuse a bad value before it lands
-            setattr(obj, attr, value)
         else:
             setattr(settings, key, value)
+    settings.grounding = grounding
     return settings
 
 
