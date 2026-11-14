@@ -408,10 +408,12 @@ consistency is degenerate on GT-shaped predictions.
    `communication_type` / `claim_type` after reading the text.
 4. **Hub union GT.** `parse_gt_fields` + `scoring_gt_fields(..., drop_unmapped=True)`
    before scoring. `not_applicable` / `schema_documented_absence` /
-   `pending_annotation` are never required events. Passing the class-label
+   `pending_annotation` are never required events: the first two are blanked
+   (labelled empty), a pending field is dropped (unlabelled). Passing the class-label
    string as GT fails closed (`gt_wrong_schema`). A schema field the GT does
-   not label is excluded from field-micro P/R/F1 on both sides (a value there
-   is not a false positive); a value on a field labelled empty, or an
+   not label, or marks `pending_annotation`, is excluded from field-micro
+   P/R/F1 on both sides (a value there is not a false positive); a value on a
+   field labelled empty (`not_applicable`, `schema_documented_absence`), or an
    off-schema key, is. A blank or literal `"nan"` `content_topic` /
    `sentiment_label` is not a label and emits no topic / sentiment score.
 5. **Perfect-prediction replay** (both splits, 3,302 rows, 19,924

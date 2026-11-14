@@ -107,6 +107,13 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
   correct `communication_type` scored precision 0.75; now 1.0). An off-schema key, or a value on
   a field labelled empty (insurance `adjuster` with documented absence), is still a false
   positive. Before re-comparing stored runs, re-score them.
+- **Score change (field-micro, `pending_annotation`).** A field whose `gt_presence` status is
+  `pending_annotation` (the label backfill has not run) is unlabelled too, so a value on it is no
+  longer a false positive: `scoring_gt_fields` now drops such a field instead of blanking it, and
+  field-micro excludes it on both sides (a correspondence row with a pending `sender` and a stated
+  sender scored precision 0.75 / F1 0.8571; now 1.0 / 1.0). `not_applicable` and
+  `schema_documented_absence` still blank the field, so a stated value there stays a false positive.
+  No signature changed; `scoring_gt_fields` output differs only by omitting pending keys.
 - A row with no labelled extraction field (presence-only CUAD, MAUD-only merger, no GT) reports
   field-micro P/R/F1/F2 as null instead of 0.0, as the presence-only contract path already did.
 - A MAUD-only merger payload now names its headline: `metric_id` is
