@@ -27,6 +27,13 @@ Format based on Keep a Changelog; versioning is SemVer.
   `trust_window`, `certainty_floor`, `spot_check_rate`, `spot_check_min_per_agent`), validated
   on every change. `derive_valid_labels` now reads its default certainty floor from it (0.9,
   unchanged). Only `grounding/` reads these; no score moves.
+- `grounding/agreement.py`: pairs each agent's blind verdict (its latest from before people
+  first decided) with human spot-checks and
+  reports, per agent over its latest `trust_window` pairs, the precision of its `valid`
+  verdicts and its Wilson 95% lower bound (tier 1, the trust-gate numbers), agreement and
+  Cohen's κ (tier 2) and the pair count (tier 3), overall and per field. Each reviewer's
+  records carry `agent=reviewer_id`, so a scorecard never shows one reviewer's numbers as
+  another's.
 <!-- end 0.31.0 -->
 
 - `schemas/doc_classes.py`: one hand-edited registry (`DOC_CLASSES`, `DocClass`, `field_types()`,

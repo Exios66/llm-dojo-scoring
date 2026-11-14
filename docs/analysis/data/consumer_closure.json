@@ -80,6 +80,11 @@
       "lines": 1,
       "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
     },
+    "grounding.agreement": {
+      "decision": "hold",
+      "lines": 311,
+      "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
+    },
     "grounding.audit": {
       "decision": "hold",
       "lines": 134,
@@ -152,7 +157,7 @@
     },
     "metrics.metric_meta": {
       "decision": "keep",
-      "lines": 615,
+      "lines": 631,
       "reason": "imported by kept metrics.registry"
     },
     "metrics.profiles": {
@@ -167,7 +172,7 @@
     },
     "metrics.registry": {
       "decision": "keep",
-      "lines": 1422,
+      "lines": 1455,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "metrics.score_changelog": {
