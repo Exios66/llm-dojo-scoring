@@ -302,6 +302,10 @@ def test_verdicts_constant_lists_every_outcome():
       then each class (`{"scope": "class", "doc_class": …}`), then each field
       (`{"scope": "field", "doc_class": …, "field": …}`).
     - Every record's `metadata` also has `"denominator"`.
+    - *Superseded after review (#147):* one record per metric for the run, with the class
+      and field slices in `metadata.by_class` / `metadata.by_field`, because
+      `Emitter.get_scorecard` aggregates by metric id alone. `docs/contracts/GROUNDING.md`
+      is the contract.
 
 - [ ] **Step 1: Write the failing tests.**
   - `test_not_found_rate_excludes_unverifiable`: counts of 3 grounded, 1 not_found and
