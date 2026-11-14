@@ -181,12 +181,15 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
     {
         # Proposed 0.31.0 (unlabelled-value grounding stack); cut separately with release.py.
         "version": "0.31.0",
+        # The factuality names are unmapped registry metrics: the emitter stamps them
+        # ``registry:<name>`` (scorecard_honesty._METRIC_ID_BY_NAME has no entry), and
+        # score_changes_between matches the stamped id exactly.
         "metric_ids": (
-            "hallucination_rate",
-            "verified_precision",
-            "extraction_hallucination_rate",
-            "extraction_overall_verified_precision",
-            "extraction_verified_precision",
+            "registry:hallucination_rate",
+            "registry:verified_precision",
+            "registry:extraction_hallucination_rate",
+            "registry:extraction_overall_verified_precision",
+            "registry:extraction_verified_precision",
             "pipeline.extraction.overall",
             "pipeline.extraction.field_micro_f1",
             "pipeline.extraction.field_micro_f2",
