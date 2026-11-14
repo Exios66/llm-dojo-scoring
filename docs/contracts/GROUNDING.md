@@ -211,7 +211,8 @@ function of the ledger, recomputed every time. Per candidate, on latest confirma
 Without a gate no agent is trusted, so only human-confirmed labels come out. A gate is any
 object with `trusted_snapshot_id(ledger, reviewer_id, at) -> str | None` (`TrustGate`
 in piece 3). A later human `hallucinated` removes a label agents made; labels of a
-`previous` export that are not derived now are returned as `withdrawn`.
+`previous` export that are not derived now (same candidate and same value) are returned
+as `withdrawn`, so a later correction to another value withdraws the old one.
 
 `ValidLabel` (JSON, `schema_version: 1`): `doc_id`, `doc_class`, `field`, `item_index`,
 `value`, `source_candidate_id`, `extractor`, `doc_text_sha256`, `confirmed_by` (every
