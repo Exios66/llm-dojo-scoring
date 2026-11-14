@@ -349,6 +349,12 @@ thresholds, the window bounds, the counts and `trusted`.
   withdrawn automatically: they were trusted when made, and a human `hallucinated`
   removes one.
 
+Trust is looked up by the agent confirmation's own `confirmed_at`, with human evidence
+at exactly that time included. The ledger accepts past times, so an agent record that
+arrives late but is dated inside a passing run counts as trusted; the regression guard
+still lists it if that run later ends, and a consumer that needs arrival-time trust
+should stamp `confirmed_at` on ingest.
+
 The Dojo stores nothing: the caller keeps the ledger, and every snapshot can be
 recomputed from it. `history` is cached per ledger object (ledgers are immutable) and
 recomputes only the candidates a person touched at each step; a test checks it against

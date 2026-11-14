@@ -58,7 +58,11 @@ METRIC_IDS: tuple[str, ...] = (N_CANDIDATES, N_VALID_LABELS, N_LABEL_CONFLICTS)
 
 
 class TrustLookup(Protocol):
-    """What :func:`derive_valid_labels` needs from a trust gate (``grounding.trust.TrustGate``)."""
+    """What :func:`derive_valid_labels` needs from a trust gate (``grounding.trust.TrustGate``).
+
+    A gate may also carry a numeric ``certainty_floor``; :func:`derive_valid_labels`
+    uses it when given no floor of its own.
+    """
 
     def trusted_snapshot_id(self, ledger: ConfirmationLedger, reviewer_id: str, at: float) -> str | None:
         """Id of the passing snapshot in force for ``reviewer_id`` at ``at``, or ``None``."""

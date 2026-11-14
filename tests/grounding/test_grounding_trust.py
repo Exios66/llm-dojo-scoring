@@ -151,6 +151,17 @@ def test_regression_guard_lists_labels_from_the_passing_run():
     assert json.loads(json.dumps(regression.as_dict()))["schema_version"] == 1
 
 
+def test_thresholds_are_read_only_and_ids_ignore_int_vs_float():
+    """``bar=1`` and ``bar=1.0`` give the same ids; thresholds cannot change under the cache."""
+    c = _candidates(5)
+    ledger = _ledger(c, _checks(0, ["valid"] * 5))
+    ids = [s.snapshot_id for s in TrustGate(bar=1, min_n=5).history(ledger)]
+    assert ids == [s.snapshot_id for s in TrustGate(bar=1.0, min_n=5).history(ledger)]
+    gate = TrustGate()
+    with pytest.raises(AttributeError):
+        gate.bar = 0.5
+
+
 def test_snapshots_are_deterministic_and_round_trip():
     """Same evidence, same ids; ids change with the thresholds; records round-trip."""
     c = _candidates(5)
@@ -188,20 +199,37 @@ def _naive_history(gate, ledger):
     return out
 
 
-@pytest.mark.parametrize("seed", range(25))
-def test_incremental_history_matches_the_naive_replay(seed):
-    """Random ledgers: the incremental replay equals ``reviewer_agreement`` as of each time."""
-    rng = random.Random(seed)
+def test_incremental_history_matches_the_naive_replay():
+    """Random ledgers: the incremental replay equals ``reviewer_agreement`` as of each time.
+
+    The sample must reach trusted snapshots, falls below the bar and withdrawn pairs, or
+    the comparison proves little.
+    """
     c = _candidates(12)
-    rows = []
-    for _ in range(rng.randint(5, 60)):
-        kind = rng.choice(["agent", "human"])
-        reviewer = rng.choice(["boss@v1", "jev-1"]) if kind == "agent" else rng.choice(["human:a", "human:b"])
-        verdict = rng.choice(["valid", "valid", "hallucinated", "unsure"])
-        rows.append((rng.randrange(12), kind, reviewer, verdict, rng.randrange(40)))
-    ledger = _ledger(c, rows)
-    gate = TrustGate(bar=0.3, min_n=2, window=4)
-    assert gate.history(ledger) == _naive_history(gate, ledger)
+    trusted = falls = empty = 0
+    for seed in range(300):
+        rng = random.Random(seed)
+        records = []
+        for _ in range(rng.randint(10, 80)):
+            kind = rng.choice(["agent", "agent", "human"])
+            reviewer = rng.choice(["boss@v1", "jev-1"]) if kind == "agent" else rng.choice(["human:a", "human:b"])
+            record = {"candidate_id": c[rng.randrange(12)].candidate_id, "reviewer_kind": kind,
+                      "reviewer_id": reviewer, "verdict": rng.choice(["valid"] * 4 + ["hallucinated", "unsure"]),
+                      "confirmed_at": float(rng.randrange(15))}
+            if kind == "agent":
+                record["certainty"] = 0.95
+            if record["verdict"] == "valid" and rng.random() < 0.15:
+                record["corrected_value"] = rng.choice(["Robin Other", "robin  other"])
+            records.append(record)
+        ledger = ingest_confirmations(records, c, now=1e6)
+        gate = TrustGate(bar=rng.choice([0.1, 0.3, 0.5]), min_n=rng.choice([1, 2, 3]),
+                         window=rng.choice([3, 4, 6, 10]))
+        history = gate.history(ledger)
+        assert history == _naive_history(gate, ledger), seed
+        trusted += sum(s.trusted for s in history)
+        empty += sum(s.n_checked == 0 for s in history)
+        falls += len(gate.regressions(ledger, []))
+    assert trusted > 100 and falls > 20 and empty > 10, (trusted, falls, empty)
 
 
 def test_withdrawn_evidence_ends_trust():
