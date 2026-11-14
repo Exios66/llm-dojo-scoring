@@ -17,7 +17,7 @@ the human's ``confirmed_at``, :func:`reviewer_agreement` reports:
 
 * **valid precision** — of the values the agent called ``valid``, the share people
   also called valid (with the same value), and its Wilson 95% lower bound. This is
-  the number that gates trust (owner decision; the gate itself lands in piece 3c);
+  the number that gates trust (owner decision; the gate is ``grounding.trust.TrustGate``);
 * **agreement** — the share of paired checks with the same verdict;
 * **Cohen's κ** — agreement beyond chance, ``None`` unless both raters used both
   verdicts;
@@ -267,19 +267,22 @@ def reviewer_agreement(
     by_agent: dict[str, list[PairedCheck]] = defaultdict(list)
     for pair in paired_checks(ledger, as_of=as_of):
         by_agent[pair.reviewer_id].append(pair)
-    result: dict[str, ReviewerAgreement] = {}
-    for reviewer_id in sorted(by_agent):
-        recent = by_agent[reviewer_id][-window:]
-        fields_: dict[str, list[PairedCheck]] = defaultdict(list)
-        for pair in recent:
-            fields_[pair.field].append(pair)
-        result[reviewer_id] = ReviewerAgreement(
-            reviewer_id=reviewer_id, window=window,
-            window_start=recent[0].human_confirmed_at, window_end=recent[-1].human_confirmed_at,
-            overall=_count(recent),
-            by_field={name: _count(fields_[name]) for name in sorted(fields_)},
-        )
-    return result
+    return {reviewer_id: _agreement_over(reviewer_id, by_agent[reviewer_id], window)
+            for reviewer_id in sorted(by_agent)}
+
+
+def _agreement_over(reviewer_id: str, pairs: list[PairedCheck], window: int) -> ReviewerAgreement:
+    """One agent's agreement over the last ``window`` of its non-empty, ordered ``pairs``."""
+    recent = pairs[-window:]
+    fields_: dict[str, list[PairedCheck]] = defaultdict(list)
+    for pair in recent:
+        fields_[pair.field].append(pair)
+    return ReviewerAgreement(
+        reviewer_id=reviewer_id, window=window,
+        window_start=recent[0].human_confirmed_at, window_end=recent[-1].human_confirmed_at,
+        overall=_count(recent),
+        by_field={name: _count(fields_[name]) for name in sorted(fields_)},
+    )
 
 
 def agreement_score_records(

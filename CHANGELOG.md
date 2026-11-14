@@ -35,6 +35,13 @@ Format based on Keep a Changelog; versioning is SemVer.
   Cohen's κ (tier 2) and the pair count (tier 3), overall and per field. Each reviewer's
   records carry `agent=reviewer_id`, so a scorecard never shows one reviewer's numbers as
   another's.
+- `grounding/trust.py`: `TrustGate` decides, from the ledger alone, when each agent was
+  trusted: at least `trust_min_n` checked `valid` verdicts and an unrounded Wilson lower bound
+  of at least `trust_bar` over its latest `trust_window` pairs, judged as of each confirmation.
+  `history` returns time-ordered `GateSnapshot`s with stable ids; `trusted_snapshot_id` is the
+  lookup `derive_valid_labels` uses; `regressions` lists the labels that rested on an agent's
+  trust when it falls below the bar. With the defaults a perfect record passes from 73 checks.
+  `derive_valid_labels` takes the gate's `certainty_floor` when given none.
 <!-- end 0.31.0 -->
 
 - `schemas/doc_classes.py`: one hand-edited registry (`DOC_CLASSES`, `DocClass`, `field_types()`,
