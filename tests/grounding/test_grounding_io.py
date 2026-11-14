@@ -50,3 +50,28 @@ def test_bad_lines_name_their_line_number(tmp_path):
     path.write_text('{"a": 1}\n[1]\n', encoding="utf-8")
     with pytest.raises(ValueError, match=r":2: expected a JSON object"):
         read_jsonl(path)
+
+
+def test_append_after_torn_line_starts_a_new_line(tmp_path):
+    """A torn last line is closed before appending, so the new record stays readable."""
+    path = tmp_path / "ledger.jsonl"
+    path.write_text('{"n": 1}\n{"n": 2', encoding="utf-8")
+    write_jsonl([{"n": 3}], path, append=True)
+    assert path.read_text(encoding="utf-8").splitlines() == ['{"n": 1}', '{"n": 2', '{"n": 3}']
+
+
+def test_nan_is_refused(tmp_path):
+    """NaN is not JSON: writing it raises and the file is untouched."""
+    path = tmp_path / "out.jsonl"
+    with pytest.raises(ValueError):
+        write_jsonl([{"x": float("nan")}], path)
+    assert not path.exists()
+
+
+def test_replace_keeps_permissions(tmp_path):
+    """Replacing a file keeps its mode."""
+    path = tmp_path / "out.jsonl"
+    path.write_text("", encoding="utf-8")
+    path.chmod(0o644)
+    write_jsonl([{"n": 1}], path)
+    assert path.stat().st_mode & 0o777 == 0o644

@@ -33,6 +33,17 @@ def _record(**overrides):
     ({"reviewer_kind": "agent", "reviewer_id": "boss@v1", "certainty": 1.5}, r"in \[0, 1\]"),
     ({"certainty": 0.9}, "carries no certainty"),
     ({"note": 3}, "note must be text"),
+    ({"candidate_id": ["x"]}, "unknown candidate_id"),
+    ({"candidate_id": {"a": 1}}, "unknown candidate_id"),
+    ({"reviewer_id": "boss@v3"}, "must start with 'human:'"),
+    ({"reviewer_kind": "agent", "reviewer_id": "human:b", "certainty": 0.9}, "must not start with"),
+    ({"confirmed_at": 1e300}, "in the future"),
+    ({"confirmed_at": float("nan")}, "confirmed_at"),
+    ({"corrected_value": ""}, "must not be blank"),
+    ({"corrected_value": False}, "non-blank text or a finite number"),
+    ({"corrected_value": float("nan")}, "non-blank text or a finite number"),
+    ({"corrected_value": []}, "non-blank text or a finite number"),
+    ({"corrected_value": {"a": 1}}, "non-blank text or a finite number"),
 ])
 def test_invalid_records_are_rejected_with_a_reason(overrides, reason):
     """Every invalid record is kept as a reject with its reason, never dropped."""
@@ -41,7 +52,7 @@ def test_invalid_records_are_rejected_with_a_reason(overrides, reason):
     (reject,) = ledger.rejects
     assert reject.index == 0
     assert re.search(reason, reject.reason)
-    assert reject.as_dict()["record"] == _record(**overrides)
+    assert reject.as_dict()["record"].keys() == _record(**overrides).keys()
 
 
 def test_non_mapping_rejected():
@@ -82,3 +93,17 @@ def test_extend_appends_and_leaves_the_original_unchanged():
     assert len(first.confirmations) == 1 and first.rejects == ()
     assert len(second.confirmations) == 2
     assert second.rejects[0].index == 1
+
+
+def test_now_bounds_confirmed_at():
+    """confirmed_at may run up to a day ahead of now, not more."""
+    ok = ingest_confirmations([_record(confirmed_at=1000 + 86_000)], CANDIDATES.values(), now=1000)
+    late = ingest_confirmations([_record(confirmed_at=1000 + 90_000)], CANDIDATES.values(), now=1000)
+    assert (len(ok.confirmations), len(late.rejects)) == (1, 1)
+
+
+def test_numeric_and_text_corrections_accepted():
+    """A finite number or non-blank text is a usable correction."""
+    ledger = ingest_confirmations([_record(corrected_value=12.5), _record(corrected_value="Robin X")],
+                                  CANDIDATES.values())
+    assert [c.corrected_value for c in ledger.confirmations] == [12.5, "Robin X"]

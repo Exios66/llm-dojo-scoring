@@ -144,3 +144,24 @@ def test_round_trip_and_score_records():
                                   run_id="r1")
     assert [(r.metric, r.value) for r in records] == list(zip(METRIC_IDS, (3, 1, 0)))
     assert records[1].metadata["by_basis"] == {"human": 1}
+
+
+def test_differently_spelled_amounts_conflict():
+    """On a money field, ``$1,250.00`` against ``-1250.00`` is a conflict, never merged."""
+    amount = CANDIDATES["claimed_amount"].candidate_id
+    result = derive(human("valid", candidate_id=amount),
+                    human("valid", who="human:b", candidate_id=amount, corrected_value="-1250.00"))
+    assert (result.labels, result.conflicts) == ((), {amount: "humans_disagree"})
+
+
+def test_blank_snapshot_id_is_not_trust():
+    """A gate that returns an empty snapshot id does not trust the agent."""
+
+    class BlankGate:
+        """Returns an empty snapshot id."""
+
+        def trusted_snapshot_id(self, ledger, reviewer_id, at):
+            """Always blank."""
+            return ""
+
+    assert derive(agent("valid"), gate=BlankGate()).pending == {CID: "agent_untrusted"}

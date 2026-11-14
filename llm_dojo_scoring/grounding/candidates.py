@@ -18,9 +18,9 @@ from collections import Counter
 from dataclasses import asdict, dataclass, fields
 from typing import Any, Iterable, Mapping
 
-from ..scoring.field_scoring import _parse_date_parts
+from ..scoring.field_scoring import _parse_date_parts, _parse_money
 from .audit import SCHEMA_VERSION, UnlabelledValueAudit
-from .verdicts import _ID_NOISE_RE, GROUNDED, NOT_FOUND, UNVERIFIABLE, _parse_amount
+from .verdicts import _ID_NOISE_RE, GROUNDED, NOT_FOUND, UNVERIFIABLE, _spell_scale
 
 #: Review order by verdict: lower is reviewed first.
 PRIORITY: dict[str, int] = {NOT_FOUND: 0, UNVERIFIABLE: 1, GROUNDED: 2}
@@ -29,13 +29,15 @@ PRIORITY: dict[str, int] = {NOT_FOUND: 0, UNVERIFIABLE: 1, GROUNDED: 2}
 def normalized_value(field_type: str, value: Any) -> str:
     """``value`` in its field type's normal form, as used in :func:`candidate_id`.
 
-    Money is the parsed amount (two decimals, sign dropped), a date its stated
-    ``year-month-day`` parts (``?`` for an unstated part), an identifier its
-    casefolded text without whitespace, ``-``, ``/`` or ``.``; anything else (or a
-    value its type cannot parse) is casefolded text with whitespace collapsed.
+    Money is the signed parsed amount with two decimals (the currency is not kept:
+    ``$1250`` and ``€1250`` share a form), a date its stated ``year-month-day`` parts
+    (``?`` for an unstated part), an identifier its casefolded text without
+    whitespace, ``-``, ``/`` or ``.`` (so ``1.2`` and ``12`` share a form); anything
+    else (or a value its type cannot parse) is casefolded text with whitespace
+    collapsed.
     """
-    if field_type == "money":
-        amount = _parse_amount(value)
+    if field_type == "money" and not isinstance(value, bool):
+        amount = _parse_money(value if isinstance(value, (int, float)) else _spell_scale(str(value)))
         if amount is not None:
             return f"{amount:.2f}"
     elif field_type == "date":

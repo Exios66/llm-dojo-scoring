@@ -10,7 +10,8 @@ Per candidate, only each reviewer's latest confirmation counts:
 
 * **Humans decide** when any human has a latest ``valid`` or ``hallucinated``
   verdict (``unsure`` neither validates nor blocks). Every such human says ``valid``
-  with the same value → label (``validity_basis: "human"``); every one says
+  with the same value (text equal after casefolding and collapsing whitespace) →
+  label (``validity_basis: "human"``); every one says
   ``hallucinated`` → rejected; a mix, or ``valid`` with different values → conflict.
 * **Otherwise agents may decide.** An agent's ``valid`` counts only when the gate
   trusted that agent as of its ``confirmed_at`` and its ``certainty`` is at least the
@@ -31,7 +32,7 @@ from typing import Any, Iterable, Mapping, Protocol
 
 from ..metrics.emitter import ScoreRecord
 from .audit import SCHEMA_VERSION
-from .candidates import ReviewCandidate, normalized_value
+from .candidates import ReviewCandidate
 from .ledger import AGENT, HALLUCINATED, HUMAN, UNSURE, VALID, Confirmation, ConfirmationLedger
 
 HUMAN_BASIS = "human"
@@ -141,8 +142,13 @@ def _label_value(candidate: ReviewCandidate, confirmation: Confirmation) -> Any:
 
 
 def _agree(candidate: ReviewCandidate, confirmations: list[Confirmation]) -> bool:
-    """Whether every ``valid`` confirmation vouches for the same value (in normal form)."""
-    forms = {normalized_value(candidate.field_type, _label_value(candidate, c)) for c in confirmations}
+    """Whether every ``valid`` confirmation vouches for the same value.
+
+    Strict on purpose: values agree only when their text matches after casefolding
+    and collapsing whitespace, so ``$1,250.00`` and ``-1250.00`` (or ``1250``) are a
+    disagreement for a person to settle, never silently merged.
+    """
+    forms = {" ".join(str(_label_value(candidate, c)).casefold().split()) for c in confirmations}
     return len(forms) == 1
 
 
@@ -202,7 +208,7 @@ def derive_valid_labels(
             sure = [c for c in valid if c.certainty is not None and c.certainty >= certainty_floor]
             trusted = [(c, gate.trusted_snapshot_id(ledger, c.reviewer_id, c.confirmed_at))
                        for c in sure] if gate is not None else []
-            trusted = [(c, sid) for c, sid in trusted if sid is not None]
+            trusted = [(c, sid) for c, sid in trusted if isinstance(sid, str) and sid]
             if trusted:
                 first, snapshot_id = min(trusted, key=lambda pair: pair[0].confirmed_at)
                 labels.append(_label(candidate, [first], latest, TRUSTED_AGENT_BASIS, snapshot_id))
