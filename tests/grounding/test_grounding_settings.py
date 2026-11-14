@@ -181,3 +181,11 @@ def test_updates_are_in_place():
     configure(grounding=GroundingSettings(spot_check_rate=0.5))
     assert get_settings().grounding is section
     assert section.spot_check_rate == 0.5
+
+
+@pytest.mark.parametrize("floor", [-1, 1.5, float("nan"), True, "0.9"])
+def test_explicit_certainty_floor_is_validated(floor):
+    """An explicit floor is checked like the setting: no fail-open below 0, no NaN, no bool."""
+    with pytest.raises(ValueError, match="certainty_floor"):
+        derive_valid_labels(ingest_confirmations([], sample_candidates().values()), certainty_floor=floor)
+

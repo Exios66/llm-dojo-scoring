@@ -42,7 +42,7 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass, field, replace
 from typing import Any, Iterable, Mapping
 
-from ..config import get_settings
+from ..config import _grounding_value, get_settings
 from ..metrics.emitter import ScoreRecord
 from .audit import SCHEMA_VERSION
 from .ledger import AGENT, HALLUCINATED, HUMAN, VALID, Confirmation, ConfirmationLedger
@@ -263,7 +263,11 @@ def reviewer_agreement(
     """
     if window is None:
         window = get_settings().grounding.trust_window
-    if isinstance(window, bool) or not isinstance(window, int) or window < 1:
+    try:
+        window = _grounding_value("trust_window", window)
+    except ValueError:
+        raise ValueError(f"window must be a whole number >= 1, got {window!r}") from None
+    if window < 1:
         raise ValueError(f"window must be a whole number >= 1, got {window!r}")
     by_agent: dict[str, list[PairedCheck]] = defaultdict(list)
     for pair in paired_checks(ledger, as_of=as_of):

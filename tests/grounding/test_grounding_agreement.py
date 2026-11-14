@@ -131,8 +131,19 @@ def test_window_keeps_latest_by_human_time_and_follows_settings():
     configure(grounding__trust_min_n=1, grounding__trust_window=2)
     latest_two = reviewer_agreement(ledger)["boss@v1"]
     assert (latest_two.window, latest_two.overall.n_checked, latest_two.overall.n_valid_confirmed) == (2, 2, 0)
-    with pytest.raises(ValueError, match="window"):
-        reviewer_agreement(ledger, window=0)
+    for bad in (0, -1, 2.5, True, "3", float("nan")):
+        with pytest.raises(ValueError, match="window must be a whole number"):
+            reviewer_agreement(ledger, window=bad)
+
+
+def test_window_is_coerced_like_the_setting():
+    """A whole float window (from YAML or numpy) works as the int does."""
+    c = _candidates(3)
+    ledger = _ledger(c, [row for i in range(3) for row in (
+        (i, "agent", "boss@v1", "valid", 1), (i, "human", "human:a", "valid", 10 + i))])
+    as_float = reviewer_agreement(ledger, window=2.0)["boss@v1"]
+    assert as_float == reviewer_agreement(ledger, window=2)["boss@v1"]
+    assert type(as_float.window) is int
 
 
 def test_as_of_sees_only_what_was_known():
