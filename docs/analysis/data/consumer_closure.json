@@ -80,11 +80,6 @@
       "lines": 1,
       "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
     },
-    "grounding.agreement": {
-      "decision": "hold",
-      "lines": 311,
-      "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
-    },
     "grounding.audit": {
       "decision": "hold",
       "lines": 138,
@@ -157,7 +152,7 @@
     },
     "metrics.metric_meta": {
       "decision": "keep",
-      "lines": 631,
+      "lines": 615,
       "reason": "imported by kept metrics.registry"
     },
     "metrics.profiles": {
@@ -172,18 +167,33 @@
     },
     "metrics.registry": {
       "decision": "keep",
-      "lines": 1455,
+      "lines": 1631,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "metrics.score_changelog": {
       "decision": "keep",
-      "lines": 188,
+      "lines": 255,
       "reason": "imported by kept analysis.serving"
     },
     "metrics.scorecard_honesty": {
       "decision": "keep",
-      "lines": 1151,
+      "lines": 1176,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
+    },
+    "ml": {
+      "decision": "hold",
+      "lines": 21,
+      "reason": "ML contract package mailroom-ml vendors as JSON, never imports (stacked on Dojo #142)"
+    },
+    "ml.contract": {
+      "decision": "hold",
+      "lines": 95,
+      "reason": "label and intake contract behind ml/data/ml_contract.json for mailroom-ml (stacked on Dojo #142)"
+    },
+    "ml.metrics": {
+      "decision": "hold",
+      "lines": 192,
+      "reason": "intake-classifier scorecard for mailroom-ml evaluation reports (stacked on Dojo #142)"
     },
     "pipeline": {
       "decision": "keep",
@@ -240,6 +250,11 @@
       "lines": 187,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
+    "prompts.alignment": {
+      "decision": "hold",
+      "lines": 84,
+      "reason": "guard that each specialist prompt asks for the fields the schema scores; no consumer imports it, CI runs it (stacked on Dojo #143)"
+    },
     "prompts.lineage": {
       "decision": "keep",
       "lines": 255,
@@ -287,7 +302,7 @@
     },
     "schemas.extraction_schemas": {
       "decision": "keep",
-      "lines": 572,
+      "lines": 583,
       "reason": "consumer import: MAIL@origin/claude/howdy-n8vcc1"
     },
     "schemas.gt_metadata": {
@@ -307,7 +322,7 @@
     },
     "schemas.maud_schema": {
       "decision": "keep",
-      "lines": 1139,
+      "lines": 1289,
       "reason": "consumer import: SBX, consumer_surface"
     },
     "schemas.schema_contract": {
@@ -365,6 +380,11 @@
       "lines": 788,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, consumer_surface"
     },
+    "scoring.decision_lanes": {
+      "decision": "hold",
+      "lines": 650,
+      "reason": "judge/arbiter/boss/review-tray scorecards; llm-mailroom wires its decision export next (stacked on Dojo #140)"
+    },
     "scoring.doc_scorers": {
       "decision": "keep",
       "lines": 44,
@@ -392,7 +412,7 @@
     },
     "scoring.doc_scorers.correspondence": {
       "decision": "keep",
-      "lines": 54,
+      "lines": 57,
       "reason": "imported by kept scoring.doc_scorers"
     },
     "scoring.doc_scorers.dispatch": {
@@ -447,7 +467,7 @@
     },
     "scoring.suites": {
       "decision": "keep",
-      "lines": 1650,
+      "lines": 1808,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "scoring.tasks": {
