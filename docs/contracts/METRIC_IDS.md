@@ -113,9 +113,10 @@ question set.
 A record carries the gold `doc_type` and `subclass`, the predictions `pred_doc_type`
 and `pred_subclass`, the head confidences `doc_type_confidence` and
 `subclass_confidence`, and `fast_path` (the model's answer was used without the LLM
-sorter). A record with no gold class is counted under `n_unscored_by_reason`. Subclasses
-are compared after `normalize_corpus_subclass` for the gold class; a subclass is right
-only when the class is right. The scorecard's `metrics` dict is keyed by the short
+sorter). A record with no gold class (`None`, NaN, `pd.NA`, `pd.NaT` or a blank) is
+counted under `n_unscored_by_reason`. Subclasses are compared after
+`normalize_corpus_subclass`, the gold one by the gold class and the predicted one by the
+predicted class; a subclass is right only when the class is right. The scorecard's `metrics` dict is keyed by the short
 names (the registry name without `ml_intake_`).
 
 | Registry name | `metric_id` |

@@ -191,6 +191,43 @@ def test_class_without_a_subclass_catalog_is_not_subclass_scored():
     assert card["metrics"]["subclass_accuracy"] is None
 
 
+def test_pandas_missing_values_are_missing_labels():
+    """``pd.NA`` / ``pd.NaT`` (nullable dtypes) are blank, never the class ``<na>``."""
+    pd = pytest.importorskip("pandas")
+    rows = [{"doc_type": pd.NA, "pred_doc_type": pd.NA, "fast_path": True},
+            {"doc_type": pd.NaT, "pred_doc_type": "contract"},
+            {"doc_type": "<NA>", "pred_doc_type": "contract"},
+            {"doc_type": "contract", "pred_doc_type": pd.NA, "subclass": pd.NA}]
+    card = score_intake_model(rows)
+    assert card["n_unscored_by_reason"] == {"no_gold_doc_type": 3}
+    assert card["n_scored"] == 1
+    assert card["n_fast_path"] == 0  # an unscored row never reaches the fast-path count
+    assert card["metrics"]["doc_type_accuracy"] == 0.0  # a missing prediction is a miss
+    assert card["n_subclass_scored"] == 0  # a missing gold subclass is not graded
+
+
+def test_cross_class_subclass_prediction_uses_the_predicted_class_catalog():
+    """A prediction under another class is normalized by that class, not the gold class."""
+    rows = [
+        {"doc_type": "contract", "subclass": "License_Agreements", "pred_doc_type": "contract",
+         "pred_subclass": "license"},
+        # Gold contract with an unknown subclass: its gold label is contract/other.
+        {"doc_type": "contract", "subclass": "zzz_unmapped", "pred_doc_type": "contract",
+         "pred_subclass": "zzz_unmapped"},
+        # Gold merger_agreement; the model says contract/all_cash. all_cash is a merger label,
+        # so under contract it is contract/other (a false positive for the real contract/other).
+        # Normalized by the gold catalog it would stay all_cash and hide that false positive.
+        {"doc_type": "merger_agreement", "subclass": "all_cash", "pred_doc_type": "contract",
+         "pred_subclass": "all_cash"},
+    ]
+    assert normalize_corpus_subclass("contract", "License_Agreements") != "other"
+    assert normalize_corpus_subclass("contract", "all_cash") == "other"
+    assert normalize_corpus_subclass("merger_agreement", "all_cash") == "all_cash"
+    card = score_intake_model(rows)
+    # contract/<family> F1 1, contract/other P 1/2 R 1 -> 2/3, merger_agreement/all_cash 0.
+    assert card["metrics"]["subclass_macro_f1"] == round((1 + 2 / 3 + 0) / 3, 6)
+
+
 def test_metric_ids_are_registered_and_changelogged():
     """Each ml.intake id is in the registry, the honesty map and the score changelog."""
     registry = get_registry()
