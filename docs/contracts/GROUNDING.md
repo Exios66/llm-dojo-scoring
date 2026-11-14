@@ -54,14 +54,19 @@ mapping or list item is checked by its string values (`{"name": "Bob Co"}` as `B
 | --- | --- | --- |
 | `name`, `free_text` (and unknown types) | at least `field_scoring.verification_token_coverage` (default 0.7) of the value's content tokens appear in the document | `not_found`; `unverifiable` when the value has no content tokens |
 | `date` | the document states the same date in any format (partial dates agree on every stated part) | `not_found`; text that is not a date uses the token rule |
-| `money` | the document states the same amount (within half a cent, sign ignored) as money: with a currency symbol or word, a scale (`K`/`M`/`B` or `thousand`/`million`/`billion`), a thousands separator or two decimals. Bare integers in the text (a day, a year, a phone digit group) never count | `not_found`; `unverifiable` when the value is not an amount |
-| `id`, `cms_doc_ref` | after casefolding and removing whitespace, `-`, `/` and `.`, the value equals one identifier-like run of the text or up to four adjacent runs (`CLM 0001` matches `CLM-0001`); never a fragment of a longer run (`12` does not match inside `2012`) | `not_found`; `unverifiable` when shorter than three characters |
+| `money` | the document states the same amount (within half a cent, sign ignored) as money: with a currency symbol or word, a scale (`5M`, upper case and attached, or `thousand`/`million`/`billion`), a thousands separator or two decimals. Bare integers in the text (a day, a year, a phone digit group) never count | `not_found`; `unverifiable` when the value is not an amount |
+| `id`, `cms_doc_ref` | after casefolding and removing whitespace, `-`, `/` and `.`, the value equals one alphanumeric part of the text or up to six adjacent parts (`CLM 0001` matches `CLM-0001`; `12345` matches `INV-12345` and `No.12345`); a part is never split (`12` does not match inside `2012`) | `not_found`; `unverifiable` when shorter than three characters |
 | `label` | never: a closed-vocabulary label is inferred, not quoted | always `unverifiable` |
 
 Missing or blank document text makes every verdict `unverifiable`. Names, text and dates
 reuse the factuality audit's matchers (`scoring/field_scoring.py`); amounts reuse its
 money parser; the money and identifier boundary rules are this module's own. Per-document
-work is cached, so auditing many values of one document scans it once. A new field type
+work is cached (the last eight documents per cache), so auditing many values of one
+document scans it once.
+
+Known limitation: dates use the shared date matcher, which does not read ordinal
+suffixes, so `2024-03-03` against "March 3rd, 2024" is `not_found`. Fixing that matcher
+would change headline scores, so it is out of scope here. A new field type
 is one entry in `grounding/verdicts.py:_RULES`.
 
 ## Metrics

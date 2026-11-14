@@ -97,7 +97,7 @@
     },
     "grounding.verdicts": {
       "decision": "hold",
-      "lines": 195,
+      "lines": 198,
       "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
     },
     "integrations": {

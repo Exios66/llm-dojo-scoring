@@ -49,19 +49,19 @@ _SCALE_WORD_RE = re.compile(r"\s*\b(" + "|".join(w for w, _ in _SCALE_WORDS) + r
 _AMOUNT_RE = re.compile(
     r"(?P<lead>[$€£]|\b(?:USD|EUR|US\$)\s?)?"
     r"(?P<num>\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)"
-    r"(?P<scale>\s?(?:[KMB]\b|thousand\b|million\b|billion\b))?"
+    r"(?P<scale>(?-i:[KMB])\b|\s?(?:thousand|million|billion)\b)?"
     r"(?P<tail>\s?(?:USD|EUR|dollars?|euros?)\b)?",
     re.IGNORECASE,
 )
 
-#: Identifier-like runs in document text: alphanumerics joined by ``-`` ``/`` ``.``.
-_ID_RUN_RE = re.compile(r"[A-Za-z0-9]+(?:[-/.][A-Za-z0-9]+)*")
+#: Alphanumeric parts of document text; an identifier is one or more adjacent parts.
+_ID_PART_RE = re.compile(r"[A-Za-z0-9]+")
 
 #: Characters ignored when comparing identifiers ("AB-12/34" == "ab 12 34").
 _ID_NOISE_RE = re.compile(r"[\s\-/.]+")
 
-#: An identifier written with spaces spans at most this many runs ("AB 12 34").
-_ID_MAX_RUNS = 4
+#: An identifier spans at most this many adjacent parts ("AB 12 34", "INV-2024-0001").
+_ID_MAX_PARTS = 6
 
 #: Shorter normalised identifiers match too much text by chance: ``unverifiable``.
 _ID_MIN_CHARS = 3
@@ -111,9 +111,9 @@ def _document_amounts(doc_text: str) -> tuple[float, ...]:
 
 
 @lru_cache(maxsize=8)
-def _document_id_runs(doc_text: str) -> tuple[str, ...]:
-    """Identifier-like runs of one document, normalised (casefolded, separators removed)."""
-    return tuple(_ID_NOISE_RE.sub("", run.casefold()) for run in _ID_RUN_RE.findall(doc_text))
+def _document_id_parts(doc_text: str) -> tuple[str, ...]:
+    """Casefolded alphanumeric parts of one document, in order."""
+    return tuple(part.casefold() for part in _ID_PART_RE.findall(doc_text))
 
 
 def _token_rule(value: Any, doc_text: str) -> tuple[str, float | None]:
@@ -145,23 +145,26 @@ def _money_rule(value: Any, doc_text: str) -> tuple[str, float | None]:
 
 
 def _id_rule(value: Any, doc_text: str) -> tuple[str, float | None]:
-    """The identifier as one or more whole adjacent runs, ignoring case and separators.
+    """The identifier as one or more whole adjacent alphanumeric parts of the text.
 
-    ``"AB-12/34"`` matches ``"ab 12 34"`` and ``"AB1234"``; ``"12"`` never matches
-    inside ``"2012"`` (runs are whole), and identifiers shorter than three characters
-    are ``unverifiable``.
+    Case and separators are ignored: ``"AB-12/34"`` matches ``"ab 12 34"`` and
+    ``"AB1234"``, and ``"12345"`` matches the number part of ``"INV-12345"`` or
+    ``"No.12345"``. A part is never split, so ``"12"`` never matches inside ``"2012"``.
+    Identifiers shorter than three characters are ``unverifiable``.
     """
     needle = _ID_NOISE_RE.sub("", str(value).casefold())
     if len(needle) < _ID_MIN_CHARS:
         return UNVERIFIABLE, None
-    runs = _document_id_runs(doc_text)
-    for start in range(len(runs)):
+    parts = _document_id_parts(doc_text)
+    for start, first in enumerate(parts):
+        if not needle.startswith(first):
+            continue
         joined = ""
-        for run in runs[start:start + _ID_MAX_RUNS]:
-            joined += run
+        for part in parts[start:start + _ID_MAX_PARTS]:
+            joined += part
             if joined == needle:
                 return GROUNDED, None
-            if len(joined) >= len(needle) or not needle.startswith(joined):
+            if not needle.startswith(joined):
                 break
     return NOT_FOUND, None
 
