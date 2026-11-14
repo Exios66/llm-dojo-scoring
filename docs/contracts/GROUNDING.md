@@ -149,12 +149,13 @@ A value found in the text is still not a label. `grounding/candidates.py:review_
 turns every audit record into a `ReviewCandidate`, whatever its verdict:
 
 - **Id.** `candidate_id` is the sha256 of `[doc_id, field, normal form, doc_text_sha256]`
-  (JSON-encoded). The normal form is the field type's own: the parsed amount with two
-  decimals for money, `year-month-day` (`?` for an unstated part) for dates, the
+  (JSON-encoded). The normal form is the field type's own: the signed parsed amount with
+  two decimals for money (the currency is not kept), `year-month-day` (`?` for an unstated part) for dates, the
   casefolded text without whitespace, `-`, `/` or `.` for identifiers, and casefolded
   text with whitespace collapsed for anything else or anything its type cannot parse.
-  So re-running gives the same ids, `$1,250.00` and `1250 USD` are one candidate, and a
-  list item keeps its id when the list is reordered. A value seen twice is one candidate
+  So re-running gives the same ids, `$1,250.00` and `1250 USD` are one candidate (as are
+  `$1250` and `€1250`, and ids `1.2` and `12`: the forms are deliberately coarse), a
+  credit `-1250` is another, and a list item keeps its id when the list is reordered. A value seen twice is one candidate
   (the first audit wins). An audit without `doc_id` raises `ValueError`.
 - **Order.** `priority` is 0 for `not_found`, 1 for `unverifiable`, 2 for `grounded`;
   candidates come sorted by priority, then fields with more candidates first, then
@@ -169,10 +170,10 @@ A confirmation is one reviewer's verdict on one candidate (JSON, `schema_version
 | `candidate_id` | must name a known candidate |
 | `verdict` | `valid`, `hallucinated` or `unsure` |
 | `reviewer_kind` | `human` or `agent` |
-| `reviewer_id` | non-blank; `human:<opaque id>`, `boss@<prompt version>`, `jev-<version>`. A new agent version is a new reviewer |
-| `confirmed_at` | Unix time (a finite number) |
+| `reviewer_id` | non-blank. A human's starts with `human:` (`human:<opaque id>`) and an agent's never does (`boss@<prompt version>`, `jev-<version>`), so an agent cannot pass as a person. A new agent version is a new reviewer |
+| `confirmed_at` | Unix time (a finite number), at most a day ahead of ingest time (`now`, default the clock) |
 | `certainty` | agents: required, in `[0, 1]`; humans: must be absent |
-| `corrected_value` | optional; becomes the label's value |
+| `corrected_value` | optional; non-blank text or a finite number; becomes the label's value |
 | `note` | optional text |
 
 `ingest_confirmations(records, candidates)` validates records (mappings, for example from
@@ -190,10 +191,10 @@ function of the ledger, recomputed every time. Per candidate, on latest confirma
 
 | Situation | Outcome |
 | --- | --- |
-| Any human said `valid` or `hallucinated` | **Humans decide.** All `valid` with values equal in normal form → label, `validity_basis: "human"`. All `hallucinated` → `rejected`. Otherwise → conflict `humans_disagree` |
+| Any human said `valid` or `hallucinated` | **Humans decide.** All `valid` with the same value (text equal after casefolding and collapsing whitespace; `$1,250.00` and `1250` differ) → label, `validity_basis: "human"`. All `hallucinated` → `rejected`. Otherwise → conflict `humans_disagree` |
 | Only `unsure` from everyone | pending `only_unsure` (a human `unsure` never validates or blocks) |
 | No human verdict; agents say only `hallucinated` | pending `agent_hallucinated` |
-| Agents disagree (`valid` and `hallucinated`, or different corrections) | conflict `agents_disagree`, for a person to settle |
+| Agents disagree (`valid` and `hallucinated`, or different values, compared as for humans) | conflict `agents_disagree`, for a person to settle |
 | Agents say `valid`; at least one was trusted by the gate as of its `confirmed_at`, with `certainty ≥ certainty_floor` | label, `validity_basis: "trusted_agent"`, `gate_snapshot_id` of the earliest such agent |
 | Agents say `valid` with enough certainty, none trusted | pending `agent_untrusted` |
 | Agents say `valid`, none with enough certainty | pending `below_certainty_floor` |
@@ -210,8 +211,10 @@ latest confirmation: `reviewer_kind`, `reviewer_id`, `verdict`, `certainty`,
 `labels`, `rejected`, `conflicts` and `pending` (candidate id → reason) and `withdrawn`.
 
 `io.write_jsonl(items, path, append=False)` and `io.read_jsonl(path)` move every record
-type to and from local JSONL files (the replace is atomic; an unserialisable record or a
-bad line raises, naming the line). Nothing is written to a hosted store.
+type to and from local JSONL files. A replace is atomic and keeps an existing file's
+permissions; an append first closes a torn last line; an unserialisable record or NaN
+raises before anything is written; a bad line on read raises, naming the line. There is
+no locking: one writer per file at a time. Nothing is written to a hosted store.
 
 | Id | Tier | Value |
 | --- | --- | --- |

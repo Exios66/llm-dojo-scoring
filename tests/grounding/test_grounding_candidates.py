@@ -23,7 +23,8 @@ def _audit(predicted, doc_id="d1", doc_text=DOC_TEXT):
 @pytest.mark.parametrize(("field_type", "value", "expected"), [
     ("money", "$1,250.00", "1250.00"),
     ("money", "1250 USD", "1250.00"),
-    ("money", "-1.2 million", "1200000.00"),
+    ("money", "-1.2 million", "-1200000.00"),
+    ("money", "1250", "1250.00"),
     ("date", "March 3, 2024", "2024-03-03"),
     ("date", "2024-03-03", "2024-03-03"),
     ("date", "August 2014", "2014-08-?"),
@@ -90,3 +91,9 @@ def test_round_trip():
     data = candidate.as_dict()
     assert data["schema_version"] == 1
     assert ReviewCandidate.from_dict(data) == candidate
+
+
+def test_credit_and_debit_are_separate_candidates():
+    """A negative amount is a different candidate from the positive one."""
+    audits = _audit({"claimed_amount": "$1,250.00"}) + _audit({"claimed_amount": "-1250"})
+    assert len(review_candidates(audits)) == 2
