@@ -120,6 +120,22 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
   merger cases. `schemas.maud_schema.hub_merger_expected_fields` is not exported from the package
   root. llm-mailroom and the sandbox vendor snapshot need a coordinated bump to see the new
   scores; direct `score_extraction` callers keep the fuzzy matcher.
+- **Score change (review fixes to the merger MAUD gold and the label pairs).**
+  `hub_merger_expected_fields` skips a question the MAUD content scorer calls ambiguous: an
+  explicit `gt_ambiguous` / `ambiguous` flag, a list (or JSON list text) of several distinct
+  answers, or a slash-collapsed answer that is not a catalog class. It was emitting a gold line for
+  it (a list answer joined as `'Yes, No'`); a list repeating one answer is that answer. In the
+  suites, derived gold stays inside the active field map (a caller's `field_types={"document_name":
+  "name"}` no longer also scores `maud_clauses` and `merger_consideration`); predicted clause
+  objects are scored as one document, not paired by position with the gold lines (a correct
+  out-of-order answer scored 0.0); a nonempty predicted clause entry the parser cannot read counts
+  as an unmatched prediction (precision and F1 drop, recall does not); and a `maud_clauses` gold
+  whose every question is ambiguous is no gold at all, not a fuzzy-matched score (a document with
+  only such gold is `unscorable`). The label pairs from the field-micro change above no longer
+  repeat one scalar prediction across several expected labels (the content scorer's length error
+  stands), and the per-document correspondence scorer (`doc_scorers.score_document`) drops a blank
+  or `"nan"` `content_topic` / `sentiment_label` like `ScoringSuite` does (it scored such a label
+  0.0). Before re-comparing stored merger or correspondence runs, re-score them.
 - **Score change (field-micro, Hub rows).** A correct value on a schema field the ground truth
   does not label is no longer a false positive: unlabelled fields are excluded from field-micro
   precision on both sides, as `overall_score` already excluded them (correspondence with a
