@@ -7,14 +7,18 @@ A verdict says whether the document supports a value, not whether the value is r
 * ``unverifiable`` — it cannot be checked: no document text, a closed-vocabulary
   ``label`` (inferred, never a literal in the text), or a value with nothing to compare.
 
-Each field type has one rule in :data:`_RULES`; a new type is one new entry. The
-matchers are the factuality audit's own (:mod:`llm_dojo_scoring.scoring.field_scoring`),
-so a value grounded here is grounded there. Deterministic and network-free.
+Each field type has one rule in :data:`_RULES`; a new type is one new entry. Names,
+text and dates reuse the factuality audit's matchers
+(:mod:`llm_dojo_scoring.scoring.field_scoring`); amounts reuse its money parser but
+only count document numbers that read as money; identifiers match whole runs of the
+text. Per-document work (tokens, amounts, identifier runs) is cached, so auditing many
+values of one document scans it once. Deterministic and network-free.
 """
 
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 from typing import Any, Callable
 
 from ..scoring.field_scoring import (
@@ -35,14 +39,81 @@ VERDICTS: tuple[str, ...] = (GROUNDED, NOT_FOUND, UNVERIFIABLE)
 #: A rule maps (value, non-blank document text) to (verdict, token coverage or None).
 Rule = Callable[[Any, str], "tuple[str, float | None]"]
 
-#: Number-like spans in document text, parsed with ``_parse_money`` for the money rule.
-_MONEY_RE = re.compile(r"[$€£]?\d[\d,]*(?:\.\d+)?(?:\s*[KMB]\b)?")
+#: Scale words spelled out ("$1.2 million") become the K/M/B suffix ``_parse_money`` reads.
+_SCALE_WORDS = (("thousand", "K"), ("million", "M"), ("billion", "B"))
+_SCALE_WORD_RE = re.compile(r"\s*\b(" + "|".join(w for w, _ in _SCALE_WORDS) + r")\b", re.IGNORECASE)
+
+#: An amount in document text: optional currency marker, digits, optional scale and
+#: currency word. Only spans with a money signal count (see :func:`_document_amounts`),
+#: so a day, a year or a phone digit group never grounds an amount.
+_AMOUNT_RE = re.compile(
+    r"(?P<lead>[$€£]|\b(?:USD|EUR|US\$)\s?)?"
+    r"(?P<num>\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)"
+    r"(?P<scale>\s?(?:[KMB]\b|thousand\b|million\b|billion\b))?"
+    r"(?P<tail>\s?(?:USD|EUR|dollars?|euros?)\b)?",
+    re.IGNORECASE,
+)
+
+#: Identifier-like runs in document text: alphanumerics joined by ``-`` ``/`` ``.``.
+_ID_RUN_RE = re.compile(r"[A-Za-z0-9]+(?:[-/.][A-Za-z0-9]+)*")
 
 #: Characters ignored when comparing identifiers ("AB-12/34" == "ab 12 34").
 _ID_NOISE_RE = re.compile(r"[\s\-/.]+")
 
+#: An identifier written with spaces spans at most this many runs ("AB 12 34").
+_ID_MAX_RUNS = 4
+
+#: Shorter normalised identifiers match too much text by chance: ``unverifiable``.
+_ID_MIN_CHARS = 3
+
 #: Two amounts within half a cent are the same amount.
 _MONEY_TOLERANCE = 0.005
+
+
+def _spell_scale(text: str) -> str:
+    """``"1.2 million"`` -> ``"1.2M"`` so the K/M/B parser reads spelled-out scales."""
+    return _SCALE_WORD_RE.sub(lambda m: dict(_SCALE_WORDS)[m.group(1).lower()], text)
+
+
+def _parse_amount(value: Any) -> float | None:
+    """A money value as a non-negative float, or ``None`` when it is not an amount."""
+    if isinstance(value, bool):
+        return None
+    amount = _parse_money(value if isinstance(value, (int, float)) else _spell_scale(str(value)))
+    return None if amount is None else abs(amount)
+
+
+@lru_cache(maxsize=8)
+def _document_tokens(doc_text: str) -> frozenset[str]:
+    """Content tokens of one document (cached: every value of a document reuses them)."""
+    return frozenset(_containment_tokens(doc_text))
+
+
+@lru_cache(maxsize=8)
+def _document_amounts(doc_text: str) -> tuple[float, ...]:
+    """Amounts the document states with a money signal.
+
+    A span counts when it has a currency symbol or word, a scale (K/M/B or spelled
+    out), a thousands separator, or exactly two decimals; bare integers ("15",
+    "2023", "555") never do.
+    """
+    amounts: list[float] = []
+    for match in _AMOUNT_RE.finditer(doc_text):
+        number = match.group("num")
+        signal = (match.group("lead") or match.group("scale") or match.group("tail")
+                  or "," in number or re.search(r"\.\d{2}$", number))
+        if not signal:
+            continue
+        found = _parse_amount((match.group("lead") or "") + number + (match.group("scale") or ""))
+        if found is not None:
+            amounts.append(found)
+    return tuple(amounts)
+
+
+@lru_cache(maxsize=8)
+def _document_id_runs(doc_text: str) -> tuple[str, ...]:
+    """Identifier-like runs of one document, normalised (casefolded, separators removed)."""
+    return tuple(_ID_NOISE_RE.sub("", run.casefold()) for run in _ID_RUN_RE.findall(doc_text))
 
 
 def _token_rule(value: Any, doc_text: str) -> tuple[str, float | None]:
@@ -50,7 +121,7 @@ def _token_rule(value: Any, doc_text: str) -> tuple[str, float | None]:
     value_tokens = _containment_tokens(str(value))
     if not value_tokens:
         return UNVERIFIABLE, None
-    coverage = len(value_tokens & _containment_tokens(doc_text)) / len(value_tokens)
+    coverage = len(value_tokens & _document_tokens(doc_text)) / len(value_tokens)
     verdict = GROUNDED if coverage >= get_verification_coverage() else NOT_FOUND
     return verdict, coverage
 
@@ -64,24 +135,35 @@ def _date_rule(value: Any, doc_text: str) -> tuple[str, float | None]:
 
 
 def _money_rule(value: Any, doc_text: str) -> tuple[str, float | None]:
-    """The same amount anywhere in the document, whatever its symbols or separators."""
-    amount = _parse_money(value)
+    """The same amount stated as money anywhere in the document, whatever its format."""
+    amount = _parse_amount(value)
     if amount is None:
         return UNVERIFIABLE, None
-    for match in _MONEY_RE.finditer(doc_text):
-        found = _parse_money(match.group(0))
-        if found is not None and abs(found - amount) <= _MONEY_TOLERANCE:
-            return GROUNDED, None
+    if any(abs(found - amount) <= _MONEY_TOLERANCE for found in _document_amounts(doc_text)):
+        return GROUNDED, None
     return NOT_FOUND, None
 
 
 def _id_rule(value: Any, doc_text: str) -> tuple[str, float | None]:
-    """The identifier as a substring, ignoring case, whitespace and ``-`` ``/`` ``.``."""
+    """The identifier as one or more whole adjacent runs, ignoring case and separators.
+
+    ``"AB-12/34"`` matches ``"ab 12 34"`` and ``"AB1234"``; ``"12"`` never matches
+    inside ``"2012"`` (runs are whole), and identifiers shorter than three characters
+    are ``unverifiable``.
+    """
     needle = _ID_NOISE_RE.sub("", str(value).casefold())
-    if not needle:
+    if len(needle) < _ID_MIN_CHARS:
         return UNVERIFIABLE, None
-    haystack = _ID_NOISE_RE.sub("", doc_text.casefold())
-    return (GROUNDED if needle in haystack else NOT_FOUND), None
+    runs = _document_id_runs(doc_text)
+    for start in range(len(runs)):
+        joined = ""
+        for run in runs[start:start + _ID_MAX_RUNS]:
+            joined += run
+            if joined == needle:
+                return GROUNDED, None
+            if len(joined) >= len(needle) or not needle.startswith(joined):
+                break
+    return NOT_FOUND, None
 
 
 def _label_rule(value: Any, doc_text: str) -> tuple[str, float | None]:

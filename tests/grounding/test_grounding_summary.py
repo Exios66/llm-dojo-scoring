@@ -81,3 +81,9 @@ def test_score_records_order_scope_and_denominator():
     assert records[-1].metadata == {"scope": "field", "doc_class": "insurance_claim",
                                     "field": "insurer", "denominator": 3}
     assert all(r.run_id == "r1" and r.agent == "specialist" for r in records)
+
+
+def test_unknown_verdict_raises_instead_of_undercounting():
+    """A record with a verdict outside VERDICTS is an error, not a silent drop."""
+    with pytest.raises(ValueError, match="unknown grounding verdict"):
+        summarize_grounding([_audit("maybe")])

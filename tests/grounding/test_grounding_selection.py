@@ -74,3 +74,24 @@ def test_unknown_doc_class_raises_key_error():
 def test_statuses_constant():
     """Statuses constant."""
     assert UNLABELLED_STATUSES == ("absent", "pending_annotation")
+
+
+def test_carried_cms_table_without_subclass_is_a_cms_row():
+    """A GT row that carries cms_source_table is CMS for the headline, so here too."""
+    gt = {"cms_source_table": "carrier", "claim_number": "1"}
+    predicted = {"adjuster": "Bob", "denial_reasons": ["x"], "insurer": "Acme"}
+    assert unlabelled_fields(gt, predicted, doc_class="insurance_claim") == {"insurer": "absent"}
+
+
+def test_cms_subclass_with_non_health_claim_type_is_not_a_cms_row():
+    """The headline treats a non-health row as non-CMS, so adjuster stays auditable."""
+    gt = with_presence(hub_row(claim_type="property"), "adjuster", "pending_annotation")
+    assert unlabelled_fields(gt, {"adjuster": "Bob"}, doc_class="insurance_claim",
+                             doc_subclass="carrier") == {"adjuster": "pending_annotation"}
+
+
+@pytest.mark.parametrize("predicted", [None, ["a"], "insurer"])
+def test_non_mapping_prediction_raises_type_error(predicted):
+    """A prediction that is not a field mapping fails loudly with a clear message."""
+    with pytest.raises(TypeError, match="mapping"):
+        unlabelled_fields({}, predicted, doc_class="insurance_claim")

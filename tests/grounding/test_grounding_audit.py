@@ -77,3 +77,14 @@ def test_every_live_class_audits_without_error(doc_class):
     """Every live class audits without error."""
     assert isinstance(audit_unlabelled_values({}, {"intent": "x"}, doc_class=doc_class,
                                               doc_text=DOC_TEXT), list)
+
+
+def test_mapping_and_list_items_are_checked_by_their_values():
+    """Keys of a structured list item are not document text."""
+    records = audit_unlabelled_values(
+        {}, {"keywords": ["Acme Holdings", {"name": "Acme Holdings"}, ["Globex"]]},
+        doc_class="insurance_claim", doc_text=DOC_TEXT,
+    )
+    assert [(r.value, r.verdict) for r in records] == [
+        ("Acme Holdings", "grounded"), ("Acme Holdings", "grounded"), ("Globex", "not_found"),
+    ]

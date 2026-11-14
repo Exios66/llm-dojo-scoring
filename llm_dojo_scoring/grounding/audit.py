@@ -66,6 +66,22 @@ def _items(value: Any) -> list[Any]:
     return parsed if isinstance(parsed, list) else [parsed]
 
 
+def _item_value(item: Any) -> Any:
+    """The checkable text of one list item: a mapping's or list's string values joined.
+
+    ``{"name": "Bob Co"}`` is checked as ``"Bob Co"`` (keys are not document text); a
+    scalar item is returned unchanged.
+    """
+    if isinstance(item, Mapping):
+        parts = item.values()
+    elif isinstance(item, (list, tuple)):
+        parts = item
+    else:
+        return item
+    return " ".join(str(part) for part in parts if not is_empty_value(part)
+                    and not isinstance(part, (Mapping, list, tuple)))
+
+
 def _element_type(field_type: str) -> str:
     """The item type of an ``entity_list`` field (``name`` when unspecified)."""
     prefix = LIST_PREFIX + ":"
@@ -86,8 +102,9 @@ def audit_unlabelled_values(
     """Grounding records for every unlabelled value in one document's prediction.
 
     Records come in registry field order; a list field gives one record per
-    non-empty item (``item_index`` set), a scalar one record (``item_index=None``).
-    An unknown ``doc_class`` raises ``KeyError``.
+    non-empty item (``item_index`` set; a mapping or list item is checked by its string
+    values), a scalar one record (``item_index=None``). ``predicted`` must be a mapping
+    (``TypeError``) and an unknown ``doc_class`` raises ``KeyError``.
     """
     types = field_types(doc_class)
     selected = unlabelled_fields(gt_row, predicted, doc_class=doc_class, doc_subclass=doc_subclass)
@@ -111,7 +128,7 @@ def audit_unlabelled_values(
             element = _element_type(ftype)
             for index, item in enumerate(_items(predicted[name])):
                 if not is_empty_value(item):
-                    record(name, element, item, index)
+                    record(name, element, _item_value(item), index)
         else:
             record(name, ftype, predicted[name], None)
     return records
