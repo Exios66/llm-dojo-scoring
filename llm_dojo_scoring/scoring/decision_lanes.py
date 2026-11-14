@@ -25,12 +25,15 @@ Gold, in priority order, recorded per scored row in
 ``provenance["gold_source"]``:
 
 1. ``human``: the person's resolution in the review tray, used when
-   ``label_source`` is ``"human"`` or absent;
+   ``label_source`` is ``"human"`` or absent. ``approve_as_is`` that also
+   records removed or corrected fields counts as ``correct``;
 2. ``corpus``: the deterministic extraction score against dataset labels, read
    through the verdict band ``[low, high]`` (default
    :func:`~llm_dojo_scoring.scoring.field_scoring.get_ambiguous_band`, the band
    :func:`~llm_dojo_scoring.pipeline.pipeline_verdict.deterministic_verdict_label`
-   uses: ``complete`` at or above ``high``, ``incomplete`` at or below ``low``);
+   uses: ``complete`` at or above ``high``, ``incomplete`` at or below ``low``).
+   Only the final extraction attempt grades a decision about it: when that
+   attempt has no score the row has no gold, whatever an earlier attempt scored;
 3. none: the row is counted under ``n_unscored_by_reason``. It is never scored 0.
 
 Every scorecard carries ``n``, ``n_scored``, ``n_unscored_by_reason``
@@ -163,9 +166,20 @@ class _Row:
     split: str | None
 
     @property
+    def outcome(self) -> str | None:
+        """The person's resolution, read by what they did to the fields.
+
+        ``approve_as_is`` that also records removed or corrected fields is a
+        ``correct``: the person changed the work whatever the label says.
+        """
+        if self.resolution == "approve_as_is" and self.corrections:
+            return "correct"
+        return self.resolution
+
+    @property
     def human_changed(self) -> bool:
         """True when the person changed or refused the model's work."""
-        return self.resolution in _CHANGED
+        return self.outcome in _CHANGED
 
     def score_of(self, attempt: int, doc_type: str | None = None) -> float | None:
         """Dataset score of extraction ``attempt`` (of ``doc_type`` when both are known)."""
@@ -175,13 +189,17 @@ class _Row:
         return None
 
     def final_score(self, doc_type: str | None = None) -> float | None:
-        """Dataset score of the last scored extraction attempt (of ``doc_type`` if known)."""
-        scored = [
+        """Dataset score of the final extraction attempt (of ``doc_type`` if known).
+
+        ``None`` when that attempt has no score: an earlier attempt's score does
+        not grade the final extraction.
+        """
+        applicable = [
             (number, score)
             for number, kind, score in self.attempts
-            if score is not None and (doc_type is None or kind is None or kind == doc_type)
+            if doc_type is None or kind is None or kind == doc_type
         ]
-        return max(scored, key=lambda pair: pair[0])[1] if scored else None
+        return max(applicable, key=lambda pair: pair[0])[1] if applicable else None
 
 
 def _read(raw: Mapping[str, Any], index: int) -> _Row:
@@ -320,7 +338,7 @@ def _expected_verdict(row: _Row, low: float, high: float) -> tuple[str | None, s
         "correct": "partial",
         "reject": "incomplete",
         "reclassify": "incomplete",
-    }.get(row.resolution or "")
+    }.get(row.outcome or "")
     last = max((number for number, _kind, _score in row.attempts), default=None)
     judged_final = row.judge_on_attempt is None or last is None or row.judge_on_attempt >= last
     if human and judged_final:
@@ -441,7 +459,7 @@ def _arbiter_outcome(
         return round(after - before, 9) >= epsilon, "corpus"
     if row.resolution is not None:
         if decision == "accept_with_caveats":
-            return row.resolution == "approve_as_is", "human"
+            return row.outcome == "approve_as_is", "human"
         return row.human_changed, "human"
     score = row.final_score(doc_type)
     if score is None:
@@ -549,7 +567,7 @@ def score_boss_lane(records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
                 wrongful += int(row.human_changed)
             else:
                 reviewed += 1
-                needless += int(row.resolution == "approve_as_is")
+                needless += int(row.outcome == "approve_as_is")
     metrics = {
         "wrongful_approve_rate": _rate(wrongful, approved),
         "needless_review_rate": _rate(needless, reviewed),
