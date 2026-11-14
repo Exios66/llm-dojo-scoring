@@ -42,3 +42,17 @@ def with_presence(gt_fields: str, field: str, status: str) -> str:
     row[field] = ""
     row["gt_presence"] = json.dumps({field: status})
     return json.dumps(row)
+
+
+def sample_candidates():
+    """Candidates from one synthetic document: one grounded, one not_found, one unverifiable."""
+    from llm_dojo_scoring.grounding.audit import audit_unlabelled_values
+    from llm_dojo_scoring.grounding.candidates import review_candidates
+
+    audits = audit_unlabelled_values(
+        {}, {"claimed_amount": "$1,250.00", "adjuster": "Robin Example",
+             "coverage_determination": "approved"},
+        doc_class="insurance_claim", doc_text=DOC_TEXT, doc_id="d1", run_id="r1",
+        extractor="insurance_claims_specialist",
+    )
+    return {c.field: c for c in review_candidates(audits)}

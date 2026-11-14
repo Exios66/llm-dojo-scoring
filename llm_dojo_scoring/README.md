@@ -64,6 +64,7 @@ llm_dojo_scoring/
 | | `serving`, `cost` | Local-vs-API serving, token cost |
 | **`grounding/`** | `verdicts`, `selection` | One value against the document; which fields are unlabelled |
 | | `audit`, `summary` | Per-value records; unlabelled-value rates as `ScoreRecord`s (`docs/contracts/GROUNDING.md`) |
+| | `candidates`, `ledger`, `labels`, `io` | Review candidates; append-only confirmations; valid labels with provenance; local JSONL |
 | **`integrations/`** | `update_awareness` | `dojo-version` release awareness |
 | | `update_awareness` | Opt-in release discovery behind `dojo-version` |
 

@@ -725,6 +725,28 @@ metrics:
     applicable_agents: [SPECIALISTS]
     aggregation: sum
     source: "grounding.summary.summarize_grounding"
+  grounding_n_candidates:
+    tier: 3
+    units: count
+    description: "Distinct unlabelled values exported for review (one per document, field and normalised value)"
+    applicable_agents: [SPECIALISTS]
+    aggregation: sum
+    source: "grounding.labels.label_score_records"
+  grounding_n_valid_labels:
+    tier: 3
+    units: count
+    description: "Unlabelled values confirmed as labels by a person or a trusted agent"
+    applicable_agents: [SPECIALISTS]
+    aggregation: sum
+    source: "grounding.labels.label_score_records"
+    notes: "metadata.by_basis splits human from trusted_agent"
+  grounding_n_label_conflicts:
+    tier: 3
+    units: count
+    description: "Candidates whose reviewers disagree (humans with humans, or agents with agents)"
+    applicable_agents: [SPECIALISTS]
+    aggregation: sum
+    source: "grounding.labels.label_score_records"
   completeness_label:
     tier: 2
     description: "Categorical completeness label (complete/partial/incomplete)"
