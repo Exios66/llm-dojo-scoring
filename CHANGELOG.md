@@ -23,6 +23,8 @@ Format based on Keep a Changelog; versioning is SemVer.
   derived from it with full provenance (human confirmation, or a trusted agent with enough
   certainty), with conflicts, pending reasons and withdrawals listed. New tier-3 counts:
   `grounding_n_candidates`, `grounding_n_valid_labels`, `grounding_n_label_conflicts`.
+  `io.read_jsonl` rejects `NaN` and `Infinity`, as the writer does; a `valid` verdict on a
+  value that is not text or a number (a predicted `false`) needs a `corrected_value`.
 <!-- end 0.31.0 -->
 
 - `schemas/doc_classes.py`: one hand-edited registry (`DOC_CLASSES`, `DocClass`, `field_types()`,
