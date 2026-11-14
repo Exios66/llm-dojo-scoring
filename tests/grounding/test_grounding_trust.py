@@ -227,6 +227,10 @@ def test_incremental_history_matches_the_naive_replay():
                          window=rng.choice([3, 4, 6, 10]))
         history = gate.history(ledger)
         assert history == _naive_history(gate, ledger), seed
+        for reviewer in ("boss@v1", "jev-1", "nobody@v1"):
+            for at in (t / 2 for t in range(-1, 32)):
+                in_force = [s for s in history if s.reviewer_id == reviewer and s.effective_at <= at]
+                assert gate.snapshot_at(ledger, reviewer, at) == (in_force[-1] if in_force else None), seed
         trusted += sum(s.trusted for s in history)
         empty += sum(s.n_checked == 0 for s in history)
         falls += len(gate.regressions(ledger, []))
