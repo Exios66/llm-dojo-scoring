@@ -1086,7 +1086,6 @@ _JOINED_DATES = [
     ("3/1/2024@10am", ["2024-03-01"]),
     ("3/1/2024_v2", ["2024-03-01"]),
     ("contract_3-1-2024.pdf", ["2024-03-01"]),
-    ("Smith3/1/2024", ["2024-03-01"]),
     ("3/1/24-3/5/24", ["2024-03-01", "2024-03-05"]),
 ]
 
@@ -1335,7 +1334,6 @@ def test_years_outside_1800_to_2099_are_not_document_dates(parts, doc):
     "pred, doc",
     [
         ("2000-01", "one 1/2000 share"),  # documented trade-off: unpadded month/year reads as a date
-        ("2024-03", "see Section 3/2024"),  # documented trade-off
         ("1899-03-03", "dated March 3, 1899"),
         ("2099-03", "due 03/2099"),
     ],
@@ -1479,6 +1477,268 @@ _HOSTILE_ROUND3 = [
 @pytest.mark.parametrize("hostile", _HOSTILE_ROUND3, ids=[f"round3_{i}" for i in range(len(_HOSTILE_ROUND3))])
 def test_document_date_scan_stays_linear_on_the_new_forms(hostile):
     """The new forms keep the scan under the same 0.5 s budget on 200 KB."""
+    fs._document_dates.cache_clear()
+    start = time.perf_counter()
+    fs._document_dates(hostile)
+    assert time.perf_counter() - start < 0.5
+
+
+# ---------------------------------------------------------------------------
+# Round 4: overlapping scan, letter before a number, every form the parser reads,
+# section numbers and docket-style ids
+# ---------------------------------------------------------------------------
+
+_LEADING_NUMBERS = ["Item 4 ", "Page 3 ", "Qty 2 ", "Section 7 ", "Rule 5 ", "Clause 12 ", "12 ", "1 ", "2 "]
+_FULL_DATES = [
+    ("March 15, 2024", "2024-03-15"),
+    ("Mar. 15, 2024", "2024-03-15"),
+    ("July 4 2024", "2024-07-04"),
+    ("June 12, 2024", "2024-06-12"),
+    ("December 1, 2020", "2020-12-01"),
+    ("January 15th, 2024", "2024-01-15"),
+    ("March, 3 2024", "2024-03-03"),
+    ("May twenty-fourth, 2024", "2024-05-24"),
+]
+
+
+@pytest.mark.parametrize("lead", _LEADING_NUMBERS)
+@pytest.mark.parametrize("written, iso", _FULL_DATES)
+def test_a_number_before_a_month_does_not_hide_the_full_date(lead, written, iso):
+    """"Item 4 March 15, 2024" states March 15; the leading 4 must not swallow the month."""
+    doc = f"{lead}{written} notice"
+    assert fs._date_grounded_in_doc(fs._parse_date_parts(iso), doc), doc
+    assert fs.audit_scalar_field("date", iso, iso, doc)["verified_in_doc"] == 1, doc
+
+
+@pytest.mark.parametrize(
+    "iso, doc",
+    [
+        ("2024-03-15", "Item 4 March 15, 2024 notice"),
+        ("2024-03-15", "Page 3 March 15, 2024"),
+        ("2024-03-15", "Qty 2 March 15, 2024"),
+        ("2024-01-15", "2 January 15, 2024"),
+        ("2024-07-04", "Section 7 July 4 2024"),
+        ("2024-06-12", "Rule 5 June 12, 2024"),
+        ("2020-12-01", "Clause 12 December 1, 2020"),
+        ("2024-03-03", "1 March 3, 2024"),
+    ],
+)
+def test_audit_verifies_a_full_date_after_a_leading_number(iso, doc):
+    """The headline audit counts the date as verified in the document."""
+    out = fs.audit_scalar_field("date", iso, iso, doc)
+    assert (out["verified_in_doc"], out["hallucination_rate"]) == (1, 0.0), doc
+
+
+def test_a_leading_number_may_still_state_its_own_year_less_date():
+    """The wrong extra year-less candidate is harmless: it never grounds a year."""
+    doc = "Item 4 March 15, 2024"
+    assert fs._date_grounded_in_doc(fs._parse_date_parts("March 4"), doc)
+    assert not fs._date_grounded_in_doc(fs._parse_date_parts("2024-03-04"), doc)
+
+
+@pytest.mark.parametrize(
+    "pred, doc",
+    [
+        ("2020-03-12", "Policy No. HO3-12-2020"),
+        ("2020-01-12", "A1-12-2020"),
+        ("2020-03-12", "HO3/12/2020"),
+        ("2020-03-12", "id x3.12.2020"),
+        ("2024-03-01", "Smith3/1/2024"),
+        ("2024-03-01", "A2024-03-01"),
+    ],
+)
+def test_a_number_right_after_a_letter_is_not_a_date(pred, doc):
+    """A policy or part number such as HO3-12-2020 is an id, not March 12, 2020."""
+    assert not fs._date_grounded_in_doc(fs._parse_date_parts(pred), doc), (pred, doc)
+
+
+@pytest.mark.parametrize(
+    "pred, doc",
+    [
+        ("2024-03-01", "contract_3-1-2024.pdf"),
+        ("2024-03-01", "Filed 3/1/2024-Smith v. Jones"),
+        ("2024-03-01", "ref-3-1-2024"),
+        ("2024-03-01", "path/3/1/2024/Rev"),
+        ("2024-03-01", "No.3/1/2024"),
+        ("2024-03-01", "Smith 3/1/2024"),
+    ],
+)
+def test_a_number_after_a_separator_is_still_a_date(pred, doc):
+    """_, -, /, a dot or whitespace before a date keeps it a date."""
+    assert fs._date_grounded_in_doc(fs._parse_date_parts(pred), doc), (pred, doc)
+
+
+_PARSER_FORMS = [
+    # two-digit-year prose
+    ("31 Dec 23", "2023-12-31"),
+    ("3 Mar 24", "2024-03-03"),
+    ("March 3rd, '24", "2024-03-03"),
+    ("Mar 3, 24", "2024-03-03"),
+    # DDMONYYYY and DDMONYY
+    ("03MAR2024", "2024-03-03"),
+    ("03Mar24", "2024-03-03"),
+    ("3MAR24", "2024-03-03"),
+    # separators between day, month and year
+    ("3rd-March-2024", "2024-03-03"),
+    ("3/Mar/2024", "2024-03-03"),
+    # legal ordinals
+    ("this 3d day of March, 2024", "2024-03-03"),
+    ("March 3d, 2024", "2024-03-03"),
+    ("the 2d day of March 2024", "2024-03-02"),
+    # "of" and "the month of"
+    ("March 3rd of 2024", "2024-03-03"),
+    ("March 3 of 2024", "2024-03-03"),
+    ("3rd day of the month of March, 2024", "2024-03-03"),
+    # a comma after the month
+    ("March, 3 2024", "2024-03-03"),
+    ("Mar,3 2024", "2024-03-03"),
+    # spelled-out day after the month
+    ("May twenty-fourth, 2024", "2024-05-24"),
+    ("March third, 2024", "2024-03-03"),
+    ("December thirty-first, 1999", "1999-12-31"),
+    # full-width and Arabic-Indic digits
+    ("\uff12\uff10\uff12\uff14-\uff10\uff13-\uff10\uff13", "2024-03-03"),
+    ("March \uff13, 2024", "2024-03-03"),
+    ("\u0662\u0660\u0662\u0664-\u0660\u0663-\u0660\u0663", "2024-03-03"),
+    # a range names its first day on the value side
+    ("3\u20145 March 2024", "2024-03-03"),
+    ("3\u20135 March 2024", "2024-03-03"),
+    ("March 3\u20145, 2024", "2024-03-03"),
+]
+
+
+@pytest.mark.parametrize("written, iso", _PARSER_FORMS)
+def test_the_scan_and_the_parser_read_the_same_forms(written, iso):
+    """A prediction the parser reads is also found in a document that writes it."""
+    got = fs.parse_date(written)
+    assert got is not None and got.isoformat() == iso, written
+    assert fs._date_grounded_in_doc(fs._parse_date_parts(iso), f"Signed {written}."), written
+
+
+#: Strings whose reading is deliberately NOT symmetric: the parser reads a full date from a
+#: lone value that a document scan does not accept as a date.
+_SYMMETRY_EXCEPTIONS: dict[str, str] = {}
+
+_SYMMETRY_DATES = _PARSER_FORMS + [
+    ("2024-03-03", "2024-03-03"),
+    ("2024/03/03", "2024-03-03"),
+    ("2024.03.03", "2024-03-03"),
+    ("2024-3-3", "2024-03-03"),
+    ("20240303", "2024-03-03"),
+    ("03/04/2024", "2024-03-04"),
+    ("13/04/2024", "2024-04-13"),
+    ("3/4/24", "2024-03-04"),
+    ("3.4.24", "2024-03-04"),
+    ("03.04.2024", "2024-03-04"),
+    ("2024-03-03T10:30:00Z", "2024-03-03"),
+    ("March 3, 2024", "2024-03-03"),
+    ("Mar. 3rd, 2024", "2024-03-03"),
+    ("March 3 2024", "2024-03-03"),
+    ("March the 3rd, 2024", "2024-03-03"),
+    ("3 March 2024", "2024-03-03"),
+    ("3rd of March, 2024", "2024-03-03"),
+    ("3 Mar. 2024", "2024-03-03"),
+    ("03-Mar-2024", "2024-03-03"),
+    ("03-Mar-24", "2024-03-03"),
+    ("3rd day of March, 2024", "2024-03-03"),
+    ("the 3rd day of March, 2024", "2024-03-03"),
+    ("Sunday, March 3, 2024", "2024-03-03"),
+    ("Sun. 3 March 2024", "2024-03-03"),
+    ("2024 March 3", "2024-03-03"),
+    ("2024, March 3rd", "2024-03-03"),
+    ("2024-Mar-03", "2024-03-03"),
+    ("this third day of March, two thousand twenty-four", "2024-03-03"),
+    ("twenty-first of June 2024", "2024-06-21"),
+    ("first of March 2024", "2024-03-01"),
+    ("the 3rd (third) day of March, 2024", "2024-03-03"),
+    ("March 3-5, 2024", "2024-03-03"),
+    ("3 to 5 March 2024", "2024-03-03"),
+]
+_SYMMETRY_PARTIAL = [
+    "March 2024",
+    "2024-03",
+    "03/2024",
+    "March 3",
+    "3rd of March",
+    "the 3rd (fourth) day of March, 2024",
+    "thirty-second of March 2024",
+    "March 1 to June 30",
+]
+
+
+@pytest.mark.parametrize("written, iso", _SYMMETRY_DATES)
+def test_parser_and_scan_agree_a_full_date_is_a_full_date(written, iso):
+    """parse_date(s) is a full date if and only if a document containing s grounds that date."""
+    if written in _SYMMETRY_EXCEPTIONS:
+        pytest.skip(_SYMMETRY_EXCEPTIONS[written])
+    parsed = fs.parse_date(written)
+    assert parsed is not None and parsed.isoformat() == iso, written
+    assert fs._date_grounded_in_doc(fs._parse_date_parts(iso), f"dated {written} here"), written
+
+
+@pytest.mark.parametrize("written", _SYMMETRY_PARTIAL)
+def test_parser_and_scan_agree_a_partial_date_has_no_full_date(written):
+    """A value with no full date reads as no full date in a document either."""
+    assert fs.parse_date(written) is None or written == "March 1 to June 30", written
+    assert not any(parts.is_full for parts in fs._document_dates(f"dated {written} here")), written
+
+
+@pytest.mark.parametrize(
+    "doc",
+    ["Section 3.1.20 applies", "see \u00a7 5.2.14", "\u00a7\u00a7 5.2.14", "Clause 3.1.20", "Article 3.1.20",
+     "Art. 3.1.20", "Paragraph 3.1.20", "Para. 3.1.20", "\u00b6 5.2.14", "Rule 5.2.14", "Item 5.2.14",
+     "Part 5.2.14", "Schedule 5.2.14", "Exhibit 5.2.14", "Sec. 5.2.14", "Sections 5.2.14", "Section: 5.2.14"],
+)
+def test_a_section_number_is_not_a_dotted_date(doc):
+    """A dotted x.y.zz span after a section word is a section number."""
+    assert not any(parts.is_full for parts in fs._document_dates(doc)), doc
+
+
+@pytest.mark.parametrize(
+    "doc",
+    ["Case No. 03-2024", "Case 03/2024", "No. 03/2024", "Number 03/2024", "# 03/2024", "Ordinance 03-2024",
+     "Resolution 03-2024", "Policy 03/2024", "Claim 03/2024", "Docket 2024-03", "Ref 03/2024", "Ref. 3/2024",
+     "RFC 2024-03", "Pub. L. 03/2024", "ext. 03/2024", "Room 03/2024", "Invoice 03/2024", "Inv. 03/2024",
+     "Section 3/2024", "Invoice #03/2024"],
+)
+def test_an_id_or_reference_number_is_not_a_month_and_year(doc):
+    """A numeric month-year after an id word is a reference number."""
+    assert not any(parts.month for parts in fs._document_dates(doc)), doc
+
+
+@pytest.mark.parametrize(
+    "pred, doc",
+    [
+        ("2020-03-12", "Policy dated 03/12/2020"),
+        ("2020-03-12", "Case No. 03/12/2020"),
+        ("2020-03-12", "Claim filed 3/12/2020"),
+        ("2020-03-12", "Invoice 2020-03-12"),
+        ("2024-03", "Policy dated 03/2024"),
+        ("2024-03", "Case dated March 2024"),
+    ],
+)
+def test_a_full_date_after_an_id_word_still_reads(pred, doc):
+    """Only month-and-year numbers are blocked after id words; full dates read."""
+    assert fs._date_grounded_in_doc(fs._parse_date_parts(pred), doc), (pred, doc)
+
+
+_HOSTILE_ROUND4 = [
+    "\uff13" * 200_000,
+    "March \uff13, 2024 " * 10_000,
+    "4 March " * 25_000,
+    "Item 4 March 15, 2024 " * 9_000,
+    "03MAR" * 40_000,
+    "3rd-March-" * 20_000,
+    "Section 3.1.20 " * 13_000,
+    "Case 03/2024 " * 15_000,
+    "March third, " * 16_000,
+    "\u0663" * 100_000 + "x" * 100_000,
+]
+
+
+@pytest.mark.parametrize("hostile", _HOSTILE_ROUND4, ids=[f"round4_{i}" for i in range(len(_HOSTILE_ROUND4))])
+def test_document_date_scan_stays_linear_on_overlapping_and_unicode_text(hostile):
+    """The overlapping scan and the digit normalisation keep the 0.5 s budget on 200 KB."""
     fs._document_dates.cache_clear()
     start = time.perf_counter()
     fs._document_dates(hostile)
