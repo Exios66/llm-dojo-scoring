@@ -1,6 +1,6 @@
 # Unlabelled-value grounding, review candidates and label provenance — design
 
-Status: draft for owner approval · Date: 2026-11-14 · Target: the `v0.30.0` staging branch
+Status: owner decisions recorded; awaiting approval of the whole design · Date: 2026-11-14 · Target: the `v0.30.0` staging branch
 
 ## 1. Intent
 
@@ -126,8 +126,8 @@ A predicted field `k` with a non-empty value is **audited** when `k` is in the c
 map and the GT does not label it:
 
 - `k` is absent from the parsed GT, **or** its `gt_presence` status is
-  `pending_annotation`. (A field present with an empty value and no presence status is
-  covered by §10 question 1; the proposed default leaves it out.)
+  `pending_annotation`. A field present with an empty value and no presence status is
+  labelled empty and **not** audited (owner decision, §10).
 - Not audited: fields labelled with a value (they are scored by the headline path);
   fields whose status is `not_applicable` / `schema_documented_absence` (labelled empty —
   a value there is already a headline false positive); CMS documented-absent
@@ -269,7 +269,8 @@ export_jsonl(items, path)  # helpers for candidates / valid labels (local file o
   same verdict (`valid`/`hallucinated`; `unsure` from either side excluded). Report per
   `reviewer_id`: n, agreement rate, Wilson 95% lower bound, per-field breakdown, and
   Cohen's κ where both classes occur.
-- **Trust gate:** see §10 question 2 for what the bar is measured on. An agent is
+- **Trust gate:** the bar is measured on the **precision of the agent's `valid`
+  verdicts** (owner decision, §10). An agent is
   trusted when, over its rolling window (default last 200 paired checks, ordered by the
   human's `confirmed_at`), `n ≥ min_n` (default 50) **and** the Wilson lower bound ≥
   `bar` (default 0.95). Untrusted agents' confirmations stay pending (never valid) until
@@ -340,19 +341,17 @@ llm-mailroom wiring + boss/JEV confirm role + review UI; dataset ingestion.
   record them as a follow-up.
 - The amount and id parsers' exact edge cases (they must be deterministic and tested).
 
-## 10. Open questions for the owner
+## 10. Owner decisions on the builder check
 
-Builder check (fresh reader) raised six points. Four were settled in the text above
-(trust as of `confirmed_at`, per-item list candidates, the append-only ledger and its
-conflict rules, the per-type verdict table). Two are the owner's:
+A fresh reader raised six points. Four were settled in the text above: trust is judged as
+of `confirmed_at`, list items are separate candidates, the ledger is append-only with
+the conflict rules in §6.3, and each field type has its own verdict rule. The owner
+decided the other two on 2026-11-14:
 
-1. **A field present in the GT with an empty value and no presence status.** Since
-   #139 the headline path treats it as *labelled empty*, so a value there is already a
-   false positive. Proposed default: **do not audit it** (it is labelled, the headline
-   already judges it, and the two calculations stay disjoint). The alternative also
-   sends it for review as a possible missing label, at the cost of one value counting in
-   both places.
-2. **What the trust bar measures.** Only an agent's `valid` verdict creates a label, but
-   plain agreement also rewards easy `hallucinated` calls. Proposed default: **gate on
-   the precision of the agent's `valid` verdicts** (of the values it called valid, the
-   share humans also called valid), and *report* overall agreement and κ alongside it.
+1. **A field present in the GT with an empty value and no presence status is not
+   audited.** Since #139 the headline treats it as labelled empty and already counts a
+   value there as a false positive. The grounding pass covers only absent and
+   `pending_annotation` fields, so no value is counted in both calculations.
+2. **The trust bar is measured on the precision of the agent's `valid` verdicts**: of the
+   values it called valid, the share humans also called valid, by Wilson lower bound.
+   Overall agreement and κ are reported next to it but do not gate trust.
