@@ -135,8 +135,9 @@ def test_score_changelog_can_filter_one_metric():
 def test_score_changelog_0_30_0_moves_field_micro_precision():
     """The #133 money fix can turn a FP+FN into a TP, so precision moves too.
 
-    The fix ships in 0.30.0 (0.29.0 is skipped), so the ledger names 0.30.0: a
-    run stamped 0.28.1 and one stamped 0.30.0 must find it.
+    The fix ships in 0.30.0 (v0.29.0 was tagged from main before it landed),
+    so the ledger names 0.30.0: a run stamped 0.28.1 and one stamped 0.30.0
+    must find it.
     """
     changes = score_changes_for_metric(
         "pipeline.extraction.field_micro_precision", "0.28.1", "0.30.0"

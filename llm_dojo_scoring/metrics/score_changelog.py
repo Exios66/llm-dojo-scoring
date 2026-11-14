@@ -64,7 +64,7 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         "rescore_required": True,
     },
     {
-        # Ships in 0.30.0 (0.29.0 is skipped); the version is cut separately with release.py.
+        # Ships in 0.30.0: v0.29.0 was tagged from main (f95c318) before these changes landed.
         "version": "0.30.0",
         "metric_ids": (
             "pipeline.extraction.overall",
