@@ -230,7 +230,7 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
   table stated on `cms_source_table` or, as the frozen prompt does, on `claim_type`, is still
   scored, and `score_document` now keeps a stated `cms_source_table` through scoping. Field-micro
   recall follows the same rule. The golden cases do not exercise either change
-  (`freeze_goldens.py --check` exit 0); `SCORE_CHANGELOG` gains a 0.29.0 entry for
+  (`freeze_goldens.py --check` exit 0); `SCORE_CHANGELOG` gains a 0.30.0 entry for
   `pipeline.extraction.overall` and the field-micro `f1`, `f2`, `precision` and `recall`
   (the #133 money fix can turn a false positive plus a false negative into a true positive).
 - Date scoring no longer reads the clock (#134, split from llm-mailroom#195).

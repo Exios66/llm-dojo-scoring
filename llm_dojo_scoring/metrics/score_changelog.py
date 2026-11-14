@@ -64,8 +64,8 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         "rescore_required": True,
     },
     {
-        # Proposed next release; the version is cut separately with release.py.
-        "version": "0.29.0",
+        # Ships in 0.30.0 (0.29.0 is skipped); the version is cut separately with release.py.
+        "version": "0.30.0",
         "metric_ids": (
             "pipeline.extraction.overall",
             "pipeline.extraction.field_micro_f1",
@@ -83,8 +83,8 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         "rescore_required": True,
     },
     {
-        # Second 0.29.0 change set (field-micro and label honesty on Hub rows).
-        "version": "0.29.0",
+        # Second 0.30.0 change set (field-micro and label honesty on Hub rows).
+        "version": "0.30.0",
         "metric_ids": (
             "pipeline.extraction.field_micro_f1",
             "pipeline.extraction.field_micro_f2",
@@ -112,8 +112,8 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         "rescore_required": True,
     },
     {
-        # Third 0.29.0 change set (merger MAUD labels become extraction gold).
-        "version": "0.29.0",
+        # Third 0.30.0 change set (merger MAUD labels become extraction gold).
+        "version": "0.30.0",
         "metric_ids": (
             "pipeline.extraction.overall",
             "pipeline.extraction.field_micro_f1",
@@ -134,8 +134,8 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         "rescore_required": True,
     },
     {
-        # Fourth 0.29.0 change set (new metrics only; no existing value moves).
-        "version": "0.29.0",
+        # Fourth 0.30.0 change set (new metrics only; no existing value moves).
+        "version": "0.30.0",
         "metric_ids": (
             "decision.judge.verdict_accuracy",
             "decision.judge.macro_f1",
@@ -159,8 +159,8 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         "rescore_required": False,
     },
     {
-        # Fifth 0.29.0 change set (new metrics only; no existing value moves).
-        "version": "0.29.0",
+        # Fifth 0.30.0 change set (new metrics only; no existing value moves).
+        "version": "0.30.0",
         "metric_ids": (
             "ml.intake.doc_type_accuracy",
             "ml.intake.doc_type_macro_f1",

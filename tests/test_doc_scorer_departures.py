@@ -4,8 +4,8 @@
 purpose (``scripts/record_doc_scorer_departures.py``); the parity tests apply it over
 the captured goldens. These tests keep it from becoming a way to absorb any change:
 it must be current, and it may only move what the 0.28.0 v2 schemas, the
-0.29.0 field-micro rules (unlabelled fields excluded, no events -> null) and the
-0.29.0 merger MAUD gold (``maud_clause_labels`` -> ``maud_clauses`` /
+0.30.0 field-micro rules (unlabelled fields excluded, no events -> null) and the
+0.30.0 merger MAUD gold (``maud_clause_labels`` -> ``maud_clauses`` /
 ``merger_consideration`` extraction gold) move.
 """
 
@@ -32,7 +32,7 @@ _MOVABLE_FIELDS = {
 _PRF = {"extraction_precision", "extraction_recall", "extraction_f1", "extraction_f2"}
 _PAYLOAD_KEYS = {"overall_extraction_score", "suite_overall_extraction_score", "fields"} | _PRF
 #: Only a merger case whose GT carries ``maud_clause_labels`` gains extraction gold
-#: (0.29.0), so only there may the list-field F1 move too.
+#: (0.30.0), so only there may the list-field F1 move too.
 _MAUD_GOLD_KEYS = _PAYLOAD_KEYS | {"entity_list_f1"}
 _BLOCK_KEYS = {"field_map_sha", "field_scores", "overall_score", "schema_valid", "tp", "fp", "fn"} | _PRF
 
@@ -45,7 +45,7 @@ def test_departures_are_current():
 def test_departures_touch_only_v2_classes_and_keys():
     """Only v2 classes move, and only scores, counts, field maps and schema_valid.
 
-    One exception since 0.29.0: field-micro P/R/F1/F2 on a row with no labelled
+    One exception since 0.30.0: field-micro P/R/F1/F2 on a row with no labelled
     extraction field are null, not 0.0, for every class.
     """
     for case_id, moved in DEPARTURES["payload"].items():
