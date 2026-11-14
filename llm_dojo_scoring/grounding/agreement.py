@@ -17,7 +17,7 @@ the human's ``confirmed_at``, :func:`reviewer_agreement` reports:
 
 * **valid precision** — of the values the agent called ``valid``, the share people
   also called valid (with the same value), and its Wilson 95% lower bound. This is
-  the number that gates trust (owner decision; the gate itself lands in piece 3c);
+  the number that gates trust (owner decision; the gate is ``grounding.trust.TrustGate``);
 * **agreement** — the share of paired checks with the same verdict;
 * **Cohen's κ** — agreement beyond chance, ``None`` unless both raters used both
   verdicts;
