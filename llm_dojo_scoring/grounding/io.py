@@ -68,11 +68,21 @@ def write_jsonl(items: Iterable[Any], path: str | os.PathLike[str], *, append: b
     return len(lines)
 
 
+class _NonJsonConstant(ValueError):
+    """``NaN``, ``Infinity`` or ``-Infinity`` on a line (Python's JSON extensions)."""
+
+
+def _reject_constant(name: str) -> Any:
+    """``json.loads`` hook: refuse the non-standard constants."""
+    raise _NonJsonConstant(name)
+
+
 def read_jsonl(path: str | os.PathLike[str]) -> list[dict[str, Any]]:
     """Every JSON object in ``path``, in file order; blank lines are skipped.
 
     A line that is not a JSON object raises ``ValueError`` naming the line number;
-    nothing is skipped silently.
+    nothing is skipped silently. ``NaN`` and ``Infinity`` are not JSON (the writer never
+    produces them), so a line holding one is invalid too.
     """
     records: list[dict[str, Any]] = []
     with Path(path).open(encoding="utf-8") as handle:
@@ -80,9 +90,11 @@ def read_jsonl(path: str | os.PathLike[str]) -> list[dict[str, Any]]:
             if not line.strip():
                 continue
             try:
-                data = json.loads(line)
+                data = json.loads(line, parse_constant=_reject_constant)
             except json.JSONDecodeError as exc:
                 raise ValueError(f"{path}:{number}: not valid JSON ({exc.msg})") from exc
+            except _NonJsonConstant as exc:
+                raise ValueError(f"{path}:{number}: not valid JSON ({exc} is not a JSON number)") from None
             if not isinstance(data, dict):
                 raise ValueError(f"{path}:{number}: expected a JSON object, got {type(data).__name__}")
             records.append(data)

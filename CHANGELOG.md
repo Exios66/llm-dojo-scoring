@@ -23,6 +23,8 @@ Format based on Keep a Changelog; versioning is SemVer.
   derived from it with full provenance (human confirmation, or a trusted agent with enough
   certainty), with conflicts, pending reasons and withdrawals listed. New tier-3 counts:
   `grounding_n_candidates`, `grounding_n_valid_labels`, `grounding_n_label_conflicts`.
+  `io.read_jsonl` rejects `NaN` and `Infinity`, as the writer does; a `valid` verdict on a
+  value that is not text or a number (a predicted `false`) needs a `corrected_value`.
 - `config.GroundingSettings` (`Settings.grounding`, a `grounding:` YAML or taxonomy block,
   `configure(grounding__…)`): reviewer-trust thresholds (`trust_bar`, `trust_min_n`,
   `trust_window`, `certainty_floor`, `spot_check_rate`, `spot_check_min_per_agent`), validated
