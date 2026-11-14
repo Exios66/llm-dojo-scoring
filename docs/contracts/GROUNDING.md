@@ -51,6 +51,11 @@ mapping or list item is checked by its string values (`{"name": "Bob Co"}` as `B
 
 ## Verdicts
 
+Each value is checked by its field type as the headline types it: the class registry's
+type, with `scoring.field_scoring.CMS_ROW_FIELD_TYPES` on a CMS row (so
+`supporting_documents` items there are `cms_doc_ref`, not names). A list field is
+checked item by item with its item type.
+
 | Field type | `grounded` when | Otherwise |
 | --- | --- | --- |
 | `name`, `free_text` (and unknown types) | at least `field_scoring.verification_token_coverage` (default 0.7) of the value's content tokens appear in the document | `not_found`; `unverifiable` when the value has no content tokens |
