@@ -338,3 +338,125 @@ def test_the_hub_class_none_is_an_answer_not_a_blank(question):
     wrong = score(row, {"maud_clauses": [gold["maud_clauses"][0][: -len("None")] + "Yes"],
                         "merger_consideration": "all_cash"})
     assert wrong["overall_score"] < 1.0
+
+
+# --- review findings on the conversion and the question-by-question rescore -------------
+
+
+def flagged_labels(flag: str) -> dict[str, dict[str, Any]]:
+    """Hub labels where ``No-Shop`` carries an explicit ambiguity flag."""
+    out = labels({"No-Shop": "Yes", "Specific Performance": '"entitled to" specific performance'})
+    out["No-Shop"][flag] = True
+    return out
+
+
+@pytest.mark.parametrize("flag", ["gt_ambiguous", "ambiguous"])
+def test_a_label_flagged_ambiguous_is_not_gold(flag):
+    """The MAUD scorer excludes a flagged question; the conversion must not turn it into gold."""
+    row = hub_row(maud_label_count="2", maud_clause_labels=flagged_labels(flag), expected_subclass="")
+    assert hub_merger_expected_fields(row) == {
+        "maud_clauses": ['Specific Performance: "entitled to" specific performance']
+    }
+
+
+def test_a_row_whose_every_label_is_ambiguous_stays_unscorable():
+    """No clean question, no clause gold: the row is unscorable, not scored on a flagged answer."""
+    lab = labels({"No-Shop": "Yes"})
+    lab["No-Shop"]["gt_ambiguous"] = True
+    row = hub_row(maud_label_count="1", maud_clause_labels=lab, expected_subclass="")
+    assert hub_merger_expected_fields(row) == {}
+    payload = score(row, {"maud_clauses": ["No-Shop: Yes"]}, subclass=None)
+    assert payload["overall_score"] is None
+    assert payload["extraction_f1"] is None
+
+
+@pytest.mark.parametrize("answer", [["Yes", "No"], '["Yes", "No"]', "Yes / Strict liability"])
+def test_a_multi_answer_label_is_ambiguous_not_one_joined_answer(answer):
+    """A Hub list of answers (or a slash-collapsed one) is unscorable, never gold like ``'Yes, No'``."""
+    record = {"answer": answer, "category": "Deal Protection"}
+    row = hub_row(maud_label_count="1", maud_clause_labels={"No-Shop": record}, expected_subclass="")
+    assert hub_merger_expected_fields(row) == {}
+
+
+def test_a_list_answer_with_one_distinct_value_is_that_answer():
+    """``["Yes", "yes"]`` is one answer; it is not rendered as ``'Yes, yes'``."""
+    record = {"answer": ["Yes", "yes", ""], "category": "Deal Protection"}
+    row = hub_row(maud_label_count="1", maud_clause_labels={"No-Shop": record}, expected_subclass="")
+    assert hub_merger_expected_fields(row) == {"maud_clauses": ["No-Shop: Yes"]}
+
+
+def test_a_free_text_predicted_clause_is_an_unmatched_prediction():
+    """An entry the parser rejects still counts against precision; recall is unchanged."""
+    row = merger_row({"No-Shop": "Yes"}, subclass="all_cash")
+    payload = score(row, {"maud_clauses": ["No-Shop: Yes", "unsupported clause text"],
+                          "merger_consideration": "all_cash"})
+    entity = payload["extraction"].entity_list_scores["maud_clauses"]
+    assert (entity.matched, entity.unmatched_predicted, entity.unmatched_expected) == (1, 1, 0)
+    assert entity.precision == 0.5
+    assert entity.recall == 1.0
+    assert payload["extraction"].field_scores["maud_clauses"] == 1.0
+    assert payload["extraction_precision"] < 1.0
+
+
+def test_blank_predicted_clause_entries_are_silence_not_unmatched():
+    """Empty entries are not predictions."""
+    row = merger_row({"No-Shop": "Yes"}, subclass="all_cash")
+    payload = score(row, {"maud_clauses": ["No-Shop: Yes", "", "   ", None],
+                          "merger_consideration": "all_cash"})
+    entity = payload["extraction"].entity_list_scores["maud_clauses"]
+    assert entity.unmatched_predicted == 0
+    assert entity.precision == 1.0
+
+
+def test_derived_gold_stays_inside_a_callers_field_map():
+    """A caller who scopes ``field_types`` is not charged for fields outside that map."""
+    gt = json.loads(merger_row({"No-Shop": "Yes"}, subclass="all_cash"))
+    gt["document_name"] = "Acme Merger Agreement"
+    suite = get_suite("merger_agreement")
+    payload = suite.score_document(
+        json.dumps(gt),
+        {"document_name": "Acme Merger Agreement"},
+        doc_subclass="all_cash",
+        field_types={"document_name": "name"},
+    )
+    assert payload["extraction"].field_scores == {"document_name": 1.0}
+    assert payload["overall_score"] == 1.0
+    # Without a caller map the suite's own map covers the derived fields.
+    default = suite.score_document(json.dumps(gt), {"document_name": "Acme Merger Agreement"},
+                                   doc_subclass="all_cash")
+    assert {"maud_clauses", "merger_consideration"} <= set(default["extraction"].field_scores)
+
+
+def test_predicted_clause_objects_are_one_document_not_a_batch():
+    """Correct clause objects in another order than the gold lines still score 1.0."""
+    row = merger_row({"No-Shop": "Yes", "Specific Performance": '"entitled to" specific performance'},
+                     subclass="")
+    objects = [
+        {"question": "Specific Performance", "answer": '"entitled to" specific performance'},
+        {"question": "No-Shop", "answer": "Yes"},
+    ]
+    payload = score(row, {"maud_clauses": objects}, subclass=None)
+    assert payload["extraction"].field_scores["maud_clauses"] == 1.0
+    entity = payload["extraction"].entity_list_scores["maud_clauses"]
+    assert (entity.matched, entity.unmatched_predicted) == (2, 0)
+    extra = [*objects, {"question": "Breach of No Shop", "answer": "No"}]
+    payload = score(row, {"maud_clauses": extra}, subclass=None)
+    assert payload["extraction"].field_scores["maud_clauses"] == 1.0
+    assert payload["extraction"].entity_list_scores["maud_clauses"].unmatched_predicted == 1
+
+
+def test_gold_lines_that_are_all_ambiguous_are_not_scored_by_the_generic_matcher():
+    """Lines the MAUD scorer calls unscorable must not keep a fuzzy-match ``maud_clauses`` score."""
+    suite = get_suite("merger_agreement")
+    payload = suite.score_document(
+        {"maud_clauses": ["No-Shop: Yes / No"]}, {"maud_clauses": ["No-Shop: Yes / No"]}
+    )
+    assert payload["status"] == "unscorable"
+    assert payload["overall_score"] is None
+    assert payload.get("extraction_f1") is None
+    # A clean question beside an ambiguous one is still scored, on the clean one.
+    mixed = suite.score_document(
+        {"maud_clauses": ["No-Shop: Yes / No", "Specific Performance: Yes"]},
+        {"maud_clauses": ["No-Shop: Yes / No", "Specific Performance: Yes"]},
+    )
+    assert mixed["extraction"].field_scores["maud_clauses"] == 1.0
