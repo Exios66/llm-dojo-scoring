@@ -181,11 +181,16 @@ Public entry points (piece 1):
 
 ```python
 audit_unlabelled_values(gt_row, predicted, *, doc_class, doc_text, doc_subclass=None,
-                        field_types=None, run_id=None, doc_id=None, extractor=None)
+                        run_id=None, doc_id=None, extractor=None)
     -> list[UnlabelledValueAudit]
 summarize_grounding(audits) -> GroundingSummary   # rates, per class, per field
 grounding_score_records(summary, *, agent, run_id) -> list[ScoreRecord]
 ```
+
+As built, the field types always come from the class registry, plus the headline's
+`CMS_ROW_FIELD_TYPES` on a CMS row, exactly as scoring uses them. A `field_types=`
+override was dropped so the audit can never type a field differently from the
+headline. `docs/contracts/GROUNDING.md` is the contract.
 
 ### 6.3 Piece 2 — candidates, confirmations, provenance, valid labels
 
