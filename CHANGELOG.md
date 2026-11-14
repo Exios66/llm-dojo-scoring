@@ -101,6 +101,41 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
 
 ### Fixed
 
+- **Score change (field-micro, Hub rows).** A correct value on a schema field the ground truth
+  does not label is no longer a false positive: unlabelled fields are excluded from field-micro
+  precision on both sides, as `overall_score` already excluded them (correspondence with a
+  correct `communication_type` scored precision 0.75; now 1.0). An off-schema key, or a value on
+  a field labelled empty (insurance `adjuster` with documented absence), is still a false
+  positive. Before re-comparing stored runs, re-score them.
+- **Score change (field-micro, `pending_annotation`).** A field whose `gt_presence` status is
+  `pending_annotation` (the label backfill has not run) is unlabelled too, so a value on it is no
+  longer a false positive: `scoring_gt_fields` now drops such a field instead of blanking it, and
+  field-micro excludes it on both sides (a correspondence row with a pending `sender` and a stated
+  sender scored precision 0.75 / F1 0.8571; now 1.0 / 1.0). `not_applicable` and
+  `schema_documented_absence` still blank the field, so a stated value there stays a false positive.
+  Exception: on a CMS insurance row, `adjuster` and `denial_reasons` stay labelled empty whatever
+  their status (the CMS source schema documents them absent), so a stated value there is still a
+  false positive. No signature changed; `scoring_gt_fields` output differs only by omitting
+  pending keys.
+- A row with no labelled extraction field (presence-only CUAD, MAUD-only merger, no GT) reports
+  field-micro P/R/F1/F2 as null instead of 0.0, as the presence-only contract path already did.
+- A MAUD-only merger payload now names its headline: `metric_id` is
+  `maud.question.micro_accuracy` (it was `pipeline.extraction.overall` with a null
+  `overall_score`). A batch takes it only when every row is MAUD-only; a run mixing
+  MAUD-only rows with rows that label extraction fields keeps `pipeline.extraction.overall` for
+  that batch; per-document payloads of such a run carry both ids, which `aggregate_serving`
+  lists in `metric_id_conflict` and `compare_serving` reports as `metric_id_mixed` (see `docs/contracts/METRIC_IDS.md`).
+- A blank or literal `"nan"` `content_topic` / `sentiment_label` (350 insurance rows of the v9.3
+  dataset) is no longer scored as a label: the topic and sentiment metrics are omitted for that
+  row instead of emitting 0.0. A real label still scores a wrong or missing prediction as 0.0.
+  When that leaves a `suite.score(...)` call with no extras, it returns the bare
+  `ExtractionScoreResult` like any other extras-free call; `score_document` always returns
+  the full dictionary.
+- `tests/behavior/test_class_headline_contract.py`: every live class, on synthetic rows shaped
+  like Hub `ground_truth` rows, scores its headline 1.0 for an oracle and 0.0 for an empty
+  prediction, keeps unlabelled and `"nan"` labels out of the score, and reports a label-less
+  row as unscorable.
+
 - **Score change.** Money strings with a currency word next to a K/M/B suffix parsed to `None`
   (#133): `parse_money("1.2M USD")` and `parse_money("USD 1.2M")` are now `1200000.0`
   (`"5K dollars"` → `5000.0`, `"EUR 3B"` → `3e9`; `"$1.2M"` and `"3 dollars"` unchanged).

@@ -333,6 +333,42 @@ def _task_key_for(profile: AgentProfile, kind: str) -> str | None:
 
 
 
+def _labelled_label_pairs(expected: Any, predicted: Any) -> tuple[Any, Any]:
+    """Keep only label pairs whose expected label is present.
+
+    A blank expected label (``None``, ``""``, ``"nan"``, ``"none"``…) is not
+    ground truth, so its pair is dropped. Returns ``(None, None)`` when no
+    labelled pair is left; a missing prediction for a labelled pair becomes
+    ``""`` (a miss). Lists of unequal length pass through unchanged so the
+    content scorer raises its usual length error.
+    """
+    from ..schemas import gt_metadata as _gtm
+
+    if expected is None:
+        return None, None
+    if isinstance(expected, (list, tuple)):
+        if not expected:
+            return None, None
+        preds = (
+            list(predicted)
+            if isinstance(predicted, (list, tuple))
+            else [predicted] * len(expected)
+        )
+        if len(preds) != len(expected):
+            return expected, predicted
+        kept = [
+            (exp, pred)
+            for exp, pred in zip(expected, preds)
+            if not _gtm.is_empty_value(exp)
+        ]
+        if not kept:
+            return None, None
+        return [exp for exp, _ in kept], ["" if p is None else p for _, p in kept]
+    if _gtm.is_empty_value(expected):
+        return None, None
+    return expected, "" if predicted is None else predicted
+
+
 def _subclass_kwarg(kwargs: Mapping[str, Any]) -> Any:
     """``doc_subclass`` (else ``expected_subclass``) as a scalar or a per-row list.
 
@@ -716,7 +752,8 @@ class ScoringSuite:
         # plus annotation stats and a stringified gt_presence map. Scope the
         # GT to THIS suite's class surface so fields that do not apply to the
         # document type (empty / not_applicable / schema_documented_absence /
-        # pending_annotation) are never required events, and parse the
+        # pending_annotation) are never required events (pending fields are
+        # dropped as unlabelled, the others blanked), and parse the
         # stringified JSON values ("[]", "{}", '["a", "b"]'). See
         # llm_dojo_scoring.schemas.gt_metadata.
         from ..schemas import gt_metadata as _gtm
@@ -749,7 +786,7 @@ class ScoringSuite:
             return row_subclass_kw if index is None else None
 
         def _scope_expected_one(value: Any, index: int | None = None) -> Any:
-            """Remove annotation keys and blank absent fields in a GT dictionary.
+            """Remove annotation keys and pending fields, and blank absent fields, in a GT dictionary.
 
             Apply :func:`scoring_gt_fields` to Hub metadata; preserve unmapped
             keys in plain dictionaries and return non-dict inputs unchanged.
@@ -1084,14 +1121,19 @@ class ScoringSuite:
         else:
             extraction = _run(expected, predicted, doc_text, audit_predictions)
 
-        if topic_e is not None or topic_p is not None:
+        # A label the dataset leaves blank (``""``, ``None``, the literal
+        # ``"nan"``) is not ground truth: drop those pairs instead of scoring
+        # the prediction against an empty label.
+        topic_e, topic_p = _labelled_label_pairs(topic_e, topic_p)
+        sent_e, sent_p = _labelled_label_pairs(sent_e, sent_p)
+        if topic_e is not None:
             extras.update(
                 score_correspondence_content(
                     expected_topic=topic_e if topic_e is not None else "",
                     predicted_topic=topic_p if topic_p is not None else "",
                 )
             )
-        if sent_e is not None or sent_p is not None:
+        if sent_e is not None:
             extras.update(
                 score_correspondence_content(
                     expected_sentiment=sent_e if sent_e is not None else "",
@@ -1146,18 +1188,27 @@ class ScoringSuite:
         # explicitly null rather than reporting a misleading 0.0.
         has_extraction_events = any(
             not _gtm.is_empty_value(value)
-            for exp in peeled_exp
-            if isinstance(exp, dict)
+            for idx, exp in enumerate(peeled_exp)
+            if idx not in unscorable_rows and isinstance(exp, dict)
             for value in exp.values()
         )
-        if presence and not has_extraction_events:
+        if not has_extraction_events:
+            # No labelled extraction field (presence-only CUAD rows, MAUD-only
+            # merger rows): field-micro P/R/F1/F2 are undefined, so they stay
+            # null rather than reporting a misleading 0.0.
             prf_payload = prf_bundle_keys({})
         elif is_batch and peeled_exp:
             rows = []
             for idx, (exp, pred, result) in enumerate(
                 zip(peeled_exp, peeled_pred, extraction)
             ):
-                if not isinstance(result, ExtractionScoreResult):
+                if (
+                    idx in unscorable_rows
+                    or not isinstance(result, ExtractionScoreResult)
+                    or (isinstance(exp, dict) and not exp)
+                ):
+                    # A row with no expected fields has no events: its
+                    # predicted keys must not count as false positives.
                     continue
                 row_presence = (
                     presence[idx]
@@ -1292,6 +1343,17 @@ class ScoringSuite:
             # Single-document payload: flatten the document's own overall
             # score so consumers do not have to dig into the dataclass.
             payload["overall_score"] = extraction.overall_score
+        rows = extraction if is_batch else [extraction]
+        if (
+            not presence
+            and filtered.get("maud_question_accuracy") is not None
+            and all(getattr(row, "overall_score", None) is None for row in rows)
+        ):
+            # MAUD-only merger GT (one document or a whole batch): no
+            # extraction field is scored, so the headline is the MAUD question
+            # accuracy, not a null overall.
+            mid = metric_id_for("maud_question_accuracy", doc_class=doc_class)
+            payload["metric_id"] = mid
         return _stamp(payload, mid)
 
     def _score_audit(

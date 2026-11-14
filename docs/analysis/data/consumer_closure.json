@@ -107,7 +107,7 @@
     },
     "metrics.metric_meta": {
       "decision": "keep",
-      "lines": 605,
+      "lines": 607,
       "reason": "imported by kept metrics.registry"
     },
     "metrics.profiles": {
@@ -127,7 +127,7 @@
     },
     "metrics.score_changelog": {
       "decision": "keep",
-      "lines": 129,
+      "lines": 158,
       "reason": "imported by kept analysis.serving"
     },
     "metrics.scorecard_honesty": {
@@ -242,7 +242,7 @@
     },
     "schemas.gt_metadata": {
       "decision": "keep",
-      "lines": 328,
+      "lines": 344,
       "reason": "consumer import: consumer_surface"
     },
     "schemas.intents": {
@@ -367,7 +367,7 @@
     },
     "scoring.extraction_metrics": {
       "decision": "keep",
-      "lines": 223,
+      "lines": 258,
       "reason": "consumer import: SBX, consumer_surface"
     },
     "scoring.extraction_scope": {
@@ -397,7 +397,7 @@
     },
     "scoring.suites": {
       "decision": "keep",
-      "lines": 1588,
+      "lines": 1650,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "scoring.tasks": {
@@ -664,7 +664,7 @@
   "schema_version": 1,
   "sources": {
     "MAIL": {
-      "commit": "4aa34186ee962c38f7e0ad42c000f674b3f302dc",
+      "commit": "5bcfe44584e468d8fc9d5d30e28abd5cc52cadfc",
       "files_scanned": 374
     },
     "MAIL@origin/claude/howdy-n8vcc1": {
@@ -684,7 +684,7 @@
       "files_scanned": 414
     },
     "SBX": {
-      "commit": "900c38a09ebf5901b1271f6690078288e0ce8052",
+      "commit": "c81a79aecaebfb2c05a124bbf93f7d4d63774e02",
       "files_scanned": 505
     },
     "consumer_surface": {

@@ -137,7 +137,8 @@ def test_score_changelog_0_29_0_moves_field_micro_precision():
     changes = score_changes_for_metric(
         "pipeline.extraction.field_micro_precision", "0.28.0", "0.29.0"
     )
-    assert [entry["version"] for entry in changes] == ["0.29.0"]
+    assert {entry["version"] for entry in changes} == {"0.29.0"}
+    assert any("#133" in entry["change"] for entry in changes)
 
 
 def test_score_changelog_handles_reversed_and_invalid_versions():
