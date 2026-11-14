@@ -491,3 +491,68 @@ def test_removed_fields_are_a_change_not_a_wasted_review():
     card = score_review_tray([record])
     assert card["metrics"]["wasted_review_rate"] == 0.0
     assert card["field_correction_rate"] == {"adjuster": 1.0}
+
+
+def _approved_with_edits(**extra: Any) -> dict[str, Any]:
+    """A row labelled ``approve_as_is`` that nevertheless records field edits."""
+    row = {"gold": {"human_resolution": "approve_as_is", "removed_fields": ["adjuster"]}}
+    row.update(extra)
+    return row
+
+
+def test_approve_as_is_with_field_edits_counts_as_a_human_change_in_every_lane():
+    """The tray already calls such a review a change; the other lanes must agree."""
+    boss = score_boss_lane(
+        [
+            _approved_with_edits(boss={"decision": "approved"}),
+            _approved_with_edits(boss={"decision": "review"}),
+        ]
+    )
+    assert boss["metrics"]["wrongful_approve_rate"] == 1.0
+    assert boss["metrics"]["needless_review_rate"] == 0.0
+
+    def arbiter(decision: str) -> dict[str, Any]:
+        return score_arbiter_lane([_approved_with_edits(arbiters=[{"ran": True, "decision": decision}])])
+
+    assert arbiter("accept_with_caveats")["by_decision"]["accept_with_caveats"] == {"wrong": 1}
+    assert arbiter("human_review")["by_decision"]["human_review"] == {"right": 1}
+
+    judged = score_judge_lane([_approved_with_edits(judge={"ran": True, "verdict": "partial"})])
+    assert judged["metrics"]["verdict_accuracy"] == 1.0  # edited fields: partial, not complete
+
+    tray = score_review_tray([_approved_with_edits(actual={"review_causes": ["conflict"]})])
+    assert tray["by_review_cause"]["conflict"]["changed"] == 1
+    assert tray["resolutions"] == {"approve_as_is": 1}  # the person's label is reported as given
+
+
+def test_a_clean_approve_as_is_is_still_not_a_change():
+    clean = {"gold": {"human_resolution": "approve_as_is"}, "boss": {"decision": "approved"}}
+    assert score_boss_lane([clean])["metrics"]["wrongful_approve_rate"] == 0.0
+
+
+def _two_attempts(second: float | None) -> dict[str, Any]:
+    return {
+        "extraction": [
+            {"attempt": 1, "doc_type": DOC_TYPE, "extraction_score": 0.95},
+            {"attempt": 2, "doc_type": DOC_TYPE, "extraction_score": second},
+        ],
+        "arbiters": [{"ran": True, "decision": "accept_with_caveats", "doc_type": DOC_TYPE}],
+        "judge": {"ran": True, "verdict": "complete", "doc_type": DOC_TYPE},
+    }
+
+
+def test_a_final_attempt_without_a_score_is_not_graded_by_an_earlier_one():
+    """Attempt 1 scored 0.95 and attempt 2 has no usable gold: the final extraction is ungraded."""
+    record = _two_attempts(None)
+    arbiter = score_arbiter_lane([record])
+    assert arbiter["n_scored"] == 0
+    assert arbiter["n_unscored_by_reason"] == {"no_gold": 1}
+    judge = score_judge_lane([record])
+    assert judge["n_scored"] == 0
+    assert judge["n_unscored_by_reason"] == {"no_gold": 1}
+
+
+def test_the_last_attempt_still_grades_when_it_is_scored():
+    arbiter = score_arbiter_lane([_two_attempts(0.2)])
+    assert arbiter["n_scored"] == 1
+    assert arbiter["metrics"]["wrongful_accept_rate"] == 1.0  # accepted a 0.2 final extraction

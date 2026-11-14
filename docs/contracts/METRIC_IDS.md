@@ -131,7 +131,10 @@ Gold and the rules behind each lane:
 - **Judge.** Human: `approve_as_is` is `complete`, `correct` is `partial`, `reject` and
   `reclassify` are `incomplete`. Corpus: the dataset score of the judged extraction at or
   above the high edge of the ambiguous band (`get_ambiguous_band()`, default 0.5 / 0.85) is
-  `complete`, at or below the low edge `incomplete`, between them `partial`. A
+  `complete`, at or below the low edge `incomplete`, between them `partial`. An
+  `approve_as_is` that also records removed or corrected fields counts as `correct`, in every
+  lane. When a decision is about the final extraction and that attempt has no dataset score,
+  the row has no gold (`no_gold`); an earlier attempt's score never stands in. A
   `judge_error` verdict is unscored and counted in `error_rate`. `escalation_recall` is
   over documents whose gold is not `complete`, `false_escalation_rate` over those whose
   gold is `complete`.
