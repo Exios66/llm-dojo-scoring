@@ -70,9 +70,12 @@ money parser; the money and identifier boundary rules are this module's own. Per
 work is cached (the last eight documents per cache), so auditing many values of one
 document scans it once.
 
-Known limitation: dates use the shared date matcher, which does not read ordinal
-suffixes, so `2024-03-03` against "March 3rd, 2024" is `not_found`. Fixing that matcher
-would change headline scores, so it is out of scope here. A new field type
+Known limitation: dates use the shared date matcher, which only reads document dates
+that state a year and does not read ordinal suffixes. So `March 3` against "Signed on
+March 3." is `not_found` (it is grounded by "March 3, 2024"), `2024-03` against "dated
+March 2024" is `not_found`, and `2024-03-03` against "March 3rd, 2024" is `not_found`.
+The headline factuality audit uses the same matcher, so fixing it changes headline scores
+and is out of scope here (tracked on Exios66/llm-dojo-scoring#146). A new field type
 is one entry in `grounding/verdicts.py:_RULES`.
 
 ## Metrics
