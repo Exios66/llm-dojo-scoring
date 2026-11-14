@@ -57,7 +57,7 @@ mapping or list item is checked by its string values (`{"name": "Bob Co"}` as `B
 | --- | --- | --- |
 | `name`, `free_text` (and unknown types) | at least `field_scoring.verification_token_coverage` (default 0.7) of the value's content tokens appear in the document | `not_found`; `unverifiable` when the value has no content tokens |
 | `date` | the document states the same date in any format (partial dates agree on every stated part) | `not_found`; text that is not a date uses the token rule |
-| `money` | the document states the same amount (within half a cent, sign ignored) as money: with a currency symbol or word, a scale (`5M`, upper case and attached, or `thousand`/`million`/`billion`), a thousands separator or two decimals. Bare integers in the text (a day, a year, a phone digit group) never count | `not_found`; `unverifiable` when the value is not an amount |
+| `money` | the document states the same amount (within half a cent, sign ignored) as money: with a currency symbol or word (spaces between it and the number on the same line are fine: `$ 500`, `500  dollars`), a scale (`5M`, upper case and attached, or `thousand`/`million`/`billion`), a thousands separator or two decimals. Bare integers in the text (a day, a year, a phone digit group) never count | `not_found`; `unverifiable` when the value is not an amount |
 | `id`, `cms_doc_ref` | after casefolding and removing whitespace, `-`, `/` and `.`, the value equals one alphanumeric part of the text or up to six adjacent parts (`CLM 0001` matches `CLM-0001`; `12345` matches `INV-12345` and `No.12345`); a part is never split (`12` does not match inside `2012`) | `not_found`; `unverifiable` when shorter than three characters |
 | `label` | never: a closed-vocabulary label is inferred, not quoted | always `unverifiable` |
 
@@ -81,9 +81,11 @@ is one entry in `grounding/verdicts.py:_RULES`.
 | `grounding_n_audited` | 3 | audited values (list items counted singly) | — |
 
 A rate with a zero denominator is `None`, never `0.0`. `grounding_score_records` emits
-each metric for the run (`metadata.scope: "run"`), then per class (`"class"`,
-`doc_class`), then per field (`"field"`, `doc_class`, `field`); every record carries
-`metadata.denominator`.
+one record per metric, for the run: `metadata` holds `scope: "run"`, the run's
+`denominator`, and `by_class` and `by_field` (keys `"doc_class.field"`), each mapping a
+slice to its `value` and `denominator`. Slices are not separate records because
+`Emitter.get_scorecard` aggregates by metric id alone: it would sum `grounding_n_audited`
+over run, class and field, and show the last slice's rate as the run's.
 
 `extraction_hallucination_rate` is a different number: a mailroom alias over **all**
 reported values (labelled or not) that match neither GT nor the document. Do not put the
@@ -129,8 +131,8 @@ for a in audits:
     print(a.field, a.verdict, a.gt_status)
 summary = summarize_grounding(audits)
 print(summary.overall.as_dict())
-for r in grounding_score_records(summary, agent="insurance_claims_specialist", run_id="run-1")[:3]:
-    print(r.metric, r.value, r.metadata)
+for r in grounding_score_records(summary, agent="insurance_claims_specialist", run_id="run-1"):
+    print(r.metric, r.value, r.metadata["denominator"], r.metadata["by_field"]["insurance_claim.adjuster"])
 ```
 
 Output (run on this release):
@@ -140,9 +142,9 @@ claimed_amount grounded absent
 adjuster not_found absent
 coverage_determination unverifiable absent
 {'grounded': 1, 'not_found': 1, 'unverifiable': 1, 'n_audited': 3, 'not_found_rate': 0.5, 'unverifiable_rate': 0.3333333333333333}
-grounding_not_found_rate 0.5 {'scope': 'run', 'denominator': 2}
-grounding_unverifiable_rate 0.3333333333333333 {'scope': 'run', 'denominator': 3}
-grounding_n_audited 3 {'scope': 'run', 'denominator': 3}
+grounding_not_found_rate 0.5 2 {'value': 1.0, 'denominator': 1}
+grounding_unverifiable_rate 0.3333333333333333 3 {'value': 0.0, 'denominator': 1}
+grounding_n_audited 3 3 {'value': 1, 'denominator': 1}
 ```
 
 ## Review candidates (piece 2)
@@ -325,7 +327,11 @@ Set them in the YAML config (`LLM_DOJO_SCORING_CONFIG`) or the taxonomy passed t
 `configure(grounding__trust_bar=0.97)` (or `configure(grounding=GroundingSettings(...))`).
 Values must be finite numbers: rates in `[0, 1]`, counts whole numbers of at least 0
 (`trust_min_n` at least 1, so no agent is trusted on zero checks), and
-`trust_window ≥ trust_min_n` (overrides passed together are checked together). A bad
+`trust_window ≥ trust_min_n` (overrides passed together are checked together). Every
+path coerces alike: `trust_min_n: 40.0` (YAML), `grounding__trust_min_n=40.0` and
+`grounding=GroundingSettings(trust_min_n=40.0)` all give `40`. A block that is not a
+mapping (`false`, `0`, `""` and `[]` included) is an error; `grounding: null` and
+`grounding: {}` change nothing. A bad
 grounding value raises `ValueError` before anything in that config file or taxonomy is
 applied, so every settings section keeps its old values; unknown keys in the block are
 ignored. Updates change `get_settings().grounding` in place.

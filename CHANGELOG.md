@@ -11,7 +11,9 @@ Format based on Keep a Changelog; versioning is SemVer.
   field the GT does not label (key absent or `pending_annotation`) against the source
   document, as `grounded`, `not_found` or `unverifiable`, and reports
   `grounding_not_found_rate` (tier 1), `grounding_unverifiable_rate` (tier 2) and
-  `grounding_n_audited` (tier 3) per run, class and field. A separate pass: nothing on the
+  `grounding_n_audited` (tier 3): one record per metric for the run, with the per-class and
+  per-field values in its metadata, so `Emitter.get_scorecard` neither sums a count over the
+  slices nor shows a slice's rate as the run's. A separate pass: nothing on the
   scoring path imports it, and the headline, field-micro and golden scores are unchanged.
   Contract: `docs/contracts/GROUNDING.md`. No consumer imports it yet (`hold`).
 - `grounding/candidates.py`, `ledger.py`, `labels.py`, `io.py`: every audited value becomes a
