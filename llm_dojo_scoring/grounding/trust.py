@@ -25,6 +25,7 @@ person to re-review. Nothing is stored; everything is recomputed from the ledger
 
 from __future__ import annotations
 
+import bisect
 import hashlib
 import json
 from collections import defaultdict
@@ -124,6 +125,7 @@ class TrustGate:
         self._window = int(checked.trust_window)
         self._certainty_floor = float(checked.certainty_floor)
         self._cache: tuple[ConfirmationLedger, tuple[GateSnapshot, ...]] | None = None
+        self._by_reviewer: dict[str, tuple[list[float], list[GateSnapshot]]] = {}
 
     @property
     def bar(self) -> float:
@@ -215,17 +217,25 @@ class TrustGate:
                     last[reviewer_id] = snapshot.snapshot_id
                     snapshots.append(snapshot)
         self._cache = (ledger, tuple(snapshots))
+        by_reviewer: dict[str, tuple[list[float], list[GateSnapshot]]] = {}
+        for snapshot in snapshots:  # already in effective_at order
+            times, kept = by_reviewer.setdefault(snapshot.reviewer_id, ([], []))
+            times.append(snapshot.effective_at)
+            kept.append(snapshot)
+        self._by_reviewer = by_reviewer
         return snapshots
 
     def snapshot_at(self, ledger: ConfirmationLedger, reviewer_id: str, at: float) -> GateSnapshot | None:
-        """The snapshot in force for ``reviewer_id`` at ``at`` (inclusive), or ``None``."""
-        current = None
-        for snapshot in self.history(ledger):
-            if snapshot.effective_at > at:
-                break
-            if snapshot.reviewer_id == reviewer_id:
-                current = snapshot
-        return current
+        """The snapshot in force for ``reviewer_id`` at ``at`` (inclusive), or ``None``.
+
+        A binary search over that reviewer's snapshots (built once per ledger with
+        :meth:`history`), so deriving labels stays near-linear in the label count.
+        """
+        if self._cache is None or self._cache[0] is not ledger:
+            self.history(ledger)
+        times, snapshots = self._by_reviewer.get(reviewer_id, ([], []))
+        index = bisect.bisect_right(times, at)
+        return snapshots[index - 1] if index else None
 
     def trusted_snapshot_id(self, ledger: ConfirmationLedger, reviewer_id: str, at: float) -> str | None:
         """Id of the passing snapshot in force for ``reviewer_id`` at ``at``, else ``None``.
