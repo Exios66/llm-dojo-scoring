@@ -132,13 +132,44 @@ def test_score_changelog_can_filter_one_metric():
     assert changes[0]["version"] == "0.26.0"
 
 
-def test_score_changelog_0_29_0_moves_field_micro_precision():
-    """The #133 money fix can turn a FP+FN into a TP, so precision moves too."""
+def test_score_changelog_0_30_0_moves_field_micro_precision():
+    """The #133 money fix can turn a FP+FN into a TP, so precision moves too.
+
+    The fix ships in 0.30.0 (v0.29.0 was tagged from main before it landed),
+    so the ledger names 0.30.0: a run stamped 0.28.1 and one stamped 0.30.0
+    must find it.
+    """
     changes = score_changes_for_metric(
-        "pipeline.extraction.field_micro_precision", "0.28.0", "0.29.0"
+        "pipeline.extraction.field_micro_precision", "0.28.1", "0.30.0"
     )
-    assert {entry["version"] for entry in changes} == {"0.29.0"}
-    assert any("#133" in entry["change"] for entry in changes)
+    money = [entry for entry in changes if "#133" in entry["change"]]
+    assert [entry["version"] for entry in money] == ["0.30.0"]
+    in_tag = score_changes_for_metric(
+        "pipeline.extraction.field_micro_precision", "0.28.1", "0.29.0"
+    )
+    assert not any("#133" in entry["change"] for entry in in_tag)
+
+
+def test_score_changelog_0_29_0_names_the_date_reader():
+    """#134 (dates no longer read the clock) shipped in the v0.29.0 tag.
+
+    A run stamped 0.28.1 compared with one stamped 0.29.0 must be told that
+    date-field scores, and the field-micro metrics they feed, moved.
+    """
+    for metric_id in (
+        "pipeline.extraction.overall",
+        "pipeline.extraction.field_micro_f1",
+        "pipeline.extraction.field_micro_precision",
+        "pipeline.extraction.field_micro_recall",
+        # sandbox_scoring._same_date decides cuad_effective_from_agreement.
+        "cuad.sandbox_category_detection.micro_f1",
+        "cuad.sandbox_category_detection.micro_precision",
+        "cuad.sandbox_category_detection.micro_recall",
+    ):
+        changes = score_changes_for_metric(metric_id, "0.28.1", "0.29.0")
+        assert [entry["version"] for entry in changes] == ["0.29.0"], metric_id
+        assert "#134" in changes[0]["change"]
+        assert changes[0]["rescore_required"] is True
 
 
 def test_score_changelog_handles_reversed_and_invalid_versions():

@@ -127,7 +127,7 @@
     },
     "metrics.score_changelog": {
       "decision": "keep",
-      "lines": 225,
+      "lines": 256,
       "reason": "imported by kept analysis.serving"
     },
     "metrics.scorecard_honesty": {
