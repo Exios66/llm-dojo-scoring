@@ -228,13 +228,14 @@ previous export, if one is passed).
 
 - Only each reviewer's **latest** confirmation counts.
 - If any human's latest verdict exists, humans decide: valid when every human with a
-  latest verdict says `valid` (or `valid` with the same `corrected_value`); a human
-  `hallucinated` or a disagreement between humans → not valid, reported as a conflict.
+  latest verdict says `valid` (or `valid` with the same `corrected_value`); every human
+  `hallucinated` → rejected; a disagreement between humans → not valid, reported as a
+  conflict.
   A human `unsure` neither validates nor blocks.
 - With no human verdict: valid only when at least one agent says `valid`, that agent was
   **trusted as of its `confirmed_at`** (piece 3) with `certainty ≥` the certainty floor,
-  and no other agent's latest verdict is `hallucinated`. Agents disagreeing → pending,
-  routed to a human.
+  and no other agent's latest verdict is `hallucinated`. Agents disagreeing → a
+  conflict (`agents_disagree`), routed to a human.
 - A later human `hallucinated` on a value that was valid on agent grounds removes it on
   the next derivation and counts as a human/agent disagreement for that agent.
 - `corrected_value` becomes the label value, with the same provenance.
