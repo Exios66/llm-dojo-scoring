@@ -237,7 +237,7 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
   `audit_consumer_surface.py` rejects an unknown `--root` code; `GT_COVERAGE.md` counts
   `cms_source_table` on CMS subtypes only and says CUAD/MAUD counts are source-container coverage.
 
-## [0.29.0] - 2026-11-14
+## [0.29.0] - 2026-11-09
 ### Changed
 
 - Production prompts re-vendored from llm-mailroom `19203eac` (#179's merge commit) with
@@ -326,8 +326,8 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
   clear `bipartite_match_threshold` (0.6): a dated prediction is not a true positive for
   a yearless label, and a prediction naming stray extra years matches nothing.
   **Consumers:** this changes scores `llm-mailroom` and the sandbox report, so `llm-mailroom`
-  needs a Dojo pin bump (`bump_dojo_scoring.py`) and the sandbox a vendor refresh once this
-  is released. No public name changed.
+  needs a Dojo pin bump (`bump_dojo_scoring.py`) and the sandbox a vendor refresh to pick
+  it up. No public name changed.
 
 ## [0.28.1] - 2026-11-07
 ### Changed
