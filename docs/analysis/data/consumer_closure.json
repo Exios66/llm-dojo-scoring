@@ -72,7 +72,7 @@
     },
     "config": {
       "decision": "keep",
-      "lines": 626,
+      "lines": 704,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
     "grounding": {
@@ -97,7 +97,7 @@
     },
     "grounding.labels": {
       "decision": "hold",
-      "lines": 235,
+      "lines": 236,
       "reason": "unlabelled-value grounding (0.31.0), mailroom wiring follows, Dojo #146"
     },
     "grounding.ledger": {

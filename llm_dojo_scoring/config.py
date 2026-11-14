@@ -16,7 +16,7 @@ local-mailroom-sandbox) can stop redefining them.
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -339,11 +339,62 @@ class TraceKnobSettings:
 
 
 @dataclass
+class GroundingSettings:
+    """Thresholds for unlabelled-value grounding's reviewer trust (``grounding:`` YAML block).
+
+    Read by :mod:`llm_dojo_scoring.grounding`; never by the scoring path, so no
+    value here can change a headline score. ``trust_*`` gate an agent's
+    confirmations on the precision of its ``valid`` verdicts against people
+    (Wilson lower bound at least ``trust_bar`` over its last ``trust_window`` paired
+    checks, with at least ``trust_min_n`` of them); ``certainty_floor`` is the least
+    certainty an agent's ``valid`` needs; ``spot_check_*`` size the sample of each
+    agent's confirmations sent to people. Call :meth:`validate` after changing a
+    value by hand (``configure`` and the YAML loader do).
+    """
+
+    trust_bar: float = 0.95
+    trust_min_n: int = 50
+    trust_window: int = 200
+    certainty_floor: float = 0.9
+    spot_check_rate: float = 0.10
+    spot_check_min_per_agent: int = 20
+
+    def validate(self) -> "GroundingSettings":
+        """Raise ``ValueError`` naming the first out-of-range value; return ``self``."""
+        for name in ("trust_bar", "certainty_floor", "spot_check_rate"):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0.0 <= value <= 1.0:
+                raise ValueError(f"grounding.{name} must be a number in [0, 1], got {value!r}")
+        for name in ("trust_min_n", "trust_window", "spot_check_min_per_agent"):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise ValueError(f"grounding.{name} must be a whole number >= 0, got {value!r}")
+        if self.trust_window < self.trust_min_n:
+            raise ValueError(
+                f"grounding.trust_window ({self.trust_window}) must be at least "
+                f"grounding.trust_min_n ({self.trust_min_n})"
+            )
+        return self
+
+
+#: The ``grounding:`` YAML keys and how each is coerced.
+_GROUNDING_KEYS: dict[str, type] = {
+    "trust_bar": float,
+    "trust_min_n": int,
+    "trust_window": int,
+    "certainty_floor": float,
+    "spot_check_rate": float,
+    "spot_check_min_per_agent": int,
+}
+
+
+@dataclass
 class Settings:
     """One importable configuration for the whole suite."""
 
     field_scoring: FieldScoringSettings = field(default_factory=FieldScoringSettings)
     trace_knobs: TraceKnobSettings = field(default_factory=TraceKnobSettings)
+    grounding: GroundingSettings = field(default_factory=GroundingSettings)
     contract_subtypes: list[dict[str, str]] = field(
         default_factory=lambda: [dict(s) for s in CONTRACT_SUBTYPES]
     )
@@ -454,6 +505,10 @@ def _apply_dict(settings: Settings, data: dict[str, Any]) -> None:
     if tk:
         _apply_trace_knobs(settings.trace_knobs, tk)
 
+    gr = data.get("grounding") or {}
+    if gr:
+        _apply_grounding(settings, gr)
+
     if "subtype_equivalences" in data:
         settings.subtype_equivalences = [
             frozenset(str(x) for x in cls) for cls in (data["subtype_equivalences"] or [])
@@ -520,6 +575,27 @@ def get_settings() -> Settings:
     return load_settings()
 
 
+def _apply_grounding(settings: Settings, data: dict[str, Any]) -> None:
+    """Apply a ``grounding:`` block; a non-numeric or out-of-range value raises ``ValueError``.
+
+    Unknown keys are ignored, as in the ``trace_knobs:`` block, so a newer
+    consumer taxonomy never breaks an older Dojo. The block is applied to a copy and
+    validated before it replaces ``settings.grounding``, so a bad block leaves the
+    old values in place.
+    """
+    updated = replace(settings.grounding)
+    for key, cast in _GROUNDING_KEYS.items():
+        if key not in data:
+            continue
+        value = data[key]
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f"grounding.{key} must be a number, got {value!r}")
+        if cast is int and value != int(value):
+            raise ValueError(f"grounding.{key} must be a whole number, got {value!r}")
+        setattr(updated, key, cast(value))
+    settings.grounding = updated.validate()
+
+
 def _apply_trace_knobs(knobs: TraceKnobSettings, data: dict[str, Any]) -> None:
     """Apply a raw ``trace_knobs:`` config dict onto ``knobs`` in place."""
     if "capture_confidence" in data:
@@ -577,10 +653,11 @@ def configure(**overrides: Any) -> Settings:
         if "__" in key:
             section, attr = key.split("__", 1)
             obj = getattr(settings, section)
-            if hasattr(obj, attr):
-                setattr(obj, attr, value)
-            else:
+            if not hasattr(obj, attr):
                 raise AttributeError(f"unknown setting {key}")
+            if isinstance(obj, GroundingSettings):
+                replace(obj, **{attr: value}).validate()  # refuse a bad value before it lands
+            setattr(obj, attr, value)
         else:
             setattr(settings, key, value)
     return settings
@@ -597,6 +674,7 @@ def configure_from_taxonomy(taxonomy: dict | None) -> Settings:
     Handles the same blocks ``_apply_dict`` reads: ``field_scoring:``
     (including the ``type_bands`` overrides and ``factuality_verification``),
     ``trace_knobs:`` (confidence / reasoning capture and gates),
+    ``grounding:`` (reviewer trust thresholds, :class:`GroundingSettings`),
     ``subtype_equivalences``, ``doc_subclass_equivalences``,
     ``contract_subtypes``, ``subtype_aliases``, ``per_subtype``,
     ``cost_models``, ``model_display``.
