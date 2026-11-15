@@ -45,7 +45,7 @@ The surface consumers rely on is listed in `docs/guides/PUBLIC_API.md` (written 
 | `llm_dojo_scoring/ml/` | the label/intake contract `mailroom-ml` vendors (`ml_contract.json`) and `score_intake_model` |
 | `llm_dojo_scoring/prompts/` | importable prompt catalog and frozen lineage; `alignment.py` checks specialist prompts against the schema fields (gaps in `data/alignment_gaps.json`) |
 | `llm_dojo_scoring/config.py` | `Settings` (`LLM_DOJO_SCORING_CONFIG`) |
-| `tests/` | ~3,500 tests, network-free but one release test; `tests/fixtures/golden/` is the golden score baseline |
+| `tests/` | ~4,000 tests, network-free but one release test; `tests/fixtures/golden/` is the golden score baseline |
 | `scripts/` | `release.py`, `freeze_goldens.py`, `audit_consumer_surface.py`, `consumer_closure.py`, `build_extraction_status.py`, `render_gt_coverage.py`, `export_ml_contract.py`, `render_prompt_changelog.py` (`docs/prompts/PROMPT_CHANGELOG.md`), GT audits |
 | `docs/guides/`, `docs/contracts/`, `docs/schemas/` | scoring guides, metric ids and contracts, schema docs |
 
