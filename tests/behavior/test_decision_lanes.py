@@ -526,6 +526,28 @@ def test_approve_as_is_with_field_edits_counts_as_a_human_change_in_every_lane()
     assert tray["resolutions"] == {"approve_as_is": 1}  # the person's label is reported as given
 
 
+def test_tray_headline_rates_count_an_edited_approve_as_is_as_correct():
+    """METRIC_IDS.md: an approve_as_is with edits counts as ``correct`` in every lane.
+
+    Five reviews: approve_as_is with edits, a clean approve_as_is, correct,
+    reclassify, reject. The edited approval is a correction, not a wasted review
+    and not a missing one, so correction_rate is 2 of 5 (it was 1 of 5 when the
+    tray read the raw label); wasted stays 1 of 5 and the three rates add up.
+    """
+    rows = [
+        _approved_with_edits(),
+        {"gold": {"human_resolution": "approve_as_is"}},
+        {"gold": {"human_resolution": "correct", "human_fields": {"adjuster": "x"}}},
+        {"gold": {"human_resolution": "reclassify"}},
+        {"gold": {"human_resolution": "reject"}},
+    ]
+    card = score_review_tray(rows)
+    assert card["metrics"]["correction_rate"] == 0.4
+    assert card["metrics"]["wasted_review_rate"] == 0.2
+    assert card["metrics"]["reject_rate"] == 0.2
+    assert card["resolutions"] == {"approve_as_is": 2, "correct": 1, "reclassify": 1, "reject": 1}
+
+
 def test_a_clean_approve_as_is_is_still_not_a_change():
     """Without field edits, approve_as_is stays a no-change resolution."""
     clean = {"gold": {"human_resolution": "approve_as_is"}, "boss": {"decision": "approved"}}
