@@ -150,6 +150,56 @@ def test_score_changelog_0_30_0_moves_field_micro_precision():
     assert not any("#133" in entry["change"] for entry in in_tag)
 
 
+def test_score_changelog_money_entry_names_every_metric_the_parser_moves():
+    """#133's money fix also moves metrics that have no canonical ``metric_id``.
+
+    ``parse_money`` feeds ``amount_exactness`` and the money diagnostics. A
+    consumer comparing those across 0.29.0 to 0.30.0 must find them in the
+    ledger entry, and the numbers must really move the way the entry says.
+    """
+    from llm_dojo_scoring.analysis.diagnostics import extraction_diagnostics
+    from llm_dojo_scoring.scoring.claims_consistency import amount_exactness
+
+    entry = next(
+        e for e in score_changes_between("0.29.0", "0.30.0") if "#133" in e["change"]
+    )
+    for name in (
+        "amount_exactness",
+        "money_mae_usd",
+        "money_median_ae_usd",
+        "money_mae_per_field",
+        "money_n_pairs",
+    ):
+        assert name in entry["change"], name
+    # What the entry claims: pairs a bare K/M/B-with-currency-word string used to skip.
+    assert amount_exactness({"claimed_amount": "$2,000,000"}, {"claimed_amount": "2M USD"}) == 1.0
+    assert amount_exactness({"claimed_amount": "$1,200,000"}, {"claimed_amount": "USD 1.3M"}) == 0.0
+    row = {
+        "filename": "a",
+        "predicted": {"claimed_amount": "5K dollars"},
+        "expected_fields": {"claimed_amount": "$5,000"},
+        "field_scores": {"claimed_amount": 1.0},
+        "entity_list_scores": {},
+        "entity_list_audit": {},
+    }
+    diagnostics = extraction_diagnostics([row], {"claimed_amount": "money"})
+    assert diagnostics["money_n_pairs"] == 1
+    assert diagnostics["money_mae_usd"] == 0.0
+
+
+def test_new_metric_entries_are_the_only_ones_that_need_no_rescore():
+    """``rescore_required: False`` is for new metric ids; the entry must say no value moves."""
+    from llm_dojo_scoring.metrics.score_changelog import SCORE_CHANGELOG
+
+    for entry in SCORE_CHANGELOG:
+        if not entry["rescore_required"]:
+            assert entry["change"].startswith("New metrics"), entry["version"]
+            assert "No existing metric value changes" in entry["change"], entry["version"]
+    # The 0.29.0 -> 0.30.0 interval mixes both kinds; a reader filters on the flag.
+    interval = score_changes_between("0.29.0", "0.30.0")
+    assert {entry["rescore_required"] for entry in interval} == {True, False}
+
+
 def test_score_changelog_0_29_0_names_the_date_reader():
     """#134 (dates no longer read the clock) shipped in the v0.29.0 tag.
 
@@ -159,6 +209,7 @@ def test_score_changelog_0_29_0_names_the_date_reader():
     for metric_id in (
         "pipeline.extraction.overall",
         "pipeline.extraction.field_micro_f1",
+        "pipeline.extraction.field_micro_f2",
         "pipeline.extraction.field_micro_precision",
         "pipeline.extraction.field_micro_recall",
         # sandbox_scoring._same_date decides cuad_effective_from_agreement.
