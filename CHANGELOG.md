@@ -49,8 +49,10 @@ Format based on Keep a Changelog; versioning is SemVer.
   false-escalation rate, `judge_error` rate), `score_arbiter_lane` (decision accuracy, retry
   usefulness at a score rise of `epsilon`, wrongful-accept and unnecessary-escalation rates),
   `score_boss_lane` (wrongful approve, needless review; human outcome only) and
-  `score_review_tray` (resolution mix, wasted-review rate, per-field correction rate, reject
-  reasons, per-cause precision). Gold per row is the person's resolution, else the dataset
+  `score_review_tray` (resolution mix, wasted-review rate, correction rate, per-field correction
+  rate, reject reasons, per-cause precision; an `approve_as_is` that records edited or removed
+  fields counts as `correct` in the correction rate, as in every other lane, while the
+  resolution mix keeps the person's label as given). Gold per row is the person's resolution, else the dataset
   extraction score read through the ambiguous band; a row with neither is counted under
   `n_unscored_by_reason`, never scored 0. 14 new `decision.{judge,arbiter,boss,review_tray}.*`
   metric ids, registered and listed in `docs/contracts/METRIC_IDS.md`, with a `score_changelog`
@@ -180,6 +182,19 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
   stands), and the per-document correspondence scorer (`doc_scorers.score_document`) drops a blank
   or `"nan"` `content_topic` / `sentiment_label` like `ScoringSuite` does (it scored such a label
   0.0). Before re-comparing stored merger or correspondence runs, re-score them.
+- **Score change (merger MAUD gold, ambiguous questions).** A question the merger gold skips as
+  ambiguous (`hub_merger_expected_fields`: a multi-label answer, an explicit `gt_ambiguous` /
+  `ambiguous` flag, a slash-collapsed non-class answer, or case-variant keys with conflicting
+  answers) is unscored on both sides, as `schemas/maud_schema.py` always said. A predicted line for
+  it no longer counts as an unmatched prediction, so the suites' `maud_clauses` entity score and
+  field-micro precision, F1 and F2 stop falling when a model answers such a question (a model that
+  answered both a clean question and a `["Yes", "No"]` one scored precision 0.5, and 1.0 when
+  silent on the second; it now scores 1.0 either way). `maud_question_accuracy` and recall do not
+  move. A question the Hub leaves blank or `"nan"` is not ambiguous: it is not a label, and an
+  answer to it is still an unmatched prediction. New
+  `schemas.maud_schema.hub_merger_skipped_questions(gt_fields)` lists the skipped questions; it is
+  not exported from the package root. llm-mailroom and the sandbox vendor snapshot need the
+  coordinated bump to see it.
 - **Score change (field-micro, Hub rows).** A correct value on a schema field the ground truth
   does not label is no longer a false positive: unlabelled fields are excluded from field-micro
   precision on both sides, as `overall_score` already excluded them (correspondence with a
@@ -218,7 +233,14 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
 - **Score change.** Money strings with a currency word next to a K/M/B suffix parsed to `None`
   (#133): `parse_money("1.2M USD")` and `parse_money("USD 1.2M")` are now `1200000.0`
   (`"5K dollars"` → `5000.0`, `"EUR 3B"` → `3e9`; `"$1.2M"` and `"3 dollars"` unchanged).
-  Currency words are stripped before the suffix check.
+  Currency words are stripped before the suffix check. The same parser feeds two metrics that
+  have registry names but no canonical `metric_id`, so they are named here and in the
+  `score_changelog` entry: `amount_exactness` (`claims_consistency`; `$2,000,000` against
+  `"2M USD"` was `None`, now `1.0`; `$1,200,000` against `"USD 1.3M"` was `None`, a skipped
+  pair, now `0.0`, a counted miss) and the extraction diagnostics `money_mae_usd`,
+  `money_median_ae_usd`, `money_mae_per_field` and `money_n_pairs` (`"5K dollars"` against
+  `$5,000` was `money_n_pairs` 0, now 1 pair with `money_mae_usd` 0.0). A historical card
+  compared across 0.29.0 to 0.30.0 can differ on these with unchanged predictions.
 - **Score change.** A perfect `insurance_claim / carrier` extraction scored 0.9412 (#132): the
   `cms_source_table` marker is derived from the subclass, the production extractor never emits
   it, and silence on it scored 0. It is now not scored when the prediction states no table; a
