@@ -595,9 +595,10 @@ def score_review_tray(records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
 
     A row is resolved when it carries a human resolution. A row without one is
     ``unresolved`` when it is still parked (``final_stage`` ``review``) and
-    ``not_parked`` otherwise. For resolved rows it reports the resolution mix,
-    ``wasted_review_rate`` (approved as is with no field corrections: the review
-    changed nothing), ``correction_rate``, ``reject_rate``, the reject-reason
+    ``not_parked`` otherwise. For resolved rows it reports the resolution mix (the
+    person's label as given), ``wasted_review_rate`` (approved as is with no field corrections: the review
+    changed nothing), ``correction_rate`` (``correct``, where an ``approve_as_is`` that
+    records field edits counts as ``correct``), ``reject_rate``, the reject-reason
     distribution, ``field_correction_rate`` (per field, over the reviews that
     checked fields: ``approve_as_is`` and ``correct``) and ``by_review_cause``
     (per cause, the share of its parks where the person changed the work).
@@ -612,8 +613,9 @@ def score_review_tray(records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
             unscored["unresolved"] += 1
         else:
             unscored["not_parked"] += 1
-    mix = Counter(row.resolution for row in resolved)
-    wasted = sum(1 for row in resolved if row.resolution == "approve_as_is" and not row.corrections)
+    mix = Counter(row.resolution for row in resolved)  # the person's label, as given
+    outcomes = Counter(row.outcome for row in resolved)  # an edited approve_as_is is a correct
+    wasted = outcomes["approve_as_is"]
     reasons = Counter(row.reject_reason or "unspecified" for row in resolved if row.resolution == "reject")
     field_reviews = [row for row in resolved if row.resolution in _FIELD_REVIEWED]
     field_edits = Counter(str(name) for row in field_reviews for name in row.corrections)
@@ -625,7 +627,7 @@ def score_review_tray(records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
             cause_changed[cause] += int(row.human_changed)
     metrics = {
         "wasted_review_rate": _rate(wasted, len(resolved)),
-        "correction_rate": _rate(mix["correct"], len(resolved)),
+        "correction_rate": _rate(outcomes["correct"], len(resolved)),
         "reject_rate": _rate(mix["reject"], len(resolved)),
     }
     return _card(

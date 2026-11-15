@@ -185,7 +185,9 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         ),
         "change": (
             "New metrics: judge, arbiter, boss and review-tray decision lanes "
-            "(scoring.decision_lanes). No existing metric value changes."
+            "(scoring.decision_lanes). The review tray counts an approve_as_is that records "
+            "edited or removed fields as correct in correction_rate, as every lane does. "
+            "No existing metric value changes."
         ),
         "rescore_required": False,
     },

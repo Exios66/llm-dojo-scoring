@@ -49,8 +49,10 @@ Format based on Keep a Changelog; versioning is SemVer.
   false-escalation rate, `judge_error` rate), `score_arbiter_lane` (decision accuracy, retry
   usefulness at a score rise of `epsilon`, wrongful-accept and unnecessary-escalation rates),
   `score_boss_lane` (wrongful approve, needless review; human outcome only) and
-  `score_review_tray` (resolution mix, wasted-review rate, per-field correction rate, reject
-  reasons, per-cause precision). Gold per row is the person's resolution, else the dataset
+  `score_review_tray` (resolution mix, wasted-review rate, correction rate, per-field correction
+  rate, reject reasons, per-cause precision; an `approve_as_is` that records edited or removed
+  fields counts as `correct` in the correction rate, as in every other lane, while the
+  resolution mix keeps the person's label as given). Gold per row is the person's resolution, else the dataset
   extraction score read through the ambiguous band; a row with neither is counted under
   `n_unscored_by_reason`, never scored 0. 14 new `decision.{judge,arbiter,boss,review_tray}.*`
   metric ids, registered and listed in `docs/contracts/METRIC_IDS.md`, with a `score_changelog`

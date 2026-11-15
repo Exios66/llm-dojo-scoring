@@ -175,8 +175,10 @@ Gold and the rules behind each lane:
   is. A row without a resolution is `no_boss_gold`. Approved documents reach a person only
   when they are sampled for audit, so `wrongful_approve_rate` describes the audited ones.
 - **Review tray.** Rows with a resolution are scored; others are `unresolved` (still parked)
-  or `not_parked`. Beyond the three scalar metrics, the scorecard carries `resolutions`
-  (mix), `reject_reasons`, `field_correction_rate` (per field, over reviews that checked
+  or `not_parked`. `wasted_review_rate` and `correction_rate` read the outcome, so an
+  `approve_as_is` with edited or removed fields is a correction, not a wasted review.
+  Beyond the three scalar metrics, the scorecard carries `resolutions`
+  (mix, the person's label as given), `reject_reasons`, `field_correction_rate` (per field, over reviews that checked
   fields: `approve_as_is` and `correct`) and `by_review_cause` (per cause: parks, parks where
   the person changed the work, and their ratio).
 
