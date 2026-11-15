@@ -529,6 +529,6 @@ def test_a_skipped_variant_does_not_unscore_a_clean_gold_question(clean_name):
         row, {"maud_clauses": ["Specific Performance: Yes", "No-Shop: Yes"]}, subclass=None
     )
     clauses = scored["extraction"].entity_list_scores["maud_clauses"]
-    assert clauses.precision <= 1.0
-    assert clauses.unmatched_predicted >= 0
-    assert 0.0 <= scored["extraction_precision"] <= 1.0
+    assert (clauses.matched, clauses.unmatched_predicted) == (2, 0)
+    assert clauses.precision == 1.0
+    assert scored["extraction_precision"] == 1.0
