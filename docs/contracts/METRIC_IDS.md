@@ -175,8 +175,10 @@ Gold and the rules behind each lane:
   is. A row without a resolution is `no_boss_gold`. Approved documents reach a person only
   when they are sampled for audit, so `wrongful_approve_rate` describes the audited ones.
 - **Review tray.** Rows with a resolution are scored; others are `unresolved` (still parked)
-  or `not_parked`. Beyond the three scalar metrics, the scorecard carries `resolutions`
-  (mix), `reject_reasons`, `field_correction_rate` (per field, over reviews that checked
+  or `not_parked`. `wasted_review_rate` and `correction_rate` read the outcome, so an
+  `approve_as_is` with edited or removed fields is a correction, not a wasted review.
+  Beyond the three scalar metrics, the scorecard carries `resolutions`
+  (mix, the person's label as given), `reject_reasons`, `field_correction_rate` (per field, over reviews that checked
   fields: `approve_as_is` and `correct`) and `by_review_cause` (per cause: parks, parks where
   the person changed the work, and their ratio).
 
@@ -221,9 +223,9 @@ pools runs with different identities — dataset revision, split, draw seed,
 fingerprint, prompt, task, model or serving kind (`identity_mixed`, listed in
 the leg's `identity_conflict`). `assert_comparable_metric_ids` uses the same
 metric rule; two legs with no id at all are legacy data and come back
-`metric_id_unverified` from both. A grid row that mixes
-metric ids raises (`llm_dojo_scoring.analysis.grid.specialist_grid_rows`) rather than
-averaging two different scales.
+`metric_id_unverified` from both. The specialist grid report, which raised on a row that
+mixed metric ids, was removed in 0.30.0; `assert_comparable_metric_ids` is the check that
+remains, so two different scales are never averaged.
 
 ## Strict resolution
 

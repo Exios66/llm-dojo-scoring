@@ -31,7 +31,10 @@ CHANGELOG.
 ledger. `score_changes_between("0.24.0", "0.26.0")` returns every release in
 the interval; `score_changes_for_metric("cuad.clause_presence.micro_f1", ...)`
 narrows to one metric. Add an entry only when a deterministic scorer change can
-move a number on unchanged predictions.
+move a number on unchanged predictions, or when a release adds metric ids (such an
+entry lists the new ids, says that no existing value changes and has
+`rescore_required: False`; filter on that flag to keep only the entries that need a
+re-score).
 
 | Release | What moved | Re-score required |
 | --- | --- | --- |

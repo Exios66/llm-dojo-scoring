@@ -54,7 +54,7 @@ in any tool.
 
 ```bash
 uv sync --frozen --extra dev                     # install from the lock (what CI does)
-uv run --locked --extra dev pytest tests -q      # full suite (~3,500 tests, under a minute; one release test uses the network)
+uv run --locked --extra dev pytest tests -q      # full suite (~4,000 tests, under a minute; one release test uses the network)
 uv run --extra dev pytest tests/test_field_scoring.py -q   # one file
 uvx ruff@0.17.3 check llm_dojo_scoring tests scripts examples   # lint gate (CI pins 0.17.3)
 uv run --locked python scripts/freeze_goldens.py --check   # golden score baseline (exit 1 + unified diff on drift)
