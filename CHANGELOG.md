@@ -182,6 +182,19 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
   stands), and the per-document correspondence scorer (`doc_scorers.score_document`) drops a blank
   or `"nan"` `content_topic` / `sentiment_label` like `ScoringSuite` does (it scored such a label
   0.0). Before re-comparing stored merger or correspondence runs, re-score them.
+- **Score change (merger MAUD gold, ambiguous questions).** A question the merger gold skips as
+  ambiguous (`hub_merger_expected_fields`: a multi-label answer, an explicit `gt_ambiguous` /
+  `ambiguous` flag, a slash-collapsed non-class answer, or case-variant keys with conflicting
+  answers) is unscored on both sides, as `schemas/maud_schema.py` always said. A predicted line for
+  it no longer counts as an unmatched prediction, so the suites' `maud_clauses` entity score and
+  field-micro precision, F1 and F2 stop falling when a model answers such a question (a model that
+  answered both a clean question and a `["Yes", "No"]` one scored precision 0.5, and 1.0 when
+  silent on the second; it now scores 1.0 either way). `maud_question_accuracy` and recall do not
+  move. A question the Hub leaves blank or `"nan"` is not ambiguous: it is not a label, and an
+  answer to it is still an unmatched prediction. New
+  `schemas.maud_schema.hub_merger_skipped_questions(gt_fields)` lists the skipped questions; it is
+  not exported from the package root. llm-mailroom and the sandbox vendor snapshot need the
+  coordinated bump to see it.
 - **Score change (field-micro, Hub rows).** A correct value on a schema field the ground truth
   does not label is no longer a false positive: unlabelled fields are excluded from field-micro
   precision on both sides, as `overall_score` already excluded them (correspondence with a

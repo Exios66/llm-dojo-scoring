@@ -187,6 +187,58 @@ def test_a_dropped_answer_lowers_recall_and_an_unlabelled_extra_lowers_precision
     assert extra["extraction_precision"] < 1.0
 
 
+def _entity(payload: dict[str, Any]) -> Any:
+    """The ``maud_clauses`` entity-list score of a scored merger document."""
+    return payload["extraction"].entity_list_scores["maud_clauses"]
+
+
+def test_answering_a_question_the_gold_skips_as_multi_label_is_not_a_false_positive():
+    """A Hub multi-label question is unscored on both sides: answering it costs no precision."""
+    lab = labels({"No-Shop": "Yes"})
+    lab["Breach of No Shop"] = {"answer": ["Yes", "No"], "category": "Deal Protection"}
+    row = hub_row(maud_label_count="2", maud_clause_labels=lab, expected_subclass="")
+    assert hub_merger_expected_fields(row) == {"maud_clauses": ["No-Shop: Yes"]}
+    silent = score(row, {"maud_clauses": ["No-Shop: Yes"]}, subclass=None)
+    answered = score(row, {"maud_clauses": ["No-Shop: Yes", "Breach of No Shop: No"]}, subclass=None)
+    for payload in (silent, answered):
+        assert (_entity(payload).matched, _entity(payload).unmatched_predicted) == (1, 0)
+        assert payload["extraction_precision"] == 1.0
+        assert payload["extraction_f1"] == 1.0
+    # An unrelated, unlabelled question still lowers precision.
+    extra = score(row, {"maud_clauses": ["No-Shop: Yes", "Knowledge Definition: Actual knowledge"]},
+                  subclass=None)
+    assert _entity(extra).unmatched_predicted == 1
+
+
+def test_answering_a_case_variant_question_with_conflicting_gold_is_not_a_false_positive():
+    """``No-Shop`` and ``no-shop`` with different answers is one ambiguous question, unscored."""
+    lab = labels({"Specific Performance": '"entitled to" specific performance', "No-Shop": "Yes"})
+    lab["no-shop"] = {"answer": "No", "category": "Deal Protection"}
+    row = hub_row(maud_label_count="3", maud_clause_labels=lab, expected_subclass="")
+    gold = hub_merger_expected_fields(row)["maud_clauses"]
+    assert 'Specific Performance: "entitled to" specific performance' in gold
+    clean = 'Specific Performance: "entitled to" specific performance'
+    for answer in ("Yes", "No"):
+        payload = score(row, {"maud_clauses": [clean, f"No-Shop: {answer}"]}, subclass=None)
+        assert (_entity(payload).matched, _entity(payload).unmatched_predicted) == (1, 0), answer
+        assert payload["extraction_precision"] == 1.0, answer
+
+
+def test_a_skipped_question_is_skipped_per_row_in_a_batch():
+    """Row 1 skips ``No-Shop``; row 2 labels it, so the same prediction is a miss there."""
+    skipped = {"No-Shop": {"answer": ["Yes", "No"], "category": "Deal Protection"},
+               **labels({"Specific Performance": "Yes"})}
+    rows = [
+        hub_row(maud_label_count="2", maud_clause_labels=skipped, expected_subclass=""),
+        merger_row({"Specific Performance": "Yes", "No-Shop": "No"}),
+    ]
+    prediction = {"maud_clauses": ["Specific Performance: Yes", "No-Shop: Yes"]}
+    payload = get_suite("merger_agreement").score_document(rows, [prediction, prediction])
+    first, second = payload["extraction"][0], payload["extraction"][1]
+    assert first.entity_list_scores["maud_clauses"].unmatched_predicted == 0
+    assert second.entity_list_scores["maud_clauses"].unmatched_predicted == 1
+
+
 @pytest.mark.parametrize("decorate", [
     lambda line: f"- {line}",
     lambda line: f"* {line}",

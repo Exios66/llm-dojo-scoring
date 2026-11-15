@@ -160,7 +160,11 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
             "so such a row has an overall score and field-micro P/R/F1/F2 instead of null, and "
             "its headline metric_id is pipeline.extraction.overall (it was "
             "maud.question.micro_accuracy). maud_clauses is scored question by question, not "
-            "as fuzzy text. maud.question.micro_accuracy itself keeps its value."
+            "as fuzzy text. A question the gold skips as ambiguous (a multi-label or flagged "
+            "answer, or case-variant keys with conflicting answers) is unscored on both sides: "
+            "a prediction for it no longer counts as an unmatched prediction in precision. "
+            "A question the Hub leaves blank or 'nan' is not ambiguous; answering it still "
+            "does. maud.question.micro_accuracy itself keeps its value."
         ),
         "rescore_required": True,
     },
