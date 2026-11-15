@@ -5,7 +5,7 @@
 > the README pins or `tests/test_consumer_compat.py`; `release.py check` fails when they,
 > or `uv.lock`, disagree. See [RELEASES.md](RELEASES.md).
 
-> **Removed in the production slim-down (Unreleased):** the `dojo-analyze`, `dojo-export`,
+> **Removed in the production slim-down (0.30.0):** the `dojo-analyze`, `dojo-export`,
 > `dojo-rescore` and `dojo-sync` CLIs, `LEGACY_FULL_EXTRACTION_FIELD_TYPES`, and the
 > analysis/export/grid/sync modules behind them. Sections below that use them are
 > historical. Only `dojo-rescore` has an alternative (re-score a stored extraction run with
@@ -61,12 +61,12 @@ warning in 0.27 and to be removed once consumers have moved.
 | `llm_dojo_scoring.equivalences` | `llm_dojo_scoring.schemas.equivalences` |
 | `llm_dojo_scoring.error_analysis` | `llm_dojo_scoring.analysis.error_analysis` |
 | `llm_dojo_scoring.experiment` | `llm_dojo_scoring.analysis.experiment` |
-| `llm_dojo_scoring.export` | `llm_dojo_scoring.analysis.export` |
+| `llm_dojo_scoring.export` | removed in 0.30.0 (was `llm_dojo_scoring.analysis.export`) |
 | `llm_dojo_scoring.extraction_metrics` | `llm_dojo_scoring.scoring.extraction_metrics` |
 | `llm_dojo_scoring.failure_modes` | `llm_dojo_scoring.analysis.failure_modes` |
 | `llm_dojo_scoring.field_scoring` | `llm_dojo_scoring.scoring.field_scoring` |
 | `llm_dojo_scoring.field_support` | `llm_dojo_scoring.scoring.field_support` |
-| `llm_dojo_scoring.grid` | `llm_dojo_scoring.analysis.grid` |
+| `llm_dojo_scoring.grid` | removed in 0.30.0 (was `llm_dojo_scoring.analysis.grid`) |
 | `llm_dojo_scoring.gt_metadata` | `llm_dojo_scoring.schemas.gt_metadata` |
 | `llm_dojo_scoring.intake` | `llm_dojo_scoring.pipeline.intake` |
 | `llm_dojo_scoring.intents` | `llm_dojo_scoring.schemas.intents` |
@@ -280,7 +280,7 @@ from scripts.reporting.export_experiment_results import (
     sorter_columns, extraction_columns, write_workbook, write_codebook, load_records,
 )
 
-# NEW
+# NEW (until 0.30.0, which removed analysis.export with no replacement)
 from llm_dojo_scoring.analysis.export import (
     sorter_columns, extraction_columns, write_workbook, write_codebook,
     load_records, sorter_records, extraction_records, build_sweep_workbook,
