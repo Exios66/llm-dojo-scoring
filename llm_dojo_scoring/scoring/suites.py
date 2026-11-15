@@ -501,7 +501,8 @@ def _score_maud_clauses_by_question(
     # Both sides are one document each: a list of clause objects must not be read
     # as a batch of documents and paired with the gold lines by position.
     pred_labels = parse_maud_labels(pred_lines)
-    scored = score_maud_extraction(parse_maud_labels(list(exp_lines)), pred_labels)
+    gold_labels = parse_maud_labels(list(exp_lines))
+    scored = score_maud_extraction(gold_labels, pred_labels)
     n_expected = scored.get("n_questions") or 0
     if not n_expected:
         return
@@ -509,8 +510,13 @@ def _score_maud_clauses_by_question(
     # A nonempty entry the parser rejects (free text, no question) is a prediction
     # that matched nothing, the same as a wrong answer.
     unscored = {normalize_maud_question_key(question) for question in skipped}
+    conflicting: set[str] = set()
     for document in scored.get("per_document") or ():
-        unscored.update(document.get("gt_ambiguous_keys") or ())
+        conflicting.update(document.get("gt_ambiguous_keys") or ())
+    # A skipped Hub key can share its normalized name with a clean variant that
+    # did become a gold line; that question is scored, so it stays counted.
+    unscored -= set(gold_labels) - conflicting
+    unscored |= conflicting
     n_predicted = sum(1 for key in pred_labels if key not in unscored) + _n_unparsed_maud_entries(
         pred_lines
     )

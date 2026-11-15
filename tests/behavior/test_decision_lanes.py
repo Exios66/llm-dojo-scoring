@@ -532,7 +532,7 @@ def test_tray_headline_rates_count_an_edited_approve_as_is_as_correct():
     Five reviews: approve_as_is with edits, a clean approve_as_is, correct,
     reclassify, reject. The edited approval is a correction, not a wasted review
     and not a missing one, so correction_rate is 2 of 5 (it was 1 of 5 when the
-    tray read the raw label); wasted stays 1 of 5 and the three rates add up.
+    tray read the raw label); wasted stays 1 of 5.
     """
     rows = [
         _approved_with_edits(),

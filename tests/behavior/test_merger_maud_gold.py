@@ -512,3 +512,23 @@ def test_gold_lines_that_are_all_ambiguous_are_not_scored_by_the_generic_matcher
         {"maud_clauses": ["No-Shop: Yes / No", "Specific Performance: Yes"]},
     )
     assert mixed["extraction"].field_scores["maud_clauses"] == 1.0
+
+
+@pytest.mark.parametrize("clean_name", ["no-shop", "No Shop", "NO-SHOP"])
+def test_a_skipped_variant_does_not_unscore_a_clean_gold_question(clean_name):
+    """A multi-label Hub key and a clean case variant of it: the clean line is gold.
+
+    The prediction for it is a match, so it must stay in the precision
+    denominator (precision never exceeds 1.0, unmatched never goes negative).
+    """
+    lab = labels({"Specific Performance": "Yes"})
+    lab["No-Shop"] = {"answer": ["Yes", "No"], "category": "x"}
+    lab[clean_name] = {"answer": "Yes", "category": "x", "valid_classes": ["Yes"]}
+    row = hub_row(maud_label_count="3", maud_clause_labels=lab, expected_subclass="")
+    scored = get_suite("merger_agreement").score_document(
+        row, {"maud_clauses": ["Specific Performance: Yes", "No-Shop: Yes"]}, subclass=None
+    )
+    clauses = scored["extraction"].entity_list_scores["maud_clauses"]
+    assert clauses.precision <= 1.0
+    assert clauses.unmatched_predicted >= 0
+    assert 0.0 <= scored["extraction_precision"] <= 1.0
