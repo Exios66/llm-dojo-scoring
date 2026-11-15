@@ -7,7 +7,11 @@ read without guessing whether a delta is a model effect or a scorer fix.
 Every entry is a release, the canonical ``metric_id`` values it moved, and
 whether stored runs must be re-scored before they can be compared. The table
 is intentionally small: add an entry only when a deterministic scorer change
-can move a number on unchanged predictions.
+can move a number on unchanged predictions, or when a release adds metric ids
+(a new-metrics entry says so, lists the ids and sets ``rescore_required`` to
+``False``: no existing value moves). :func:`score_changes_between` returns both
+kinds, so a reader that wants only the entries needing a re-score filters on
+``rescore_required``.
 """
 
 from __future__ import annotations
@@ -106,8 +110,11 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         ),
         "change": (
             "Money parsing reads a currency word next to a K/M/B suffix ('1.2M USD', "
-            "'USD 1.2M'; #133). On a CMS insurance row the subclass-derived "
-            "cms_source_table is no longer scored when the prediction states no table "
+            "'USD 1.2M'; #133). The same parser moves two metrics that have no canonical "
+            "metric_id: amount_exactness (an unparsed pair was skipped, now scored) and the "
+            "diagnostics money_mae_usd / money_median_ae_usd / money_mae_per_field / "
+            "money_n_pairs (more pairs, so their values and counts change). On a CMS "
+            "insurance row the subclass-derived cms_source_table is no longer scored when the prediction states no table "
             "(a perfect carrier extraction scored 0.9412; #132); a stated table, on "
             "cms_source_table or claim_type, is still scored."
         ),
@@ -136,7 +143,8 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
             "documented-absent adjuster / denial_reasons). A row "
             "with no labelled extraction field (presence-only CUAD, MAUD-only merger, "
             "no GT) gets them as null from the suite and doc scorers, not 0.0. A MAUD-only merger payload's "
-            "headline metric_id is maud.question.micro_accuracy (overall is null). "
+            "overall score is null and its field-micro P/R/F1/F2 are null (they were 0.0); its "
+            "headline metric_id is maud.question.micro_accuracy only while nothing is derivable. "
             "A blank or literal 'nan' content_topic / sentiment_label is not a label: "
             "no topic or sentiment score is emitted for it (it scored 0.0)."
         ),
@@ -157,10 +165,9 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
             "A Hub merger row's maud_clause_labels are extraction gold: maud_clauses (one "
             "'<Question>: <Hub class>' line per answered question) and merger_consideration "
             "(the Type of Consideration answer, else the subclass) are scored by the suites, "
-            "so such a row has an overall score and field-micro P/R/F1/F2 instead of null, and "
-            "its headline metric_id is pipeline.extraction.overall (it was "
-            "maud.question.micro_accuracy). maud_clauses is scored question by question, not "
-            "as fuzzy text. A question the gold skips as ambiguous (a multi-label or flagged "
+            "so such a row has an overall score and field-micro P/R/F1/F2 instead of null / 0.0 "
+            "(its headline metric_id is pipeline.extraction.overall, as it was in 0.29.0). "
+            "maud_clauses is scored question by question, not as fuzzy text. A question the gold skips as ambiguous (a multi-label or flagged "
             "answer, or case-variant keys with conflicting answers) is unscored on both sides: "
             "a prediction for it no longer counts as an unmatched prediction in precision. "
             "A question the Hub leaves blank or 'nan' is not ambiguous; answering it still "

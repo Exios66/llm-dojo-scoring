@@ -233,7 +233,14 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
 - **Score change.** Money strings with a currency word next to a K/M/B suffix parsed to `None`
   (#133): `parse_money("1.2M USD")` and `parse_money("USD 1.2M")` are now `1200000.0`
   (`"5K dollars"` → `5000.0`, `"EUR 3B"` → `3e9`; `"$1.2M"` and `"3 dollars"` unchanged).
-  Currency words are stripped before the suffix check.
+  Currency words are stripped before the suffix check. The same parser feeds two metrics that
+  have registry names but no canonical `metric_id`, so they are named here and in the
+  `score_changelog` entry: `amount_exactness` (`claims_consistency`; `$2,000,000` against
+  `"2M USD"` was `None`, now `1.0`; `$1,200,000` against `"USD 1.3M"` was `None`, a skipped
+  pair, now `0.0`, a counted miss) and the extraction diagnostics `money_mae_usd`,
+  `money_median_ae_usd`, `money_mae_per_field` and `money_n_pairs` (`"5K dollars"` against
+  `$5,000` was `money_n_pairs` 0, now 1 pair with `money_mae_usd` 0.0). A historical card
+  compared across 0.29.0 to 0.30.0 can differ on these with unchanged predictions.
 - **Score change.** A perfect `insurance_claim / carrier` extraction scored 0.9412 (#132): the
   `cms_source_table` marker is derived from the subclass, the production extractor never emits
   it, and silence on it scored 0. It is now not scored when the prediction states no table; a
