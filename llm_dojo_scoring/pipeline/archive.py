@@ -353,7 +353,9 @@ def _live_field_types(doc_class: str, field_types: Mapping[str, str] | None) -> 
     """Return ``field_types`` as given, else the live default map for ``doc_class``."""
     if field_types:
         return dict(field_types)
-    mapped = doc_classes.field_types(doc_class) if doc_class in doc_classes.DOC_CLASSES else None
+    # Only a live class has a default map: a retired class (still in DOC_CLASSES)
+    # raises like an unknown one (#161).
+    mapped = doc_classes.field_types(doc_class) if doc_class in LIVE_ARCHIVE_DOC_TYPES else None
     if mapped:
         return mapped
     raise KeyError(
