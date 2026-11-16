@@ -152,9 +152,13 @@ short names below, and `provenance` (`gold_source` counts, dataset revision, spl
 - **Class match.** Human gold grades a judge verdict or arbiter ruling only when the
   decision observed the class the person resolved: `human_doc_type`, or for a
   `reclassify` the final extraction's class. A decision on another class's
-  extraction is graded by the corpus.
+  extraction is graded by the corpus, and so is a typed decision when the resolved
+  class is unknown and the final attempt has several classes. An untyped decision
+  observed the final attempt's class, when it has one.
 - **Ambiguous attempts.** A decision with no `doc_type` on an attempt that has
-  extractions of several classes is unscored as `ambiguous_attempt`.
+  extractions of several classes is unscored as `ambiguous_attempt`. A decision that
+  names its class is graded by that class's extraction, not by an untyped one beside
+  it, and its final score is the record's last attempt.
 
 | Registry name | `metric_id` |
 |---|---|

@@ -34,7 +34,10 @@ Gold, in priority order, recorded per scored row in
    ``label_source`` is ``"human"`` or absent. ``approve_as_is`` that also
    records removed or corrected fields counts as ``correct``. It grades a judge
    verdict or arbiter ruling only when that decision observed the class the
-   person resolved; one on another class's extraction is graded by the corpus;
+   person resolved; one on another class's extraction is graded by the corpus,
+   and so is a typed one when the resolved class is unknown and the final
+   attempt has several classes (an untyped decision observed the final
+   attempt's class, if it has one);
 2. ``corpus``: the deterministic extraction score against dataset labels, read
    through the verdict band ``[low, high]`` (default
    :func:`~llm_dojo_scoring.scoring.field_scoring.get_ambiguous_band`, the band
@@ -45,7 +48,9 @@ Gold, in priority order, recorded per scored row in
 3. none: the row is counted under ``n_unscored_by_reason``. It is never scored 0.
    ``ambiguous_attempt`` is the reason when a decision names an attempt (or the
    final one) that has extractions of several classes and no ``doc_type`` says
-   which one it observed.
+   which one it observed. A decision that names its class is graded by that
+   class's extraction, never by an untyped one beside it, and its final score
+   is the record's last attempt, never an older attempt of its class.
 
 Every scorecard carries ``n``, ``n_scored``, ``n_unscored_by_reason``
 (``n == n_scored + sum(n_unscored_by_reason.values())``), a ``metrics`` dict
