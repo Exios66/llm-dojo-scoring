@@ -120,7 +120,8 @@ was predicted right. That per-class figure is what the mailroom-ml release gates
 `metrics.subclass_macro_f1` is end to end: a wrong class makes the subclass wrong. Macro
 F1 is exact arithmetic over the gold labels, rounded once to six places.
 
-`selective_risk_upper` is the Wilson upper bound of `selective_risk`. Hold a release
+`selective_risk_upper` is the Wilson upper bound of `selective_risk`, the exact bound
+rounded up (never to nearest) to 4 places. Hold a release
 gate on it, not on the point rate. The `ml.*` namespace is not a doc-class extraction
 identity.
 

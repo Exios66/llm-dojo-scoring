@@ -488,6 +488,9 @@ def score_archive_block(
     A prediction that is not a mapping (JSON text, prose, a list) is coerced to the JSON
     object it holds, else scored as empty; before 0.27.0 it raised.
 
+    Raises :class:`KeyError` for a class with no live field map (a retired or
+    unknown class) unless ``field_types`` is given (#161).
+
     ``expected_subclass`` decides the CMS ``cms_source_table`` above; when it is ``None``,
     ``doc_subclass`` does (0.27.1), so the field-map score and the tiered keys describe
     one subclass.
