@@ -7,6 +7,13 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+- **A typed decision is never graded by an untyped score when its class is missing (#168).**
+  In `scoring/decision_lanes.py`, when the graded attempt had a typed extraction of another
+  class and an untyped one beside it, a judge or arbiter decision naming a third class was
+  graded by the untyped score, so it could earn a `complete` verdict with no gold for its
+  class. The untyped fallback now applies only to attempts with no typed extraction; such a
+  decision is counted under `no_gold`. Records whose extractions are all untyped keep the
+  fallback (`test_human_gold_still_grades_a_typed_judge_on_untyped_extractions`).
 - **Correspondence prompt types the content, not the carrier (llm-mailroom#269).** The
   `communication_type` line of `correspondence_specialist` said "Enron-style inbox → email",
   so a press release, memo or notice that arrived inside an email was labelled `email`

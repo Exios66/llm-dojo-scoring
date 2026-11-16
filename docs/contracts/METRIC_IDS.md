@@ -158,7 +158,8 @@ short names below, and `provenance` (`gold_source` counts, dataset revision, spl
 - **Ambiguous attempts.** A decision with no `doc_type` on an attempt that has
   extractions of several classes is unscored as `ambiguous_attempt`. A decision that
   names its class is graded by that class's extraction, not by an untyped one beside
-  it, and its final score is the record's last attempt.
+  it; an untyped extraction grades it only on an attempt with no typed extraction.
+  Its final score is the record's last attempt.
 
 | Registry name | `metric_id` |
 |---|---|
