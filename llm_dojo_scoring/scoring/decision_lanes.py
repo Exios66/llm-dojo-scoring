@@ -216,7 +216,13 @@ class _Row:
             # An extraction of ``doc_type`` wins over an untyped one on the same
             # attempt, so list order never picks the score.
             exact = [(kind, score) for kind, score in matches if kind == doc_type]
-            return exact or matches
+            if exact:
+                return exact
+            # The untyped fallback is only for attempts with no typed extraction:
+            # when the attempt extracted another class, ``doc_type`` has no score.
+            if any(number == attempt and kind is not None for number, kind, _score in self.attempts):
+                return []
+            return matches
         return matches
 
     def ambiguous(self, attempt: int | None, doc_type: str | None) -> bool:
