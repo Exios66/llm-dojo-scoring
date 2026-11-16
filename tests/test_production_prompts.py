@@ -2,7 +2,9 @@
 
 The sha256 values pin the current text. Corporate-records and correspondence carry the
 field-guidance corrections that eval-environment froze as mutations
-``corporate_records_specialist_v7`` / ``correspondence_specialist_v7`` (#29).
+``corporate_records_specialist_v7`` / ``correspondence_specialist_v7`` (#29). The
+correspondence ``production_prompts`` row has since moved on to the candidate
+``correspondence_specialist_v8`` (llm-mailroom#269); its ``production`` row still serves ``_v7``.
 Source lineage comes from the sandbox
 ``config/prompts/eval_environment_lineage.json`` (``mailroom-dataset-v1``,
 frozen 2026-09-26T05:09:29+00:00). Network-free; no sandbox checkout needed.
@@ -37,10 +39,10 @@ FROZEN_V1: dict[str, dict[str, object]] = {
         "doc_bundle": "corporate_record",
     },
     "correspondence_specialist": {
-        "eval_key": "correspondence_specialist_v7",
+        "eval_key": "correspondence_specialist_v8",
         "sandbox_stem": "correspondence_specialist_simplified",
-        "sha256": "2b0b81ff98920b9207627707443e2b023db39212fda5bdcba7bfbded39fa38b6",
-        "chars": 6113,
+        "sha256": "e3bc920d5a99c951ace99e4a726a8cbd85a135ebf0fb81408ec8654c774b4000",
+        "chars": 6316,
         "opening": "You are the correspondence specialist.",
         "doc_bundle": "correspondence",
     },
@@ -145,6 +147,12 @@ def test_production_specialists_are_frozen_v1():
             assert text == get_prompt_version("corporate_records_specialist_v6").text
             assert _frozen_sha(text) == "fe13501f667fcd9f64f7dfbf8b0f124f81d9dd039f4109288b43f106f82b1399"
             assert text != get_prompt(a, family="production_prompts").text
+        elif a == "correspondence_specialist":
+            # Mailroom still pins _v7 (2b0b81ff…); the content-not-carrier candidate
+            # (_v8) lives only in production_prompts until mailroom re-pins.
+            text = get_prompt(a).text
+            assert text == get_prompt_version("correspondence_specialist_v7").text
+            assert text != get_prompt(a, family="production_prompts").text
         else:
             assert get_prompt(a).text == get_prompt(a, family="production_prompts").text
 
@@ -238,3 +246,51 @@ def test_production_family_has_no_retired_vocabulary():
 def test_reporter_is_deterministic():
     """Classify the reporter as deterministic rather than an LLM prompt."""
     assert get_prompt("reporter").kind == "deterministic"
+
+
+# --- correspondence: content, not carrier (llm-mailroom#269) ----------------
+
+#: sha256 llm-mailroom pins for correspondence_specialist (eval-environment ``_v7``). The
+#: ``production`` row must keep serving these exact bytes; the content-not-carrier
+#: correction lives only in the ``production_prompts`` row until mailroom re-pins.
+CORRESPONDENCE_V7_SHA256 = "2b0b81ff98920b9207627707443e2b023db39212fda5bdcba7bfbded39fa38b6"
+
+
+def _communication_type_line(text: str) -> str:
+    """Return the ``communication_type`` field-spec line of a correspondence body."""
+    (line,) = [ln for ln in text.splitlines() if ln.startswith("- communication_type (")]
+    return line
+
+
+def test_correspondence_production_row_still_serves_the_pinned_v7_bytes():
+    """The ``production`` row hashes to the sha256 llm-mailroom pins; it is not edited."""
+    rec = get_prompt("correspondence_specialist")
+    assert rec.family == "production"
+    assert hashlib.sha256(rec.text.encode("utf-8")).hexdigest() == CORRESPONDENCE_V7_SHA256
+    assert len(rec.text) == 6113
+    # The unpromoted correction must not leak into the pinned row.
+    assert get_prompt_version("correspondence_specialist_v7").text == rec.text
+
+
+def test_correspondence_production_prompts_types_the_content_not_the_carrier():
+    """The ``production_prompts`` row has no inbox -> email mapping and states the content rule."""
+    line = _communication_type_line(get_prompt("correspondence_specialist", family="production_prompts").text)
+    assert "Enron-style inbox" not in line
+    assert "→ email" not in line
+    assert "Type the content, not the carrier" in line
+    assert "press release" in line and "sent, forwarded or pasted in an email takes that type" in line
+    assert "email only for ordinary email correspondence with no other form inside it" in line
+    # The rest of the field spec is unchanged.
+    assert "null when no registered token fits" in line
+    assert "email, letter, memo, notice, demand, attorney_demand, press_release, meeting_request" in line
+    assert "Do not invent a type." in line
+
+
+def test_correspondence_production_prompts_differs_from_v7_only_in_communication_type():
+    """Exactly one line changed against the pinned v7 bytes."""
+    old = get_prompt("correspondence_specialist").text.splitlines()
+    new = get_prompt("correspondence_specialist", family="production_prompts").text.splitlines()
+    assert len(old) == len(new)
+    assert [i for i, (a, b) in enumerate(zip(old, new)) if a != b] == [
+        old.index(_communication_type_line("\n".join(old)))
+    ]
