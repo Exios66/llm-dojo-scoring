@@ -319,8 +319,9 @@ still score those metrics.
 `pipeline.enron.topic_accuracy` / `topic_f1_macro` /
 `sentiment_accuracy` / `sentiment_f1_macro`.
 
-**Frozen prompt:** `correspondence_specialist` `sha256 2b0b81ff…`
-(locally corrected `communication_type` fallback).
+**Frozen prompt:** `correspondence_specialist` `sha256 2b0b81ff…` (`production`; locally
+corrected `communication_type` fallback). The `production_prompts` candidate `_v8`
+(`sha256 e3bc920d…`) also types the content, not the carrier.
 
 ---
 
