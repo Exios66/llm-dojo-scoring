@@ -257,6 +257,22 @@ def test_human_gold_does_not_grade_an_arbiter_of_another_class():
 # ---------------------------------------------------------------------------
 
 
+#: ``Gold`` fields of llm-mailroom ``src/schemas/run_record.py`` at ``v0.30.0`` (``98c89b8``).
+#: The fixture below carries exactly these keys, so a renamed or added field shows up here
+#: when the pin moves; ``test_mailroom_gold_fixture_matches_the_pinned_fields`` checks it.
+MAILROOM_GOLD_FIELDS = (
+    "expected_doc_type",
+    "expected_doc_subclass",
+    "expected_stage",
+    "review_expected",
+    "human_decision",
+    "human_doc_type",
+    "human_doc_subclass",
+    "human_fields",
+    "label_source",
+)
+
+
 def _mailroom_record(decision, *, human_doc_type="contract", human_fields=None, boss="review"):
     """A ``RunRecord.model_dump()``-shaped row as llm-mailroom's ``export_review_labels`` writes it."""
     return {
@@ -264,6 +280,8 @@ def _mailroom_record(decision, *, human_doc_type="contract", human_fields=None, 
         "gold": {
             "expected_doc_type": human_doc_type,
             "expected_doc_subclass": None,
+            "expected_stage": None,
+            "review_expected": None,
             "human_decision": decision,
             "human_doc_type": human_doc_type,
             "human_doc_subclass": None,
@@ -274,6 +292,11 @@ def _mailroom_record(decision, *, human_doc_type="contract", human_fields=None, 
         "boss": {"ran": True, "decision": boss},
         "actual": {"final_stage": "review", "review_causes": ["low_confidence"]},
     }
+
+
+def test_mailroom_gold_fixture_matches_the_pinned_fields():
+    """The fixture's ``gold`` keys are llm-mailroom's ``Gold`` fields, no more and no fewer."""
+    assert tuple(_mailroom_record("approved")["gold"]) == MAILROOM_GOLD_FIELDS
 
 
 def test_mailroom_shaped_records_score_as_resolved():
