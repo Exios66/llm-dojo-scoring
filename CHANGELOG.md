@@ -156,10 +156,11 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
   on `v0.31.0`.
 - **Archive (#161).** `score_archive_block` raises the live-only `KeyError` for a retired class
   (`compliance_filing`, `court_opinion`, `due_diligence`) instead of scoring it with the retired
-  field map. An explicit `field_types` still scores any class.
+  field map. An explicit, non-empty `field_types` still scores any class (an empty one counts as
+  absent, as before).
 - **Score change (Wilson bounds, #160).** `wilson_ci` rounds `lo` down and `hi` up to 4 places,
   so the reported interval always contains the exact one (it rounded to nearest: 0 errors in 379
-  reported `hi` 0.01 for an exact 0.010034). `ml.score_intake_model`'s `selective_risk_upper` is
+  reported `hi` 0.01 for an exact 0.010034). A negative or NaN `z` raises `ValueError`. `ml.score_intake_model`'s `selective_risk_upper` is
   the exact upper bound rounded up, so a budget gate never passes a model whose true bound is over.
   New `analysis.bootstrap.wilson_bounds`, `round_up` and `round_down` (not exported from the
   package root).
@@ -167,10 +168,12 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
   `doc_type` on an attempt that has extractions of several classes is unscored as
   `ambiguous_attempt`; it took whichever extraction came first, so list order decided the gold.
   A decision that names its class is graded by that class's extraction, not by an untyped one on
-  the same attempt. Human gold grades a judge verdict or arbiter ruling only when it observed the class the person
+  the same attempt, and its "final" score is the record's last attempt, never an older attempt of
+  its class. Human gold grades a judge verdict or arbiter ruling only when it observed the class the person
   resolved (`human_doc_type`, or for a `reclassify` the final extraction's class); one on another
   class's extraction is graded by the corpus, and so is any typed decision when the final attempt
-  has several classes and no `human_doc_type` says which one the person resolved. llm-mailroom's `RunRecord.gold` is read when
+  has several classes and no `human_doc_type` says which one the person resolved. An untyped
+  decision observed the final attempt's class when it has one. llm-mailroom's `RunRecord.gold` is read when
   `human_resolution` is absent: `human_decision` `rejected` is `reject`, `approved` is
   `reclassify` when `human_doc_type` names a class other than the final extraction's, else
   `approve_as_is` (a `correct` when `human_fields` records edits). Mailroom records used to read as

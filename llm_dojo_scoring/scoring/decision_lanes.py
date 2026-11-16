@@ -203,7 +203,9 @@ class _Row:
             if doc_type is None or kind is None or kind == doc_type
         ]
         if attempt is None:
-            attempt = max((number for number, _kind, _score in applicable), default=None)
+            # The final attempt of the record, not the last one of ``doc_type``:
+            # an earlier attempt's score never grades the final extraction.
+            attempt = max((number for number, _kind, _score in self.attempts), default=None)
         matches = [(kind, score) for number, kind, score in applicable if number == attempt]
         if doc_type is not None:
             # An extraction of ``doc_type`` wins over an untyped one on the same
@@ -251,15 +253,21 @@ class _Row:
 
     def human_applies_to(self, doc_type: str | None) -> bool:
         """True when human gold may grade a decision that observed ``doc_type``."""
+        final = {kind for kind, _score in self._at(None, None) if kind is not None}
         if doc_type is None:
-            return True
+            # An untyped decision observed the final attempt's class, if it has one.
+            if not final:
+                return True
+            if len(final) > 1:
+                return False
+            doc_type = next(iter(final))
         resolved = self.resolved_doc_type
         if resolved is not None:
             return doc_type == resolved
         # The resolved class is unknown. Apply human gold only when nothing
         # shows another class: a final attempt with several typed classes
         # leaves the person's class open, so the corpus grades the decision.
-        return not {kind for kind, _score in self._at(None, None) if kind is not None}
+        return not final
 
 
 def _read(raw: Mapping[str, Any], index: int) -> _Row:

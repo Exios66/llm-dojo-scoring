@@ -541,3 +541,56 @@ def test_human_gold_still_grades_a_typed_judge_on_untyped_extractions():
 def test_ordinal_suffixes_do_not_block_a_date_phrase_match(predicted, expected):
     """An ordinal suffix on either side does not hide the same date."""
     assert fs.score_date_field(predicted, expected) == 1.0
+
+
+def test_typed_final_score_never_falls_back_to_an_older_attempt():
+    """The final attempt is the record's last, even when it has another class."""
+    record = {
+        "doc_id": "d1",
+        "extraction": [
+            {"attempt": 1, "doc_type": "contract", "extraction_score": 0.95},
+            {"attempt": 2, "doc_type": "merger_agreement", "extraction_score": 0.10},
+        ],
+        "judge": {"ran": True, "verdict": "complete", "doc_type": "contract"},
+        "gold": {"label_source": "corpus"},
+    }
+    card = score_judge_lane([record])
+    assert card["n_scored"] == 0
+
+
+def test_untyped_judge_does_not_take_human_gold_for_another_class():
+    """An untyped judge on a final attempt of one class is not graded by a person who confirmed another."""
+    record = {
+        "doc_id": "d1",
+        "extraction": [{"attempt": 1, "doc_type": "merger_agreement", "extraction_score": 0.95}],
+        "judge": {"ran": True, "verdict": "complete", "on_attempt": 1},
+        "gold": {
+            "label_source": "human",
+            "human_resolution": "approve_as_is",
+            "human_doc_type": "contract",
+        },
+    }
+    card = score_judge_lane([record])
+    assert card["provenance"]["gold_source"] == {"corpus": 1}
+
+
+def test_untyped_judge_keeps_human_gold_for_its_class():
+    """An untyped judge on the resolved class is still graded by the person."""
+    record = {
+        "doc_id": "d1",
+        "extraction": [{"attempt": 1, "doc_type": "contract", "extraction_score": 0.10}],
+        "judge": {"ran": True, "verdict": "complete", "on_attempt": 1},
+        "gold": {
+            "label_source": "human",
+            "human_resolution": "approve_as_is",
+            "human_doc_type": "contract",
+        },
+    }
+    assert score_judge_lane([record])["provenance"]["gold_source"] == {"human": 1}
+
+
+@pytest.mark.parametrize("z", [-1.96, float("nan")])
+def test_wilson_bounds_rejects_a_negative_z(z):
+    """A negative z would understate the upper bound a budget gate reads."""
+    with pytest.raises(ValueError, match="non-negative"):
+        wilson_bounds(0.0, 379, z)
