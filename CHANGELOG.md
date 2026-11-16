@@ -151,7 +151,8 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
   `August 2014`) is found inside longer predicted text, as day-first `18 August` already was:
   `score_date_field("effective on August 18 per the notice", "August 18")` is 1.0 (was 0.0) and
   `"in August 2014"` against `"August 2014"` is 1.0 (was 0.67). A lone month word is not a date
-  phrase. The same bug is on `v0.31.0`.
+  phrase, and neither is month-first prose that states no number (`march of`). The same bug is
+  on `v0.31.0`.
 - **Archive (#161).** `score_archive_block` raises the live-only `KeyError` for a retired class
   (`compliance_filing`, `court_opinion`, `due_diligence`) instead of scoring it with the retired
   field map. An explicit `field_types` still scores any class.

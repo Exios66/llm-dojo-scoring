@@ -873,13 +873,18 @@ def _date_phrase_contained(container: str, target: str) -> bool:
     if not target_norm:
         return False
     dt = _parse_date(target)
-    # A month name anywhere in a phrase of two or more words makes it explicit:
-    # "18 august" and month-first "august 18" alike (#162). A lone month word
-    # ("may") is not a date phrase.
+    # A month name after another word makes the phrase explicit ("18 august");
+    # so does a month-first phrase that also states a number ("august 18",
+    # "august 2014"; #162). A lone month word ("may") or month-first prose
+    # ("march of") is not a date phrase.
     explicit_month = (
-        len(target_norm.split()) >= 2
-        and any(re.search(rf"\b{month}\b", target_norm) for month in _MONTH_NAMES)
-    ) or bool(re.search(r"\b\d{4}-\d{1,2}\b", target_norm))
+        any(f" {month}" in target_norm for month in _MONTH_NAMES)
+        or (
+            any(re.search(rf"\b{month}\b", target_norm) for month in _MONTH_NAMES)
+            and bool(re.search(r"\b\d+\b", target_norm))
+        )
+        or bool(re.search(r"\b\d{4}-\d{1,2}\b", target_norm))
+    )
     # Match on word boundaries, so a date is never found inside a different one
     # ("august 1" in "august 18 2014", "1 august 2014" in "11 august 2014").
     found = _contains_phrase(nc, target_norm)
