@@ -350,7 +350,10 @@ def _is_empty(value: Any) -> bool:
 
 
 def _live_field_types(doc_class: str, field_types: Mapping[str, str] | None) -> dict[str, str]:
-    """Return ``field_types`` as given, else the live default map for ``doc_class``."""
+    """Return a non-empty ``field_types`` as given, else the live default map for ``doc_class``.
+
+    An empty mapping counts as absent, as it did before #161.
+    """
     if field_types:
         return dict(field_types)
     # Only a live class has a default map: a retired class (still in DOC_CLASSES)
@@ -489,7 +492,7 @@ def score_archive_block(
     object it holds, else scored as empty; before 0.27.0 it raised.
 
     Raises :class:`KeyError` for a class with no live field map (a retired or
-    unknown class) unless ``field_types`` is given (#161).
+    unknown class) unless a non-empty ``field_types`` is given (#161).
 
     ``expected_subclass`` decides the CMS ``cms_source_table`` above; when it is ``None``,
     ``doc_subclass`` does (0.27.1), so the field-map score and the tiered keys describe

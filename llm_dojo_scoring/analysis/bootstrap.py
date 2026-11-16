@@ -121,7 +121,13 @@ def delta_significance(
 
 
 def wilson_bounds(p: float, n: int, z: float = 1.96) -> tuple[float, float]:
-    """Exact (unrounded) Wilson score bounds ``(lo, hi)`` for rate ``p`` over ``n`` (``n >= 1``)."""
+    """Exact (unrounded) Wilson score bounds ``(lo, hi)`` for rate ``p`` over ``n`` (``n >= 1``).
+
+    ``z`` must be non-negative: a negative one would swap the bounds and
+    understate the upper one a budget gate reads.
+    """
+    if not z >= 0:
+        raise ValueError(f"z must be non-negative; got {z!r}")
     z2 = z * z
     denom = 1.0 + z2 / n
     centre = (p + z2 / (2 * n)) / denom
