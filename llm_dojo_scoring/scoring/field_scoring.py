@@ -863,8 +863,9 @@ def _date_is_blank_or_bare_label(exp: str) -> bool:
 def _date_phrase_contained(container: str, target: str) -> bool:
     """True when a date phrase stated in ``target`` appears in ``container``."""
     def norm(text: str) -> str:
-        """Lowercase a date phrase and collapse non-alphanumeric separators to spaces."""
-        return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", str(text).lower())).strip()
+        """Lowercase a date phrase, drop ordinal suffixes ("18th" -> "18") and collapse separators."""
+        ordinal_free = re.sub(r"(\d)(?:st|nd|rd|th)\b", r"\1", str(text).lower())
+        return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", ordinal_free)).strip()
 
     nc = norm(container)
     if not nc:

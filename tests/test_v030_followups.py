@@ -457,3 +457,87 @@ def test_catalog_considerations_are_unchanged():
     """Catalog considerations are unchanged."""
     assert _toc("All Cash", "All Cash") == 1.0
     assert _toc("All Cash", "All Stock") == 0.0
+
+
+# ---------------------------------------------------------------------------
+# PR #163 review follow-ups (CodeRabbit)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "pred_lines",
+    [
+        ["Type of Consideration: Zebra stripes", "Type of Consideration: Quantum foam"],
+        ["Type of Consideration: Quantum foam", "Type of Consideration: Zebra stripes"],
+    ],
+)
+def test_distinct_off_vocabulary_predictions_do_not_resolve_by_position(pred_lines):
+    """Two different off-vocabulary answers are a conflict in either order, never the first one."""
+    score = score_maud_extraction(["Type of Consideration: Zebra stripes"], pred_lines)
+    assert score["maud_question_accuracy"] == 0.0
+
+
+def test_repeated_off_vocabulary_prediction_still_collapses():
+    """The same off-vocabulary answer twice (case and spacing aside) is one answer."""
+    score = score_maud_extraction(
+        ["Type of Consideration: Zebra stripes"],
+        ["Type of Consideration: Zebra stripes", "Type of Consideration: zebra  STRIPES"],
+    )
+    assert score["maud_question_accuracy"] == 1.0
+
+
+@pytest.mark.parametrize("order", [(None, "contract"), ("contract", None)])
+def test_typed_judge_prefers_its_class_over_an_untyped_extraction(order):
+    """A judge naming its class is graded by that class's extraction, whatever the list order."""
+    record = {
+        "doc_id": "d1",
+        "extraction": [
+            {"attempt": 1, "doc_type": kind, "extraction_score": 0.2 if kind is None else 0.9}
+            for kind in order
+        ],
+        "judge": {"ran": True, "verdict": "incomplete", "on_attempt": 1, "doc_type": "contract"},
+        "gold": {"label_source": "corpus"},
+    }
+    card = score_judge_lane([record])
+    assert card["verdicts_by_expected"] == {"complete": {"incomplete": 1}}
+
+
+@pytest.mark.parametrize("judge_doc_type", ["contract", "merger_agreement"])
+def test_human_gold_needs_a_known_class_when_the_final_attempt_has_two(judge_doc_type):
+    """With two classes on the final attempt and no ``human_doc_type``, the corpus grades."""
+    record = {
+        "doc_id": "d1",
+        "extraction": [
+            {"attempt": 1, "doc_type": "contract", "extraction_score": 0.95},
+            {"attempt": 1, "doc_type": "merger_agreement", "extraction_score": 0.10},
+        ],
+        "judge": {"ran": True, "verdict": "complete", "on_attempt": 1, "doc_type": judge_doc_type},
+        "gold": {"label_source": "human", "human_resolution": "approve_as_is"},
+    }
+    card = score_judge_lane([record])
+    assert card["provenance"]["gold_source"] == {"corpus": 1}
+
+
+def test_human_gold_still_grades_a_typed_judge_on_untyped_extractions():
+    """Legacy records with untyped extractions keep human gold for a typed judge."""
+    record = {
+        "doc_id": "d1",
+        "extraction": [{"attempt": 1, "extraction_score": 0.10}],
+        "judge": {"ran": True, "verdict": "complete", "on_attempt": 1, "doc_type": "contract"},
+        "gold": {"label_source": "human", "human_resolution": "approve_as_is"},
+    }
+    card = score_judge_lane([record])
+    assert card["provenance"]["gold_source"] == {"human": 1}
+
+
+@pytest.mark.parametrize(
+    ("predicted", "expected"),
+    [
+        ("effective on August 18th per the notice", "August 18"),
+        ("effective on August 18 per the notice", "August 18th"),
+        ("signed on March 1st, 2014 by both parties", "March 1, 2014"),
+    ],
+)
+def test_ordinal_suffixes_do_not_block_a_date_phrase_match(predicted, expected):
+    """An ordinal suffix on either side does not hide the same date."""
+    assert fs.score_date_field(predicted, expected) == 1.0

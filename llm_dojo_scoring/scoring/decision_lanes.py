@@ -204,7 +204,13 @@ class _Row:
         ]
         if attempt is None:
             attempt = max((number for number, _kind, _score in applicable), default=None)
-        return [(kind, score) for number, kind, score in applicable if number == attempt]
+        matches = [(kind, score) for number, kind, score in applicable if number == attempt]
+        if doc_type is not None:
+            # An extraction of ``doc_type`` wins over an untyped one on the same
+            # attempt, so list order never picks the score.
+            exact = [(kind, score) for kind, score in matches if kind == doc_type]
+            return exact or matches
+        return matches
 
     def ambiguous(self, attempt: int | None, doc_type: str | None) -> bool:
         """True when ``attempt`` has extractions of several classes and ``doc_type`` is unknown.
@@ -245,8 +251,15 @@ class _Row:
 
     def human_applies_to(self, doc_type: str | None) -> bool:
         """True when human gold may grade a decision that observed ``doc_type``."""
+        if doc_type is None:
+            return True
         resolved = self.resolved_doc_type
-        return doc_type is None or resolved is None or doc_type == resolved
+        if resolved is not None:
+            return doc_type == resolved
+        # The resolved class is unknown. Apply human gold only when nothing
+        # shows another class: a final attempt with several typed classes
+        # leaves the person's class open, so the corpus grades the decision.
+        return not {kind for kind, _score in self._at(None, None) if kind is not None}
 
 
 def _read(raw: Mapping[str, Any], index: int) -> _Row:
