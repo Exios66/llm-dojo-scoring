@@ -536,6 +536,24 @@ def test_typed_judge_is_not_graded_by_an_untyped_score_when_its_class_is_missing
     }
     card = score_judge_lane([record])
     assert card["n_scored"] == 0
+    assert card["n_unscored_by_reason"] == {"no_gold": 1}
+
+
+@pytest.mark.parametrize("order", [(None, "contract"), ("contract", None)])
+def test_typed_arbiter_is_not_graded_by_an_untyped_score_when_its_class_is_missing(order):
+    """llm-dojo-scoring#168, arbiter lane: same rule on the final attempt."""
+    record = {
+        "doc_id": "d1",
+        "extraction": [
+            {"attempt": 1, "doc_type": kind, "extraction_score": 1.0 if kind is None else 0.1}
+            for kind in order
+        ],
+        "arbiters": [{"decision": "accept_with_caveats", "doc_type": "merger_agreement"}],
+        "gold": {"label_source": "corpus"},
+    }
+    card = score_arbiter_lane([record])
+    assert card["n_scored"] == 0
+    assert card["n_unscored_by_reason"] == {"no_gold": 1}
 
 
 def test_human_gold_still_grades_a_typed_judge_on_untyped_extractions():
