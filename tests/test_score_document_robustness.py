@@ -199,10 +199,16 @@ def test_odd_field_values_never_raise_either_entry_point(doc_type):
                     score_document(doc_type, pred, exp)
                     if doc_type in LIVE_ARCHIVE_DOC_TYPES:
                         score_archive_block(doc_type, pred, exp)
+                    else:
+                        # A retired class has no live field map (#161); the
+                        # archive scorer is still fuzzed with an explicit one.
+                        score_archive_block(
+                            doc_type, pred, exp, field_types=DEFAULT_FIELD_TYPES[doc_type]
+                        )
                 except Exception as exc:  # pragma: no cover - failure path
                     pytest.fail(f"{where}: {type(exc).__name__}: {exc}")
     if doc_type not in LIVE_ARCHIVE_DOC_TYPES:
-        # The archive block is live-only: a retired class raises (#161).
+        # Without an explicit field map, the archive block is live-only (#161).
         with pytest.raises(KeyError, match="no live field map"):
             score_archive_block(doc_type, dict(BASE), dict(BASE))
 

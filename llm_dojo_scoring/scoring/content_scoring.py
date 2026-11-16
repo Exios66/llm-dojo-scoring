@@ -424,7 +424,9 @@ def reduce_maud_prediction(
     least one in-catalog answer exists; if the in-catalog answers then share
     one canonical class, that class is the prediction. Distinct in-catalog
     answers stay a list (scored wrong) and are reported as a conflict, never
-    resolved by position. Returns ``(answer, conflict)``.
+    resolved by position. With no in-catalog answer, entries are compared by
+    their case- and spacing-folded text, so distinct off-catalog answers are a
+    conflict too. Returns ``(answer, conflict)``.
     """
     if not isinstance(answer, (list, tuple)):
         return answer, False
@@ -435,7 +437,11 @@ def reduce_maud_prediction(
     pool = valid or items
     canon: dict[str, Any] = {}
     for a in pool:
-        canon.setdefault(normalize_maud_answer(question, a, valid_classes), a)
+        # Off-catalog answers all normalize to one class (``other``), so key
+        # them by their folded text: distinct ones stay a conflict instead of
+        # the first one winning by position.
+        key = normalize_maud_answer(question, a, valid_classes) if valid else "\0" + _fold(a)
+        canon.setdefault(key, a)
     if len(canon) == 1:
         return next(iter(canon.values())), False
     return list(canon.values()), True

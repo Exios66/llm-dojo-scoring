@@ -151,7 +151,8 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
   `August 18th`, `August 2014`) is found inside longer predicted text, as day-first `18 August` already was:
   `score_date_field("effective on August 18 per the notice", "August 18")` is 1.0 (was 0.0) and
   `"in August 2014"` against `"August 2014"` is 1.0 (was 0.67). A lone month word is not a date
-  phrase, and neither is month-first prose that states no number (`march of`). The same bug is
+  phrase, and neither is month-first prose that states no number (`march of`). An ordinal suffix
+  on either side (`August 18th` against `August 18`) no longer hides the date. The same bug is
   on `v0.31.0`.
 - **Archive (#161).** `score_archive_block` raises the live-only `KeyError` for a retired class
   (`compliance_filing`, `court_opinion`, `due_diligence`) instead of scoring it with the retired
@@ -165,9 +166,11 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
 - **Score change (decision lanes, #160, #159).** A judge verdict or arbiter ruling with no
   `doc_type` on an attempt that has extractions of several classes is unscored as
   `ambiguous_attempt`; it took whichever extraction came first, so list order decided the gold.
-  Human gold grades a judge verdict or arbiter ruling only when it observed the class the person
+  A decision that names its class is graded by that class's extraction, not by an untyped one on
+  the same attempt. Human gold grades a judge verdict or arbiter ruling only when it observed the class the person
   resolved (`human_doc_type`, or for a `reclassify` the final extraction's class); one on another
-  class's extraction is graded by the corpus. llm-mailroom's `RunRecord.gold` is read when
+  class's extraction is graded by the corpus, and so is any typed decision when the final attempt
+  has several classes and no `human_doc_type` says which one the person resolved. llm-mailroom's `RunRecord.gold` is read when
   `human_resolution` is absent: `human_decision` `rejected` is `reject`, `approved` is
   `reclassify` when `human_doc_type` names a class other than the final extraction's, else
   `approve_as_is` (a `correct` when `human_fields` records edits). Mailroom records used to read as
@@ -179,8 +182,9 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
   An off-vocabulary `Type of Consideration` answer (one outside the consideration types and
   aliases, a blank prediction included) folds to `other` like the catalog's own `other`; it now
   matches only an equal answer (compared case- and spacing-insensitively), so two different
-  off-vocabulary answers, or one against a catalog `other`, no longer tie. Two catalog answers
-  score as before.
+  off-vocabulary answers, or one against a catalog `other`, no longer tie. A multi-answer
+  prediction of two different off-vocabulary answers is a conflict (scored wrong) in either order;
+  it kept the first one. Two catalog answers score as before.
 - **Score change (merger MAUD gold, Hub rows).** A Hub merger row's `maud_clause_labels` now give
   extraction gold, the way `cuad_clause_labels` feed a contract:
   `schemas.maud_schema.hub_merger_expected_fields(gt_fields, subclass=None)` converts them to
