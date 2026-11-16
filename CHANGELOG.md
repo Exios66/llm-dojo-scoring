@@ -148,7 +148,7 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
 ### Fixed
 
 - **Score change (dates, #162).** A two-word date phrase that starts with the month (`August 18`,
-  `August 2014`) is found inside longer predicted text, as day-first `18 August` already was:
+  `August 18th`, `August 2014`) is found inside longer predicted text, as day-first `18 August` already was:
   `score_date_field("effective on August 18 per the notice", "August 18")` is 1.0 (was 0.0) and
   `"in August 2014"` against `"August 2014"` is 1.0 (was 0.67). A lone month word is not a date
   phrase, and neither is month-first prose that states no number (`march of`). The same bug is

@@ -881,7 +881,7 @@ def _date_phrase_contained(container: str, target: str) -> bool:
         any(f" {month}" in target_norm for month in _MONTH_NAMES)
         or (
             any(re.search(rf"\b{month}\b", target_norm) for month in _MONTH_NAMES)
-            and bool(re.search(r"\b\d+\b", target_norm))
+            and bool(re.search(r"\b\d+(?:st|nd|rd|th)?\b", target_norm))
         )
         or bool(re.search(r"\b\d{4}-\d{1,2}\b", target_norm))
     )

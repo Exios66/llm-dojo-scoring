@@ -36,6 +36,7 @@ from llm_dojo_scoring.scoring.suites import get_suite
     [
         ("effective on August 18 per the notice", "August 18"),
         ("effective on 18 August per the notice", "18 August"),
+        ("effective on August 18th per the notice", "August 18th"),
         ("signed in August 2014 by both parties", "August 2014"),
         ("dated 2014-08-18 at noon", "2014-08-18"),
     ],
