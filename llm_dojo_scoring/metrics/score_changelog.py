@@ -234,6 +234,7 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
             "maud.question.micro_accuracy",
             "ml.intake.selective_risk_upper",
             "decision.judge.verdict_accuracy",
+            "decision.judge.macro_f1",
             "decision.judge.escalation_recall",
             "decision.judge.false_escalation_rate",
             "decision.arbiter.decision_accuracy",
