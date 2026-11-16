@@ -663,7 +663,20 @@ def score_maud_extraction(expected: Any, predicted: Any) -> dict:
                 if present
                 else ""
             )
-            if present and exp_answer == got_answer:
+            matched = present and exp_answer == got_answer
+            if (
+                matched
+                and exp_answer == "other"
+                and normalize_maud_question_key(question) == "Type of Consideration"
+                and not (
+                    is_valid_maud_answer(question, rec["answer"], gt_classes)
+                    and is_valid_maud_answer(question, pred_answer, gt_classes)
+                )
+            ):
+                # Every unrecognized consideration folds to ``other``: two different
+                # off-vocabulary answers must not tie there (#160 item 6).
+                matched = _fold(rec["answer"]) == _fold(pred_answer)
+            if matched:
                 stats["exact"] += 1
                 n_exact += 1
                 doc_exact += 1

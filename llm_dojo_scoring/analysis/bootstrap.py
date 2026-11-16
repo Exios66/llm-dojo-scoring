@@ -120,25 +120,50 @@ def delta_significance(
     }
 
 
+def wilson_bounds(p: float, n: int, z: float = 1.96) -> tuple[float, float]:
+    """Exact (unrounded) Wilson score bounds ``(lo, hi)`` for rate ``p`` over ``n`` (``n >= 1``)."""
+    z2 = z * z
+    denom = 1.0 + z2 / n
+    centre = (p + z2 / (2 * n)) / denom
+    margin = z * ((p * (1 - p) / n + z2 / (4 * n * n)) ** 0.5) / denom
+    return max(0.0, centre - margin), min(1.0, centre + margin)
+
+
+def round_up(value: float, places: int) -> float:
+    """``value`` rounded to ``places`` decimals, never below ``value``."""
+    rounded = round(value, places)
+    if rounded < value:
+        rounded = round(rounded + 10.0 ** -places, places)
+    return rounded
+
+
+def round_down(value: float, places: int) -> float:
+    """``value`` rounded to ``places`` decimals, never above ``value``."""
+    rounded = round(value, places)
+    if rounded > value:
+        rounded = round(rounded - 10.0 ** -places, places)
+    return rounded
+
+
 def wilson_ci(p: float, n: int, z: float = 1.96) -> Optional[dict[str, Any]]:
     """Wilson score interval for an aggregate proportion.
 
     Used when only the aggregate rate ``p`` and support ``n`` are available
     (e.g. rows of an Excel results workbook) rather than per-document scores.
     Returns ``{"lo", "hi", "half", "n", "p", "z"}`` or ``None`` when ``n < 1``.
+
+    The bounds are rounded outward (``lo`` down, ``hi`` up) to 4 places, so the
+    reported interval always contains the exact one and a bound compared with a
+    budget never passes where the exact bound fails (#160). Gates that need the
+    exact value use :func:`wilson_bounds`.
     """
     if n < 1 or p is None:
         return None
     p = float(p)
-    z2 = z * z
-    denom = 1.0 + z2 / n
-    centre = (p + z2 / (2 * n)) / denom
-    margin = z * ((p * (1 - p) / n + z2 / (4 * n * n)) ** 0.5) / denom
-    lo = max(0.0, centre - margin)
-    hi = min(1.0, centre + margin)
+    lo, hi = wilson_bounds(p, n, z)
     return {
-        "lo": round(lo, 4),
-        "hi": round(hi, 4),
+        "lo": round_down(lo, 4),
+        "hi": round_up(hi, 4),
         "half": round((hi - lo) / 2, 4),
         "n": int(n),
         "p": round(p, 4),
