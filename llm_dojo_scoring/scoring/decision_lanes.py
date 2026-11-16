@@ -213,7 +213,8 @@ class _Row:
         """
         if doc_type is not None:
             return False
-        return len({kind for kind, _score in self._at(attempt, None) if kind is not None}) > 1
+        # An untyped extraction next to a typed one is ambiguous too.
+        return len({kind for kind, _score in self._at(attempt, None)}) > 1
 
     def score_of(self, attempt: int, doc_type: str | None = None) -> float | None:
         """Dataset score of extraction ``attempt`` (of ``doc_type`` when both are known)."""

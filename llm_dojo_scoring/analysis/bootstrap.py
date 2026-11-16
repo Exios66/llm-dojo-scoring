@@ -160,10 +160,11 @@ def wilson_ci(p: float, n: int, z: float = 1.96) -> Optional[dict[str, Any]]:
     if n < 1 or p is None:
         return None
     p = float(p)
-    lo, hi = wilson_bounds(p, n, z)
+    exact_lo, exact_hi = wilson_bounds(p, n, z)
+    lo, hi = round_down(exact_lo, 4), round_up(exact_hi, 4)
     return {
-        "lo": round_down(lo, 4),
-        "hi": round_up(hi, 4),
+        "lo": lo,
+        "hi": hi,
         "half": round((hi - lo) / 2, 4),
         "n": int(n),
         "p": round(p, 4),

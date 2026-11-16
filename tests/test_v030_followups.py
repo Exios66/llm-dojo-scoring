@@ -50,6 +50,7 @@ def test_two_word_date_phrase_found_in_longer_text(container, target):
         ("effective on August 1, 2014", "August 18"),  # a different day
         ("effective on August 18, 2014", "August 1"),  # never inside a longer number
         ("the party may terminate on June 1", "May"),  # a lone month word is not a date
+        ("march of the penguins", "march of"),  # month-first prose states no number
     ],
 )
 def test_two_word_date_phrase_negative_cases(container, target):
@@ -170,6 +171,27 @@ def test_arbiter_accept_without_doc_type_on_an_ambiguous_attempt_is_unscored(ord
     card = score_arbiter_lane([record])
     assert card["metrics"]["wrongful_accept_rate"] is None
     assert card["n_unscored_by_reason"] == {"ambiguous_attempt": 1}
+
+
+@pytest.mark.parametrize("order", [(None, "merger_agreement"), ("merger_agreement", None)])
+def test_untyped_next_to_typed_extraction_is_ambiguous(order):
+    """An untyped extraction beside a typed one on the same attempt does not let list order decide."""
+    record = {
+        "doc_id": "d1",
+        "extraction": [
+            {"attempt": 1, "doc_type": kind, "extraction_score": 0.2 if kind is None else 0.9}
+            for kind in order
+        ],
+        "judge": {"ran": True, "verdict": "incomplete", "on_attempt": 1},
+        "gold": {"label_source": "corpus"},
+    }
+    assert score_judge_lane([record])["n_unscored_by_reason"] == {"ambiguous_attempt": 1}
+
+
+def test_wilson_half_matches_the_reported_bounds():
+    """``half`` is half the reported interval."""
+    ci = wilson_ci(3 / 172, 172)
+    assert ci["half"] == round((ci["hi"] - ci["lo"]) / 2, 4)
 
 
 def test_arbiter_retry_on_an_ambiguous_attempt_is_unscored():
