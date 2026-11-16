@@ -538,10 +538,10 @@ def _score_maud_clauses_by_question(
         result.ambiguous_fields.remove("maud_clauses")
     values = list(result.field_scores.values())
     result.overall_score = round(sum(values) / len(values), 4)
-    if isinstance(result.trace, dict) and "calibration_error" in result.trace:
-        # The trace was captured against the pre-rescore score (#160 item 4).
-        from .trace_knobs import confidence_calibration_error
+    from .trace_knobs import confidence_calibration_error, get_trace_knobs
 
+    if isinstance(result.trace, dict) and get_trace_knobs().compute_calibration_error:
+        # The trace was captured against the pre-rescore score (#160 item 4).
         result.trace["calibration_error"] = confidence_calibration_error(
             result.trace.get("confidence"), result.overall_score
         )

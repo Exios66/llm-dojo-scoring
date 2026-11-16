@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import pytest
 
+from llm_dojo_scoring.config import clear_settings_cache, configure
 from llm_dojo_scoring.analysis.bootstrap import round_down, round_up, wilson_bounds, wilson_ci
 from llm_dojo_scoring.ml.metrics import score_intake_model
 from llm_dojo_scoring.pipeline import archive
@@ -406,6 +407,24 @@ def test_maud_rescore_calibration_error_with_two_fields():
     assert result.trace["calibration_error"] == 0.4
 
 
+def test_maud_rescore_leaves_calibration_error_off_when_the_setting_is_off():
+    """With ``compute_calibration_error`` off the rescore does not fill the value in."""
+    configure(trace_knobs__compute_calibration_error=False)
+    try:
+        result = _maud_extraction(
+            {"acquirer": "Acme Corp", "maud_clauses": ["Type of Consideration: All Cash"]},
+            {
+                "acquirer": "Acme Corp",
+                "maud_clauses": ["Type of Consideration: All Stock"],
+                "confidence": 0.9,
+            },
+        )
+    finally:
+        clear_settings_cache()
+    assert result.overall_score == 0.5
+    assert result.trace["calibration_error"] is None
+
+
 # ---------------------------------------------------------------------------
 # #160 item 6: off-vocabulary Type of Consideration answers do not tie at "other"
 # ---------------------------------------------------------------------------
@@ -425,6 +444,12 @@ def test_different_off_vocabulary_considerations_do_not_match():
 def test_equal_off_vocabulary_considerations_still_match():
     """Equal off vocabulary considerations still match."""
     assert _toc("Zebra stripes", "zebra  stripes") == 1.0
+
+
+def test_off_vocabulary_consideration_does_not_tie_with_catalog_other():
+    """An off-vocabulary answer and a blank prediction no longer tie with the catalog ``other``."""
+    assert _toc("other", "bitcoin") == 0.0
+    assert _toc("bitcoin", "other") == 0.0
 
 
 def test_catalog_considerations_are_unchanged():
