@@ -120,7 +120,8 @@ was predicted right. That per-class figure is what the mailroom-ml release gates
 `metrics.subclass_macro_f1` is end to end: a wrong class makes the subclass wrong. Macro
 F1 is exact arithmetic over the gold labels, rounded once to six places.
 
-`selective_risk_upper` is the Wilson upper bound of `selective_risk`. Hold a release
+`selective_risk_upper` is the Wilson upper bound of `selective_risk`, the exact bound
+rounded up (never to nearest) to 4 places. Hold a release
 gate on it, not on the point rate. The `ml.*` namespace is not a doc-class extraction
 identity.
 
@@ -134,6 +135,30 @@ short names below, and `provenance` (`gold_source` counts, dataset revision, spl
 `metric_ids`, `scorer_version`). A row with no gold is counted under
 `n_unscored_by_reason` and is never scored 0. Gold per row: the person's resolution
 (`human`), else the dataset extraction score (`corpus`).
+
+- **Resolution keys.** `gold.human_resolution` (`approve_as_is`, `correct`,
+  `reclassify`, `reject`) wins. Without it, llm-mailroom's `RunRecord.gold` is read
+  through this alias table:
+
+  | `human_decision` | Condition | Resolution |
+  |---|---|---|
+  | `rejected` | none | `reject` |
+  | `approved` | `human_doc_type` names a class other than the final extraction's | `reclassify` |
+  | `approved` | otherwise | `approve_as_is` |
+
+  `human_fields` (the person's field corrections) turn an `approve_as_is` into a
+  `correct`. `RunRecord` keeps no `removed_fields`, so a review that only removed
+  fields reads as `approve_as_is`. `label_source: corpus` ignores both keys.
+- **Class match.** Human gold grades a judge verdict or arbiter ruling only when the
+  decision observed the class the person resolved: `human_doc_type`, or for a
+  `reclassify` the final extraction's class. A decision on another class's
+  extraction is graded by the corpus, and so is a typed decision when the resolved
+  class is unknown and the final attempt has several classes. An untyped decision
+  observed the final attempt's class, when it has one.
+- **Ambiguous attempts.** A decision with no `doc_type` on an attempt that has
+  extractions of several classes is unscored as `ambiguous_attempt`. A decision that
+  names its class is graded by that class's extraction, not by an untyped one beside
+  it, and its final score is the record's last attempt.
 
 | Registry name | `metric_id` |
 |---|---|

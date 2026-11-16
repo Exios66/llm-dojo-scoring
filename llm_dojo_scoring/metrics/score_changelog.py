@@ -222,6 +222,46 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         ),
         "rescore_required": False,
     },
+    {
+        # Sixth 0.30.0 change set: the sandbox re-vendor follow-ups (#159-#162).
+        "version": "0.30.0",
+        "metric_ids": (
+            "pipeline.extraction.overall",
+            "pipeline.extraction.field_micro_f1",
+            "pipeline.extraction.field_micro_f2",
+            "pipeline.extraction.field_micro_precision",
+            "pipeline.extraction.field_micro_recall",
+            "maud.question.micro_accuracy",
+            "ml.intake.selective_risk_upper",
+            "decision.judge.verdict_accuracy",
+            "decision.judge.macro_f1",
+            "decision.judge.escalation_recall",
+            "decision.judge.false_escalation_rate",
+            "decision.arbiter.decision_accuracy",
+            "decision.arbiter.retry_usefulness",
+            "decision.arbiter.wrongful_accept_rate",
+            "decision.arbiter.unnecessary_escalation_rate",
+            "decision.boss.needless_review_rate",
+            "decision.boss.wrongful_approve_rate",
+            "decision.review_tray.correction_rate",
+            "decision.review_tray.reject_rate",
+            "decision.review_tray.wasted_review_rate",
+        ),
+        "change": (
+            "A month-first or month-year date phrase ('August 18', 'August 2014') is found "
+            "inside longer predicted text, ordinal suffixes aside (#162). An "
+            "off-vocabulary MAUD 'Type of Consideration' answer (blank included) no longer "
+            "ties at 'other' with a different answer, and two different ones in one "
+            "prediction are a conflict (#160). The Wilson "
+            "upper bound behind ml.intake.selective_risk_upper is rounded up, never to "
+            "nearest (#160). Decision lanes: an attempt with extractions of several classes "
+            "and no doc_type is unscored (ambiguous_attempt), a typed decision is graded by "
+            "its own class's extraction, human gold grades only a decision on the class the "
+            "person resolved (#160), and llm-mailroom "
+            "RunRecord gold (human_decision approved/rejected) reads as a resolution (#159)."
+        ),
+        "rescore_required": True,
+    },
 )
 
 
