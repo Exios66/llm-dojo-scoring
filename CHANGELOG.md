@@ -5,6 +5,25 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Correspondence prompt types the content, not the carrier (llm-mailroom#269).** The
+  `communication_type` line of `correspondence_specialist` said "Enron-style inbox → email",
+  so a press release, memo or notice that arrived inside an email was labelled `email`
+  (see llm-mailroom#269 for the sandbox slice-100 observation). The `production_prompts`
+  row now says "Type the content, not the carrier: a
+  memo, letter, notice, demand, press release or meeting request sent, forwarded or pasted
+  in an email takes that type; email only for ordinary email correspondence with no other
+  form inside it." Nothing else in the body changed: sha256 `e3bc920d…` (6,316 chars), source
+  key `correspondence_specialist_v8` (a candidate; the eval-environment mint is pending).
+  The `production` row and the lineage entry `correspondence_specialist_v7` are untouched
+  (`2b0b81ff…`, 6,113 chars), so llm-mailroom's digest pin keeps resolving; it re-pins when
+  it adopts `_v8`. The `docclass` template and `eval_environment_lineage.json` are
+  mirrors of llm-entity-extraction and eval-environment and are not edited here.
+  Regression tests pin the `production` digest and the one-line difference.
+  The default `production` family row still carries the old line (it is the byte-pinned v7
+  llm-mailroom resolves today); consumers get the fix from `production_prompts` once they re-pin.
+
 ## [0.30.0] - 2026-11-14
 ### Added
 
@@ -314,20 +333,6 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
 
 ### Fixed
 
-- **Correspondence prompt types the content, not the carrier (llm-mailroom#269).** The
-  `communication_type` line of `correspondence_specialist` said "Enron-style inbox → email",
-  so a press release, memo or notice that arrived inside an email was labelled `email`
-  (6 of 7 gold-typed documents in the sandbox slice-100 run: 3 `press_release`, 2 `memo`,
-  1 `notice`). The `production_prompts` row now says "Type the content, not the carrier: a
-  memo, letter, notice, demand, press release or meeting request sent, forwarded or pasted
-  in an email takes that type; email only for ordinary email correspondence with no other
-  form inside it." Nothing else in the body changed: sha256 `e3bc920d…` (6,316 chars), source
-  key `correspondence_specialist_v8` (a candidate; the eval-environment mint is pending).
-  The `production` row and the lineage entry `correspondence_specialist_v7` are untouched
-  (`2b0b81ff…`, 6,113 chars), so llm-mailroom's digest pin keeps resolving; it re-pins when
-  it adopts `_v8`. The `docclass` template and `eval_environment_lineage.json` are
-  mirrors of llm-entity-extraction and eval-environment and are not edited here.
-  Regression tests pin the `production` digest and the one-line difference.
 - Date scoring no longer reads the clock (#134, split from llm-mailroom#195).
   `field_scoring._parse_date` handed `dateutil` the bare text, and `dateutil` fills every
   component the text omits from today's date: the CUAD-style "18th day of August" got the
