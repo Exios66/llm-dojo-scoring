@@ -130,7 +130,11 @@ def wilson_bounds(p: float, n: int, z: float = 1.96) -> tuple[float, float]:
 
 
 def round_up(value: float, places: int) -> float:
-    """``value`` rounded to ``places`` decimals, never below ``value``."""
+    """``value`` rounded to ``places`` decimals, never below ``value``.
+
+    Float noise just above a decimal (``0.00010000000000000002``) rounds up a whole
+    step: conservative for an upper bound compared with a budget.
+    """
     rounded = round(value, places)
     if rounded < value:
         rounded = round(rounded + 10.0 ** -places, places)

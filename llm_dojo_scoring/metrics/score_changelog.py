@@ -249,8 +249,9 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         ),
         "change": (
             "A month-first or month-year date phrase ('August 18', 'August 2014') is found "
-            "inside longer predicted text (#162). Two different off-vocabulary MAUD "
-            "'Type of Consideration' answers no longer tie at 'other' (#160). The Wilson "
+            "inside longer predicted text (#162). An off-vocabulary MAUD 'Type of "
+            "Consideration' answer (blank included) no longer ties at 'other' with a "
+            "different answer (#160). The Wilson "
             "upper bound behind ml.intake.selective_risk_upper is rounded up, never to "
             "nearest (#160). Decision lanes: an attempt with extractions of several classes "
             "and no doc_type is unscored (ambiguous_attempt), human gold grades only a "

@@ -176,8 +176,11 @@ no Dojo module imports them any more: llm-mailroom imports pandas without declar
   `approve_as_is`.
 - **Score change (MAUD, #160).** The question-by-question `maud_clauses` rescore recomputes
   `trace.calibration_error` from the rescored `overall_score` (it kept the pre-rescore value).
-  Two different off-vocabulary `Type of Consideration` answers, which both fold to `other`, no
-  longer match; equal answers, and catalog answers, score as before.
+  An off-vocabulary `Type of Consideration` answer (one outside the consideration types and
+  aliases, a blank prediction included) folds to `other` like the catalog's own `other`; it now
+  matches only an equal answer (compared case- and spacing-insensitively), so two different
+  off-vocabulary answers, or one against a catalog `other`, no longer tie. Two catalog answers
+  score as before.
 - **Score change (merger MAUD gold, Hub rows).** A Hub merger row's `maud_clause_labels` now give
   extraction gold, the way `cuad_clause_labels` feed a contract:
   `schemas.maud_schema.hub_merger_expected_fields(gt_fields, subclass=None)` converts them to
