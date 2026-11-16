@@ -49,7 +49,8 @@ Gold, in priority order, recorded per scored row in
    ``ambiguous_attempt`` is the reason when a decision names an attempt (or the
    final one) that has extractions of several classes and no ``doc_type`` says
    which one it observed. A decision that names its class is graded by that
-   class's extraction, never by an untyped one beside it, and its final score
+   class's extraction, never by an untyped one beside it (an untyped extraction
+   grades it only on an attempt with no typed extraction), and its final score
    is the record's last attempt, never an older attempt of its class.
 
 Every scorecard carries ``n``, ``n_scored``, ``n_unscored_by_reason``
