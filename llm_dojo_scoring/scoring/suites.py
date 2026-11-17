@@ -439,7 +439,7 @@ def _maud_lines_all_ambiguous(lines: Any) -> bool:
 
 
 def _n_unparsed_maud_entries(lines: Any) -> int:
-    """Nonempty predicted clause entries that :func:`parse_maud_labels` cannot read."""
+    """Nonempty clause entries (gold or predicted) that :func:`parse_maud_labels` cannot read."""
     from .content_scoring import _span_lines, parse_maud_labels
 
     if not isinstance(lines, list):
@@ -475,7 +475,8 @@ def _score_maud_clauses_by_question(
     prediction for one is neither a match nor an unmatched prediction. A question
     the Hub leaves blank is not ambiguous; an answer to it is still unmatched.
     The overall score is recomputed. Gold whose lines name no question is left to
-    the generic matcher.
+    the generic matcher; a gold line that names none beside lines that do counts as
+    an expected clause that no prediction matches.
     """
     from .content_scoring import (
         normalize_maud_question_key,
@@ -507,6 +508,9 @@ def _score_maud_clauses_by_question(
     if not n_expected:
         return
     exact = round((scored.get("maud_question_accuracy") or 0.0) * n_expected)
+    # A gold line that names no question beside parseable ones is still an expected
+    # clause no prediction can match; dropping it would shrink the denominator (#170).
+    n_expected += _n_unparsed_maud_entries(list(exp_lines))
     # A nonempty entry the parser rejects (free text, no question) is a prediction
     # that matched nothing, the same as a wrong answer.
     unscored = {normalize_maud_question_key(question) for question in skipped}

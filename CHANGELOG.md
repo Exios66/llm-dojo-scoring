@@ -7,6 +7,15 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+- **Merger `maud_clauses` gold lines that name no question are no longer dropped when other
+  gold lines parse (#170).** `_score_maud_clauses_by_question` built the gold from
+  `parse_maud_labels`, which keeps only lines that name a question, so a plain-text gold line
+  beside parseable ones left the recall denominator and raised the score. Such a line now counts as
+  an expected clause that no prediction matches (the way unreadable predicted entries already
+  count): gold `["Type of Consideration: All Cash", "the buyer pays cash at closing"]` against the
+  first line alone scores recall 0.5, not 1.0. All-parseable gold and all-plain gold (left to the
+  generic matcher) are unchanged, as is `parse_maud_labels`. **Consumer impact:** merger rows with
+  mixed gold can score lower in llm-mailroom and the sandbox; the golden cases do not move.
 - **Sandbox CUAD presence credits `agreement_date` (#167).** `pipeline.sandbox_scoring.FIELD_CATEGORY`
   now maps `agreement_date` to `Agreement Date`, so a filled `agreement_date` evidences that
   category in `score_cuad` / `score_sandbox_cuad` without a repeated `cuad_clauses` line. Rows

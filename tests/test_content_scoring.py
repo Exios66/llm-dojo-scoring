@@ -432,3 +432,39 @@ def test_merger_suite_scores_maud_labels_and_has_no_honest_gap():
     assert out["maud_clause_presence"] == 1.0
     assert "parties" in out["extraction"].field_scores
     assert "maud_clause_labels" not in out["extraction"].field_scores
+
+
+def _maud_rescore(gold_lines, pred_lines):
+    """Run the merger ``maud_clauses`` rescorer on one document; return its entity-list score."""
+    from llm_dojo_scoring.scoring.field_scoring import score_extraction
+    from llm_dojo_scoring.scoring.suites import _score_maud_clauses_by_question
+
+    exp, pred = {"maud_clauses": gold_lines}, {"maud_clauses": pred_lines}
+    result = score_extraction("merger_agreement", {"maud_clauses": "entity_list:free_text"}, pred, exp)
+    _score_maud_clauses_by_question(result, exp, pred)
+    return result.field_scores["maud_clauses"], result.entity_list_scores["maud_clauses"]
+
+
+def test_maud_rescore_counts_plain_text_gold_lines_beside_parseable_ones():
+    """A gold line that names no question stays expected and unmatched (#170)."""
+    gold = ["Type of Consideration: All Cash", "the buyer pays cash at closing"]
+    score, ent = _maud_rescore(gold, ["Type of Consideration: All Cash"])
+    assert score == 0.5
+    assert (ent.matched, ent.unmatched_expected, ent.unmatched_predicted) == (1, 1, 0)
+    assert (ent.precision, ent.recall) == (1.0, 0.5)
+
+
+def test_maud_rescore_unchanged_for_all_parseable_and_all_plain_gold():
+    """Only mixed gold moves: all-parseable keeps its denominator and all-plain stays generic."""
+    score, ent = _maud_rescore(["Type of Consideration: All Cash"], ["Type of Consideration: All Cash"])
+    assert (score, ent.unmatched_expected) == (1.0, 0)
+    # All-plain gold is left to the generic matcher: no per-question entity score is written.
+    from llm_dojo_scoring.scoring.field_scoring import score_extraction
+    from llm_dojo_scoring.scoring.suites import _score_maud_clauses_by_question
+
+    exp = {"maud_clauses": ["the buyer pays cash at closing"]}
+    pred = {"maud_clauses": ["Type of Consideration: All Cash"]}
+    result = score_extraction("merger_agreement", {"maud_clauses": "entity_list:free_text"}, pred, exp)
+    before = (result.field_scores["maud_clauses"], result.entity_list_scores["maud_clauses"])
+    _score_maud_clauses_by_question(result, exp, pred)
+    assert (result.field_scores["maud_clauses"], result.entity_list_scores["maud_clauses"]) == before
