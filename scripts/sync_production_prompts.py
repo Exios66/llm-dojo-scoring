@@ -33,6 +33,10 @@ CATALOG = PROMPTS / "catalog.yaml"
 # Live agents whose production row is not an LLM prompt in the dojo catalog.
 DETERMINISTIC = {"reporter"}
 
+# A production row with this ``source_repo`` is authored here (e.g. production v2 of the
+# contracts and merger specialists), so mailroom's body, still frozen_v1, must not replace it.
+DOJO_AUTHORED = "llm-dojo-scoring"
+
 
 
 def _git_head(mailroom: Path) -> str:
@@ -115,6 +119,7 @@ def main(argv: list[str] | None = None) -> int:
     head, blocks = _split_blocks(CATALOG.read_text(encoding="utf-8").splitlines())
     drifted: list[str] = []
     refused: list[str] = []
+    authored: list[str] = []
     writes: dict[Path, str] = {}
     seen: set[str] = set()
 
@@ -129,6 +134,9 @@ def main(argv: list[str] | None = None) -> int:
             continue  # retired in mailroom (e.g. compliance); left untouched
         seen.add(agent)
         row_agent = block[0][len("- agent:"):].strip()
+        if _field(block, "source_repo") == DOJO_AUTHORED:
+            authored.append(row_agent)  # left as is: neither digest-checked nor overwritten
+            continue
         key = bound.get(agent)
         if key == "frozen_v1":
             # mailroom serves frozen v1 from whichever dojo it resolves, so check the
@@ -172,6 +180,8 @@ def main(argv: list[str] | None = None) -> int:
         _set_field(block, "source_commit", commit, after="source_key")
 
     unvendored = sorted(set(live) - seen)
+    if authored:
+        print("authored in this repo, not synced: " + ", ".join(authored))
     if refused:
         print("refused (nothing written):\n  " + "\n  ".join(refused), file=sys.stderr)
         return 1
@@ -179,7 +189,8 @@ def main(argv: list[str] | None = None) -> int:
         if drifted:
             print("drifted production prompts:\n  " + "\n  ".join(drifted))
             return 1
-        print(f"production prompts in sync with mailroom {commit[:7]}")
+        skipped = f" (not compared: {', '.join(authored)})" if authored else ""
+        print(f"production prompts in sync with mailroom {commit[:7]}{skipped}")
         return 0
 
     for path, text in writes.items():

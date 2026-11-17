@@ -37,7 +37,7 @@ correctness arms.
 
 | `family` | Meaning |
 | --- | --- |
-| `production` (default) | Live mailroom prompt bodies, re-vendored verbatim by `scripts/sync_production_prompts.py` from a mailroom checkout (each row records `source_commit`). Sorter is `sorter_condensed_v5`. The specialists use mailroom’s freeze (`version: v1`, `source_key: frozen_v1`). Corporate records stays at `_v6` (`fe13501f…`); its `production_prompts` evaluation stem is `_v7` (`253559fc…`). The other four specialists equal `production_prompts`. `reporter` is `kind: deterministic`. |
+| `production` (default) | Live mailroom prompt bodies, re-vendored verbatim by `scripts/sync_production_prompts.py` from a mailroom checkout (each row records `source_commit`). Sorter is `sorter_condensed_v5`. The specialists use mailroom’s freeze (`version: v1`, `source_key: frozen_v1`). Corporate records stays at `_v6` (`fe13501f…`); its `production_prompts` evaluation stem is `_v7` (`253559fc…`). Correspondence stays at `_v7` (`2b0b81ff…`); its `production_prompts` row is the candidate `_v8` (`e3bc920d…`). Of the other three specialists, only `insurance_claims_specialist` equals `production_prompts`; `contracts_specialist` and `merger_agreement_specialist` are production-v2 exceptions (`tests/test_production_prompts.py`, `PRODUCTION_V2`). `reporter` is `kind: deterministic`. |
 | `docclass` | Latest key from entity-extraction `src/prompts_docclass.py` (`sorter_docclass_v7`, `*_specialist_docclass_v1`, `reviewer_docclass_v1`, `judge_*_docclass_v1`, `arbiter_docclass_v1`, `boss_docclass_v1`). |
 | `production_prompts` | Frozen eval-environment **v1** specialist lineage (`mailroom-dataset-v1`, frozen 2026-09-26T05:09:29+00:00). Five sha256-locked stems; not grouped with `docclass`. |
 
@@ -63,14 +63,22 @@ names); sha256 `253559fc…`, 5,462 chars (−403 vs the 5,865-char `_v6` parent
 Their `source_key` names those mutation keys and their provenance comments keep
 the superseded digests. eval-environment's default for both roles stays `_v1`
 (promoting the corrected text to the default-pin is a separate decision);
-select the corrected text there with `--prompt-version`. Other stems remain
+select the corrected text there with `--prompt-version`. The correspondence
+stem has moved on from `_v7` (`2b0b81ff…`, 6,113 chars) to the candidate `_v8`
+(`e3bc920d…`, 6,316 chars): only the `communication_type` line changed, from
+"Enron-style inbox → email" to "Type the content, not the carrier: a memo, letter,
+notice, demand, press release or meeting request sent, forwarded or pasted in an
+email takes that type; email only for ordinary email correspondence with no other
+form inside it" (llm-mailroom#269). `_v7` stays in the lineage and in the
+`production` row, which llm-mailroom pins by digest; only `production_prompts`
+carries `_v8`. Other stems remain
 byte-identical to the frozen v1 source. Catalog digests identify the current text.
 
 | Agent | Eval-environment key | Sandbox stem | `sha256` (prefix) |
 | --- | --- | --- | --- |
 | `contracts_specialist` | `contracts_specialist_v1` | `contracts_specialist_v33_simplified` | `d91de396…` |
 | `corporate_records_specialist` | `corporate_records_specialist_v7` (extends `_v6`) | `corporate_records_specialist_simplified` | `253559fc…` |
-| `correspondence_specialist` | `correspondence_specialist_v7` (corrects `_v1`) | `correspondence_specialist_simplified` | `2b0b81ff…` |
+| `correspondence_specialist` | `correspondence_specialist_v8` (candidate, key pending its eval-environment mint; amends `_v7`) | `correspondence_specialist_simplified` | `e3bc920d…` |
 | `insurance_claims_specialist` | `insurance_claims_specialist_v1` | `insurance_claims_specialist_simplified` | `6c2776bc…` |
 | `merger_agreement_specialist` | `merger_agreement_specialist_v1` | `merger_agreement_specialist_simplified` | `00323258…` |
 
@@ -127,9 +135,9 @@ and `notes` (data-quality observations, usually empty).
 **Digests.** `sha256` here is eval-environment's: `sha256(text.encode("utf-8"))`
 over the raw text. The `production_prompts` catalog above hashes the text with a
 trailing newline ensured. They are equal for the specialist stems (those texts
-end in `"\n"`), so `correspondence_specialist_v7` / `corporate_records_specialist_v7`
-are byte-equal to `get_prompt(<role>, family="production_prompts").text` with the
-same digest. Prompts without a trailing newline (sorter, judges) would differ
+end in `"\n"`), so `corporate_records_specialist_v7` is byte-equal to
+`get_prompt(<role>, family="production_prompts").text` with the same digest
+(`correspondence_specialist_v7` is byte-equal to the `production` row instead). Prompts without a trailing newline (sorter, judges) would differ
 between the two conventions.
 
 **Quirks in the source data** (recorded, not corrected):

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -99,29 +101,97 @@ _GH_UNAVAILABLE = re.compile(
 )
 
 
-def test_cli_publish_dry_run_json():
-    # v0.25.0 is now published; a dry-run publish must refuse (idempotent)
-    # rather than silently re-tag/re-release.
-    """A dry-run publish of a published version refuses (idempotent)."""
-    proc = subprocess.run(
-        [sys.executable, str(SCRIPT), "publish", "0.25.0", "--commit", "HEAD", "--json"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        timeout=60,
-    )
-    # main() writes a ReleaseError payload to stderr; a gh/network failure is
-    # an environment limit, not a release-tool regression.
+def _run_with_gh_shim(tmp_path, cmd, timeout, real_gh=None):
+    """Run *cmd* with a ``gh`` shim that marks each ``gh`` call while it runs.
+
+    The shim creates one marker per call and removes it when ``gh`` exits, so a
+    timeout is a network-unavailability skip only while a ``gh`` call is still
+    running. A timeout anywhere else, before ``gh`` or after it returned, is
+    re-raised so a hang in local processing still fails the test.
+    """
+    markers = tmp_path / "gh-running"
+    markers.mkdir()
+    env = dict(os.environ)
+    real_gh = real_gh or shutil.which("gh")
+    if real_gh:
+        # No shim without a real gh: a missing CLI must stay a missing binary
+        # ("No such file or directory"), which _payload_or_skip classifies.
+        shim_dir = tmp_path / "bin"
+        shim_dir.mkdir()
+        shim = shim_dir / "gh"
+        shim.write_text(
+            '#!/bin/sh\nm="$GH_MARKERS/$$"\n: > "$m"\n"$REAL_GH" "$@"\nrc=$?\nrm -f "$m"\nexit $rc\n'
+        )
+        shim.chmod(0o755)
+        env.update(
+            PATH=f"{shim_dir}{os.pathsep}{os.environ.get('PATH', '')}",
+            GH_MARKERS=str(markers),
+            REAL_GH=real_gh,
+        )
+    try:
+        return subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=timeout, env=env)
+    except subprocess.TimeoutExpired:
+        if any(markers.iterdir()):
+            pytest.skip(f"gh stalled for {timeout} s (network unavailable)")
+        raise
+
+
+def _publish_dry_run(tmp_path, timeout, real_gh=None):
+    """Run ``release.py publish --json`` under the ``gh`` shim (see ``_run_with_gh_shim``)."""
+    cmd = [sys.executable, str(SCRIPT), "publish", "0.25.0", "--commit", "HEAD", "--json"]
+    return _run_with_gh_shim(tmp_path, cmd, timeout, real_gh)
+
+
+def _payload_or_skip(proc):
+    """The publish JSON payload, or a skip when ``gh`` itself cannot be reached here.
+
+    ``main()`` writes a ReleaseError payload to stderr; a gh/network failure is an
+    environment limit, not a release-tool regression.
+    """
     payload = json.loads(proc.stdout or proc.stderr)
     error = str(payload.get("error", ""))
     if "action" not in payload and error.startswith("gh ") and _GH_UNAVAILABLE.search(error):
         pytest.skip(f"GitHub CLI unavailable here: {error[:120]}")
+    return payload
+
+
+def test_cli_publish_dry_run_json(tmp_path):
+    # v0.25.0 is now published; a dry-run publish must refuse (idempotent)
+    # rather than silently re-tag/re-release.
+    """A dry-run publish of a published version refuses (idempotent)."""
+    payload = _payload_or_skip(_publish_dry_run(tmp_path, timeout=20))
     assert payload["action"] == "publish"
     assert payload["version"] == "0.25.0"
     assert payload["dry_run"] is True
     assert payload["tag"] == "v0.25.0"
     assert payload["errors"]
     assert any("already published" in e for e in payload["errors"])
+
+
+def _fake_gh(tmp_path, body):
+    """An executable stand-in for ``gh`` running the shell *body*."""
+    fake = tmp_path / "fake-gh"
+    fake.write_text(f"#!/bin/sh\n{body}\n")
+    fake.chmod(0o755)
+    return str(fake)
+
+
+def test_publish_dry_run_timeout_outside_gh_is_not_skipped(tmp_path):
+    """A timeout before any ``gh`` call is a failure, not a network skip."""
+    with pytest.raises(subprocess.TimeoutExpired):
+        _run_with_gh_shim(tmp_path, ["sh", "-c", "sleep 30"], 1, _fake_gh(tmp_path, "exit 0"))
+
+
+def test_timeout_after_a_finished_gh_call_is_not_skipped(tmp_path):
+    """A local hang after ``gh`` returned is a failure: the shim clears its marker on exit."""
+    with pytest.raises(subprocess.TimeoutExpired):
+        _run_with_gh_shim(tmp_path, ["sh", "-c", "gh api x; sleep 30"], 2, _fake_gh(tmp_path, "exit 0"))
+
+
+def test_publish_dry_run_gh_stall_is_a_skip(tmp_path):
+    """A timeout while ``gh`` is hanging is the one classified as network unavailability."""
+    with pytest.raises(pytest.skip.Exception, match="gh stalled"):
+        _publish_dry_run(tmp_path, timeout=6, real_gh=_fake_gh(tmp_path, "sleep 30"))
 
 
 def test_missing_executable_is_a_release_error(release):
@@ -471,3 +541,13 @@ def test_publish_keeps_its_result_when_consumer_lookup_fails(monkeypatch):
     steps = release.publish_next_steps("0.28.0", "v0.28.0", {"url": "u"})
     assert steps[0] == "verify u"
     assert any("could not read the consumer pins" in s for s in steps), steps
+
+
+def test_publish_dry_run_without_gh_installed_is_a_skip(tmp_path, monkeypatch):
+    """With no ``gh`` on PATH (CI images), the dry run skips as unavailable instead of failing."""
+    bin_dir = tmp_path / "path-without-gh"
+    bin_dir.mkdir()
+    (bin_dir / "git").symlink_to(shutil.which("git"))
+    monkeypatch.setenv("PATH", str(bin_dir))
+    with pytest.raises(pytest.skip.Exception, match="GitHub CLI unavailable"):
+        _payload_or_skip(_publish_dry_run(tmp_path, timeout=20))

@@ -13,7 +13,7 @@ import pytest
 
 import llm_dojo_scoring.scoring.doc_scorers.dispatch as dispatch_mod
 from llm_dojo_scoring import score_document
-from llm_dojo_scoring.pipeline.archive import score_archive_block
+from llm_dojo_scoring.pipeline.archive import LIVE_ARCHIVE_DOC_TYPES, score_archive_block
 from llm_dojo_scoring.scoring.doc_scorers import get_doc_scorer
 from llm_dojo_scoring.scoring.suites import DEFAULT_FIELD_TYPES
 
@@ -184,7 +184,10 @@ BASE = {"document_name": "X", "sender": "a", "claim_number": "C1", "entity_name"
 
 @pytest.mark.parametrize("doc_type", sorted(DEFAULT_FIELD_TYPES))
 def test_odd_field_values_never_raise_either_entry_point(doc_type):
-    """Every live field of every type, odd value on either side: neither entry point raises."""
+    """Every field of every type, odd value on either side: neither entry point raises.
+
+    The archive block only scores live classes; a retired one raises ``KeyError``.
+    """
     fields = list(DEFAULT_FIELD_TYPES[doc_type]) + EXTRA_LIVE.get(doc_type, [])
     for field in fields:
         for value in FUZZ_VALUES:
@@ -194,9 +197,20 @@ def test_odd_field_values_never_raise_either_entry_point(doc_type):
                 where = f"{doc_type}.{field}={value!r} on {side}"
                 try:
                     score_document(doc_type, pred, exp)
-                    score_archive_block(doc_type, pred, exp)
+                    if doc_type in LIVE_ARCHIVE_DOC_TYPES:
+                        score_archive_block(doc_type, pred, exp)
+                    else:
+                        # A retired class has no live field map (#161); the
+                        # archive scorer is still fuzzed with an explicit one.
+                        score_archive_block(
+                            doc_type, pred, exp, field_types=DEFAULT_FIELD_TYPES[doc_type]
+                        )
                 except Exception as exc:  # pragma: no cover - failure path
                     pytest.fail(f"{where}: {type(exc).__name__}: {exc}")
+    if doc_type not in LIVE_ARCHIVE_DOC_TYPES:
+        # Without an explicit field map, the archive block is live-only (#161).
+        with pytest.raises(KeyError, match="no live field map"):
+            score_archive_block(doc_type, dict(BASE), dict(BASE))
 
 
 # ---------------------------------------------------------------- I2: CMS by doc_subclass
