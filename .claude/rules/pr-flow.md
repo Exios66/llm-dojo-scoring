@@ -93,3 +93,28 @@ local gate. If the fixes were more than trivial, dispatch another fresh `pre-pr-
 When a bot finds a careless mistake that steps 1 to 3 should have caught, add one line
 to "Lessons from bot reviews" in `.claude/agents/pre-pr-reviewer.md` in the same PR, so
 the next fresh reviewer checks for it.
+
+## 7. Merge: one coherent commit per PR
+
+A PR lands on its base as **one squash commit** that describes the whole change. The
+branch's commits are working history (a fix, a review follow-up, a typo); they are not
+what `main` should read like.
+
+- **Squash-merge feature and fix PRs** (`merge_method: squash`, with `expectedHeadSha`
+  set to the head you verified). Write the squash commit yourself; do not accept the
+  default concatenation of branch messages:
+  - **title:** the PR title, as a conventional summary with the issue
+    (`fix(scoring): typed decisions are graded by their own type's score (#168)`);
+  - **body:** a few lines on what changed and why, the `Closes #N` lines, and the
+    attribution trailers. No list of WIP commit messages.
+- **Use a merge commit instead** for a branch-sync PR (for example `main` → a release
+  branch, or a release branch back to `main`) and for a release PR cut by
+  `scripts/release.py`. Squashing those rewrites shared history, so the next sync
+  conflicts and tags or pins can point at commits that are not on the branch.
+- **Pins and evidence use the merged commit.** Consumers pin a 40-hex SHA. After a squash
+  merge the branch commits are no longer on `main`, so a pin or a "Commit:" line meant to
+  last names the squash commit, never a PR-branch commit.
+- **Never rewrite pushed history to tidy it.** No force-push, no rebase or amend of pushed
+  commits: the squash at merge does the tidying. Commits that are **not yet pushed** may
+  be folded into one commit per concern (`git reset --soft <base>`, then commit) before
+  the first push.

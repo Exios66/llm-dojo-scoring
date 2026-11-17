@@ -33,6 +33,10 @@ closest models your tool offers.
    dependent ones in sequence.
 5. Subagents never push, open PRs, comment on GitHub, publish, or run anything that spends
    money or writes to hosted services. Those actions stay with the orchestrator.
+6. Subagents commit locally, one concern per commit with a message that says what and why.
+   The orchestrator squash-merges the PR into one coherent commit
+   (`.claude/rules/pr-flow.md` step 7), so a subagent never squashes, rebases or amends
+   pushed commits to tidy history.
 
 ## Writing a brief
 
