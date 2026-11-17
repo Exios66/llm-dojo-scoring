@@ -598,6 +598,10 @@ def prs_in_range(prev_tag: str | None, end_ref: str, *, net: bool) -> list[dict]
     Merge-commit PRs (``Merge pull request #N from``) and squash-merged PRs (a
     single-parent commit whose subject ends in ``(#N)``) both count. Results are
     de-duplicated by number and keep ``git log`` order (newest first).
+
+    The offline list is best effort: it reads subjects only, so a branch commit inside a
+    merge-committed PR whose subject ends in ``(#N)`` is listed too. The online list
+    resolves every commit by ``mergeCommit.oid``, so it asks ``gh`` for any non-empty range.
     """
     span = f"{prev_tag}..{end_ref}" if prev_tag else end_ref
     log = git("log", "--format=%H%x1f%P%x1f%s", span)
