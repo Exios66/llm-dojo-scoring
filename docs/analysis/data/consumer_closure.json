@@ -260,6 +260,11 @@
       "lines": 583,
       "reason": "consumer import: MAIL@origin/claude/howdy-n8vcc1"
     },
+    "schemas.gt_label_quality": {
+      "decision": "hold",
+      "lines": 156,
+      "reason": "opt-in filter for untrusted correspondence and corporate GT labels, Dojo #171, #164, #94; consumers adopt it next"
+    },
     "schemas.gt_metadata": {
       "decision": "keep",
       "lines": 344,

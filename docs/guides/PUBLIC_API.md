@@ -163,6 +163,22 @@ pre-0.26 flat path work (see [MIGRATION.md](MIGRATION.md#legacy-flat-import-path
 
 The per-name detail (which file and line uses each attribute) is in the fixture.
 
+## Offered, not yet consumed
+
+New names that no consumer scan lists yet (so `tests/fixtures/consumer_surface.json`, which the
+audit script generates from the consumer checkouts, does not carry them). They are part of the
+supported surface from the release that ships them:
+
+- `filter_untrusted_labels(doc_type, gt_fields, *, subclass=None) -> (filtered_gt_fields, report)`
+  (`llm_dojo_scoring.schemas.gt_label_quality`): opt-in filter that drops the correspondence and
+  corporate-record `intent` / `subject_matter` / `keywords` labels the audits flag (heuristic
+  intent, templated subject_matter, metadata keywords) with `pending_annotation` semantics,
+  never one whose own source is `claude_refined`, `manual` or another adjudicated source.
+  `report` maps each filtered field to its reason code. Pass the returned ground truth to
+  `suite.score` / `score_document`; nothing applies it by default.
+  `count_untrusted_labels(reports)` totals the reports by `field:reason`, and
+  `ADJUDICATED_LABEL_SOURCES` lists the protected sources.
+
 ## Patch targets
 
 Consumer tests patch these names, so they must stay patchable at this path:

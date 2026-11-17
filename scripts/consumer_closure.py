@@ -103,6 +103,7 @@ HOLD: dict[str, str] = {
     "schemas.v10_rows": "v10 dataset row loaders, mailroom #174",
     "schemas.correspondence_gt_audit": "correspondence ground-truth audit, Dojo #94",
     "schemas.corporate_record_relabel": "corporate record relabelling, Dojo #52",
+    "schemas.gt_label_quality": "opt-in filter for untrusted correspondence and corporate GT labels, Dojo #171, #164, #94; consumers adopt it next",
     "integrations.update_awareness": "release tooling behind the dojo-version CLI, Dojo #66",
     "analysis.failure_modes": "source of registry metric failure_mode_breakdown (sorter bundle), Dojo #66",
     "ml": "ML contract package mailroom-ml vendors as JSON, never imports (stacked on Dojo #142)",

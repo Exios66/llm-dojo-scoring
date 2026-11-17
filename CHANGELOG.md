@@ -5,6 +5,27 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Added
+
+- **`filter_untrusted_labels`: an opt-in filter for untrusted correspondence and corporate GT
+  labels (#171, #164, #94).** `llm_dojo_scoring.schemas.gt_label_quality.filter_untrusted_labels(doc_type,
+  gt_fields, *, subclass=None) -> (filtered_gt_fields, report)` removes, from one row's ground
+  truth, the labels the existing audits flag, with `pending_annotation` semantics: the field is
+  unlabelled, so it is not scored and a value the model states is not a false positive. It flags
+  `intent` when `intent_source` is `heuristic`; a templated `subject_matter`
+  (`subject_matter_templated` for correspondence, `subject_matter_template` for corporate records);
+  and metadata `keywords` (`keywords_all_metadata` for correspondence, the narrower of its two
+  keyword rules, so a real list holding one topic key or folder path keeps its label;
+  `keywords_provenance_ids` for corporate records). A label whose own source (`<field>_source`,
+  `provenance[field]`, or for `intent` `intent_status`) is `claude_refined`, `manual` or another
+  adjudicated source (`ADJUDICATED_LABEL_SOURCES`) is never filtered. `report` maps each filtered
+  field to its reason; `count_untrusted_labels(reports)` totals them. Nothing calls it by default,
+  so no score or golden moves; llm-mailroom and the sandbox opt in by passing their rows through it
+  before `suite.score` / `score_document`. Example: a correspondence row with a templated
+  `subject_matter` refined to a real summary scores precision 0.3333 unfiltered and 1.0 once its
+  heuristic `intent` and metadata `keywords` are filtered. Documented in `docs/guides/PUBLIC_API.md`
+  under "Offered, not yet consumed".
+
 ### Fixed
 
 - **Corporate `not_applicable` covers every core field (#127).** `align_unlabeled` dropped a
