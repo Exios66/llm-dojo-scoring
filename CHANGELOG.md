@@ -7,6 +7,15 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+- **A relative-date phrase is a real expected `date` value (#127).** Gold such as `"nine months
+  after the date hereof"` (merger `outside_date`) parses to no calendar date and its words matched
+  the bare-label pattern, so an identical prediction scored 0.0 and an omission scored 1.0, on
+  `score_date_field` and on the null-prediction shortcut in `score_extraction`. A phrase of a count
+  (digits or words, optionally `(10)`), a unit (day, week, month, year, optionally business or
+  calendar) and after, before or following is now compared as normalized text: equal scores 1.0,
+  omitted or different scores 0.0. Blank templates and bare labels (`Effective Date`) are unchanged.
+  **Consumer impact:** merger `outside_date` (and any `date` field with relative gold) can move in
+  both directions in llm-mailroom and the sandbox; the golden cases do not move.
 - **Merger `maud_clauses` gold lines that name no question are no longer dropped when other
   gold lines parse (#170).** `_score_maud_clauses_by_question` built the gold from
   `parse_maud_labels`, which keeps only lines that name a question, so a plain-text gold line

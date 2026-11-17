@@ -779,6 +779,10 @@ def _score_date_field_uncapped(pred, exp, embedding=None) -> float:
         if not _date_is_blank_or_bare_label(exp) and normalize_text(pred) == normalize_text(exp):
             return 1.0
         return 0.0
+    if es is None and _date_is_relative(exp):
+        # A relative-date phrase ("nine months after the date hereof") is a stated value:
+        # equal normalized text is right, an omission or a different phrase is not.
+        return 1.0 if str(pred).strip() and normalize_text(pred) == normalize_text(exp) else 0.0
     pred_omits_label_component = es is not None and (ps is None or bool(es.stated - ps.stated))
     if _date_phrase_contained(pred, exp) or (
         not pred_omits_label_component and _date_phrase_contained(exp, pred)
@@ -837,9 +841,34 @@ def _score_partial_dates(ps: _DateParts, es: _DateParts) -> float:
     return 0.33 if agree & {0, 1} else 0.0
 
 
+_COUNT_WORDS = (
+    "one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|"
+    "sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred"
+)
+#: ``<count> <unit> after|before|following``: "nine months after the date hereof",
+#: "ten (10) days following the date of this Agreement", "30 days after the Effective Date".
+_RELATIVE_DATE_RE = re.compile(
+    rf"\b(?:\d+|(?:{_COUNT_WORDS})(?:[\s-]+(?:and\s+)?(?:{_COUNT_WORDS}))*)"
+    r"(?:\s*\(\d+\))?\s+(?:(?:business|calendar)\s+)?(?:day|week|month|year)s?\s+"
+    r"(?:after|before|following)\b",
+    re.IGNORECASE,
+)
+
+
+def _date_is_relative(exp: str) -> bool:
+    """True for a relative-date phrase ("nine months after the date hereof").
+
+    It names no calendar date, but it is a stated value, not a blank template or a
+    bare label, so it is compared as text (#127).
+    """
+    return bool(_RELATIVE_DATE_RE.search(str(exp)))
+
+
 def _date_expected_is_null(exp: str) -> bool:
     """True when the expected date text carries no real date: a blank
-    template line or a bare label."""
+    template line or a bare label. A relative-date phrase is a real value."""
+    if _date_is_relative(exp):
+        return False
     if "_" in exp or "blank" in exp.lower():
         return True
     low = exp.lower()

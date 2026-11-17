@@ -872,3 +872,35 @@ def test_audit_list_field_does_not_match_an_unverified_year():
 def test_strict_date_list_matching_cases(pred, label, matched):
     """List pairing for dates: unverified or stray years never match; exact copies do."""
     assert fs.score_entity_list("date", pred, label).matched == matched
+
+
+RELATIVE_DATES = [
+    "nine months after the date hereof",
+    "30 days after the Effective Date",
+    "ten (10) days following the date of this Agreement",
+    "two years before the Closing Date",
+]
+
+
+@pytest.mark.parametrize("label", RELATIVE_DATES)
+def test_relative_date_is_a_real_expected_value(label):
+    """A relative-date phrase is populated text: copied it scores 1.0, omitted or different 0.0 (#127)."""
+    assert fs.score_date_field(label, label) == 1.0
+    assert fs.score_date_field(label.upper() + ".", label) == 1.0  # normalized text
+    assert fs.score_date_field("", label) == 0.0
+    assert fs.score_date_field("six days after the date hereof", label) == 0.0
+
+
+@pytest.mark.parametrize("label", RELATIVE_DATES)
+def test_relative_date_omission_is_a_miss_on_the_extraction_path(label):
+    """The null-prediction shortcut in ``score_extraction`` does not credit a relative date either."""
+    ftypes = {"outside_date": "date"}
+    kept = fs.score_extraction("merger_agreement", ftypes, {"outside_date": label}, {"outside_date": label})
+    omitted = fs.score_extraction("merger_agreement", ftypes, {"outside_date": None}, {"outside_date": label})
+    assert (kept.field_scores["outside_date"], omitted.field_scores["outside_date"]) == (1.0, 0.0)
+
+
+@pytest.mark.parametrize("label", ["Effective Date", "the date hereof", "within the date", "date"])
+def test_phrases_without_a_count_and_unit_stay_bare_labels(label):
+    """Only a count, a unit and after/before/following make a phrase a relative date."""
+    assert fs.score_date_field("", label) == 1.0
