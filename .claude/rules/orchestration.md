@@ -33,9 +33,11 @@ closest models your tool offers.
    dependent ones in sequence.
 5. Subagents never push, open PRs, comment on GitHub, publish, or run anything that spends
    money or writes to hosted services. Those actions stay with the orchestrator.
-6. Subagents commit locally, one concern per commit with a message that says what and why.
-   A subagent never rewrites pushed history and leaves folding to the orchestrator, which
-   merges the PR as one coherent commit (`.claude/rules/pr-flow.md` step 7).
+6. Subagents that change files commit locally, one concern per commit with a message that
+   says what and why (the read-only reviewers commit nothing). A subagent never rewrites
+   pushed history and leaves folding to the orchestrator, which squash-merges a feature or
+   fix PR as one coherent commit; branch-sync and release PRs keep a merge commit
+   (`.claude/rules/pr-flow.md` step 7).
 
 ## Writing a brief
 
