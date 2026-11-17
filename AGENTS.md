@@ -28,6 +28,8 @@ and for humans. Read it by section, on demand.
    - `.claude/rules/pr-flow.md` — local gate → self-review → fresh-context pre-PR review
      → draft PR → bot review (CodeRabbit, CodeAnt). Pushing and opening a PR happen only
      when the user asked for one; nothing is pushed for review unvetted.
+   - `.claude/rules/code-mode.md` — bulk work (many files, fixtures, score diffs, logs)
+     runs as one script that prints a digest, not as many tool calls.
 3. **Fill in `.github/pull_request_template.md`** for every PR: problem, change, evidence,
    what was not verified, review log, public API and consumer impact.
 
@@ -148,6 +150,9 @@ suite. CI runs `--check`. A diff means a score moved:
   matches.
 - `cut --apply`, `publish`, `edit` and `assets` need the user's explicit go-ahead. Never
   force-push, delete or move tags, or amend release commits.
+- Feature and fix PRs are squash-merged into one coherent commit; branch-sync and release
+  PRs keep a merge commit. Pin consumers to the merged commit, never to a PR-branch
+  commit (`.claude/rules/pr-flow.md` step 7).
 - After a release: `llm-mailroom` bumps its pin (`src/scripts/bump_dojo_scoring.py`, its
   `/dojo-bump` skill), the sandbox refreshes its vendor snapshot (`/vendor-sync`). Full
   steps: `docs/guides/RELEASES.md` and `.claude/skills/cross-repo-bump/SKILL.md`.
