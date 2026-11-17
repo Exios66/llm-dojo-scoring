@@ -7,6 +7,10 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+- **The package identity matches the published `v0.30.1` tag.** The tag was cut on `116da0b`
+  without a version bump, so `pyproject.toml`, `__version__`, `uv.lock`, the README release pins
+  and the consumer-compat pin still read 0.30.0, and the release-chain check failed every later
+  commit on this branch. They now read 0.30.1. No code or score changes.
 - **A typed decision is never graded by an untyped score when its class is missing (#168).**
   In `scoring/decision_lanes.py`, when the graded attempt had a typed extraction of another
   class and an untyped one beside it, a judge or arbiter decision naming a third class was
