@@ -5,7 +5,8 @@ prints a short digest, instead of making many tool calls that each paste raw out
 the conversation. Every tool result stays in context for the rest of the session, so
 twenty `Read`/`Grep`/`Bash` round trips cost far more tokens and time than one script
 that returns twenty lines. This applies to the orchestrator and to every subagent; put
-"use code mode" in briefs for bulk work.
+"use code mode" in briefs for bulk work (not in the pre-PR reviewer's brief, which is
+fixed). Read-only agents create scratch scripts through `Bash`, never inside the repo.
 
 ## When to use it
 

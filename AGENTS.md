@@ -28,6 +28,8 @@ and for humans. Read it by section, on demand.
    - `.claude/rules/pr-flow.md` — local gate → self-review → fresh-context pre-PR review
      → draft PR → bot review (CodeRabbit, CodeAnt). Pushing and opening a PR happen only
      when the user asked for one; nothing is pushed for review unvetted.
+   - `.claude/rules/code-mode.md` — bulk work (many files, fixtures, score diffs, logs)
+     runs as one script that prints a digest, not as many tool calls.
 3. **Fill in `.github/pull_request_template.md`** for every PR: problem, change, evidence,
    what was not verified, review log, public API and consumer impact.
 
