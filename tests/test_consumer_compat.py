@@ -28,7 +28,6 @@ _TOP_LEVEL = (
     "LocalManifestSink",
     "ScoreRecord",
     "DEFAULT_FIELD_TYPES",
-    "LEGACY_FULL_EXTRACTION_FIELD_TYPES",
     "accuracy",
     "bootstrap_ci",
     "classify_serving_kind",
@@ -86,7 +85,6 @@ _MODULE_ATTRS: dict[str, tuple[str, ...]] = {
         "record_date",
         "utc_now",
     ),
-    "export": ("extraction_columns", "sorter_columns", "write_codebook", "write_workbook"),
     "extraction_metrics": ("extraction_binary_metrics",),
     "archive": (
         "score_archive_block",
@@ -130,7 +128,6 @@ _MODULE_ATTRS: dict[str, tuple[str, ...]] = {
     ),
     "suites": (
         "DEFAULT_FIELD_TYPES",
-        "LEGACY_FULL_EXTRACTION_FIELD_TYPES",
         "get_suite",
     ),
     "tasks": ("contracteval_metrics", "contracteval_score", "get_jaccard"),
@@ -236,7 +233,7 @@ def test_jellyfish_is_importable_core_dependency():
 
 def test_release_version_is_current():
     """Pin the package version to the expected compatibility release."""
-    assert dojo.__version__ == "0.28.1"
+    assert dojo.__version__ == "0.30.1"
 
 
 # Every name llm-mailroom imports (src/ + notebooks/), per the sync plan's
