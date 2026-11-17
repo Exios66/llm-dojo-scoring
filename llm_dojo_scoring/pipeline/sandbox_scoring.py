@@ -212,7 +212,10 @@ FIELD_CATEGORY = {
     "document_name": "Document Name",
     "parties": "Parties",
     "effective_date": "Effective Date",
+    "agreement_date": "Agreement Date",
     "governing_law": "Governing Law",
+    # expiration_date is left out on purpose: CUAD "Expiration Date" is often a term, not a
+    # date, and term_length already maps there.
     "term_length": "Expiration Date",
     "renewal_terms": "Renewal Term",
 }

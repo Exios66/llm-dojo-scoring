@@ -7,6 +7,16 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+- **Sandbox CUAD presence credits `agreement_date` (#167).** `pipeline.sandbox_scoring.FIELD_CATEGORY`
+  now maps `agreement_date` to `Agreement Date`, so a filled `agreement_date` evidences that
+  category in `score_cuad` / `score_sandbox_cuad` without a repeated `cuad_clauses` line. Rows
+  that label an Agreement Date and where the model filled the field no longer count it as a miss
+  (`cuad_fn` falls, `cuad_tp` and recall rise). `field_value_ok("agreement_date", ...)` now
+  returns a verdict (presence) instead of `None` on rows whose universe carries the category.
+  `expiration_date` is left unmapped on purpose: CUAD "Expiration Date" is often a term, not a
+  date, and `term_length` already maps there. **Consumer impact:** sandbox and llm-mailroom
+  contract presence scores can rise on rows with an Agreement Date label; the golden cases do
+  not move (`freeze_goldens.py --check` exit 0).
 - **A typed decision is never graded by an untyped score when its class is missing (#168).**
   In `scoring/decision_lanes.py`, when the graded attempt had a typed extraction of another
   class and an untyped one beside it, a judge or arbiter decision naming a third class was

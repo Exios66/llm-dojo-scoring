@@ -64,6 +64,24 @@ def test_agreement_date_effective_date_is_not_a_false_positive():
     assert wrong["cuad_fp"] == 1 and wrong["cuad_effective_from_agreement"] == 0
 
 
+def test_agreement_date_field_credits_the_agreement_date_category():
+    """A filled ``agreement_date`` evidences CUAD ``Agreement Date`` without a ``cuad_clauses`` line (#167)."""
+    gold = _labels(**{"Agreement Date": ["December 20, 2007"]})
+    got = score_cuad({"agreement_date": "2007-12-20"}, gold)
+    assert (got["cuad_tp"], got["cuad_fp"], got["cuad_fn"]) == (1, 0, 0)
+    assert got["cuad_presence_recall"] == 1.0
+    # Unchanged: no field and no clause line is still a miss, and a blank field earns nothing.
+    for pred in ({}, {"agreement_date": ""}, {"agreement_date": None}):
+        missed = score_cuad(pred, gold)
+        assert (missed["cuad_tp"], missed["cuad_fn"]) == (0, 1)
+    assert field_value_ok("agreement_date", "2007-12-20", gold) is True
+    assert field_value_ok("agreement_date", None, gold) is False
+    # ``expiration_date`` is left unmapped on purpose; ``term_length`` is the Expiration Date evidence.
+    expiry = _labels(**{"Expiration Date": ["two years"]})
+    assert score_cuad({"expiration_date": "2009-12-20"}, expiry)["cuad_tp"] == 0
+    assert score_cuad({"term_length": "two years"}, expiry)["cuad_tp"] == 1
+
+
 def test_cms_mapping_is_one_table():
     """One table maps each CMS source table to claim type, subclass and intent."""
     assert set(CMS_SOURCE_TABLES) == {"carrier", "inpatient", "outpatient", "pde"}
