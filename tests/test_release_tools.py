@@ -551,3 +551,137 @@ def test_publish_dry_run_without_gh_installed_is_a_skip(tmp_path, monkeypatch):
     monkeypatch.setenv("PATH", str(bin_dir))
     with pytest.raises(pytest.skip.Exception, match="GitHub CLI unavailable"):
         _payload_or_skip(_publish_dry_run(tmp_path, timeout=20))
+
+
+# ---------------------------------------------------------------------------
+# prs_in_range: merge-commit and squash-merge detection
+# ---------------------------------------------------------------------------
+
+
+def _git_in(repo: Path, *args: str) -> str:
+    """Run a git command in ``repo`` with a hermetic identity and config; return stdout."""
+    env = {
+        **os.environ,
+        "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.invalid",
+        "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.invalid",
+        "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_SYSTEM": os.devnull,
+    }
+    proc = subprocess.run(
+        ["git", "-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false", *args],
+        cwd=repo, env=env, capture_output=True, text=True, check=True,
+    )
+    return proc.stdout.strip()
+
+
+def _commit(repo: Path, subject: str) -> str:
+    """Commit one line to ``repo`` with ``subject`` and return the new commit SHA."""
+    (repo / "n.txt").write_text(f"{(repo / 'n.txt').read_text() if (repo / 'n.txt').exists() else ''}{subject}\n")
+    _git_in(repo, "add", "n.txt")
+    _git_in(repo, "commit", "-m", subject)
+    return _git_in(repo, "rev-parse", "HEAD")
+
+
+def _merge_pr(repo: Path, number: int, branch_subject: str) -> str:
+    """Merge a one-commit side branch the way GitHub's merge button does; return the merge SHA."""
+    base = _git_in(repo, "rev-parse", "--abbrev-ref", "HEAD")
+    _git_in(repo, "checkout", "-q", "-b", f"pr-{number}")
+    _commit(repo, branch_subject)
+    _git_in(repo, "checkout", "-q", base)
+    _git_in(repo, "merge", "--no-ff", "-m", f"Merge pull request #{number} from o/pr-{number}", f"pr-{number}")
+    return _git_in(repo, "rev-parse", "HEAD")
+
+
+@pytest.fixture
+def pr_repo(tmp_path, monkeypatch):
+    """A temp repo tagged ``v0`` with the release module pointed at it."""
+    release = load_release()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_in(repo, "init", "-q", "-b", "main")
+    _commit(repo, "base (#1)")  # before the tag: out of range
+    _git_in(repo, "tag", "v0")
+    monkeypatch.setattr(release, "REPO_ROOT", repo)
+    return release, repo
+
+
+def _numbers(prs):
+    """Return the PR numbers of ``prs`` in order."""
+    return [pr["number"] for pr in prs]
+
+
+def test_prs_in_range_lists_squash_only_range_offline(pr_repo):
+    """A range holding only squash commits lists their PRs offline, newest first."""
+    release, repo = pr_repo
+    _commit(repo, "feat: first (#10)")
+    _commit(repo, "fix: second (#11)")
+    prs = release.prs_in_range("v0", "HEAD", net=False)
+    assert _numbers(prs) == [11, 10]
+    assert prs[0]["url"] == f"{release.REPO_URL}/pull/11"
+    assert prs[0]["title"] == "(offline)"
+
+
+def test_prs_in_range_ignores_plain_and_lookalike_commits(pr_repo):
+    """Plain commits, mid-subject numbers and reverts without a trailing number are not PRs."""
+    release, repo = pr_repo
+    _commit(repo, "chore: no pr number")
+    _commit(repo, "docs: mentions (#99) mid-subject only")
+    _commit(repo, 'Revert "feat: x (#10)"')
+    _commit(repo, "fix: real (#12)")
+    assert _numbers(release.prs_in_range("v0", "HEAD", net=False)) == [12]
+
+
+def test_prs_in_range_mixes_merge_and_squash_newest_first(pr_repo):
+    """Merge-commit and squash PRs interleave in git log order."""
+    release, repo = pr_repo
+    _commit(repo, "feat: squashed (#20)")
+    _merge_pr(repo, 21, "plain branch commit")
+    _commit(repo, "fix: squashed too (#22)")
+    assert _numbers(release.prs_in_range("v0", "HEAD", net=False)) == [22, 21, 20]
+
+
+def test_prs_in_range_deduplicates_by_number(pr_repo):
+    """A PR seen as both a merge commit and a branch commit subject is listed once."""
+    release, repo = pr_repo
+    _merge_pr(repo, 30, "feat: branch commit carries the number (#30)")
+    _commit(repo, "fix: again (#30)")
+    assert _numbers(release.prs_in_range("v0", "HEAD", net=False)) == [30]
+
+
+def test_prs_in_range_without_a_previous_tag_walks_all_history(pr_repo):
+    """With no previous tag the whole history is searched."""
+    release, repo = pr_repo
+    _commit(repo, "feat: a (#40)")
+    assert _numbers(release.prs_in_range(None, "HEAD", net=False)) == [40, 1]
+
+
+def test_prs_in_range_online_matches_squash_commits_by_oid(pr_repo, monkeypatch):
+    """Online, squash commits resolve through ``mergeCommit.oid`` like merge commits do."""
+    release, repo = pr_repo
+    squash_a = _commit(repo, "feat: a (#50)")
+    _commit(repo, "chore: plain")
+    merge_b = _merge_pr(repo, 51, "branch work")
+    squash_c = _commit(repo, "fix: c (#52)")
+    listing = [
+        {"number": 50, "title": "A", "mergedAt": "2026-01-01T00:00:00Z", "mergeCommit": {"oid": squash_a}, "url": "u50"},
+        {"number": 51, "title": "B", "mergedAt": "2026-01-02T00:00:00Z", "mergeCommit": {"oid": merge_b}, "url": "u51"},
+        {"number": 52, "title": "C", "mergedAt": "2026-01-03T00:00:00Z", "mergeCommit": {"oid": squash_c}},
+        {"number": 53, "title": "elsewhere", "mergedAt": "", "mergeCommit": {"oid": "f" * 40}, "url": "u53"},
+        {"number": 54, "title": "no merge commit", "mergedAt": "", "mergeCommit": None},
+    ]
+    monkeypatch.setattr(release, "gh_json", lambda *a, **k: listing)
+    prs = release.prs_in_range("v0", "HEAD", net=True)
+    assert _numbers(prs) == [52, 51, 50]
+    assert prs[0] == {"number": 52, "title": "C", "merged_at": "2026-01-03", "url": f"{release.REPO_URL}/pull/52"}
+    assert prs[2]["title"] == "A"
+
+
+def test_prs_in_range_online_deduplicates_and_handles_empty_range(pr_repo, monkeypatch):
+    """Online lookups de-duplicate by number and an empty range returns nothing."""
+    release, repo = pr_repo
+    monkeypatch.setattr(release, "gh_json", lambda *a, **k: [])
+    assert release.prs_in_range("v0", "HEAD", net=True) == []
+    assert release.prs_in_range("v0", "HEAD", net=False) == []
+    sha = _commit(repo, "feat: a (#60)")
+    dup = [{"number": 60, "title": "A", "mergedAt": "", "mergeCommit": {"oid": sha}, "url": "u"}] * 2
+    monkeypatch.setattr(release, "gh_json", lambda *a, **k: dup)
+    assert _numbers(release.prs_in_range("v0", "HEAD", net=True)) == [60]
