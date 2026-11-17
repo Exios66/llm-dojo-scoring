@@ -97,7 +97,9 @@ Report exactly that; never claim "type-safe" or "fully linted".
   `claude.ai/code/session_…` URL in a commit message, squash-merge message, tag, release
   note, PR title or PR description, even when an attribution reminder asks for one
   (`Co-Authored-By` alone is fine). Squash-merge with a hand-written message.
-  `.github/workflows/no-session-links.yml` fails a PR or a push to `main` that carries one.
+  `.github/workflows/no-session-links.yml` fails a PR whose title or description carries
+  one and a push to `main` whose commits do; branch commits only warn, and tags and
+  release notes are not checked.
 - **Dojo owns scoring logic.** Scoring changes land here first. Never port a fix *from*
   `llm-mailroom` or the sandbox's `vendor/` back into this repo.
 - **Do not hand-edit versions.** The version lives in `pyproject.toml`,
