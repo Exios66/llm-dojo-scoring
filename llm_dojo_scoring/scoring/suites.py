@@ -991,7 +991,8 @@ class ScoringSuite:
                 extra_keys=scorable_gt_keys,
                 drop_unmapped=is_hub_metadata,
                 doc_type=doc_class,
-                subclass=_subclass_for(index),
+                # The row's own ``expected_subclass`` stands in when no keyword names one.
+                subclass=_subclass_for(index) or value.get("expected_subclass"),
             )
             if doc_class == "merger_agreement":
                 from ..schemas.maud_schema import hub_merger_skipped_questions

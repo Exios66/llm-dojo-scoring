@@ -33,6 +33,7 @@ import math
 from collections import Counter
 from typing import Any, Iterable, Mapping
 
+from .corpus import CMS_DOCUMENTED_ABSENT_FIELDS
 from .doc_classes import LIVE_DOC_TYPES, in_order
 from .gt_metadata import GT_PRESENCE_KEY
 
@@ -59,6 +60,9 @@ IDENTITY_COLUMNS: tuple[str, ...] = (
 
 #: Struct columns of a ``gt_<class>`` row (presence codes and label support).
 _STRUCT_COLUMNS: tuple[str, ...] = ("presence", "evidence", "provenance")
+
+#: The ``gt_presence`` code that marks a field the class schema documents as absent.
+_DOCUMENTED_ABSENCE = "schema_documented_absence"
 
 #: The four ``gt_presence`` codes, in report order.
 PRESENCE_CODES: tuple[str, ...] = (
@@ -149,7 +153,9 @@ def gt_from_v10_row(row: Mapping[str, Any]) -> dict[str, Any]:
     becomes ``cuad_clause_labels`` as ``{category: [{start, text}]}``,
     ``maud_clauses`` becomes ``maud_clause_labels`` as ``{question: {category,
     answer}}``). ``presence`` becomes ``gt_presence`` under the same keys, with
-    ``None`` codes dropped. ``evidence`` and ``provenance`` are kept as annotation
+    ``None`` codes dropped. A CMS ``adjuster`` or ``denial_reasons`` whose presence code
+    is ``schema_documented_absence`` is kept as an empty value, like the legacy row, so
+    a stated value stays a false positive. ``evidence`` and ``provenance`` are kept as annotation
     keys (never scored), and ``source_subclass`` becomes ``expected_subclass``, the
     legacy subclass column. Identity columns are left out. Returns a new dict; a
     non-mapping row raises ``TypeError``.
@@ -163,6 +169,9 @@ def gt_from_v10_row(row: Mapping[str, Any]) -> dict[str, Any]:
             continue
         value = _plain(raw)
         if value is None or value == [] or value == {}:
+            if column in CMS_DOCUMENTED_ABSENT_FIELDS and presence.get(column) == _DOCUMENTED_ABSENCE:
+                # Labelled empty, like the legacy row: a stated value stays a false positive.
+                out[V10_LEGACY_KEYS.get(column, column)] = "" if value is None else value
             continue
         if column == "cuad_clauses":
             value = _cuad_map(value)

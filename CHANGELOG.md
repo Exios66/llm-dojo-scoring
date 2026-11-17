@@ -7,6 +7,16 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+- **A v10 CMS row scores like its legacy row (#127).** `gt_from_v10_row` dropped a null
+  `adjuster` or empty `denial_reasons` even when the row's `presence` marked it
+  `schema_documented_absence`, so a stated adjuster or denial reason was not a false positive
+  (carrier row, spurious `adjuster` and `denial_reasons`: `extraction_precision` 1.0, legacy row
+  0.5). Those two CMS fields are now kept as empty values. `ScoringSuite.score` /
+  `score_document` also fall back to the GT dict's own `expected_subclass` when no
+  `expected_subclass=` / `doc_subclass=` keyword is given, so a converted row still derives its
+  `cms_source_table`. Other empty fields, and other documented absences, are unchanged.
+  **Consumer impact:** CMS rows built from v10 gold can score lower (spurious values are now
+  penalised) in llm-mailroom and the sandbox; the golden cases do not move.
 - **A relative-date phrase is a real expected `date` value (#127).** Gold such as `"nine months
   after the date hereof"` (merger `outside_date`) parses to no calendar date and its words matched
   the bare-label pattern, so an identical prediction scored 0.0 and an omission scored 1.0, on

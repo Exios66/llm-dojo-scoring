@@ -238,3 +238,49 @@ def test_cuad_family_other_is_a_scored_token():
     from llm_dojo_scoring.schemas.scored_enums import scored_vocabulary
 
     assert scored_vocabulary("contract", "cuad_family") == CUAD_FAMILY_KEYS
+
+
+#: A CMS carrier claim as the legacy ``ground_truth`` row and as the typed v10 row (#127).
+_CARRIER_PRESENCE = {
+    "claim_type": "populated", "claim_number": "populated",
+    "adjuster": "schema_documented_absence", "denial_reasons": "schema_documented_absence",
+}
+LEGACY_CARRIER = {
+    "claim_type": "health", "claim_number": "887013387879564", "adjuster": "", "denial_reasons": "[]",
+    "gt_presence": json.dumps(_CARRIER_PRESENCE), "expected_subclass": "carrier",
+}
+V10_CARRIER = {
+    "document_id": "DOC-1", "filename": "x.pdf", "subclass": "carrier", "source_subclass": "carrier",
+    "claim_type": "health", "claim_number": "887013387879564", "adjuster": None, "denial_reasons": [],
+    "presence": dict(_CARRIER_PRESENCE),
+}
+SPURIOUS_CARRIER = {
+    "claim_type": "health", "claim_number": "887013387879564",
+    "adjuster": "JOHN D.", "denial_reasons": ["late"],
+}
+
+
+def test_v10_row_keeps_cms_documented_absences_as_empty_values():
+    """A null adjuster / empty denial_reasons on a documented-absence CMS field stays labelled empty."""
+    gt = gt_from_v10_row(V10_CARRIER)
+    assert gt["adjuster"] == ""
+    assert gt["denial_reasons"] == []
+    # Only documented CMS absences are kept: an empty field with another status is still dropped.
+    other = gt_from_v10_row({**V10_CARRIER, "claim_number": None,
+                             "presence": {**_CARRIER_PRESENCE, "claim_number": "pending_annotation"}})
+    assert "claim_number" not in other
+    populated_empty = gt_from_v10_row({**V10_CARRIER, "presence": {**_CARRIER_PRESENCE, "adjuster": "populated"}})
+    assert "adjuster" not in populated_empty
+
+
+def test_v10_carrier_row_scores_like_the_legacy_row_without_a_subclass_keyword():
+    """A spurious adjuster / denial_reasons is penalised on both shapes; the GT's own subclass marks the CMS row."""
+    suite = dojo.get_suite("insurance_claims_specialist")
+    legacy = suite.score_document(dict(LEGACY_CARRIER), dict(SPURIOUS_CARRIER))
+    v10 = suite.score_document(gt_from_v10_row(V10_CARRIER), dict(SPURIOUS_CARRIER))
+    assert legacy["extraction_precision"] < 1.0
+    assert v10["extraction_precision"] == legacy["extraction_precision"]
+    assert v10["extraction"].field_scores == legacy["extraction"].field_scores
+    # The GT dict's own expected_subclass derives the CMS table (no ``expected_subclass=`` keyword).
+    named = suite.score_document(gt_from_v10_row(V10_CARRIER), {**SPURIOUS_CARRIER, "cms_source_table": "carrier"})
+    assert named["extraction"].field_scores["cms_source_table"] == 1.0
