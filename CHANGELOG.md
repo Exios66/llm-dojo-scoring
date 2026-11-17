@@ -7,6 +7,13 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+- **Release notes list squash-merged PRs.** `scripts/release.py:prs_in_range` collected PRs only
+  from `git log --merges` and matched only `Merge pull request #N from` subjects, so a
+  squash-merged PR (one parent, subject `title (#N)`) vanished from the notes' PR list. It now
+  also takes single-parent commits whose subject ends in `(#N)` (offline) and looks every commit
+  in the range up by `mergeCommit.oid` (online). Results are de-duplicated by number and stay
+  newest first; merge-commit detection is unchanged, and a range holding only squash commits no
+  longer returns early. Tests build a temporary git repo (`test_prs_in_range_*`).
 - **CUAD presence credits `agreement_date` and `expiration_date`, for recall only (#167).**
   `pipeline.sandbox_scoring.FIELD_CATEGORY` maps them to `Agreement Date` / `Expiration Date`.
   A filled date field earns the category when CUAD labels it. Where CUAD leaves it unlabelled,

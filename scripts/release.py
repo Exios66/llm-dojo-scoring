@@ -73,6 +73,8 @@ COMPAT_VERSION_RE = re.compile(
     r'(assert dojo\.__version__\s*==\s*")(?P<version>\d+\.\d+\.\d+)(")'
 )
 PR_MERGE_RE = re.compile(r"\bMerge pull request #(?P<num>\d+) from")
+# A squash- or rebase-merge commit keeps the PR title and GitHub appends ``(#N)``.
+PR_SQUASH_RE = re.compile(r"\(#(?P<num>\d+)\)\s*$")
 DMR_RE = re.compile(r"\b(?:DMR|DOJO)-\d{2,}\b")
 
 
@@ -591,29 +593,41 @@ def commits_in_range(prev_tag: str | None, end_ref: str) -> list[dict]:
 
 
 def prs_in_range(prev_tag: str | None, end_ref: str, *, net: bool) -> list[dict]:
-    """List the pull requests merged between the previous tag and ``end_ref`` (GitHub lookup when ``net``)."""
-    if prev_tag:
-        merge_log = git("log", "--oneline", "--merges", f"{prev_tag}..{end_ref}")
-    else:
-        merge_log = git("log", "--oneline", "--merges", end_ref)
-    merge_shas = [line.split()[0] for line in merge_log.splitlines() if line.strip()]
-    if not merge_shas:
+    """List the pull requests merged between the previous tag and ``end_ref`` (GitHub lookup when ``net``).
+
+    Merge-commit PRs (``Merge pull request #N from``) and squash-merged PRs (a
+    single-parent commit whose subject ends in ``(#N)``) both count. Results are
+    de-duplicated by number and keep ``git log`` order (newest first).
+    """
+    span = f"{prev_tag}..{end_ref}" if prev_tag else end_ref
+    log = git("log", "--format=%H%x1f%P%x1f%s", span)
+    commits: list[tuple[str, str]] = []  # (full sha, PR number as offline-detected or "")
+    for line in log.splitlines():
+        if not line.strip():
+            continue
+        sha, parents, subject = (line.split("\x1f", 2) + ["", ""])[:3]
+        pattern = PR_MERGE_RE if len(parents.split()) > 1 else PR_SQUASH_RE
+        match = pattern.search(subject)
+        commits.append((sha, match["num"] if match else ""))
+    if not commits:
         return []
 
     if not net:
-        prs = []
-        for line in merge_log.splitlines():
-            match = PR_MERGE_RE.search(line)
-            if match:
-                prs.append(
-                    {
-                        "number": int(match["num"]),
-                        "title": "(offline)",
-                        "merged_at": "",
-                        "url": f"{REPO_URL}/pull/{match['num']}",
-                    }
-                )
-        return prs
+        offline: list[dict] = []
+        seen_numbers: set[int] = set()
+        for _sha, num in commits:
+            if not num or int(num) in seen_numbers:
+                continue
+            seen_numbers.add(int(num))
+            offline.append(
+                {
+                    "number": int(num),
+                    "title": "(offline)",
+                    "merged_at": "",
+                    "url": f"{REPO_URL}/pull/{num}",
+                }
+            )
+        return offline
 
     merged = gh_json(
         "pr",
@@ -634,9 +648,8 @@ def prs_in_range(prev_tag: str | None, end_ref: str, *, net: bool) -> list[dict]
     }
     window: list[dict] = []
     seen: set[int] = set()
-    for sha in merge_shas:
-        full = git("rev-parse", sha).strip()
-        pr = by_sha.get(full)
+    for sha, _num in commits:
+        pr = by_sha.get(sha)
         if not pr or pr["number"] in seen:
             continue
         seen.add(pr["number"])
