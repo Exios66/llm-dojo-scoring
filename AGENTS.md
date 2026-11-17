@@ -150,6 +150,9 @@ suite. CI runs `--check`. A diff means a score moved:
   matches.
 - `cut --apply`, `publish`, `edit` and `assets` need the user's explicit go-ahead. Never
   force-push, delete or move tags, or amend release commits.
+- Feature and fix PRs are squash-merged into one coherent commit; branch-sync and release
+  PRs keep a merge commit. Pin consumers to the merged commit, never to a PR-branch
+  commit (`.claude/rules/pr-flow.md` step 7).
 - After a release: `llm-mailroom` bumps its pin (`src/scripts/bump_dojo_scoring.py`, its
   `/dojo-bump` skill), the sandbox refreshes its vendor snapshot (`/vendor-sync`). Full
   steps: `docs/guides/RELEASES.md` and `.claude/skills/cross-repo-bump/SKILL.md`.
