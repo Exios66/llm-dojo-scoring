@@ -180,7 +180,7 @@ development pushes.
 
 | Repo | How it consumes the Dojo | What a change here obliges |
 |:---|:---|:---|
-| llm-mailroom | git pin (40-hex SHA) in `pyproject.toml` + fallback snapshot `vendor/llm-dojo-scoring/`; daily `bump-dojo-scoring.yml` opens bump PRs | a release or interim SHA, then its `bump_dojo_scoring.py`; it verifies against the real pinned revision |
+| llm-mailroom | git pin (40-hex SHA) in `pyproject.toml` + fallback snapshot `vendor/llm-dojo-scoring/`; bumped by hand with `bump_dojo_scoring.py` | a release or interim SHA, then its `bump_dojo_scoring.py`; it verifies against the real pinned revision |
 | local-mailroom-sandbox | tracked snapshot under `vendor/llm-dojo-scoring`, pinned in `_VENDOR_PINS` | its `/vendor-sync` after the release is merged |
 | eval-environment | imports suites and the frozen v1 prompt lineage | keep `prompts/` lineage stable; note changes in the PR |
 | mailroom-ml | reads the Dojo taxonomy | never redefine taxonomy there |
