@@ -134,6 +134,22 @@ def expected_cms_source_table(doc_class: str | None, expected: Any) -> str | Non
     return token
 
 
+def is_unstated_cms_marker(key: str, cms_table: str | None, predicted: Any) -> bool:
+    """True for a CMS row's ``cms_source_table`` that the prediction does not state (#132).
+
+    The marker is derived from the row's subclass, not labelled in the ground truth. A
+    prediction states a table either in ``cms_source_table`` or, as the frozen insurance
+    prompt does, as a table token on ``claim_type``; both are scored. A prediction that
+    states no table at all (``claim_type`` holds the product line) is neither a miss nor a
+    hit: the marker is not scored for it.
+    """
+    if key != "cms_source_table" or cms_table is None or not isinstance(predicted, dict):
+        return False
+    if not is_empty_value(parse_json_container(predicted.get(key))):
+        return False
+    return str(predicted.get("claim_type") or "").strip().lower() not in CMS_CLAIM_TYPES
+
+
 def get_ambiguous_band() -> tuple[float, float]:
     """Return the configured global half-open judge-review score band."""
     return get_settings().field_scoring.ambiguous_band
@@ -506,15 +522,21 @@ def _parse_money(text) -> Optional[float]:
     if not isinstance(text, str):
         return None
     s = text.strip().upper().replace(",", "").replace("$", "").replace("€", "").replace("£", "")
+    # Currency words come off first, so "1.2M USD" and "USD 1.2M" reach the
+    # K/M/B suffix check as "1.2M" (#133).
+    for tail in (" USD", " DOLLARS", " DOLLAR", " EUROS", " EUR"):
+        if s.endswith(tail):
+            s = s[: -len(tail)].rstrip()
+            break
+    for head in ("USD ", "US ", "EUR "):
+        if s.startswith(head):
+            s = s[len(head):].lstrip()
+            break
     multiplier = 1.0
     for suffix, m in (("M", 1e6), ("K", 1e3), ("B", 1e9)):
         if s.endswith(suffix):
             multiplier = m
             s = s[:-1].rstrip()
-            break
-    for tail in (" USD", " DOLLARS", " EUROS"):
-        if s.endswith(tail):
-            s = s[: -len(tail)].rstrip()
             break
     if not s:
         return None
@@ -841,8 +863,9 @@ def _date_is_blank_or_bare_label(exp: str) -> bool:
 def _date_phrase_contained(container: str, target: str) -> bool:
     """True when a date phrase stated in ``target`` appears in ``container``."""
     def norm(text: str) -> str:
-        """Lowercase a date phrase and collapse non-alphanumeric separators to spaces."""
-        return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", str(text).lower())).strip()
+        """Lowercase a date phrase, drop ordinal suffixes ("18th" -> "18") and collapse separators."""
+        ordinal_free = re.sub(r"(\d)(?:st|nd|rd|th)\b", r"\1", str(text).lower())
+        return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", ordinal_free)).strip()
 
     nc = norm(container)
     if not nc:
@@ -851,8 +874,16 @@ def _date_phrase_contained(container: str, target: str) -> bool:
     if not target_norm:
         return False
     dt = _parse_date(target)
+    # A month name after another word makes the phrase explicit ("18 august");
+    # so does a month-first phrase that also states a number ("august 18",
+    # "august 2014"; #162). A lone month word ("may") or month-first prose
+    # ("march of") is not a date phrase.
     explicit_month = (
         any(f" {month}" in target_norm for month in _MONTH_NAMES)
+        or (
+            any(re.search(rf"\b{month}\b", target_norm) for month in _MONTH_NAMES)
+            and bool(re.search(r"\b\d+(?:st|nd|rd|th)?\b", target_norm))
+        )
         or bool(re.search(r"\b\d{4}-\d{1,2}\b", target_norm))
     )
     # Match on word boundaries, so a date is never found inside a different one
@@ -1762,6 +1793,8 @@ def score_extraction(
         if key in NEVER_SCORED_FIELDS:
             continue
         if key in RETIRED_PROMPT_KEYS and key not in field_types:
+            continue
+        if is_unstated_cms_marker(key, cms_table, predicted):
             continue
         exp_value = parse_json_container(exp_value)
         if is_empty_value(exp_value):

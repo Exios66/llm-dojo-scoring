@@ -214,7 +214,7 @@
             "payment_terms",
             "territory"
           ],
-          "schema_id": "contract@v9.2.1",
+          "schema_id": "contract@v9.3",
           "scorable_fields": [
             "parties",
             "effective_date",
@@ -331,7 +331,7 @@
             "signatories",
             "jurisdiction"
           ],
-          "schema_id": "corporate_record@v9.2.1",
+          "schema_id": "corporate_record@v9.3",
           "scorable_fields": [
             "entity_name",
             "record_type"
@@ -456,7 +456,7 @@
             "action_items",
             "urgency"
           ],
-          "schema_id": "correspondence@v9.2.1",
+          "schema_id": "correspondence@v9.3",
           "scorable_fields": [
             "communication_type"
           ],
@@ -622,7 +622,7 @@
           "pending_fields": [
             "claim_checklist"
           ],
-          "schema_id": "insurance_claim@v9.2.1",
+          "schema_id": "insurance_claim@v9.3",
           "scorable_fields": [
             "claim_number",
             "claim_type",
@@ -1758,7 +1758,7 @@
             "financial_advisors",
             "legal_counsel"
           ],
-          "schema_id": "merger_agreement@v9.2.1",
+          "schema_id": "merger_agreement@v9.3",
           "scorable_fields": [
             "merger_consideration"
           ],

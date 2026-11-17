@@ -221,7 +221,6 @@ def test_unknown_key_suggests_close_matches():
 @pytest.mark.parametrize(
     "key,role",
     [
-        ("correspondence_specialist_v7", "correspondence_specialist"),
         ("corporate_records_specialist_v7", "corporate_records_specialist"),
     ],
 )
@@ -236,6 +235,18 @@ def test_corrected_records_equal_production_prompts_catalog(key, role):
     # texts already end in "\n", so the digests coincide.
     assert v.text.endswith("\n")
     assert v.sha256 == rec.sha256 == _sha(rec.text)
+
+
+def test_correspondence_v7_is_unchanged_and_production_prompts_is_the_v8_candidate():
+    """``_v7`` keeps the bytes llm-mailroom pins; the catalog row moved on to the ``_v8`` candidate."""
+    v7 = get_prompt_version("correspondence_specialist_v7")
+    assert v7.sha256 == _sha(v7.text) == "2b0b81ff98920b9207627707443e2b023db39212fda5bdcba7bfbded39fa38b6"
+    assert v7.chars == 6113
+    rec = get_prompt("correspondence_specialist", family="production_prompts")
+    assert rec.source_key == "correspondence_specialist_v8"
+    assert rec.text != v7.text and rec.sha256 == _sha(rec.text)
+    with pytest.raises(KeyError):  # not minted in eval-environment yet
+        get_prompt_version("correspondence_specialist_v8")
 
 
 def test_digest_conventions_differ_for_unterminated_text():
