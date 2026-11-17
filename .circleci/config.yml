@@ -113,7 +113,12 @@ jobs:
 workflows:
   ci:
     jobs:
-      - no-session-links
+      - no-session-links:
+          filters:
+            branches:
+              ignore: gh-pages
+            tags:
+              ignore: /.*/
       - test:
           filters:
             branches:

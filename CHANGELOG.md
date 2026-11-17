@@ -5,6 +5,10 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Changed
+
+- **CI rejects leaked links.** The GitHub Actions link guard is removed (CI is CircleCI only). The new CircleCI job `no-session-links` fails when a commit or the PR description carries a claude.ai link, a `Claude-Session` trailer or a "Generated with Claude Code" footer. Commits follow the new `.gitmessage` template.
+
 ### Fixed
 
 - **Release notes list squash-merged PRs.** `scripts/release.py:prs_in_range` collected PRs only
