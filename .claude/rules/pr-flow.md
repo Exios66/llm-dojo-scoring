@@ -4,7 +4,7 @@ Bot reviewers (CodeRabbit, CodeAnt) should spend their attention on real bugs, n
 mistakes we could have caught ourselves. So **nothing is pushed for review until it has
 been vetted locally and by a fresh-context reviewer.** Run these steps in order. Steps 4
 and 5 (pushing, opening and updating a PR) happen only when the user asked for a pull
-request; otherwise stop after step 3 and report the result with its evidence. A local
+request, and step 7 (merging) only when the user asked for the merge; otherwise stop after step 3 and report the result with its evidence. A local
 commit needs no request. If the tree holds changes you did not make (the user's own
 edits), do not commit, stash or discard them: stop and ask the user how to proceed,
 because the gates below need a clean tree.
@@ -96,25 +96,33 @@ the next fresh reviewer checks for it.
 
 ## 7. Merge: one coherent commit per PR
 
+**Only when the user asks you to merge.** The orchestrator merges, never a subagent, and
+only after CI is green on the head you verified and every review thread is resolved.
+
 A PR lands on its base as **one squash commit** that describes the whole change. The
 branch's commits are working history (a fix, a review follow-up, a typo); they are not
 what `main` should read like.
 
-- **Squash-merge feature and fix PRs** (`merge_method: squash`, with `expectedHeadSha`
-  set to the head you verified). Write the squash commit yourself; do not accept the
-  default concatenation of branch messages:
-  - **title:** the PR title, as a conventional summary with the issue
-    (`fix(scoring): typed decisions are graded by their own type's score (#168)`);
+- **Squash-merge feature and fix PRs**, including a feature PR whose base is a release
+  branch. Pin the head you verified: the GitHub MCP `merge_pull_request` with
+  `merge_method: squash` and `expectedHeadSha`, or
+  `gh pr merge <n> --squash --match-head-commit <sha>`. Write the squash commit yourself;
+  do not accept the default concatenation of branch messages:
+  - **title:** the PR title, as a conventional summary that names the issue it fixes
+    (`fix(scoring): grade typed decisions by their own type's score, issue #168`);
   - **body:** a few lines on what changed and why, the `Closes #N` lines, and the
     attribution trailers. No list of WIP commit messages.
-- **Use a merge commit instead** for a branch-sync PR (for example `main` → a release
-  branch, or a release branch back to `main`) and for a release PR cut by
-  `scripts/release.py`. Squashing those rewrites shared history, so the next sync
-  conflicts and tags or pins can point at commits that are not on the branch.
-- **Pins and evidence use the merged commit.** Consumers pin a 40-hex SHA. After a squash
-  merge the branch commits are no longer on `main`, so a pin or a "Commit:" line meant to
-  last names the squash commit, never a PR-branch commit.
-- **Never rewrite pushed history to tidy it.** No force-push, no rebase or amend of pushed
+- **Use a merge commit instead** for:
+  - a branch-sync PR (`main` → a release branch such as `v0.30.0`, or back). Squashing
+    copies the commits instead of joining the histories, so the next sync conflicts;
+  - a release PR cut by `scripts/release.py`. Release PRs are merge-committed, so the
+    release commit keeps the identity `release.py` and the tag refer to
+    (`docs/guides/RELEASES.md`).
+- **Name the merged commit in anything that outlives the PR.** The PR's own "Commit:" line
+  keeps the branch head the evidence was taken on (step 5). After a squash merge that
+  commit is no longer on `main`, so consumer pins, bump-PR evidence, release notes and
+  CHANGELOG or doc references name the squash commit, never a PR-branch commit.
+- **Never rewrite pushed history to tidy it.** No force-push, rebase or amend of pushed
   commits: the squash at merge does the tidying. Commits that are **not yet pushed** may
   be folded into one commit per concern (`git reset --soft <base>`, then commit) before
   the first push.
