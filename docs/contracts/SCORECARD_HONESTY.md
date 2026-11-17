@@ -141,18 +141,16 @@ Rules:
 
 `aggregate_quality_honest(rows, doc_class=...)` adds these keys when rows carry
 `field_scores` (top level, `extraction.` or `scores.`); without `doc_class` the
-result shape is unchanged. `specialist_grid_rows` adds `headline_scope`,
-`headline_label`, `scored_fields` and `unscored_fields` **only on rows whose
-scored documents carry field data** (`field_scores` or `scored_fields`, a list,
-tuple, set or frozenset; a bare string is one field); a row without field data
-has exactly the pre-#95 key set. The class comes from `doc_class`, the
-specialist name, or `SPECIALIST_DOC_TYPES`.
+result shape is unchanged. The keys `headline_scope`, `headline_label`,
+`scored_fields` and `unscored_fields` appear in the returned dict **only when the
+input rows carry field data** (`field_scores` or `scored_fields`, a list, tuple, set or
+frozenset; a bare string is one field); rows without field data give exactly the
+pre-#95 key set. The class comes from `doc_class`, the specialist name, or
+`SPECIALIST_DOC_TYPES`.
 
-The grid report marks MAUD-only and mixed scores with `†`, partial scores with
-`‡` and unknown scores with `?`, each with a footnote naming what the score
-covers. Footnotes are keyed on (specialist, scope, label); when one specialist
-has several distinct notes each names its experiment(s), e.g.
-`‡ **correspondence** (e1, e3): ...`.
+The specialist grid report (`specialist_grid_rows`, with its `†` / `‡` / `?` score
+markers and footnotes) was removed in 0.30.0; the scope keys above remain in the
+dict `aggregate_quality_honest` returns.
 
 ## Confidence and reasoning knobs
 

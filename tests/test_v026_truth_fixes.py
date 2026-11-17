@@ -85,8 +85,10 @@ def test_cms_source_table_is_scored_orthogonally():
     assert both.field_scores == {"claim_type": 1.0, "cms_source_table": 1.0}
     wrong = score_extraction("insurance_claim", {}, {"claim_type": "outpatient"}, exp)
     assert wrong.field_scores == {"claim_type": 0.0, "cms_source_table": 0.0}
+    # #132: a prediction that states no table (the product line on claim_type, no
+    # cms_source_table) is not scored on the subclass-derived marker.
     health = score_extraction("insurance_claim", {}, {"claim_type": "health"}, exp)
-    assert health.field_scores == {"claim_type": 1.0, "cms_source_table": 0.0}
+    assert health.field_scores == {"claim_type": 1.0}
     # A non-CMS row (no cms_source_table expectation) keeps generic name scoring.
     plain = score_extraction("insurance_claim", {}, {"claim_type": "auto"}, {"claim_type": "auto"})
     assert plain.field_scores == {"claim_type": 1.0}
