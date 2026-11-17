@@ -28,9 +28,9 @@ While working:
 - Fix bugs test-first: write the regression test, watch it fail, then fix.
 - New script tests load scripts with `tests/conftest.py:load_script(name)`.
 - Never push, tag, open PRs, comment on GitHub or run `dojo-sync` against hosted services.
-- Commit locally, one concern per commit, with a message that says what and why. Do not
-  squash, rebase or amend: the orchestrator squash-merges the PR
-  (`.claude/rules/pr-flow.md` step 7).
+- Commit locally, one concern per commit, with a message that says what and why. Never
+  rewrite pushed history; leave folding to the orchestrator, which merges the PR as one
+  coherent commit (`.claude/rules/pr-flow.md` step 7).
 
 Before you report, run the verification gates that match your change (see `CLAUDE.md`)
 on your final edit.
