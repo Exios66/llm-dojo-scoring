@@ -17,25 +17,35 @@ prompts:
   priming: []
 - agent: contracts_specialist
   family: production
-  version: v1
+  version: v2
   kind: llm
   metrics_bundle: extraction
   doc_bundle: contract
-  source_repo: llm-mailroom
-  source_key: frozen_v1
+  source_repo: llm-dojo-scoring
+  source_key: production_v2
   source_commit: 19203eac07f67c215f50af2fd498560ce195adae
   template: contracts_specialist.production.md
+  notes: 'Production v2, authored here: llm-mailroom frozen_v1 plus every field the registry scores
+    (schemas/doc_classes.py). source_commit is the llm-mailroom commit of the frozen_v1 base it derives
+    from, not a commit of this repo. The production_prompts v1 row and the lineage JSON keep the frozen
+    bytes. llm-mailroom still serves frozen_v1 until it adopts v2; scripts/sync_production_prompts.py
+    skips this row.'
   priming: []
 - agent: merger_agreement_specialist
   family: production
-  version: v1
+  version: v2
   kind: llm
   metrics_bundle: extraction
   doc_bundle: merger_agreement
-  source_repo: llm-mailroom
-  source_key: frozen_v1
+  source_repo: llm-dojo-scoring
+  source_key: production_v2
   source_commit: 19203eac07f67c215f50af2fd498560ce195adae
   template: merger_agreement_specialist.production.md
+  notes: 'Production v2, authored here: llm-mailroom frozen_v1 plus every field the registry scores
+    (schemas/doc_classes.py). source_commit is the llm-mailroom commit of the frozen_v1 base it derives
+    from, not a commit of this repo. The production_prompts v1 row and the lineage JSON keep the frozen
+    bytes. llm-mailroom still serves frozen_v1 until it adopts v2; scripts/sync_production_prompts.py
+    skips this row.'
   priming: []
 - agent: corporate_records_specialist
   family: production
@@ -560,12 +570,15 @@ prompts:
   metrics_bundle: extraction
   doc_bundle: correspondence
   source_repo: LLM-Mailroom-Services/eval-environment
-  source_key: correspondence_specialist_v7
+  source_key: correspondence_specialist_v8
   template: correspondence_specialist.production_prompts.md
-  sha256: 2b0b81ff98920b9207627707443e2b023db39212fda5bdcba7bfbded39fa38b6
-  notes: 'Byte-identical to eval-environment mutation correspondence_specialist_v7
-    (2026-10-16, #29), the field-guidance correction of frozen v1 (mailroom-dataset-v1,
-    2026-09-26; v1 sha256 eab63b5a…); sandbox stem correspondence_specialist_simplified.'
+  sha256: e3bc920d5a99c951ace99e4a726a8cbd85a135ebf0fb81408ec8654c774b4000
+  notes: 'Candidate correspondence_specialist_v8 (key pending its eval-environment mint):
+    correspondence_specialist_v7 (2026-10-16, #29; sha256 2b0b81ff…, still served by the
+    production row that llm-mailroom pins) with only the communication_type line changed
+    to type the content, not the carrier (llm-mailroom#269). Field-guidance correction of
+    frozen v1 (mailroom-dataset-v1, 2026-09-26; v1 sha256 eab63b5a…); sandbox stem
+    correspondence_specialist_simplified.'
   priming: []
 - agent: insurance_claims_specialist
   family: production_prompts

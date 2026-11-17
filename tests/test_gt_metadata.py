@@ -615,10 +615,10 @@ def test_pending_annotation_stale_labels_are_never_scored():
         "maud_clause_labels": "{}",
     }
     scoped = scoring_gt_fields(gt, field_types=suite.field_types, drop_unmapped=True)
-    # Annotation/presence inputs never survive scoping; pending schema fields
-    # are blanked even when a stale value is attached.
+    # Annotation/presence inputs never survive scoping; a pending schema field
+    # is unlabelled, so it is dropped even when a stale value is attached.
     assert "cuad_clause_labels" not in scoped
-    assert scoped["governing_law"] == ""
+    assert "governing_law" not in scoped
     assert derive_presence_from_gt(parse_gt_fields(gt)) is None
     out = suite.score_document(gt, {"cuad_clauses": []})
     assert out["status"] == "unscorable"
@@ -682,9 +682,10 @@ def test_absent_status_suppresses_stale_fields_and_presence_without_mutation(sta
         GT_PRESENCE_KEY: json.dumps(presence) if stringified else presence,
     }
     original = deepcopy(fields)
-    assert scoring_gt_fields(fields, field_types={"governing_law": "name"}) == {
-        "governing_law": "",
-    }
+    # Labelled-empty statuses keep the key blank; a pending field is dropped
+    # (unlabelled), so field-micro excludes it on both sides.
+    expected = {} if status == "pending_annotation" else {"governing_law": ""}
+    assert scoring_gt_fields(fields, field_types={"governing_law": "name"}) == expected
     assert derive_presence_from_gt(fields) is None
     assert fields == original
 
