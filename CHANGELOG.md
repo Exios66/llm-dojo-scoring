@@ -7,6 +7,14 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+- **CUAD presence credits `agreement_date` and `expiration_date`, for recall only (#167).**
+  `pipeline.sandbox_scoring.FIELD_CATEGORY` maps them to `Agreement Date` / `Expiration Date`.
+  A filled date field earns the category when CUAD labels it. Where CUAD leaves it unlabelled,
+  the field is not a false positive and `field_value_ok` returns `None`, because CUAD often
+  leaves a printed date unannotated. These are listed in the new `RECALL_ONLY_FIELDS`. A
+  `cuad_clauses` line, or `term_length` naming the category, still counts both ways.
+  On the sandbox's slice-100 r2 contracts, folding the dates in without this guard turned a
+  correct extraction into a false positive (1.0 → 0.80). With the guard, no contract score falls.
 - **A typed decision is never graded by an untyped score when its class is missing (#168).**
   In `scoring/decision_lanes.py`, when the graded attempt had a typed extraction of another
   class and an untyped one beside it, a judge or arbiter decision naming a third class was
