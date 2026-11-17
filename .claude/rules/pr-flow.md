@@ -4,8 +4,9 @@ Bot reviewers (CodeRabbit, CodeAnt) should spend their attention on real bugs, n
 mistakes we could have caught ourselves. So **nothing is pushed for review until it has
 been vetted locally and by a fresh-context reviewer.** Run these steps in order. Steps 4
 and 5 (pushing, opening and updating a PR) happen only when the user asked for a pull
-request, and step 7 (merging) only when the user asked for the merge; otherwise stop after step 3 and report the result with its evidence. A local
-commit needs no request. If the tree holds changes you did not make (the user's own
+request; otherwise stop after step 3 and report the result with its evidence. Step 7
+(merging) happens only when the user asked for the merge. A local commit needs no
+request. If the tree holds changes you did not make (the user's own
 edits), do not commit, stash or discard them: stop and ask the user how to proceed,
 because the gates below need a clean tree.
 
@@ -118,6 +119,9 @@ what `main` should read like.
   - a release PR cut by `scripts/release.py`. Release PRs are merge-committed, so the
     release commit keeps the identity `release.py` and the tag refer to
     (`docs/guides/RELEASES.md`).
+- **Release notes list both kinds.** `scripts/release.py` collects merge-commit PRs
+  (`Merge pull request #N from …`) and squash commits (`title (#N)`), so keep the `(#N)`
+  suffix GitHub adds to the squash title.
 - **Name the merged commit in anything that outlives the PR.** The PR's own "Commit:" line
   keeps the branch head the evidence was taken on (step 5). After a squash merge that
   commit is no longer on `main`, so consumer pins, bump-PR evidence, release notes and
