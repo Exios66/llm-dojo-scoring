@@ -284,3 +284,30 @@ def test_v10_carrier_row_scores_like_the_legacy_row_without_a_subclass_keyword()
     # The GT dict's own expected_subclass derives the CMS table (no ``expected_subclass=`` keyword).
     named = suite.score_document(gt_from_v10_row(V10_CARRIER), {**SPURIOUS_CARRIER, "cms_source_table": "carrier"})
     assert named["extraction"].field_scores["cms_source_table"] == 1.0
+
+
+@pytest.mark.parametrize("field", ["intent", "subject_matter", "keywords"])
+def test_corporate_not_applicable_covers_the_semantic_core_fields(field):
+    """``not_applicable`` leaves both sides for intent, subject_matter and keywords too (#127)."""
+    gt = {"entity_name": "Acme", "gt_presence": json.dumps({"entity_name": "populated", field: "not_applicable"})}
+    expected = {"entity_name": "Acme", field: ""}
+    predicted = {"entity_name": "Acme", field: ["acme"] if field == "keywords" else "filled in"}
+    exp, pred, dropped = align_unlabeled("bylaws", gt, expected, predicted)
+    assert field not in exp and field not in pred
+    assert field not in dropped and field not in unlabeled_fields("bylaws", gt)
+
+
+def test_corporate_not_applicable_semantic_trio_is_not_a_false_positive():
+    """A filled intent / subject_matter / keywords on ``not_applicable`` gold no longer costs precision."""
+    suite = dojo.get_suite("corporate_records_specialist")
+    trio = ("intent", "subject_matter", "keywords")
+    gt = {
+        "entity_name": "Acme Corp", "record_type": "bylaws", "intent": "", "subject_matter": "", "keywords": "[]",
+        "gt_presence": json.dumps({"entity_name": "populated", "record_type": "populated",
+                                   **{f: "not_applicable" for f in trio}}),
+        "expected_subclass": "bylaws",
+    }
+    pred = {"entity_name": "Acme Corp", "record_type": "bylaws", "intent": "governance",
+            "subject_matter": "Bylaws of Acme", "keywords": ["acme"]}
+    out = suite.score_document(dict(gt), pred)
+    assert out["extraction_precision"] == 1.0 and out["extraction_recall"] == 1.0

@@ -7,6 +7,14 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+- **Corporate `not_applicable` covers every core field (#127).** `align_unlabeled` dropped a
+  `not_applicable` field from both sides for `ENTITY_CORE_FIELDS` only, so a filled `intent`,
+  `subject_matter` or `keywords` on gold marked `not_applicable` was a spurious fill (corporate
+  bylaws row with all three `not_applicable`, all three predicted: `extraction_precision` 0.4;
+  now 1.0). It now covers all of `CORE_FIELDS`. `unlabeled_fields` is unchanged: it only lists
+  entity-core and extension fields, and never reported the semantic trio. **Consumer impact:**
+  corporate-record precision can rise in llm-mailroom and the sandbox on rows that mark the trio
+  `not_applicable`; the golden cases do not move.
 - **Contract parse-compat keys are not scored on the direct path (#127).** `merger_consideration`
   and `maud_clauses` are accepted on a contract but never scored, as the schema-adherence module
   already treats them; `score_extraction("contract", ...)` and `extraction_binary_metrics` still

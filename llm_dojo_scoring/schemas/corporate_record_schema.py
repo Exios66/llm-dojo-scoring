@@ -495,8 +495,9 @@ def align_unlabeled(
         if not _labeled(presence, parsed, e.key)
     }
     # ``not_applicable`` core fields leave both sides too (same rule as the
-    # extension entities above); they are not reported as unlabeled.
-    stray |= {f for f in ENTITY_CORE_FIELDS if presence.get(f) == _NOT_APPLICABLE}
+    # extension entities above), every core field including intent, subject_matter
+    # and keywords; they are not reported as unlabeled.
+    stray |= {f for f in CORE_FIELDS if presence.get(f) == _NOT_APPLICABLE}
     if not dropped and not (stray & (set(predicted) | set(expected))):
         return dict(expected), dict(predicted), ()
     gone = set(dropped) | stray
