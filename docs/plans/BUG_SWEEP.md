@@ -73,15 +73,21 @@ scores needs a CHANGELOG comparability note and a `score_changelog` entry.
   - plain system Python lacks `structlog`, so `import llm_dojo_scoring` fails outside `uv`;
   - ~~`test_release_tools` fails in shallow clones without tags~~ (fixed: the notes test
     skips when the release tags are missing);
-  - `scripts/audit_consumer_surface.py` pins developer checkout paths and exits 2 when
-    they are missing.
+  - ~~`scripts/audit_consumer_surface.py` pins developer checkout paths and exits 2 when
+    they are missing~~ (fixed: checkouts default to sibling directories and `--root
+    CODE=PATH` / `--only CODES` locate and rescan just the ones you have; the fixture
+    records repo code and commit, never a path; exit 2 only for a *requested* checkout).
 - [ ] **Repo-owned CI entry point.** Build one (e.g. `scripts/ci.py`) that:
   - builds the wheel into a clean venv from `uv.lock`;
   - runs a fast smoke/contract tier and an offline-by-default full tier;
   - emits a machine-readable summary;
   - runs locally, in a container, or from a pre-push hook.
-- [ ] **Suite bloat.** Profile it (`--durations`, tests per file) and demote pinning-only
-  tests (doc-table lockstep, docstring coverage) out of the smoke tier.
+  - *(partly done: `scripts/ci.py --tier smoke|full --json PATH` runs the gates in CI's order and
+    CircleCI calls it; the clean-venv wheel build is still open.)*
+- [x] **Suite bloat.** Profile it (`--durations`, tests per file) and demote pinning-only
+  tests (doc-table lockstep, docstring coverage) out of the smoke tier. *(Profiled: 3,688 tests in
+  about 21 s, slowest test 1.2 s, so runtime is not the problem; the smoke tier runs only the
+  contract tests.)*
 
 ## Process notes
 
