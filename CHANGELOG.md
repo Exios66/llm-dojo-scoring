@@ -7,7 +7,7 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Changed
 
-- **CI rejects leaked links.** The GitHub Actions link guard is removed (CI is CircleCI only). The new CircleCI job `no-session-links` fails when a commit or the PR description carries a claude.ai link, a `Claude-Session` trailer or a "Generated with Claude Code" footer. Commits follow the new `.gitmessage` template.
+- **CI rejects leaked links.** The GitHub Actions link guard is removed (CI is CircleCI only). The new CircleCI job `no-session-links` fails when a commit carries a claude.ai session, project, chat, artifact or share link, a `Claude-Session` trailer or a "Generated with Claude Code" footer. It also checks the PR title and description, warning and skipping that part if the GitHub API is unreachable. Commits follow the new `.gitmessage` template.
 
 ### Fixed
 
