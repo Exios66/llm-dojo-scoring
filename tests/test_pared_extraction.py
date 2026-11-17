@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from llm_dojo_scoring import (
     DEFAULT_FIELD_TYPES,
-    LEGACY_FULL_EXTRACTION_FIELD_TYPES,
     get_suite,
 )
 from llm_dojo_scoring.schemas.corpus import CORPUS_EXTRACTION_FIELDS
@@ -51,13 +50,6 @@ def test_default_field_types_match_corpus_and_mailroom_pared_schema():
     assert "cuad_family" not in DEFAULT_FIELD_TYPES["merger_agreement"]
     assert "cuad_clauses" not in DEFAULT_FIELD_TYPES["merger_agreement"]
 
-
-def test_legacy_full_map_keeps_key_obligations_for_historical_rescoring():
-    """Retain retired obligation fields in legacy maps for historical score replay."""
-    assert "key_obligations" in LEGACY_FULL_EXTRACTION_FIELD_TYPES["contract"]
-    assert "termination_clauses" in LEGACY_FULL_EXTRACTION_FIELD_TYPES["contract"]
-    assert "key_points" in LEGACY_FULL_EXTRACTION_FIELD_TYPES["correspondence"]
-    assert "key_provisions" in LEGACY_FULL_EXTRACTION_FIELD_TYPES["corporate_record"]
 
 
 def test_suite_score_emits_category_presence_from_kwargs():

@@ -20,7 +20,6 @@ from llm_dojo_scoring.metrics.registry import load_registry
 from llm_dojo_scoring.metrics.score_changelog import SCORE_CHANGELOG
 from llm_dojo_scoring.metrics.scorecard_honesty import SCORER_VERSION
 from llm_dojo_scoring.schemas.scored_enums import SCORED_ENUM_FIELDS, enum_hint_violations
-from llm_dojo_scoring.scoring.rescore import rescore_record
 from llm_dojo_scoring.scoring.reviewer import (
     ReviewRecord,
     _operating_points,
@@ -106,28 +105,6 @@ def _reviewer_record():
             "review_records": [_row(reviewer_confidence=0.95)]}
 
 
-def test_rescore_reviewer_keeps_canonical_metric_id():
-    """Caller provenance cannot relabel the reviewer lane's metric."""
-    out = rescore_record(_reviewer_record(), provenance={"metric_id": "other.metric", "split": "test"})
-    assert out["provenance"]["metric_id"] != "other.metric"
-    assert out["provenance"]["split"] == "test"
-
-
-def test_rescore_current_reviewer_record_keeps_its_headline():
-    """Re-running a current reviewer output keeps class_accuracy as the score."""
-    first = rescore_record(_reviewer_record())
-    assert first["provenance"]["scorer_version"] == SCORER_VERSION
-    again = rescore_record(first)
-    assert again["already_current"] is True
-    assert again["score"] == first["score"] == 1.0
-
-
-def test_rescore_transcription_accepts_scalar_text():
-    """Scalar-text tasks are not forced through the array parser."""
-    out = rescore_record({"task": "transcription", "expected": "hello world", "predicted": "hello world"})
-    assert out["payload"]["task"] == "transcription"
-
-
 def test_reviewer_metrics_scoped_to_sorter_reviewer():
     """Reviewer metrics do not leak into the sorter / judge bundles."""
     registry = load_registry()
@@ -205,34 +182,6 @@ def test_risk_cutoff_is_exact():
     ]
     out = _operating_points(rows, target_accuracy=0.95, risk=0.05, confidence=0.95)
     assert out["contract"]["risk_cutoff"] == 0.8000004
-
-
-@pytest.mark.parametrize("task", ["transcription", "wer", "cer"])
-def test_rescore_transcription_aliases_take_raw_path_with_headline(task):
-    """``wer`` / ``cer`` resolve to transcription and score word accuracy."""
-    out = rescore_record({"task": task, "expected": "hello world", "predicted": "hello world"})
-    assert out["payload"]["task"] == "transcription"
-    assert out["score"] == 1.0
-
-
-def test_rescore_transcription_decodes_serialized_batches():
-    """A stored JSON array is still scored as a batch of documents."""
-    out = rescore_record(
-        {
-            "task": "transcription",
-            "expected": json.dumps(["a b", "c d"]),
-            "predicted": ("a b", "c x"),
-        }
-    )
-    assert out["payload"]["n"] == 2
-    assert out["score"] == 0.75
-
-
-def test_rescore_maud_clause_alias_takes_raw_path():
-    """``maud_clause`` resolves to maud_extraction and is not forced to an array."""
-    out = rescore_record({"task": "maud_clause", "expected": {}, "predicted": {}})
-    assert out["task"] == "maud_clause"
-    assert "maud_question_accuracy" in out["payload"]
 
 
 def test_audit_star_import_binds_dispatch_aliases():

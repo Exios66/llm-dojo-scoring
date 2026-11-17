@@ -3,6 +3,7 @@
 - Live extraction schemas (five mailroom-dataset classes): [`EXTRACTION_SCHEMAS.md`](../schemas/EXTRACTION_SCHEMAS.md)
 - Archive / unified scoring block: [`ARCHIVE_SCORING.md`](../contracts/ARCHIVE_SCORING.md)
 - MAUD GT, format vs extraction, completion and cost: [`SCORECARD_HONESTY.md`](../contracts/SCORECARD_HONESTY.md)
+- Merger MAUD labels as extraction gold: [`EXTRACTION_SCHEMAS.md`](../schemas/EXTRACTION_SCHEMAS.md) (`maud_schema.hub_merger_expected_fields`)
 - Headline scope (MAUD-only merger, partial correspondence): [`SCORECARD_HONESTY.md`](../contracts/SCORECARD_HONESTY.md#headline-scope-which-fields-a-class-score-covers-95)
 - Metric identity: [`METRIC_IDS.md`](../contracts/METRIC_IDS.md)
 - Controlled `intent` labels (`label` field type): `llm_dojo_scoring/schemas/intents.py`
@@ -288,7 +289,7 @@ Field-micro F1 over (field, value) events (ACE / CoNLL / SemEval slot filling)
 - **ground_truth:** `required`
 - **units:** `float[0,1]` · **aggregation:** `mean`
 - **citation:** ACE / CoNLL / SemEval slot filling; TP requires typed score ≥ 1.0. F1 is van Rijsbergen β=1.
-- **inclusion:** Skipped when expected is empty/null. Empty GT field values are not FN. List F1 is None if no list fields.
+- **inclusion:** Skipped when expected is empty/null. Empty GT field values are not FN. List F1 is None if no list fields. A schema field the GT does not label is excluded on both sides (a value there is not an FP); with no labelled field the suite reports P/R/F1/F2 as null.
 
 ### `extraction_f2` (T0)
 
