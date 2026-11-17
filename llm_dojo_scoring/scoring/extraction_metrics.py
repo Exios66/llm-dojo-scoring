@@ -30,6 +30,7 @@ from .field_scoring import (
     expected_cms_source_table,
     is_unstated_cms_marker,
     NEVER_SCORED_FIELDS,
+    is_unscored_parse_compat,
     RETIRED_PROMPT_KEYS,
     ExtractionScoreResult,
     score_extraction,
@@ -151,6 +152,8 @@ def extraction_binary_metrics(
             name in RETIRED_PROMPT_KEYS and name not in types
         ):
             continue
+        if is_unscored_parse_compat(doc_class, name):
+            continue
         if is_unstated_cms_marker(name, cms_table, predicted):
             continue
         if _is_empty(exp_val):
@@ -177,6 +180,8 @@ def extraction_binary_metrics(
         if key in NEVER_SCORED_FIELDS or (
             key in RETIRED_PROMPT_KEYS and key not in types
         ):
+            continue
+        if is_unscored_parse_compat(doc_class, key):
             continue
         # A schema field the ground truth does not label is excluded on both
         # sides (it is not in ``result.field_scores`` either); only an

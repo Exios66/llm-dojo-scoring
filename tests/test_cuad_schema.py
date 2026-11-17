@@ -507,3 +507,32 @@ def test_json_schema_rejects_v1_parse_compat_keys():
     schema = cuad_json_schema()
     assert not {f.name for f in CONTRACT_PARSE_COMPAT_FIELDS} & set(schema["properties"])
     assert _validate(_gt_shaped(merger_consideration=None), schema) != []
+
+
+def test_direct_contract_scoring_ignores_the_parse_compat_keys():
+    """merger_consideration / maud_clauses are never scored on a contract, on the direct path too (#127)."""
+    from llm_dojo_scoring.scoring.extraction_metrics import extraction_binary_metrics
+    from llm_dojo_scoring.scoring.field_scoring import score_extraction
+
+    types = DEFAULT_FIELD_TYPES["contract"]
+    exp = {"document_name": "MSA", "merger_consideration": "all_cash", "maud_clauses": ["No-Shop: Yes"]}
+    pred = {"document_name": "MSA"}
+    result = score_extraction("contract", types, pred, exp)
+    assert result.field_scores == {"document_name": 1.0}
+    assert result.overall_score == 1.0
+    metrics = extraction_binary_metrics(exp, pred, field_types=types, doc_class="contract")
+    assert (metrics["tp"], metrics["fn"], metrics["fp"]) == (1, 0, 0)
+    # A model that still emits the v1 keys is not penalised for them either.
+    emitted = extraction_binary_metrics(
+        exp, {**pred, "merger_consideration": "all_cash"}, field_types=types, doc_class="contract"
+    )
+    assert emitted["fp"] == 0
+
+
+def test_parse_compat_keys_still_score_on_a_merger_agreement():
+    """The exclusion is contract-only: a merger agreement scores its own merger_consideration."""
+    from llm_dojo_scoring.scoring.field_scoring import score_extraction
+
+    types = {"merger_consideration": "label"}
+    result = score_extraction("merger_agreement", types, {}, {"merger_consideration": "all_cash"})
+    assert result.field_scores == {"merger_consideration": 0.0}

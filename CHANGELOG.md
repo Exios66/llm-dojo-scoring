@@ -7,6 +7,15 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+- **Contract parse-compat keys are not scored on the direct path (#127).** `merger_consideration`
+  and `maud_clauses` are accepted on a contract but never scored, as the schema-adherence module
+  already treats them; `score_extraction("contract", ...)` and `extraction_binary_metrics` still
+  scored them when gold carried one (`{"document_name": 1.0, "merger_consideration": 0.0}`, overall
+  0.5), and counted a predicted one as a false positive. Both now skip them on `doc_class ==
+  "contract"`; a merger agreement still scores them. **Consumer impact:** direct `score_extraction`
+  callers with v1-shaped contract gold see the zero-scored key and the false positive disappear
+  (llm-mailroom, the sandbox); `score_document` already hid this through GT scoping, and the
+  golden cases do not move.
 - **A v10 CMS row scores like its legacy row (#127).** `gt_from_v10_row` dropped a null
   `adjuster` or empty `denial_reasons` even when the row's `presence` marked it
   `schema_documented_absence`, so a stated adjuster or denial reason was not a false positive

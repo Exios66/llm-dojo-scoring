@@ -45,6 +45,7 @@ import structlog
 
 from ..config import get_settings
 from ..schemas.corpus import CMS_DOCUMENTED_ABSENT_FIELDS, CMS_SOURCE_TABLES
+from ..schemas.cuad_schema import CONTRACT_PARSE_COMPAT_FIELDS
 from ..schemas.gt_metadata import ANNOTATION_KEYS, is_empty_value, parse_json_container
 from ..schemas.intents import INTENT_LABELS, normalize_intent  # noqa: F401  (historic module attributes)
 from ..schemas.scored_enums import canonical_label
@@ -68,6 +69,16 @@ RETIRED_PROMPT_KEYS: frozenset[str] = frozenset(
         "referenced_communications",
     }
 )
+
+#: v1 contract keys a prediction may still carry (``merger_consideration``, ``maud_clauses``):
+#: accepted, never scored on a contract (they belong to the merger agreement).
+CONTRACT_PARSE_COMPAT_KEYS: frozenset[str] = frozenset(f.name for f in CONTRACT_PARSE_COMPAT_FIELDS)
+
+
+def is_unscored_parse_compat(doc_class: str, key: str) -> bool:
+    """True for a v1 parse-compat key on a ``contract``; a merger agreement scores them."""
+    return doc_class == "contract" and key in CONTRACT_PARSE_COMPAT_KEYS
+
 
 # ---------------------------------------------------------------------------
 # Configuration accessors (kept for drop-in compatibility with the
@@ -1822,6 +1833,8 @@ def score_extraction(
         if key in NEVER_SCORED_FIELDS:
             continue
         if key in RETIRED_PROMPT_KEYS and key not in field_types:
+            continue
+        if is_unscored_parse_compat(doc_class, key):
             continue
         if is_unstated_cms_marker(key, cms_table, predicted):
             continue
