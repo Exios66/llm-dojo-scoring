@@ -59,10 +59,10 @@ def test_explicit_thresholds_and_hostile_values():
     """Booleans, NaN and out-of-range scores never clear a cutoff; bad cutoffs are dropped."""
     curve = risk_coverage_curve(
         [{"score": True, "wrong": False}, {"score": float("nan"), "wrong": True}, {"score": 1.5, "wrong": False},
-         "junk", {"wrong": "yes"}],
-        thresholds=[0.5, float("inf"), "x", True],
+         {"score": 10 ** 400, "wrong": False}, "junk", {"wrong": "yes"}],
+        thresholds=[0.5, float("inf"), "x", True, 10 ** 400],
     )
-    assert curve["n_no_score"] == 3 and curve["n_unscorable"] == 2
+    assert curve["n_no_score"] == 4 and curve["n_unscorable"] == 2
     assert [p["threshold"] for p in curve["points"]] == [0.5]
     assert curve["points"][0]["archived"] == 0
 
@@ -157,3 +157,12 @@ def test_slot_summary_keeps_crashes_out_of_the_review_rate():
     pipe = slot_decision_summary(records)["pipeline"]
     assert (pipe["reviewed"], pipe["other"], pipe["review_rate"]) == (1, 1, 0.25)
     assert pipe["wrong_per_1000"] == pytest.approx(333.333)  # 1 wrong over 2 scorable archives + 1 reviewed
+
+
+def test_slot_summary_reads_final_stage_from_a_dumped_run_record():
+    """A RunRecord model dump nests final_stage under actual; the top-level key wins when present."""
+    records = [{"actual": {"final_stage": "archived"}, "wrong_archive": True},
+               {"actual": {"final_stage": "review"}},
+               {"final_stage": "review", "actual": {"final_stage": "archived"}}]
+    pipe = slot_decision_summary(records)["pipeline"]
+    assert (pipe["archived"], pipe["reviewed"], pipe["other"]) == (1, 2, 0)

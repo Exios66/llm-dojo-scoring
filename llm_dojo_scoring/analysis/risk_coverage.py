@@ -45,12 +45,21 @@ __all__ = [
 ]
 
 
-def _score(value: Any) -> float | None:
-    """A finite score in [0, 1], else None (booleans are not scores)."""
+def _finite(value: Any) -> float | None:
+    """``value`` as a finite float, else None (booleans and ints too large for a float are not numbers)."""
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
-    value = float(value)
-    return value if math.isfinite(value) and 0.0 <= value <= 1.0 else None
+    try:
+        value = float(value)
+    except OverflowError:
+        return None
+    return value if math.isfinite(value) else None
+
+
+def _score(value: Any) -> float | None:
+    """A finite score in [0, 1], else None (booleans are not scores)."""
+    value = _finite(value)
+    return value if value is not None and 0.0 <= value <= 1.0 else None
 
 
 def _upper(hits: int, total: int, z: float) -> float | None:
@@ -98,8 +107,7 @@ def risk_coverage_curve(
     if thresholds is None:
         cutoffs = sorted({s for s, _ in scored} | {1.01})
     else:
-        cutoffs = sorted({float(t) for t in thresholds if isinstance(t, (int, float)) and not isinstance(t, bool)
-                          and math.isfinite(float(t))})
+        cutoffs = sorted({c for c in map(_finite, thresholds) if c is not None})
     points: list[dict[str, Any]] = []
     for t in cutoffs:
         archived = [w for s, w in scored if s >= t]
@@ -157,7 +165,8 @@ def slot_decision_summary(records: Iterable[Mapping[str, Any]], *, z: float = 1.
     """Per-slot decision rates and the pipeline's review and wrong-archive rates.
 
     Each record is one document: ``decision_slot_outcomes`` and ``decision_slot_marks``
-    as llm-mailroom writes them, ``final_stage`` (``archived``, ``review``; anything else,
+    as llm-mailroom writes them, ``final_stage`` (top level, or under ``actual`` as in a
+    dumped llm-mailroom ``RunRecord``; ``archived``, ``review``; anything else,
     such as ``crashed``, is neither) and ``wrong_archive`` (``True`` / ``False`` for an
     archived document the gold scores wrong / right, ``None`` when unscorable or not
     archived). A slot has seen a document when its ``seen:<slot>`` mark or an outcome is
@@ -181,6 +190,9 @@ def slot_decision_summary(records: Iterable[Mapping[str, Any]], *, z: float = 1.
             continue
         n += 1
         stage = record.get("final_stage")
+        actual = record.get("actual")
+        if stage is None and isinstance(actual, Mapping):
+            stage = actual.get("final_stage")  # a dumped llm-mailroom RunRecord nests it
         is_archived = stage == "archived"
         archived += is_archived
         reviewed += stage == "review"
