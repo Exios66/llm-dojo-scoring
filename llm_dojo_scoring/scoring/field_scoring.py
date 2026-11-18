@@ -714,7 +714,7 @@ _DATE_MONTH_PATTERN = (
 )
 _PROSE_DATED_YEAR_RE = re.compile(
     rf"\b{_DATE_MONTH_PATTERN}\s+\d{{1,2}}(?:st|nd|rd|th)?(?:,\s*|\s+)(?:\d{{4}}|\d{{2}})\b"
-    rf"|\b\d{{1,2}}(?:st|nd|rd|th)?\s+{_DATE_MONTH_PATTERN}(?:,\s*|\s+)(?:\d{{4}}|\d{{2}})\b"
+    rf"|\b\d{{1,2}}(?:st|nd|rd|th)?\s+(?:day\s+of\s+)?{_DATE_MONTH_PATTERN}(?:,\s*|\s+)(?:\d{{4}}|\d{{2}})\b"
     r"|\b\d{1,2}[-/.]\d{1,2}[-/.](?:\d{4}|\d{2})\b"
     rf"|\b{_DATE_MONTH_PATTERN}\s+\d{{4}}\b"
     r"|\b\d{4}-\d{1,2}-\d{1,2}\b",
@@ -731,7 +731,8 @@ def _stated_years(text) -> set:
     text = str(text)
     years = {int(y) for y in re.findall(r"(?<!\d)((?:19|20)\d{2})(?!\d)", text)}
     for match in _PROSE_DATED_YEAR_RE.finditer(text):
-        parts = _parse_date_parts(match.group(0))
+        span = re.sub(r"\bday\s+of\s+", "", match.group(0), flags=re.IGNORECASE)
+        parts = _parse_date_parts(span)
         if parts is not None and parts.year is not None:
             years.add(parts.year)
     return years

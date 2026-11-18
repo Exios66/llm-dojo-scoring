@@ -901,6 +901,7 @@ def test_abbreviated_date_containment_rejects_false_phrases(pred, exp):
     ("August 18, 1899", "August 18"),
     ("August 18, 2100", "August 18"),
     ("08/18/14", "08/18"),
+    ("18th day of August, 14", "18th day of August"),
 ])
 def test_prose_date_with_unverified_year_stays_capped(phrase, expected):
     """Prose cannot hide either a two-digit year or a stated century from the cap."""
@@ -910,9 +911,11 @@ def test_prose_date_with_unverified_year_stays_capped(phrase, expected):
 
 @pytest.mark.parametrize("year, canonical", [("14", 2014), ("68", 2068), ("69", 1969), ("99", 1999)])
 def test_prose_two_digit_years_use_the_fixed_pivot(year, canonical):
+    """A prose date uses the same fixed year pivot as a bare date."""
     assert canonical in fs._stated_years(f"dated Aug 18, {year}")
     assert not fs._stated_years("effective on Aug 18 per the notice")
 
 
 def test_prose_date_does_not_treat_unrelated_amount_as_an_extra_year():
+    """Amounts beside a valid date do not introduce unverified years."""
     assert fs.score_date_field("effective August 18, 2014; consideration $5000", "August 18, 2014") == 1.0
