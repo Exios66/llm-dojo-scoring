@@ -45,6 +45,7 @@ import structlog
 
 from ..config import get_settings
 from ..schemas.corpus import CMS_DOCUMENTED_ABSENT_FIELDS, CMS_SOURCE_TABLES
+from ..schemas.cuad_schema import CONTRACT_PARSE_COMPAT_FIELDS
 from ..schemas.gt_metadata import ANNOTATION_KEYS, is_empty_value, parse_json_container
 from ..schemas.intents import INTENT_LABELS, normalize_intent  # noqa: F401  (historic module attributes)
 from ..schemas.scored_enums import canonical_label
@@ -68,6 +69,24 @@ RETIRED_PROMPT_KEYS: frozenset[str] = frozenset(
         "referenced_communications",
     }
 )
+
+#: ContractExtraction v1 keys a contract prediction may still carry
+#: (``merger_consideration``, ``maud_clauses``): accepted, never scored (#127).
+CONTRACT_PARSE_COMPAT_KEYS: frozenset[str] = frozenset(f.name for f in CONTRACT_PARSE_COMPAT_FIELDS)
+
+
+def is_parse_compat_key(doc_class: Any, key: str, field_types: Any = None) -> bool:
+    """True for a contract's v1 parse-compat key, which is accepted but never scored.
+
+    Like :data:`RETIRED_PROMPT_KEYS`, an explicit ``field_types`` entry opts back in
+    (historical rescoring); a merger agreement scores the same names normally.
+    """
+    return (
+        key in CONTRACT_PARSE_COMPAT_KEYS
+        and str(getattr(doc_class, "value", doc_class) or "").strip().lower() == "contract"
+        and key not in (field_types or {})
+    )
+
 
 # ---------------------------------------------------------------------------
 # Configuration accessors (kept for drop-in compatibility with the
@@ -737,7 +756,9 @@ def _score_date_field_uncapped(pred, exp, embedding=None) -> float:
     Rules, in order:
 
     1. Blank-template or label-only ground truth (no real date) -> 1.0 for a
-       null prediction, else 0.0.
+       null prediction, else 0.0. A relative date ("nine months after the date
+       hereof") is populated text, not a blank: it skips this rule and is matched
+       as text (#127).
     2. Containment -> 1.0: the labeler's date phrase appears inside the
        prediction. The reverse (prediction inside the label) does not count
        when the prediction leaves out a component the label states.
@@ -837,11 +858,35 @@ def _score_partial_dates(ps: _DateParts, es: _DateParts) -> float:
     return 0.33 if agree & {0, 1} else 0.0
 
 
+_NUMBER_WORD = (
+    r"(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|"
+    r"fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|"
+    r"eighty|ninety|hundred)"
+)
+_RELATIVE_DATE_RE = re.compile(
+    rf"\b(?:\d+|{_NUMBER_WORD}(?:[\s-]+(?:and\s+)?{_NUMBER_WORD})*)\s*(?:\(\d+\)\s*)?"
+    r"(?:(?:business|calendar|consecutive)\s+)?(?:days?|weeks?|months?|years?)\s+"
+    r"(?:after|before|from|following|of|prior\s+to|subsequent\s+to)\b",
+    re.IGNORECASE,
+)
+
+
+def _date_expected_is_relative(exp: str) -> bool:
+    """True for a relative date ("nine months after the date hereof"): populated
+    text that states a period, not a calendar date and not a blank template."""
+    text = str(exp)
+    if "_" in text or "blank" in text.lower():
+        return False
+    return _RELATIVE_DATE_RE.search(text) is not None
+
+
 def _date_expected_is_null(exp: str) -> bool:
     """True when the expected date text carries no real date: a blank
-    template line or a bare label."""
+    template line or a bare label. A relative date is populated text (#127)."""
     if "_" in exp or "blank" in exp.lower():
         return True
+    if _date_expected_is_relative(exp):
+        return False
     low = exp.lower()
     if not any(m in low for m in _MONTH_NAMES):
         if not re.search(r"\b(19|20)\d{2}\b", low):
@@ -1794,6 +1839,8 @@ def score_extraction(
             continue
         if key in RETIRED_PROMPT_KEYS and key not in field_types:
             continue
+        if is_parse_compat_key(doc_class, key, field_types):
+            continue
         if is_unstated_cms_marker(key, cms_table, predicted):
             continue
         exp_value = parse_json_container(exp_value)
@@ -1882,9 +1929,18 @@ def score_extraction(
                     element_type, pred_value, expected.get(key) or [], doc_text,
                 )
             else:
-                entity_list_audit[key] = audit_scalar_field(
-                    field_type, pred_value, expected.get(key), doc_text,
-                )
+                exp_audit = expected.get(key)
+                audit = audit_scalar_field(field_type, pred_value, exp_audit, doc_text)
+                if field_type == "label" and doc_class and not audit["true_items"]:
+                    # The audit matches through the same alias folding as the label
+                    # scorer (#127): "covered" is the gold "approved", not an invention.
+                    folded_pred = canonical_label(doc_class, key, pred_value) or pred_value
+                    folded_exp = canonical_label(doc_class, key, exp_audit) or exp_audit
+                    if (folded_pred, folded_exp) != (pred_value, exp_audit):
+                        folded = audit_scalar_field(field_type, folded_pred, folded_exp, doc_text)
+                        if folded["true_items"]:
+                            audit = folded
+                entity_list_audit[key] = audit
 
     scored = list(field_scores.values())
     overall = round(sum(scored) / len(scored), 4) if scored else None

@@ -120,10 +120,17 @@ def test_corporate_record_always_detailed():
 
 @pytest.mark.parametrize("doc_type", _FIELD_MAP_TYPES + ("contract", "merger_agreement"))
 def test_unknown_subclass_surface_normalises(doc_type):
-    """Tier 2: an uncatalogued subclass surface becomes the type's catch-all, never raises."""
+    """Tier 2: an uncatalogued surface becomes the type's catch-all (or no subclass), never raises.
+
+    A type whose catalogue has no ``other`` bucket (insurance claims) has no catch-all to
+    land in, so the surface is no subclass (#119 M5).
+    """
     scorer = DOC_SCORERS[doc_type]
     out = scorer.subclass("Totally Unknown Surface!!")
-    assert out in (*scorer.subclasses, "other")
+    if "other" in scorer.subclasses or doc_type == "contract":
+        assert out == "other"
+    else:
+        assert out is None
     assert scorer.subclass(None) is None  # no subclass known: tier 0 keeps the sandbox rule
 
 

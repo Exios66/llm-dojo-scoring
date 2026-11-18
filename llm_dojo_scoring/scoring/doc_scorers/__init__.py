@@ -7,6 +7,7 @@ falls back to ``generic``, so every document is scored by something.
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import Any
 
 from ..suites import SPECIALIST_DOC_TYPES
@@ -27,15 +28,20 @@ DOC_SCORERS: dict[str, DocScorer] = {
 
 
 def canonical_doc_type(doc_type: Any) -> str:
-    """Lower-case, strip and resolve specialist aliases (``contracts_specialist`` → ``contract``)."""
+    """Lower-case, strip and resolve specialist aliases (``contracts_specialist`` → ``contract``).
+
+    An :class:`~enum.Enum` member (``class DT(str, Enum)``) is read by its ``value``, not by
+    ``str(member)`` (``"DT.CONTRACT"``).
+    """
+    if isinstance(doc_type, Enum):
+        doc_type = doc_type.value
     key = str(doc_type or "").strip().lower()
     return SPECIALIST_DOC_TYPES.get(key, key)
 
 
 def get_doc_scorer(doc_type: str | None) -> DocScorer:
     """The scorer for ``doc_type``; specialist names resolve; unknown types get ``generic``."""
-    key = str(doc_type or "").strip().lower()
-    key = SPECIALIST_DOC_TYPES.get(key, key)
+    key = canonical_doc_type(doc_type)
     if key == "generic":
         return GENERIC
     return DOC_SCORERS.get(key, GENERIC)

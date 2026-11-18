@@ -10,7 +10,28 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping, Protocol, runtime_checkable
 
+from ...config import SUBTYPE_UNKNOWN
 from ...schemas.corpus import normalize_corpus_subclass
+from ...schemas.gt_metadata import is_empty_value
+
+#: Types whose own normaliser has a first-class unknown bucket (CUAD's "Other / unlisted"),
+#: so ``other`` is a valid subclass for them even though the catalogue tuple omits it.
+_UNKNOWN_BUCKET_TYPES = frozenset({"contract"})
+
+
+def clean_subclass(*values: Any) -> str | None:
+    """The first subclass value that says something, as stripped text; else ``None``.
+
+    ``None``, blank text, NaN and the literal absence tokens (``"nan"``, ``"none"``,
+    ``"null"``, ``"n/a"``) are not a subclass, and one of them does not shadow a later value.
+    """
+    for value in values:
+        if is_empty_value(value):
+            continue
+        text = str(value).strip()
+        if text:
+            return text
+    return None
 
 
 @runtime_checkable
@@ -48,10 +69,19 @@ class TypeScorer:
     detailed: bool | None = None
 
     def subclass(self, raw: Any) -> str | None:
-        """Normalise ``raw`` through the corpus catalogue; ``None`` for types without one."""
-        if not self.subclasses or raw is None or not str(raw).strip():
+        """Normalise ``raw`` through the corpus catalogue.
+
+        ``None`` for types without a catalogue, for a blank value (NaN, ``"nan"``, ``""``) and
+        for a value outside the catalogue where the type has no ``other`` bucket (so an
+        insurance ``health`` is no subclass rather than an ``other`` the catalogue never lists).
+        """
+        text = clean_subclass(raw)
+        if not self.subclasses or text is None:
             return None
-        return normalize_corpus_subclass(self.doc_type, raw)
+        key = normalize_corpus_subclass(self.doc_type, text)
+        if key in self.subclasses or (key == SUBTYPE_UNKNOWN and self.doc_type in _UNKNOWN_BUCKET_TYPES):
+            return key
+        return None
 
     def extras(
         self,

@@ -25,6 +25,7 @@ llm_dojo_scoring/
 | **`schemas/`** | `doc_classes` | The one hand-edited registry of document classes, their extraction fields and field types; every other class/field table derives from it. Stdlib-only leaf |
 | | `corpus` | mailroom-dataset alignment: doc types, subclasses, extraction fields, the CMS source-table mapping |
 | | `gt_metadata` | Hub `gt_fields` / `gt_presence` parsing into scoring-ready fields |
+| | `label_policy` | What is scored as truth: stale Hub labels (heuristic `intent`, templated `subject_matter` / `keywords`) dropped, and the one merge rule for the interim and near-gold label overlays |
 | | `intents` | Controlled `intent` vocabularies for the classes that carry one |
 | | `equivalences` | Subtype and doc-subclass normalization and equivalence |
 | | `sorter_guide` | Sorter-facing subclass guide: what each subclass key means |

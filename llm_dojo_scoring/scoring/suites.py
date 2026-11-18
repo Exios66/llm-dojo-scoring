@@ -29,6 +29,8 @@ the matching suite.
 
 from __future__ import annotations
 
+import re
+from collections import Counter
 from dataclasses import dataclass, field
 from collections.abc import Mapping
 from typing import Any, Iterable
@@ -438,20 +440,71 @@ def _maud_lines_all_ambiguous(lines: Any) -> bool:
     return bool(score_maud_extraction(parse_maud_labels(list(lines)), {}).get("gt_ambiguous"))
 
 
-def _n_unparsed_maud_entries(lines: Any) -> int:
-    """Nonempty predicted clause entries that :func:`parse_maud_labels` cannot read."""
+def _unparsed_maud_lines(lines: Any) -> list[Any]:
+    """Nonempty clause entries that :func:`parse_maud_labels` cannot read (no question named)."""
     from .content_scoring import _span_lines, parse_maud_labels
 
-    if not isinstance(lines, list):
-        return 0
-    count = 0
+    if not isinstance(lines, (list, tuple)):
+        return []
+    unparsed: list[Any] = []
     for entry in lines:
         for item in _span_lines(entry):
             if item is None or (isinstance(item, str) and not item.strip()):
                 continue
             if not parse_maud_labels([item]):
-                count += 1
-    return count
+                unparsed.append(item)
+    return unparsed
+
+
+def _n_unparsed_maud_entries(lines: Any) -> int:
+    """Nonempty predicted clause entries that :func:`parse_maud_labels` cannot read."""
+    return len(_unparsed_maud_lines(lines)) if isinstance(lines, list) else 0
+
+
+_BULLET = re.compile(r"^\s*(?:[-*\u2022]|\d+[.)])\s+")
+
+
+def _free_text_key(line: Any) -> str:
+    """A clause line without a question, folded for equality: bullet, case and spacing aside."""
+    return " ".join(_BULLET.sub("", str(line)).casefold().split())
+
+
+def _maud_predicted_lines(predicted: Any) -> Any:
+    """The predicted ``maud_clauses`` as canonical lines, or the ``{question: class}`` object."""
+    pred_lines = predicted.get("maud_clauses") if isinstance(predicted, dict) else None
+    if isinstance(pred_lines, str):
+        pred_lines = [pred_lines]
+    if isinstance(pred_lines, (list, tuple)):
+        return [_canonical_maud_line(line) for line in pred_lines]
+    if isinstance(pred_lines, Mapping):  # the ``{question: class}`` object grammar parses too
+        return pred_lines
+    return []
+
+
+def _match_free_maud_lines(free_gold: Iterable[Any], pred_lines: Any) -> int:
+    """How many plain gold lines an equal predicted plain line meets, each prediction once (#170)."""
+    free_pred = Counter(_free_text_key(line) for line in _unparsed_maud_lines(pred_lines))
+    matched = 0
+    for line in free_gold:
+        key = _free_text_key(line)
+        if free_pred[key] > 0:
+            free_pred[key] -= 1
+            matched += 1
+    return matched
+
+
+def _unscored_maud_questions(scored: Mapping[str, Any], skipped: Iterable[str], gold_labels: Any) -> set[str]:
+    """Questions unscored on both sides: Hub-skipped ones and those whose gold lines conflict."""
+    from .content_scoring import normalize_maud_question_key
+
+    unscored = {normalize_maud_question_key(question) for question in skipped}
+    conflicting: set[str] = set()
+    for document in scored.get("per_document") or ():
+        conflicting.update(document.get("gt_ambiguous_keys") or ())
+    # A skipped Hub key can share its normalized name with a clean variant that
+    # did become a gold line; that question is scored, so it stays counted.
+    unscored -= set(gold_labels) - conflicting
+    return unscored | conflicting
 
 
 def _score_maud_clauses_by_question(
@@ -474,14 +527,12 @@ def _score_maud_clauses_by_question(
     question whose gold lines conflict. Those are unscored on both sides, so a
     prediction for one is neither a match nor an unmatched prediction. A question
     the Hub leaves blank is not ambiguous; an answer to it is still unmatched.
-    The overall score is recomputed. Gold whose lines name no question is left to
-    the generic matcher.
+    The overall score is recomputed. Gold whose lines name no question at all is left
+    to the generic matcher. In gold that mixes question lines with plain lines, each plain
+    line is still an expected clause (#170): it counts in the recall denominator and is
+    matched only by an equal predicted plain line (bullet, case and spacing aside).
     """
-    from .content_scoring import (
-        normalize_maud_question_key,
-        parse_maud_labels,
-        score_maud_extraction,
-    )
+    from .content_scoring import parse_maud_labels, score_maud_extraction
     from .field_scoring import EntityListScore
 
     if "maud_clauses" not in result.field_scores or not isinstance(expected, dict):
@@ -489,34 +540,26 @@ def _score_maud_clauses_by_question(
     exp_lines = expected.get("maud_clauses")
     if not isinstance(exp_lines, (list, tuple)):
         return
-    pred_lines = predicted.get("maud_clauses") if isinstance(predicted, dict) else None
-    if isinstance(pred_lines, str):
-        pred_lines = [pred_lines]
-    if isinstance(pred_lines, (list, tuple)):
-        pred_lines = list(pred_lines)
-    elif not isinstance(pred_lines, Mapping):  # the ``{question: class}`` object grammar parses too
-        pred_lines = []
-    if isinstance(pred_lines, list):
-        pred_lines = [_canonical_maud_line(line) for line in pred_lines]
+    pred_lines = _maud_predicted_lines(predicted)
     # Both sides are one document each: a list of clause objects must not be read
     # as a batch of documents and paired with the gold lines by position.
     pred_labels = parse_maud_labels(pred_lines)
     gold_labels = parse_maud_labels(list(exp_lines))
     scored = score_maud_extraction(gold_labels, pred_labels)
     n_expected = scored.get("n_questions") or 0
-    if not n_expected:
+    # Gold lines that name no question are expected clauses too (#170): dropping them
+    # would shrink the denominator. Each one is met by one equal predicted plain line.
+    # They are scored here even when every question line is ambiguous (gold_labels
+    # nonempty, n_expected 0); gold with no question line stays with the generic matcher.
+    free_gold = _unparsed_maud_lines(list(exp_lines))
+    if not n_expected and not (gold_labels and free_gold):
         return
     exact = round((scored.get("maud_question_accuracy") or 0.0) * n_expected)
+    n_expected += len(free_gold)
+    exact += _match_free_maud_lines(free_gold, pred_lines)
     # A nonempty entry the parser rejects (free text, no question) is a prediction
     # that matched nothing, the same as a wrong answer.
-    unscored = {normalize_maud_question_key(question) for question in skipped}
-    conflicting: set[str] = set()
-    for document in scored.get("per_document") or ():
-        conflicting.update(document.get("gt_ambiguous_keys") or ())
-    # A skipped Hub key can share its normalized name with a clean variant that
-    # did become a gold line; that question is scored, so it stays counted.
-    unscored -= set(gold_labels) - conflicting
-    unscored |= conflicting
+    unscored = _unscored_maud_questions(scored, skipped, gold_labels)
     n_predicted = sum(1 for key in pred_labels if key not in unscored) + _n_unparsed_maud_entries(
         pred_lines
     )
@@ -981,23 +1024,33 @@ class ScoringSuite:
             is_hub_metadata = bool(_gtm.gt_presence_map(value)) or (
                 _gtm.GT_PRESENCE_KEY in value
             )
+            subclass = _subclass_for(index)
+            own_subclass = value.get("expected_subclass")
+            if subclass is None and isinstance(own_subclass, str) and own_subclass.strip():
+                # A converted v10 row carries its own subclass (``gt_from_v10_row``); a
+                # caller's keyword stays authoritative (#127).
+                subclass = own_subclass
             scoped = _gtm.scoring_gt_fields(
                 value,
                 field_types=ftypes,
                 extra_keys=scorable_gt_keys,
                 drop_unmapped=is_hub_metadata,
                 doc_type=doc_class,
-                subclass=_subclass_for(index),
+                subclass=subclass,
             )
             if doc_class == "merger_agreement":
                 from ..schemas.maud_schema import hub_merger_skipped_questions
 
                 skipped_maud[index] = hub_merger_skipped_questions(value)
                 scoped.update(
-                    _merger_gold_from_labels(value, scoped, _subclass_for(index), ftypes)
+                    _merger_gold_from_labels(value, scoped, subclass, ftypes)
                 )
                 if _maud_lines_all_ambiguous(scoped.get("maud_clauses")):
-                    del scoped["maud_clauses"]  # unscorable gold is no gold
+                    # Ambiguous question lines are unscorable gold, but plain clause lines
+                    # beside them are still expected clauses (#170): keep the field, and the
+                    # by-question rescore leaves the conflicting question unscored.
+                    if not _unparsed_maud_lines(scoped["maud_clauses"]):
+                        del scoped["maud_clauses"]  # unscorable gold is no gold
             return scoped
 
         scoped_to_empty = False
