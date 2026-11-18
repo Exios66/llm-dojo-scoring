@@ -150,7 +150,7 @@ def operating_point(
     return dict(min(fits, key=lambda p: (p["review_rate"], -p["threshold"])))
 
 
-_ACTIONS = ("park", "release", "capped", "agree", "hold", "unavailable", "replaced")
+_ACTIONS = ("park", "release", "capped", "agree", "hold", "unavailable", "unverified", "replaced")
 
 
 def slot_decision_summary(records: Iterable[Mapping[str, Any]], *, z: float = 1.96) -> dict[str, Any]:

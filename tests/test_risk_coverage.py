@@ -114,6 +114,20 @@ def test_slot_summary_reads_mailroom_outcomes():
     assert out["slots"]["arbiter_veto"]["actions"] == {"none": 1}
 
 
+def test_slot_summary_counts_unverified_approval_checks():
+    """llm-mailroom's approval checks record ``unverified`` when the gate cannot confirm an approval."""
+    records = [
+        {"final_stage": "archived", "wrong_archive": True,
+         "decision_slot_outcomes": {"judge_check": {"action": "unverified"}}},
+        {"final_stage": "review", "wrong_archive": None,
+         "decision_slot_outcomes": {"judge_check": {"action": "park", "route": "human_review"}},
+         "decision_slot_marks": ["seen:judge_check", "park:judge_check"]},
+    ]
+    slot = slot_decision_summary(records)["slots"]["judge_check"]
+    assert slot["actions"] == {"park": 1, "unverified": 1}
+    assert slot["park_rate"] == 0.5
+
+
 def test_slot_summary_empty():
     """No records: empty rates, no slots."""
     out = slot_decision_summary([])
