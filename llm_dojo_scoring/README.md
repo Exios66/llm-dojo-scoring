@@ -60,6 +60,7 @@ llm_dojo_scoring/
 | | `score_changelog` | Machine ledger of releases that moved a score |
 | **`analysis/`** | `bootstrap`, `calibration`, `diagnostics`, `failure_modes` | Statistics and diagnostics over runs |
 | | `calibration` | Exact risk bounds, sample size, ECE/Brier, AUROC, cutoffs |
+| | `risk_coverage` | Risk-coverage curve (review rate vs wrong-archive rate), operating point, per-slot decision summary |
 | | `experiment` | Experiment-log records |
 | | `serving`, `cost` | Local-vs-API serving, token cost |
 | **`ml/`** | `contract` | `ml_contract()`: the label and intake tables `mailroom-ml` vendors as `ml/data/ml_contract.json` |
