@@ -272,7 +272,7 @@
     },
     "schemas.label_policy": {
       "decision": "keep",
-      "lines": 343,
+      "lines": 396,
       "reason": "imported by kept scoring.extraction_scope"
     },
     "schemas.maud": {

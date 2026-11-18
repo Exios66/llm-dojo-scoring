@@ -523,6 +523,14 @@ def score_archive_block(
         from .sandbox_schema_adherence import coerce_expected_payload
 
         expected = coerce_expected_payload(expected)
+    if isinstance(expected, Mapping):
+        # Stale Hub labels (heuristic intent, templated subject_matter / keywords) are no
+        # truth: not a scoring event on either side, as in ``scope_extraction_pair`` (0.30.2).
+        from ..schemas.label_policy import drop_stale_hub_labels
+
+        expected, stale = drop_stale_hub_labels(doc_class, expected)
+        if stale and predicted:
+            predicted = {k: v for k, v in predicted.items() if k not in stale}
     ftypes = _live_field_types(doc_class, field_types)
     exp = _filter_to_live_map(expected, ftypes)
     pred = _filter_to_live_map(predicted, ftypes)

@@ -233,3 +233,69 @@ def test_overlay_may_fill_a_field_whose_hub_label_was_stale() -> None:
     assert merged.report["stale"]["subject_matter"] == "subject_matter_templated"
     assert merged.fields["subject_matter"] == "Gas price update"
     assert "intent" not in merged.fields and "keywords" not in merged.fields
+
+
+def test_archive_block_drops_stale_labels_like_score_document() -> None:
+    """Review MAJOR 1: the pipeline's archive block and score_document agree on one row."""
+    from llm_dojo_scoring.pipeline.archive import score_archive_block
+    from llm_dojo_scoring.scoring.doc_scorers.dispatch import score_document
+
+    gt = {**CORR_STALE, "sender": "Phillip Allen"}
+    pred = {"subject_matter": "Gas price update", "keywords": ["gas"], "intent": "update", "sender": "Phillip Allen"}
+    block = score_archive_block("correspondence", pred, gt)
+    doc = score_document("correspondence", pred, gt)
+    assert block["overall_score"] == doc["overall_extraction_score"] == 1.0
+    assert block["extraction_f1"] == 1.0
+    assert set(block.get("field_scores") or {}) <= {"sender"}
+
+
+def test_archive_block_with_only_stale_labels_is_not_scored() -> None:
+    """A corporate row whose labels are all stale has no truth for the block to count."""
+    from llm_dojo_scoring.pipeline.archive import score_archive_block
+
+    block = score_archive_block("corporate_record", {"intent": "compliance"}, CORP_STALE)
+    assert block["status"] != "scored"
+    assert block["extraction_f1"] is None
+
+
+def test_stale_label_is_dropped_whatever_its_presence_code() -> None:
+    """Review MINOR 4: a ``pending_annotation`` code does not keep a heuristic intent scored."""
+    gt = {"intent": "notice", "intent_source": "heuristic", "sender": "A",
+          "gt_presence": {"intent": "pending_annotation"}}
+    _, expected = scope_extraction_pair("correspondence", {}, gt)
+    assert expected == {"sender": "A"}
+
+
+def test_result_shares_no_objects_with_the_overlay() -> None:
+    """Review MINOR 5: editing the merged gold never edits the overlay record."""
+    near = _rec({"additional_recipients": {"value": ["a", "b"], "basis": "near_gold:two_pass_agree"}})
+    merged = apply_label_overlays({}, doc_class="correspondence", doc_text=TEXT, near_gold=near)
+    merged.fields["additional_recipients"].append("z")
+    assert near["labels"]["additional_recipients"]["value"] == ["a", "b"]
+
+
+def test_malformed_records_are_reported_not_raised() -> None:
+    """A broken overlay file cannot take scoring down; it is reported."""
+    bad_labels = apply_label_overlays({}, doc_class="correspondence", doc_text=TEXT,
+                                      interim={**_rec({}), "labels": ["sender"]})
+    bad_label = apply_label_overlays({}, doc_class="correspondence", doc_text=TEXT,
+                                     interim=_rec({"sender": "Phillip Allen"}),
+                                     near_gold=_rec({"recipient": "John"}))
+    assert bad_labels.sources == {} and "malformed" in bad_labels.report["rejected"][0]
+    assert bad_label.sources == {}
+    assert bad_label.report["rejected"] == ["sender: malformed label", "recipient: basis '' is not near_gold"]
+
+
+def test_dict_repr_gt_string_is_read_and_garbage_stays_loud() -> None:
+    """GT text is parsed like Hub ``gt_fields``; unreadable GT still raises."""
+    fields, dropped = drop_stale_hub_labels("correspondence", str({**CORR_STALE, "sender": "A"}))
+    assert fields == {"intent_source": "heuristic", "sender": "A"} and len(dropped) == 3
+    with pytest.raises(ValueError):
+        drop_stale_hub_labels("correspondence", "not json at all {")
+
+
+def test_enum_label_is_stored_as_the_scored_token() -> None:
+    """A padded or upper-case enum value is admitted and stored canonical."""
+    merged = apply_label_overlays({}, doc_class="correspondence", doc_text=TEXT,
+                                  interim=_rec({"urgency": _lab(" URGENT ")}))
+    assert merged.fields["urgency"] == "urgent"
