@@ -13,7 +13,6 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
-<<<<<<< HEAD
 - **Payload nesting limits are deterministic across Python versions.** Text payloads
   exceeding 128 nested containers are rejected before JSON or Python-repr decoding,
   including wrapped objects and arrays. Recovery skips deep child candidates and
@@ -40,7 +39,6 @@ Format based on Keep a Changelog; versioning is SemVer.
   not extra years. These scorer corrections require a coordinated `llm-mailroom`
   pin bump and sandbox vendor refresh after merge. Rescore stored runs containing
   these date forms before comparing their scores across the consumer update.
-=======
 - **Score change: stale Hub labels are not scored; one overlay policy (#164, #171, #94).** New
   `schemas.label_policy`. `stale_hub_labels` names the Hub labels that are not truth:
   `intent` with `intent_source: heuristic` (any class), corporate-record SEC EDGAR template
@@ -104,7 +102,6 @@ Format based on Keep a Changelog; versioning is SemVer.
   `docs/contracts/METRIC_IDS.md` explains `headline_metric` against `method` (M7, M8). M1 and M3
   are pinned by tests as intended or already fixed; M9 (reusing the suite result in the block) is
   deferred because the two paths score different pairs. Tests: `tests/test_review_findings_119.py`.
->>>>>>> origin/main
 - **Release notes list squash-merged PRs.** `scripts/release.py:prs_in_range` collected PRs only
   from `git log --merges` and matched only `Merge pull request #N from` subjects, so a
   squash-merged PR (one parent, subject `title (#N)`) vanished from the notes' PR list. It now

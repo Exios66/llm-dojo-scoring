@@ -948,6 +948,7 @@ def test_ordinal_label_retains_its_two_digit_year(prediction):
 
 @pytest.mark.parametrize("amount", ["$2014", "USD 2014", "2014 USD", "14 dollars", "€2014", "2014 GBP"])
 def test_yearless_date_does_not_treat_currency_amount_as_year(amount):
+    """Currency-marked amounts beside a date do not add an unverified year."""
     prediction = f"effective Aug 18; consideration {amount}"
     assert fs.score_date_field(prediction, "Aug 18") == 1.0
     assert not fs._stated_years(prediction)
