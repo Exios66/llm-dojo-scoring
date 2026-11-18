@@ -260,29 +260,18 @@ def _parse_object_text(text: str) -> tuple[dict[str, Any] | None, str | None]:
     # (which counts lines up to the failure) over that object only, not the whole text.
     # A candidate whose "{" never closes cannot decode and is skipped without trying.
     decoder = json.JSONDecoder()
-    ends: dict[int, int] = {}
-    deep_starts: set[int] = set()
-    region_end = -1
     candidate = _JSON_CONTAINER_START.search(text)
+    if candidate is None:
+        return None, None
+    # Index every opening once, including those quoted in another candidate's
+    # context. Recovery never needs to scan a malformed suffix again.
+    ends, deep_starts, _ = _object_ends(text, candidate.start())
     while candidate is not None:
         start = candidate.start()
-        if start >= region_end:
-            ends, deep_starts, region_end = _object_ends(text, start)
-        end = ends.get(start)
+        end = ends[start]
         resume = start + 1
         obj = None
         how = "wrapped_json"
-        if end is None:
-            # A malformed wrapper may have an unbalanced quote before a valid
-            # object. Scan that candidate independently, under the same guard;
-            # never raw-decode an unbounded suffix or retry guarded children.
-            alternate_ends, alternate_deep, alternate_end = _object_ends(text, start)
-            # Retain both quote contexts. Replacing this map would repeatedly
-            # forget known candidates and rescan malformed suffixes quadratically.
-            ends.update(alternate_ends)
-            deep_starts.update(alternate_deep)
-            region_end = max(region_end, alternate_end)
-            end = ends.get(start, -1)
         if end > 0 and start in deep_starts:
             # Skip all child candidates too; none may escape the nesting guard.
             resume = end
@@ -307,44 +296,64 @@ def _parse_object_text(text: str) -> tuple[dict[str, Any] | None, str | None]:
 
 
 def _object_ends(text: str, start: int) -> tuple[dict[int, int], set[int], int]:
-    """Match object ends and excessive subtree depths in one linear scan.
+    """Index every container opening in linear time, independent of quote context.
 
-    Arrays, objects and tuples contribute depth. Both JSON and Python string
-    delimiters protect quoted brackets. Each stack frame keeps its maximum
-    child depth, propagated once on close, so deep objects and all their children
-    can be skipped without retrying a decoder at every nested opening brace.
+    For each position, ``closers`` stores the first closing bracket outside
+    complete strings and nested containers; ``depths`` stores the maximum depth
+    before that closer. Computing these suffix summaries right to left lets each
+    opening reuse its child's summary and jump directly past the matched child.
+    Quote ends are indexed first, including quotes escaped in another context:
+    a recovery candidate always begins outside a string, so its own quote context
+    must be available without rescanning the suffix. Every character participates
+    in two passes and every opening receives one cached end, including unclosed
+    openings. Both quote grammars and arrays, dictionaries and tuples are covered.
     """
+    size = len(text)
+    quote_ends: dict[int, int] = {}
+    unescaped_quotes: dict[str, list[int]] = {'"': [], "'": []}
+    all_quotes: list[tuple[int, str]] = []
+    escaped = False
+    for index in range(start, size):
+        char = text[index]
+        if char in "\"'":
+            all_quotes.append((index, char))
+            if not escaped:
+                unescaped_quotes[char].append(index)
+        escaped = char == "\\" and not escaped
+    next_quote = {'"': size, "'": size}
+    # A quote closes at the next matching quote with even backslash parity.
+    # Whether the opening itself was escaped outside this string is irrelevant.
+    for index, char in reversed(all_quotes):
+        quote_ends[index] = next_quote[char]
+        if unescaped_quotes[char] and unescaped_quotes[char][-1] == index:
+            next_quote[char] = index
+            unescaped_quotes[char].pop()
+
+    closers = [size] * (size + 1)
+    depths = [0] * (size + 1)
     ends: dict[int, int] = {}
     deep_starts: set[int] = set()
-    # (opening bracket, index, maximum relative subtree depth)
-    stack: list[tuple[str, int, int]] = []
-    quote: str | None = None
-    escaped = False
-    for index in range(start, len(text)):
+    for index in range(size - 1, start - 1, -1):
         char = text[index]
-        if quote is not None:
-            if escaped:
-                escaped = False
-            elif char == "\\":
-                escaped = True
-            elif char == quote:
-                quote = None
-        elif char in "\"'":
-            quote = char
+        if char in "\"'":
+            following = min(quote_ends[index] + 1, size)
+            closers[index] = closers[following]
+            depths[index] = depths[following]
         elif char in "[{(":
-            stack.append((char, index, 1))
-        elif char in "]})" and stack:
-            opening, open_index, depth = stack.pop()
-            ends[open_index] = index + 1
+            close = closers[index + 1]
+            depth = depths[index + 1] + 1
+            ends[index] = close + 1 if close < size else -1
             if depth > _MAX_TEXT_NESTING:
-                deep_starts.add(open_index)
-            if not stack:
-                return ends, deep_starts, index + 1
-            parent, parent_index, parent_depth = stack[-1]
-            stack[-1] = (parent, parent_index, max(parent_depth, depth + 1))
-    for _opening, open_index, _depth in stack:
-        ends[open_index] = -1
-    return ends, deep_starts, len(text)
+                deep_starts.add(index)
+            following = min(close + 1, size)
+            closers[index] = closers[following]
+            depths[index] = max(depth, depths[following])
+        elif char in "]})":
+            closers[index] = index
+        else:
+            closers[index] = closers[index + 1]
+            depths[index] = depths[index + 1]
+    return ends, deep_starts, size
 
 
 def _typed_valid(

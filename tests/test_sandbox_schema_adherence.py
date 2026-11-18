@@ -282,3 +282,42 @@ def test_deep_repr_cannot_recover_json_from_a_quoted_value():
     payload, meta = coerce_predicted_payload(text)
     assert payload is None
     assert meta["parse_error"] is True
+
+
+@pytest.mark.parametrize("quote", ['"', "'"])
+@pytest.mark.parametrize("count", [80, 2_000])
+@pytest.mark.parametrize("tail", ["", "z" * 4_000], ids=["no-tail", "long-tail"])
+def test_escaped_quote_recovery_reads_a_linear_number_of_characters(quote, count, tail, monkeypatch):
+    """Count real indexing work when malformed candidates change quote contexts."""
+    from llm_dojo_scoring.pipeline import sandbox_schema_adherence as adherence
+
+    reads = 0
+    original = adherence._object_ends
+
+    class CountedText(str):
+        """Instrument character access without relying on machine timing."""
+
+        def __getitem__(self, index):
+            """Count individual indexed reads."""
+            nonlocal reads
+            if isinstance(index, int):
+                reads += 1
+            return super().__getitem__(index)
+
+        def __iter__(self):
+            """Expose iteration through the same read counter."""
+            for index in range(len(self)):
+                yield self[index]
+
+    def count_scan(text, start):
+        """Instrument the index builder without changing payload parsing."""
+        return original(CountedText(text), start)
+
+    monkeypatch.setattr(adherence, "_object_ends", count_scan)
+    text = 'x {"bad": "' + ("[\\" + quote) * count + tail
+    assert coerce_predicted_payload(text)[0] is None
+    assert reads <= 3 * len(text)
+    reads = 0
+    sibling_text = text + ' then {"sender": "Acme"}'
+    assert coerce_predicted_payload(sibling_text)[0] == {"sender": "Acme"}
+    assert reads <= 3 * len(sibling_text)

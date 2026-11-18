@@ -13,10 +13,13 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
-- **Payload nesting limits are deterministic across Python versions.** Text payloads
-  exceeding 128 nested containers are rejected before JSON or Python-repr decoding,
-  including wrapped objects and arrays. Recovery skips deep child candidates and
-  still finds later independent JSON siblings in linear time. A 30,000-level junk
+- **Payload nesting limits are deterministic across Python versions.** Completed
+  payload candidates exceeding 128 nested containers are rejected before JSON or
+  Python-repr decoding, including wrapped objects and arrays. Recovery skips the
+  completed deep container and its children; closed objects inside malformed,
+  unclosed wrappers remain recoverable under their own depth guard. A linear
+  boundary index handles quote escapes without rescanning malformed suffixes and
+  still finds later independent JSON or Python-repr siblings. A 30,000-level junk
   object previously became the payload on Python 3.14 but was skipped on Python 3.11;
   both now recover the later `{"sender": "Acme"}`. Normal mappings, nested arrays and
   quoted brackets remain supported. No metric names or public signatures change;
