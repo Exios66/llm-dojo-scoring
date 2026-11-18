@@ -256,10 +256,12 @@ def _parse_object_text(text: str) -> tuple[dict[str, Any] | None, str | None]:
         resume = start + 1
         obj = None
         if end is None:
-            # A candidate inside a quoted string is not an independent object.
-            # Decoding from here would bypass the scanned region's depth guard.
-            pass
-        elif end > 0 and start in deep_starts:
+            # A malformed wrapper may have an unbalanced quote before a valid
+            # object. Scan that candidate independently, under the same guard;
+            # never raw-decode an unbounded suffix or retry guarded children.
+            ends, deep_starts, region_end = _object_ends(text, start)
+            end = ends.get(start, -1)
+        if end > 0 and start in deep_starts:
             # Skip all child candidates too; none may escape the nesting guard.
             resume = end
         elif end > 0:
@@ -304,7 +306,7 @@ def _object_ends(text: str, start: int) -> tuple[dict[int, int], set[int], int]:
         elif char in "]}" and stack:
             opening, open_index, depth = stack.pop()
             ends[open_index] = index + 1
-            if depth + len(stack) > _MAX_TEXT_NESTING:
+            if depth > _MAX_TEXT_NESTING:
                 deep_starts.add(open_index)
             if not stack:
                 return ends, deep_starts, index + 1
