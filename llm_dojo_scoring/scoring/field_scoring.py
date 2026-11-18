@@ -83,7 +83,7 @@ def is_parse_compat_key(doc_class: Any, key: str, field_types: Any = None) -> bo
     """
     return (
         key in CONTRACT_PARSE_COMPAT_KEYS
-        and str(doc_class or "").strip().lower() == "contract"
+        and str(getattr(doc_class, "value", doc_class) or "").strip().lower() == "contract"
         and key not in (field_types or {})
     )
 

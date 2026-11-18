@@ -521,12 +521,14 @@ def _score_maud_clauses_by_question(
     gold_labels = parse_maud_labels(list(exp_lines))
     scored = score_maud_extraction(gold_labels, pred_labels)
     n_expected = scored.get("n_questions") or 0
-    if not n_expected:
-        return
-    exact = round((scored.get("maud_question_accuracy") or 0.0) * n_expected)
     # Gold lines that name no question are expected clauses too (#170): dropping them
     # would shrink the denominator. Each one is met by one equal predicted plain line.
+    # They are scored here even when every question line is ambiguous (gold_labels
+    # nonempty, n_expected 0); gold with no question line stays with the generic matcher.
     free_gold = _unparsed_maud_lines(list(exp_lines))
+    if not n_expected and not (gold_labels and free_gold):
+        return
+    exact = round((scored.get("maud_question_accuracy") or 0.0) * n_expected)
     free_pred = Counter(_free_text_key(line) for line in _unparsed_maud_lines(pred_lines))
     free_matched = 0
     for line in free_gold:
@@ -1032,7 +1034,11 @@ class ScoringSuite:
                     _merger_gold_from_labels(value, scoped, subclass, ftypes)
                 )
                 if _maud_lines_all_ambiguous(scoped.get("maud_clauses")):
-                    del scoped["maud_clauses"]  # unscorable gold is no gold
+                    # Ambiguous question lines are unscorable gold, but plain clause lines
+                    # beside them are still expected clauses (#170): keep the field, and the
+                    # by-question rescore leaves the conflicting question unscored.
+                    if not _unparsed_maud_lines(scoped["maud_clauses"]):
+                        del scoped["maud_clauses"]  # unscorable gold is no gold
             return scoped
 
         scoped_to_empty = False

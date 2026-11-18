@@ -77,3 +77,29 @@ def test_gold_of_plain_lines_only_stays_with_the_generic_matcher():
     )["extraction"]
     assert extraction.field_scores["maud_clauses"] == 1.0
     assert extraction.entity_list_scores["maud_clauses"].matched == 1
+
+
+AMBIGUOUS = ["Type of Consideration: All Cash", "Type of Consideration: All Stock"]
+
+
+@pytest.mark.parametrize("hub_metadata", [False, True])
+def test_plain_gold_lines_survive_when_every_question_line_is_ambiguous(hub_metadata):
+    """Conflicting question lines are unscored, but the plain gold line is still expected."""
+    gold = {"maud_clauses": [*AMBIGUOUS, PLAIN]}
+    if hub_metadata:
+        gold["gt_presence"] = '{"maud_clauses": "populated"}'
+    suite = get_suite("merger_agreement")
+    missed = suite.score_document(gold, {"maud_clauses": []})["extraction"]
+    assert missed.field_scores["maud_clauses"] == 0.0
+    pred = {"maud_clauses": ["Type of Consideration: All Cash", PLAIN]}
+    hit = suite.score_document(gold, pred)["extraction"]
+    entity = hit.entity_list_scores["maud_clauses"]
+    assert hit.field_scores["maud_clauses"] == 1.0
+    assert (entity.matched, entity.unmatched_expected, entity.unmatched_predicted) == (1, 0, 0)
+
+
+def test_gold_of_only_ambiguous_question_lines_stays_unscorable():
+    """With no plain line left, ambiguous gold is still no gold (hub path)."""
+    gold = {"maud_clauses": AMBIGUOUS, "gt_presence": '{"maud_clauses": "populated"}'}
+    extraction = get_suite("merger_agreement").score_document(gold, {"maud_clauses": []}).get("extraction")
+    assert extraction is None or "maud_clauses" not in extraction.field_scores

@@ -325,7 +325,8 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
             "approved' / 'partly denied' fold to partial coverage (#127). A typed (v10) CMS "
             "row keeps an absent adjuster / denial_reasons as labelled-empty and reads its own "
             "expected_subclass, like the legacy row (#127). MAUD gold lines that name no "
-            "question stay in the maud_clauses recall denominator (#170). The factuality "
+            "question stay in the maud_clauses recall denominator, also when every question line is "
+            "ambiguous (#170). The factuality "
             "audit compares labels through the scorer's alias fold (#127); field scores "
             "are unchanged by that part."
         ),
@@ -345,6 +346,7 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         "rescore_required": True,
     },
     {
+        # Fifth 0.30.2 change set: stale Hub labels (#164, #171, #94).
         "version": "0.30.2",
         "metric_ids": (
             "pipeline.extraction.overall",
@@ -358,7 +360,8 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
             "#164 / #171 / #94): intent with intent_source 'heuristic' (any class), corporate "
             "SEC EDGAR template subject_matter and provenance-id keywords, correspondence "
             "templated subject_matter and metadata keywords. A corporate row whose only labels "
-            "are stale is unscorable instead of scoring its template ceiling. "
+            "are stale is unscorable instead of scoring its template ceiling. Applies to "
+            "scope_extraction_pair (every doc scorer) and score_archive_block. "
             "apply_label_overlays is the one merge rule for the interim and near-gold overlays."
         ),
         "rescore_required": True,

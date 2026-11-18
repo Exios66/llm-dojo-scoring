@@ -279,8 +279,10 @@ Three paths stamp a `metric_id`, and they agree:
   `method` through `metric_id_for` (unknown names raise). A contradicting
   claimed `metric_id` is refused.
 
-  `method` and `provenance.metric_id` name the field-map score (`overall_score`,
-  `extraction_f1`). The block's `headline_metric` (`cuad_presence_f1`, `maud_accuracy`) names
+  For the field-map methods (`overall_score`, `extraction_f1` and their aliases),
+  `method` and `provenance.metric_id` name the field-map score. Any other registry
+  method resolves to its own id (for example `maud_question_accuracy` stamps
+  `maud.question.micro_accuracy`). The block's `headline_metric` (`cuad_presence_f1`, `maud_accuracy`) names
   the separate benchmark number in `headline_score`; its canonical ids are the additive
   sandbox rubrics below (`sandbox_cuad_presence_f1`, `sandbox_maud_accuracy`). A bare
   family name such as `method="cuad"` is not a registry name and raises.

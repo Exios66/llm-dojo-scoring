@@ -12,7 +12,8 @@ Format based on Keep a Changelog; versioning is SemVer.
   `intent` with `intent_source: heuristic` (any class), corporate-record SEC EDGAR template
   `subject_matter` and provenance-id `keywords`, and correspondence templated `subject_matter` and
   metadata `keywords`. `scope_extraction_pair` now drops them from expected **and** predicted
-  before every doc-scorer run, so a correct free-text answer is no longer a miss against a
+  before every doc-scorer run, and `score_archive_block` (what llm-mailroom's scoring nodes call)
+  does the same, so a correct free-text answer is no longer a miss against a
   template. A corporate row whose only labels are stale is unscorable (`None`) instead of scoring
   its template ceiling. `apply_label_overlays` merges the Claude-built interim labels
   (`mailroom-interim-labels/v1`) and near-gold labels with one rule set that the sandbox and
@@ -26,7 +27,10 @@ Format based on Keep a Changelog; versioning is SemVer.
   - Near-gold labels fill only what nothing else labels.
 
   Goldens unchanged (no golden input carries a stale label). Consumers adopt the merge
-  after the pin bump.
+  after the pin bump; until then their own merges differ from it: the sandbox counts only
+  `populated` as labelled, fills over a documented absence and `"None"` / `"N/A"`, and applies
+  corrections unconditionally; llm-mailroom reports null labels instead of applying them and has
+  no near-gold.
 - **Score ledger names every score change past `v0.30.1` (#179).** `metrics.score_changelog`
   gains three 0.30.2 entries, all `rescore_required`: CUAD presence credits the agreement and
   expiration dates for recall only (#167; `cuad.sandbox_category_detection.*`); a typed decision
@@ -38,7 +42,8 @@ Format based on Keep a Changelog; versioning is SemVer.
   ("nine months after the date hereof") scores as populated text: an identical prediction was
   0.0 and a missing one 1.0. A contract's v1 parse-compat keys (`merger_consideration`,
   `maud_clauses`) are no longer scored on the direct `score_extraction` path or in field-micro,
-  unless `field_types` names them; merger scoring is unchanged. "partly approved" / "partly
+  unless `field_types` names them (a `str`-Enum contract class is read by its value); merger
+  scoring is unchanged. "partly approved" / "partly
   denied" fold to `partial`. The factuality audit compares labels through the scorer's alias fold,
   so an aliased label (`covered` for `approved`) is no longer called a hallucination.
   `cuad_labels_from_long` / `maud_labels_from_long` skip rows with no category or question. The
@@ -52,8 +57,9 @@ Format based on Keep a Changelog; versioning is SemVer.
   `question: answer` lines with plain lines, `parse_maud_labels` kept only the former, so the plain
   lines left the `maud_clauses` recall denominator and the score rose. Each unparsed gold line now
   counts as expected, matched only by an equal predicted plain line (bullet, case and spacing
-  aside). Gold of question lines only, or of plain lines only, scores as before. Tests:
-  `tests/test_maud_mixed_gold_170.py`.
+  aside). Gold of question lines only, or of plain lines only, scores as before. When every
+  question line is ambiguous (two answers to one question), the plain lines are still scored;
+  only gold with no plain line left is unscorable. Tests: `tests/test_maud_mixed_gold_170.py`.
 - **Minor findings from the 0.27.0 review (#119).** `score_document` and `score_archive_block` read
   a JSON-object `expected` the same way; any other non-mapping is no ground truth, and the block
   files `unscorable` / `gt_wrong_schema` instead of raising `ValueError` (M4). A `str`-Enum
