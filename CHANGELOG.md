@@ -7,6 +7,14 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+- **Abbreviated partial dates in prose retain date credit.** A prediction such as
+  `effective on Aug 18 per the notice` against `Aug 18` now scores 1.0 instead of 0.0;
+  abbreviated month-year phrases work too. Date boundaries and non-date prose guards
+  remain in place. Stated two-digit years and explicit dates outside 1900–2099 also
+  retain the unverified-year cap: `dated August 18, 14` against `August 18` changes
+  from 1.0 to 0.67, using the existing fixed century pivot. Unrelated amounts are
+  not extra years. These scorer corrections require a coordinated `llm-mailroom`
+  pin bump and sandbox vendor refresh after merge.
 - **Release notes list squash-merged PRs.** `scripts/release.py:prs_in_range` collected PRs only
   from `git log --merges` and matched only `Merge pull request #N from` subjects, so a
   squash-merged PR (one parent, subject `title (#N)`) vanished from the notes' PR list. It now
