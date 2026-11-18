@@ -559,6 +559,7 @@ def test_conflicting_consideration_variants_do_not_derive_scalar_gold(reverse, f
 
 @pytest.mark.parametrize("variant", ["all_cash", "all cash", "ALL CASH"])
 def test_equivalent_consideration_variants_keep_one_gold_answer(variant):
+    """Catalog-equivalent answers give the same gold in either order."""
     lab = labels({"Type of Consideration": "All Cash", "type of consideration": variant, "No-Shop": "Yes"})
     expected = {"maud_clauses": ["No-Shop: Yes", "Type of Consideration: All Cash"], "merger_consideration": "all_cash"}
     for ordered in (lab, dict(reversed(list(lab.items())))):
@@ -569,6 +570,7 @@ def test_equivalent_consideration_variants_keep_one_gold_answer(variant):
 
 @pytest.mark.parametrize("reverse", [False, True])
 def test_clean_consideration_variant_survives_flagged_variant(reverse):
+    """A flagged variant cannot override independently clean consideration gold."""
     lab = {"Type of Consideration": {"answer": "All Cash", "gt_ambiguous": True}, "type of consideration": {"answer": "All Stock"}, "No-Shop": {"answer": "Yes"}}
     if reverse:
         lab = dict(reversed(list(lab.items())))
