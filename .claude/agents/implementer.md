@@ -1,7 +1,7 @@
 ---
 name: implementer
-description: Scoped higher-level work in llm-dojo-scoring delegated by the orchestrator - a scoring feature, a bug fix with root-cause analysis, a refactor, or an investigation write-up. Needs a brief with the goal, boundaries and acceptance check. Returns a change summary with evidence. Use instead of a general-purpose agent so the model tier stays fixed.
-model: sonnet
+description: Scoped higher-level work in llm-dojo-scoring delegated by the orchestrator - a scoring feature, a bug fix with root-cause analysis, a refactor, or an investigation write-up. Needs a brief with the goal, boundaries and acceptance check. Returns a change summary with evidence. Use the session model unless the user selects another model.
+model: inherit
 effort: high
 ---
 

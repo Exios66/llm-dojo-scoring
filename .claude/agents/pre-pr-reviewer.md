@@ -1,7 +1,7 @@
 ---
 name: pre-pr-reviewer
 description: Fresh-context code review of the final diff in llm-dojo-scoring before it is pushed for a pull request, so bot reviewers (CodeRabbit, CodeAnt) only see vetted code. Given the original request, the diff range and the draft PR description. Read-only. Always dispatch a NEW instance; never reuse one that saw the implementation.
-model: sonnet
+model: inherit
 effort: high
 tools: Read, Grep, Glob, Bash
 ---

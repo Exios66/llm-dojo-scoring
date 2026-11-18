@@ -1,42 +1,44 @@
 # Subagent orchestration
 
 These rules govern how the main session delegates work. They apply to every task in
-this repository. `AGENTS.md` points other agent tools here; map the tiers to the
-closest models your tool offers.
+this repository. `AGENTS.md` points other agent tools here.
 
-## Roles and model tiers
+## Roles and model selection
 
-| Role | Who | Model / effort | Use for |
-|:---|:---|:---|:---|
-| Orchestrator | The main session | Opus | Plans the work, writes the subagent briefs, owns the final verification, talks to the user. |
-| `implementer` | `.claude/agents/implementer.md` | `sonnet`, effort `high` | Scoped, higher-level work: a feature, a bug fix with root-cause analysis, a refactor, a design or investigation write-up. |
-| `runner` | `.claude/agents/runner.md` | `haiku`, effort `high` | Simple tasks: fetch data, run commands or test suites, collect results, read logs, simple mechanical edits (rename, add a line, fix a typo). |
-| `adversarial-reviewer` | `.claude/agents/adversarial-reviewer.md` | `sonnet`, effort `high` | Tries to break subagent output before the orchestrator accepts it. Read-only. |
-| `pre-pr-reviewer` | `.claude/agents/pre-pr-reviewer.md` | `sonnet`, effort `high` | Fresh-context review of the final diff before anything is pushed for a PR. Read-only. |
+Use the current session's provider and model for delegated work by default, including
+implementation and review. Role names describe responsibilities, not model tiers.
+User model choices override repository defaults. **Do not use Sonnet 4.6.**
+
+Discover the live model catalog before selecting a model explicitly. Do not downgrade to
+an older model because a role used to name a cheaper tier, or because another provider
+fails. Stay with the current approved provider/model unless the user selects another.
+The project agent briefs inherit the session model; use high reasoning effort for
+implementation and review when the provider supports it.
+
+| Role | Who | Use for |
+|:---|:---|:---|
+| Orchestrator | The main session | Plans the work, writes briefs, owns final verification, talks to the user. |
+| `implementer` | `.claude/agents/implementer.md` | Features, bug fixes, refactors and investigations. |
+| `runner` | `.claude/agents/runner.md` | Commands, data collection and mechanical work. |
+| `adversarial-reviewer` | `.claude/agents/adversarial-reviewer.md` | Read-only attempts to break the change. |
+| `pre-pr-reviewer` | `.claude/agents/pre-pr-reviewer.md` | Fresh-context review before pushing a PR. |
 
 **Hard rules**
 
-1. **YOU MUST NOT start an Opus subagent.** Opus orchestrates; it does not spawn copies
-   of itself. A subagent with no `model` inherits the main session's model, so:
-   - prefer the project agents above (their frontmatter pins `model` and `effort`);
-   - when you use a built-in type (`general-purpose`, `Explore`, `Plan`), **always** pass
-     `model: "sonnet"` or `model: "haiku"` and `effort: "high"` explicitly (if your Claude
-     Code build has no per-call `effort`, use the project agents, whose frontmatter sets it);
-   - a `fork` always runs on the main session's model, so do not fork for delegated work.
-2. Pick the **cheapest tier that can do the job well**. If a task needs judgement
-   (choosing an approach, reading unfamiliar code, explaining *why*), it is `implementer`
-   work, not `runner` work. If the `runner` reports that the task was not simple, re-brief
-   it to an `implementer`; do not retry the `runner` with the same brief.
-3. Do not delegate trivial lookups you can answer with one `Read` or `Grep`. Every
-   subagent starts cold and re-reads context, so delegation has a cost.
-4. Run independent subagents in parallel (one message, several `Agent` calls). Run
-   dependent ones in sequence.
-5. Subagents never push, open PRs, comment on GitHub, publish, or run anything that spends
-   money or writes to hosted services. Those actions stay with the orchestrator.
+1. Model selection follows the user's current instructions, then the session default;
+   project roles never force a provider or an older model. Check the selected model
+   before dispatch, including when using a built-in agent rather than a project brief.
+2. Match the brief to the work. If a runner task requires implementation judgement,
+   re-brief it as implementer work; do not retry the same mechanical brief.
+3. Do not delegate trivial lookups you can answer with one read or search. Each subagent
+   starts cold and re-reads context, so delegation has a cost.
+4. Run independent subagents in parallel and dependent ones in sequence.
+5. Subagents never push, open PRs, comment on GitHub, publish, or write to hosted services.
+   Those actions stay with the orchestrator.
 6. Subagents that change files commit locally, one concern per commit with a message that
-   says what and why (the read-only reviewers commit nothing). A subagent never rewrites
-   pushed history and leaves folding to the orchestrator, which squash-merges a feature or
-   fix PR as one coherent commit; branch-sync and release PRs keep a merge commit
+   says what and why (read-only reviewers commit nothing). Never rewrite pushed history;
+   leave folding to the orchestrator, which squash-merges a feature or fix PR as one
+   coherent commit; branch-sync and release PRs keep a merge commit
    (`.claude/rules/pr-flow.md` step 7).
 
 ## Writing a brief
