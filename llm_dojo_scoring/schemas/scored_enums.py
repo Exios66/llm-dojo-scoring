@@ -225,6 +225,7 @@ _COVERAGE_ALIASES: dict[str, str] = {
     **{_compact(v): "denied" for v in ("deny", "declined", "rejected", "not covered", "uncovered")},
     **{_compact(v): "partial" for v in (
         "partially approved", "partially denied", "partial approval", "partial denial",
+        "partly approved", "partly denied",
     )},
     **{_compact(v): "pending" for v in ("under review", "in review", "open", "undetermined")},
 }

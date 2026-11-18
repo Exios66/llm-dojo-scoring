@@ -13,6 +13,7 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+<<<<<<< HEAD
 - **Payload nesting limits are deterministic across Python versions.** Text payloads
   exceeding 128 nested containers are rejected before JSON or Python-repr decoding,
   including wrapped objects and arrays. Recovery skips deep child candidates and
@@ -39,6 +40,71 @@ Format based on Keep a Changelog; versioning is SemVer.
   not extra years. These scorer corrections require a coordinated `llm-mailroom`
   pin bump and sandbox vendor refresh after merge. Rescore stored runs containing
   these date forms before comparing their scores across the consumer update.
+=======
+- **Score change: stale Hub labels are not scored; one overlay policy (#164, #171, #94).** New
+  `schemas.label_policy`. `stale_hub_labels` names the Hub labels that are not truth:
+  `intent` with `intent_source: heuristic` (any class), corporate-record SEC EDGAR template
+  `subject_matter` and provenance-id `keywords`, and correspondence templated `subject_matter` and
+  metadata `keywords`. `scope_extraction_pair` now drops them from expected **and** predicted
+  before every doc-scorer run, and `score_archive_block` (what llm-mailroom's scoring nodes call)
+  does the same, so a correct free-text answer is no longer a miss against a
+  template. A corporate row whose only labels are stale is unscorable (`None`) instead of scoring
+  its template ceiling. `apply_label_overlays` merges the Claude-built interim labels
+  (`mailroom-interim-labels/v1`) and near-gold labels with one rule set that the sandbox and
+  llm-mailroom previously each implemented differently:
+  - Hub labels win.
+  - A `correction` applies only while the Hub value equals its `hub_value`.
+  - `disputed` labels never apply.
+  - Labels bind to the document text (`doc_sha256`) and class.
+  - Enum values must be in the scored vocabulary, and a CMS `claim_type` is `health`.
+  - A null label is a documented absence.
+  - Near-gold labels fill only what nothing else labels.
+
+  Goldens unchanged (no golden input carries a stale label). Consumers adopt the merge
+  after the pin bump; until then their own merges differ from it: the sandbox counts only
+  `populated` as labelled, fills over a documented absence and `"None"` / `"N/A"`, and applies
+  corrections unconditionally; llm-mailroom reports null labels instead of applying them and has
+  no near-gold.
+- **Score ledger names every score change past `v0.30.1` (#179).** `metrics.score_changelog`
+  gains three 0.30.2 entries, all `rescore_required`: CUAD presence credits the agreement and
+  expiration dates for recall only (#167; `cuad.sandbox_category_detection.*`); a typed decision
+  without its class's extraction counts under `no_gold` (#168; the `decision.*` lanes); and the
+  #127 and #170 fixes below (`pipeline.extraction.overall` and `field_micro_*`). Consumers pinned
+  at `025400f` already score #167 and #168 this way while reporting 0.30.1; re-score runs from
+  before that commit, and runs before this release for #127 and #170, before comparing.
+- **0.28.0-review scoring fixes still open on `main` (#127).** A relative merger `outside_date`
+  ("nine months after the date hereof") scores as populated text: an identical prediction was
+  0.0 and a missing one 1.0. A contract's v1 parse-compat keys (`merger_consideration`,
+  `maud_clauses`) are no longer scored on the direct `score_extraction` path or in field-micro,
+  unless `field_types` names them (a `str`-Enum contract class is read by its value); merger
+  scoring is unchanged. "partly approved" / "partly
+  denied" fold to `partial`. The factuality audit compares labels through the scorer's alias fold,
+  so an aliased label (`covered` for `approved`) is no longer called a hallucination.
+  `cuad_labels_from_long` / `maud_labels_from_long` skip rows with no category or question. The
+  guided `party_roles` schema anchors each item's role to `CONTRACT_PARTY_ROLES`.
+  `gt_from_v10_row` keeps a CMS row's absent `adjuster` / `denial_reasons` as labelled-empty, as
+  the legacy row does, and the suite reads a converted row's own `expected_subclass` when no
+  subclass keyword is given. Schema adherence keeps the v1 compat keys for agent aliases
+  (`contract_specialist`) and for producer models that forbid extras. Tests:
+  `tests/test_scoring_fixes_127.py`.
+- **MAUD gold lines that name no question are no longer dropped (#170).** When the gold mixed
+  `question: answer` lines with plain lines, `parse_maud_labels` kept only the former, so the plain
+  lines left the `maud_clauses` recall denominator and the score rose. Each unparsed gold line now
+  counts as expected, matched only by an equal predicted plain line (bullet, case and spacing
+  aside). Gold of question lines only, or of plain lines only, scores as before. When every
+  question line is ambiguous (two answers to one question), the plain lines are still scored;
+  only gold with no plain line left is unscorable. Tests: `tests/test_maud_mixed_gold_170.py`.
+- **Minor findings from the 0.27.0 review (#119).** `score_document` and `score_archive_block` read
+  a JSON-object `expected` the same way; any other non-mapping is no ground truth, and the block
+  files `unscorable` / `gt_wrong_schema` instead of raising `ValueError` (M4). A `str`-Enum
+  `doc_type` resolves by its value (M2). A blank subclass (`None`, NaN, `"nan"`) is no subclass and
+  records no tier-2 run, and an off-catalogue subclass is `other` only where the type has that
+  bucket, so insurance `"health"` is now `None` (M5). `assess_extraction_payload` reads `doc_type`
+  case-insensitively (M6). Docs: `score_document` carries no `status` / `reason`, and
+  `docs/contracts/METRIC_IDS.md` explains `headline_metric` against `method` (M7, M8). M1 and M3
+  are pinned by tests as intended or already fixed; M9 (reusing the suite result in the block) is
+  deferred because the two paths score different pairs. Tests: `tests/test_review_findings_119.py`.
+>>>>>>> origin/main
 - **Release notes list squash-merged PRs.** `scripts/release.py:prs_in_range` collected PRs only
   from `git log --merges` and matched only `Merge pull request #N from` subjects, so a
   squash-merged PR (one parent, subject `title (#N)`) vanished from the notes' PR list. It now

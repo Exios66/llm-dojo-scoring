@@ -322,3 +322,22 @@ def test_emit_serving_scorecard_explicit_scorer_version_wins():
         for r in em._records
     }
     assert got == {("local", "0.21.0"), ("api", "0.20.0")}
+
+
+def test_score_changelog_0_30_2_names_the_cuad_date_and_decision_lane_fixes():
+    """#179: the score changes past v0.30.1 (#167, #168, #127, #170) are in the 0.30.2 ledger."""
+    changes = score_changes_between("0.30.1", "0.30.2")
+    assert all(entry["version"] == "0.30.2" for entry in changes)
+    by_issue = {
+        issue: [e for e in changes if issue in e["change"]]
+        for issue in ("#167", "#168", "#127", "#170")
+    }
+    assert all(by_issue.values()), by_issue
+    assert all(e["rescore_required"] for entries in by_issue.values() for e in entries)
+    recall = score_changes_for_metric(
+        "cuad.sandbox_category_detection.micro_recall", "0.30.1", "0.30.2"
+    )
+    assert any("#167" in e["change"] for e in recall)
+    verdict = score_changes_for_metric("decision.judge.verdict_accuracy", "0.30.1", "0.30.2")
+    assert any("#168" in e["change"] for e in verdict)
+    assert score_changes_between("0.30.0", "0.30.1") == []
