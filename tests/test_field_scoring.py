@@ -902,6 +902,11 @@ def test_abbreviated_date_containment_rejects_false_phrases(pred, exp):
     ("August 18, 2100", "August 18"),
     ("08/18/14", "08/18"),
     ("18th day of August, 14", "18th day of August"),
+    ("18/Aug/14", "18/Aug"),
+    ("Aug-18-14", "Aug-18"),
+    ("August 1-3, 14", "August 1"),
+    ("Aug 18, '14", "Aug 18"),
+    ("18 Aug '14", "18 Aug"),
 ])
 def test_prose_date_with_unverified_year_stays_capped(phrase, expected):
     """Prose cannot hide either a two-digit year or a stated century from the cap."""
@@ -919,3 +924,30 @@ def test_prose_two_digit_years_use_the_fixed_pivot(year, canonical):
 def test_prose_date_does_not_treat_unrelated_amount_as_an_extra_year():
     """Amounts beside a valid date do not introduce unverified years."""
     assert fs.score_date_field("effective August 18, 2014; consideration $5000", "August 18, 2014") == 1.0
+
+
+@pytest.mark.parametrize("phrase, expected", [
+    ("Aug 18 12:00", "Aug 18"),
+    ("August 18 14:30", "August 18"),
+    ("August 18, 12:00 PM", "August 18"),
+    ("August 18 12 AM", "August 18"),
+    ("18th day of August 12:00 PM", "18th day of August"),
+    ("18th day of August 12 AM", "18th day of August"),
+])
+def test_time_in_yearless_date_is_not_a_stated_year(phrase, expected):
+    """Clock hours in valid date text must never be interpreted as two-digit years."""
+    assert fs.score_date_field(phrase, expected) == 1.0
+    assert not fs._stated_years(phrase)
+
+
+@pytest.mark.parametrize("prediction", ["18th day of August, 14", "August 18, 2014", "2014-08-18"])
+def test_ordinal_label_retains_its_two_digit_year(prediction):
+    """An ordinal two-digit year label verifies the canonical year and exact copies."""
+    assert fs.score_date_field(prediction, "18th day of August, 14") == 1.0
+
+
+@pytest.mark.parametrize("amount", ["$2014", "USD 2014", "2014 USD", "14 dollars", "€2014", "2014 GBP"])
+def test_yearless_date_does_not_treat_currency_amount_as_year(amount):
+    prediction = f"effective Aug 18; consideration {amount}"
+    assert fs.score_date_field(prediction, "Aug 18") == 1.0
+    assert not fs._stated_years(prediction)

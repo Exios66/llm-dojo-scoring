@@ -463,7 +463,7 @@ def _parse_date_parts(text) -> Optional[_DateParts]:
     )
     # "16 day of August. 2012": a period before the year is OCR/typing noise.
     day_of_month = re.search(
-        r"\b(\d{1,2})\s+day\s+of\s+([A-Za-z]+)[,.\s]*(\d{4})?", s, flags=re.IGNORECASE
+        rf"\b(\d{{1,2}})\s+day\s+of\s+([A-Za-z]+)[,.\s]*({_DATE_SPAN_YEAR})?", s, flags=re.IGNORECASE
     )
     if day_of_month:
         month, day, year = day_of_month.group(2), day_of_month.group(1), day_of_month.group(3)
@@ -712,10 +712,21 @@ _DATE_MONTH_PATTERN = (
     r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?"
     r"|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?"
 )
+_DATE_SPAN_SEPARATOR = r"[-/.,\s]+"
+_DATE_SPAN_DAY = r"\d{1,2}(?:st|nd|rd|th)?(?:\s*[-–]\s*\d{1,2})?"
+# A clock hour is not a two-digit year ("Aug 18 12:00", "Aug 18 12 PM").
+_DATE_SPAN_YEAR = r"'?(?:\d{4}|\d{2})\b(?!\s*:|\s*(?:am|pm|USD|EUR|GBP|dollars?|euros?|pounds?)\b)"
+_DATE_CURRENCY_AMOUNT_RE = re.compile(
+    r"(?:[$€£]|\b(?:USD|EUR|GBP)\s+)\s*\d[\d,]*(?:\.\d+)?"
+    r"|\b\d[\d,]*(?:\.\d+)?\s*(?:USD|EUR|GBP|dollars?|euros?|pounds?)\b",
+    re.IGNORECASE,
+)
 _PROSE_DATED_YEAR_RE = re.compile(
-    rf"\b{_DATE_MONTH_PATTERN}\s+\d{{1,2}}(?:st|nd|rd|th)?(?:,\s*|\s+)(?:\d{{4}}|\d{{2}})\b"
-    rf"|\b\d{{1,2}}(?:st|nd|rd|th)?\s+(?:day\s+of\s+)?{_DATE_MONTH_PATTERN}(?:,\s*|\s+)(?:\d{{4}}|\d{{2}})\b"
-    r"|\b\d{1,2}[-/.]\d{1,2}[-/.](?:\d{4}|\d{2})\b"
+    rf"\b{_DATE_MONTH_PATTERN}{_DATE_SPAN_SEPARATOR}{_DATE_SPAN_DAY}"
+    rf"{_DATE_SPAN_SEPARATOR}{_DATE_SPAN_YEAR}"
+    rf"|\b{_DATE_SPAN_DAY}{_DATE_SPAN_SEPARATOR}(?:day\s+of\s+)?{_DATE_MONTH_PATTERN}"
+    rf"{_DATE_SPAN_SEPARATOR}{_DATE_SPAN_YEAR}"
+    rf"|\b\d{{1,2}}[-/.]\d{{1,2}}[-/.]{_DATE_SPAN_YEAR}"
     rf"|\b{_DATE_MONTH_PATTERN}\s+\d{{4}}\b"
     r"|\b\d{4}-\d{1,2}-\d{1,2}\b",
     re.IGNORECASE,
@@ -728,11 +739,11 @@ def _stated_years(text) -> set:
     Parse only bounded date spans in prose, using the same fixed century pivot
     as bare dates; ordinary day numbers never become years.
     """
-    text = str(text)
+    # Amounts such as "$2014" or "2014 USD" are not document years.
+    text = _DATE_CURRENCY_AMOUNT_RE.sub(" ", str(text))
     years = {int(y) for y in re.findall(r"(?<!\d)((?:19|20)\d{2})(?!\d)", text)}
     for match in _PROSE_DATED_YEAR_RE.finditer(text):
-        span = re.sub(r"\bday\s+of\s+", "", match.group(0), flags=re.IGNORECASE)
-        parts = _parse_date_parts(span)
+        parts = _parse_date_parts(match.group(0))
         if parts is not None and parts.year is not None:
             years.add(parts.year)
     return years

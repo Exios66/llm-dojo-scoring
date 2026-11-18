@@ -37,7 +37,8 @@ Format based on Keep a Changelog; versioning is SemVer.
   retain the unverified-year cap: `dated August 18, 14` against `August 18` changes
   from 1.0 to 0.67, using the existing fixed century pivot. Unrelated amounts are
   not extra years. These scorer corrections require a coordinated `llm-mailroom`
-  pin bump and sandbox vendor refresh after merge.
+  pin bump and sandbox vendor refresh after merge. Rescore stored runs containing
+  these date forms before comparing their scores across the consumer update.
 - **Release notes list squash-merged PRs.** `scripts/release.py:prs_in_range` collected PRs only
   from `git log --merges` and matched only `Merge pull request #N from` subjects, so a
   squash-merged PR (one parent, subject `title (#N)`) vanished from the notes' PR list. It now
