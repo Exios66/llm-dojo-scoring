@@ -245,3 +245,24 @@ def test_nesting_limit_boundary_and_quoted_brackets_are_accepted(style):
     assert isinstance(payload["items"], list)
     assert meta["parse_error"] is False
     assert coerce_predicted_payload(json.dumps({"text": "{" * 200 + "[" * 200}))[0] == {"text": "{" * 200 + "[" * 200}
+
+
+@pytest.mark.parametrize("fragment", ['{"', '{"a": "'])
+def test_malformed_quote_candidates_reuse_scanned_regions(fragment, monkeypatch):
+    """Alternate quote contexts share cached ends instead of rescanning each suffix."""
+    from llm_dojo_scoring.pipeline import sandbox_schema_adherence as adherence
+
+    original = adherence._object_ends
+    scanned = 0
+
+    def count_scan(text, start):
+        """Count a conservative upper bound on characters scanned by each call."""
+        nonlocal scanned
+        scanned += len(text) - start
+        return original(text, start)
+
+    monkeypatch.setattr(adherence, "_object_ends", count_scan)
+    text = 'x {"bad": "' + fragment * 2_000
+    assert coerce_predicted_payload(text)[0] is None
+    assert scanned <= 3 * len(text)
+    assert coerce_predicted_payload(text + ' then {"sender": "Acme"}')[0] == {"sender": "Acme"}

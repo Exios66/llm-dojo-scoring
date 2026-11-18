@@ -259,7 +259,12 @@ def _parse_object_text(text: str) -> tuple[dict[str, Any] | None, str | None]:
             # A malformed wrapper may have an unbalanced quote before a valid
             # object. Scan that candidate independently, under the same guard;
             # never raw-decode an unbounded suffix or retry guarded children.
-            ends, deep_starts, region_end = _object_ends(text, start)
+            alternate_ends, alternate_deep, alternate_end = _object_ends(text, start)
+            # Retain both quote contexts. Replacing this map would repeatedly
+            # forget known candidates and rescan malformed suffixes quadratically.
+            ends.update(alternate_ends)
+            deep_starts.update(alternate_deep)
+            region_end = max(region_end, alternate_end)
             end = ends.get(start, -1)
         if end > 0 and start in deep_starts:
             # Skip all child candidates too; none may escape the nesting guard.
