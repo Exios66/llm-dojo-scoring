@@ -27,8 +27,8 @@ Three label sources reach a score:
    ``status``:
 
    * ``gap_fill`` / ``derived`` — truth. Applied only where the Hub has no label.
-   * ``correction`` — truth. Applied only while the Hub value still equals the
-     ``hub_value`` it corrects (two blanks are equal: a CUAD contract correction
+   * ``correction`` — truth. Applied only while the Hub value (as published, before a
+     stale label is dropped) still equals the ``hub_value`` it corrects (two blanks are equal: a CUAD contract correction
      fixes the clause-span label while the Hub field is blank). A Hub revision that
      publishes another value wins.
    * ``disputed``, or any label with ``use_as_truth`` false — never applied.
@@ -275,6 +275,8 @@ class _Merge:
     fields: dict[str, Any]
     presence: dict[str, str]
     report: dict[str, Any]
+    #: The Hub row before stale labels were dropped: what a ``correction`` was written against.
+    hub: dict[str, Any] = field(default_factory=dict)
     sources: dict[str, str] = field(default_factory=dict)
 
     def labelled(self, name: str) -> bool:
@@ -338,7 +340,7 @@ class _Merge:
             if status == "correction":
                 # Two empties match: a CUAD contract correction fixes the clause-span label
                 # while the Hub field itself is blank (``hub_value: null``).
-                stale_hub = _canon(self.fields.get(name)) != _canon(lab.get("hub_value"))
+                stale_hub = _canon(self.hub.get(name)) != _canon(lab.get("hub_value"))
             else:
                 stale_hub = self.labelled(name)
             if stale_hub:
@@ -377,7 +379,8 @@ def apply_label_overlays(
     malformed record or label is reported under ``rejected``, never raised.
     """
     cls = _class(doc_class)
-    fields, stale = drop_stale_hub_labels(cls, expected)
+    hub = copy.deepcopy(_fields(expected))
+    fields, stale = drop_stale_hub_labels(cls, hub)
     original_presence = fields.get(GT_PRESENCE_KEY)
     merge = _Merge(
         cls=cls,
@@ -385,6 +388,7 @@ def apply_label_overlays(
         fields=fields,
         presence=gt_presence_map(fields),
         report={"stale": stale, "applied": {}, "superseded": [], "rejected": [], "disputed": []},
+        hub=hub,
     )
     text_sha = doc_sha(doc_text)
     if interim and merge.bound(interim, text_sha, "interim"):

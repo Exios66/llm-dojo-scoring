@@ -153,6 +153,29 @@ def test_correction_of_a_blank_hub_field_applies_until_the_hub_fills_it() -> Non
     assert filled.report["superseded"] == ["parties"]
 
 
+def test_correction_of_a_stale_hub_label_is_judged_against_the_hub_value() -> None:
+    """Dropping a stale label must not hide the value a correction was written against."""
+    hub = {"intent": "notice", "intent_source": "heuristic"}
+    lab = _lab("request", "correction", hub_value="notice")
+    merged = apply_label_overlays(hub, doc_class="correspondence", doc_text=TEXT,
+                                  interim=_rec({"intent": lab}))
+    assert merged.fields["intent"] == "request"
+    assert merged.sources == {"intent": "interim:correction"}
+    assert merged.report["stale"] == {"intent": "intent_heuristic"}
+    moved = apply_label_overlays({"intent": "payment_demand", "intent_source": "heuristic"},
+                                 doc_class="correspondence", doc_text=TEXT, interim=_rec({"intent": lab}))
+    assert "intent" not in moved.fields and moved.report["superseded"] == ["intent"]
+
+
+def test_result_shares_no_objects_with_the_hub_row() -> None:
+    """Changing a merged list never reaches the caller's ground truth."""
+    hub = {"keywords": ["gas prices"]}
+    merged = apply_label_overlays(hub, doc_class="correspondence", doc_text=TEXT,
+                                  interim=_rec({"sender": _lab("Phillip Allen")}))
+    merged.fields["keywords"].append("x")
+    assert hub == {"keywords": ["gas prices"]}
+
+
 def test_disputed_and_non_truth_labels_never_apply() -> None:
     """``disputed`` and ``use_as_truth: false`` stay out of the gold."""
     merged = apply_label_overlays(
