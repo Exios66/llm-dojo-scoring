@@ -262,6 +262,51 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         ),
         "rescore_required": True,
     },
+    {
+        # First 0.30.2 change set: CUAD agreement and expiration dates (#167, #173).
+        # Consumers pinned at 025400f already score this way while reporting 0.30.1
+        # (the commit sits past the v0.30.1 tag); see #179.
+        "version": "0.30.2",
+        "metric_ids": (
+            "cuad.sandbox_category_detection.micro_f1",
+            "cuad.sandbox_category_detection.micro_precision",
+            "cuad.sandbox_category_detection.micro_recall",
+        ),
+        "change": (
+            "CUAD presence credits agreement_date and expiration_date toward the "
+            "Agreement Date / Expiration Date categories, for recall only (#167): a filled "
+            "date earns the category when CUAD labels it, and is never a false positive "
+            "when CUAD leaves it unlabelled (RECALL_ONLY_FIELDS). Recall can rise on "
+            "unchanged predictions; precision never falls."
+        ),
+        "rescore_required": True,
+    },
+    {
+        # Second 0.30.2 change set: decision lanes (#168, #169).
+        "version": "0.30.2",
+        "metric_ids": (
+            "decision.judge.verdict_accuracy",
+            "decision.judge.macro_f1",
+            "decision.judge.escalation_recall",
+            "decision.judge.false_escalation_rate",
+            "decision.arbiter.decision_accuracy",
+            "decision.arbiter.retry_usefulness",
+            "decision.arbiter.wrongful_accept_rate",
+            "decision.arbiter.unnecessary_escalation_rate",
+            "decision.boss.wrongful_approve_rate",
+            "decision.boss.needless_review_rate",
+            "decision.review_tray.wasted_review_rate",
+            "decision.review_tray.correction_rate",
+            "decision.review_tray.reject_rate",
+        ),
+        "change": (
+            "A typed decision is never graded by an untyped score when the graded attempt "
+            "has typed extractions but none of the decision's class (#168): it counts under "
+            "no_gold instead of earning a verdict. Attempts with only untyped extractions "
+            "keep the untyped fallback. Lane denominators can shrink on unchanged records."
+        ),
+        "rescore_required": True,
+    },
 )
 
 
