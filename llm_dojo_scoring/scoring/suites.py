@@ -981,20 +981,26 @@ class ScoringSuite:
             is_hub_metadata = bool(_gtm.gt_presence_map(value)) or (
                 _gtm.GT_PRESENCE_KEY in value
             )
+            subclass = _subclass_for(index)
+            own_subclass = value.get("expected_subclass")
+            if subclass is None and isinstance(own_subclass, str) and own_subclass.strip():
+                # A converted v10 row carries its own subclass (``gt_from_v10_row``); a
+                # caller's keyword stays authoritative (#127).
+                subclass = own_subclass
             scoped = _gtm.scoring_gt_fields(
                 value,
                 field_types=ftypes,
                 extra_keys=scorable_gt_keys,
                 drop_unmapped=is_hub_metadata,
                 doc_type=doc_class,
-                subclass=_subclass_for(index),
+                subclass=subclass,
             )
             if doc_class == "merger_agreement":
                 from ..schemas.maud_schema import hub_merger_skipped_questions
 
                 skipped_maud[index] = hub_merger_skipped_questions(value)
                 scoped.update(
-                    _merger_gold_from_labels(value, scoped, _subclass_for(index), ftypes)
+                    _merger_gold_from_labels(value, scoped, subclass, ftypes)
                 )
                 if _maud_lines_all_ambiguous(scoped.get("maud_clauses")):
                     del scoped["maud_clauses"]  # unscorable gold is no gold

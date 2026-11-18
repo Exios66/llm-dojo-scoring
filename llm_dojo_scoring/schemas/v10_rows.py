@@ -33,6 +33,7 @@ import math
 from collections import Counter
 from typing import Any, Iterable, Mapping
 
+from .corpus import CMS_DOCUMENTED_ABSENT_FIELDS, cms_source_table
 from .doc_classes import LIVE_DOC_TYPES, in_order
 from .gt_metadata import GT_PRESENCE_KEY
 
@@ -151,7 +152,9 @@ def gt_from_v10_row(row: Mapping[str, Any]) -> dict[str, Any]:
     answer}}``). ``presence`` becomes ``gt_presence`` under the same keys, with
     ``None`` codes dropped. ``evidence`` and ``provenance`` are kept as annotation
     keys (never scored), and ``source_subclass`` becomes ``expected_subclass``, the
-    legacy subclass column. Identity columns are left out. Returns a new dict; a
+    legacy subclass column. A CMS insurance row (its subclass is a CMS source table)
+    keeps a null ``adjuster`` / ``denial_reasons`` as ``""``, as the legacy row
+    states them. Identity columns are left out. Returns a new dict; a
     non-mapping row raises ``TypeError``.
     """
     if not isinstance(row, Mapping):
@@ -179,7 +182,27 @@ def gt_from_v10_row(row: Mapping[str, Any]) -> dict[str, Any]:
     source_subclass = _plain(row.get("source_subclass"))
     if source_subclass not in (None, ""):
         out["expected_subclass"] = str(source_subclass)
+    if cms_source_table("insurance_claim", _plain(row.get("subclass")) or source_subclass) is not None:
+        # The legacy CMS row states ``adjuster`` / ``denial_reasons`` as empty strings; a
+        # typed row holds null / []. Keep them as labelled-empty so the scorer's
+        # empty-value credit survives the conversion (#127).
+        for key in CMS_DOCUMENTED_ABSENT_FIELDS:
+            out.setdefault(key, "")
     return out
+
+
+def _group_long(rows: Iterable[Mapping[str, Any]], required: str) -> dict[str, list[Mapping[str, Any]]]:
+    """Group long-config rows by ``document_id``, skipping rows without a document or ``required``.
+
+    A row with no category / question carries no label, so it never creates an
+    empty entry for its document (#127).
+    """
+    grouped: dict[str, list[Mapping[str, Any]]] = {}
+    for row in rows:
+        doc = _plain(row.get("document_id"))
+        if doc and _plain(row.get(required)):
+            grouped.setdefault(str(doc), []).append({k: _plain(v) for k, v in row.items()})
+    return grouped
 
 
 def cuad_labels_from_long(rows: Iterable[Mapping[str, Any]]) -> dict[str, dict[str, list[dict[str, Any]]]]:
@@ -188,11 +211,7 @@ def cuad_labels_from_long(rows: Iterable[Mapping[str, Any]]) -> dict[str, dict[s
     Spans keep their input order within a category. Rows without a
     ``document_id`` or ``category`` are skipped.
     """
-    grouped: dict[str, list[Mapping[str, Any]]] = {}
-    for row in rows:
-        doc = _plain(row.get("document_id"))
-        if doc:
-            grouped.setdefault(str(doc), []).append({k: _plain(v) for k, v in row.items()})
+    grouped = _group_long(rows, "category")
     return {doc: _cuad_map(spans) for doc, spans in grouped.items()}
 
 
@@ -202,11 +221,7 @@ def maud_labels_from_long(rows: Iterable[Mapping[str, Any]]) -> dict[str, dict[s
     A repeated question keeps its last answer. Rows without a ``document_id`` or
     ``question`` are skipped.
     """
-    grouped: dict[str, list[Mapping[str, Any]]] = {}
-    for row in rows:
-        doc = _plain(row.get("document_id"))
-        if doc:
-            grouped.setdefault(str(doc), []).append({k: _plain(v) for k, v in row.items()})
+    grouped = _group_long(rows, "question")
     return {doc: _maud_map(answers) for doc, answers in grouped.items()}
 
 
