@@ -117,6 +117,29 @@ def test_slot_summary_reads_mailroom_outcomes():
 def test_slot_summary_empty():
     """No records: empty rates, no slots."""
     out = slot_decision_summary([])
-    assert out == {"pipeline": {"n": 0, "archived": 0, "review_rate": None, "n_scorable_archives": 0,
+    assert out == {"pipeline": {"n": 0, "archived": 0, "reviewed": 0, "other": 0, "review_rate": None, "n_scorable_archives": 0,
                                 "wrong_archives": 0, "wrong_archive_rate": None, "wrong_archive_upper95": None,
                                 "wrong_per_1000": None}, "slots": {}}
+
+
+def test_slot_summary_counts_parks_from_the_durable_marks():
+    """A park whose outcome was cleared (a person resolved it) still counts as the slot's park."""
+    records = [
+        {"final_stage": "archived", "wrong_archive": False,
+         "decision_slot_marks": ["seen:archive_gate", "park:archive_gate"], "decision_slot_outcomes": {}},
+        {"final_stage": "archived", "wrong_archive": False,
+         "decision_slot_marks": ["seen:archive_gate", "release:archive_gate"],
+         "decision_slot_outcomes": {"archive_gate": {"action": "agree"}}},
+    ]
+    gate = slot_decision_summary(records)["slots"]["archive_gate"]
+    assert gate["actions"] == {"park": 1, "release": 1}
+    assert gate["park_rate"] == 0.5 and gate["release_rate"] == 0.5
+
+
+def test_slot_summary_keeps_crashes_out_of_the_review_rate():
+    """A crashed document is neither archived nor reviewed, as the sandbox slice gate counts it."""
+    records = [{"final_stage": "crashed"}, {"final_stage": "review"},
+               {"final_stage": "archived", "wrong_archive": True}, {"final_stage": "archived", "wrong_archive": False}]
+    pipe = slot_decision_summary(records)["pipeline"]
+    assert (pipe["reviewed"], pipe["other"], pipe["review_rate"]) == (1, 1, 0.25)
+    assert pipe["wrong_per_1000"] == pytest.approx(333.333)  # 1 wrong over 2 scorable archives + 1 reviewed

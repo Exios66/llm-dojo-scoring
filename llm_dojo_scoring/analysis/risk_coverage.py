@@ -16,6 +16,11 @@ picks the lowest review rate inside a wrong-archive budget, and
 ``decision_slots:``) into per-slot park, release and cap rates next to the pipeline's
 own review and wrong-archive rates. All functions are pure and network-free.
 
+A curve's ``coverage`` and ``review_rate`` are over the rows it is given (a caller that
+passes only archived documents gets the extra review a further cutoff would cost), not
+over every document of a run; :func:`slot_decision_summary`'s ``review_rate`` is over every
+document.
+
 Row conventions (:func:`risk_coverage_curve`): ``score`` is how safe the row looks to
 archive (higher archives first); ``wrong`` is the gold: ``True`` when archiving the row
 would be wrong, ``False`` when right, ``None`` when it cannot be scored. Unscorable rows
@@ -132,8 +137,10 @@ def operating_point(
 ) -> dict[str, Any] | None:
     """The point with the lowest review rate whose wrong-archive rate is within budget.
 
-    ``use_upper`` (default) holds the Wilson upper bound to the budget, the way a release
-    gate does; ties keep the higher threshold. ``None`` when no point fits.
+    ``use_upper`` (default) holds the Wilson upper bound to the budget; ``use_upper=False``
+    holds the point estimate, which is what a gate comparing its observed rate to a bar does.
+    On a small sample the upper bound is wide, so no point may fit although the observed
+    rate is within budget. Ties keep the higher threshold. ``None`` when no point fits.
     """
     key = "wrong_archive_upper95" if use_upper else "wrong_archive_rate"
     fits = [p for p in curve.get("points") or []
@@ -150,16 +157,21 @@ def slot_decision_summary(records: Iterable[Mapping[str, Any]], *, z: float = 1.
     """Per-slot decision rates and the pipeline's review and wrong-archive rates.
 
     Each record is one document: ``decision_slot_outcomes`` and ``decision_slot_marks``
-    as llm-mailroom writes them, ``final_stage`` (``archived`` counts as archived,
-    anything else as reviewed or failed) and ``wrong_archive`` (``True`` / ``False`` for
-    an archived document the gold scores wrong / right, ``None`` when unscorable or not
+    as llm-mailroom writes them, ``final_stage`` (``archived``, ``review``; anything else,
+    such as ``crashed``, is neither) and ``wrong_archive`` (``True`` / ``False`` for an
+    archived document the gold scores wrong / right, ``None`` when unscorable or not
     archived). A slot has seen a document when its ``seen:<slot>`` mark or an outcome is
-    present. Per slot: ``n_seen``, ``actions`` (count per action), ``park_rate``,
-    ``release_rate``, ``capped_rate`` and ``unavailable_rate`` over ``n_seen``. Pipeline:
-    ``n``, ``review_rate`` (not archived over ``n``), ``wrong_archive_rate`` and its
-    Wilson ``wrong_archive_upper95`` over the scorable archives (archived with a boolean
-    ``wrong_archive``), and ``wrong_per_1000`` over the scorable documents (scorable
-    archives plus every document not archived).
+    present. The marks are the durable record (llm-mailroom keeps only each slot's latest
+    outcome and clears them when a person resolves a park), so a ``park:<slot>`` or
+    ``release:<slot>`` mark counts the document as parked or released by that slot whatever
+    its outcome says now; otherwise the outcome's ``action`` counts. Per slot: ``n_seen``,
+    ``actions`` (count per action, the marks applied), ``park_rate``, ``release_rate``,
+    ``capped_rate`` and ``unavailable_rate`` over ``n_seen``. Pipeline: ``n``, ``archived``,
+    ``reviewed``, ``other`` (neither, e.g. crashed), ``review_rate`` (reviewed over ``n``,
+    as the sandbox slice gate counts it), ``wrong_archive_rate`` and its Wilson
+    ``wrong_archive_upper95`` over the scorable archives (archived with a boolean
+    ``wrong_archive``), and ``wrong_per_1000`` over the scorable archives plus the reviewed
+    documents.
     """
     n = archived = wrong = scorable_archives = reviewed = 0
     seen: Counter[str] = Counter()
@@ -168,22 +180,27 @@ def slot_decision_summary(records: Iterable[Mapping[str, Any]], *, z: float = 1.
         if not isinstance(record, Mapping):
             continue
         n += 1
-        is_archived = record.get("final_stage") == "archived"
+        stage = record.get("final_stage")
+        is_archived = stage == "archived"
         archived += is_archived
+        reviewed += stage == "review"
         verdict = record.get("wrong_archive")
         if is_archived and isinstance(verdict, bool):
             scorable_archives += 1
             wrong += verdict
-        elif not is_archived:
-            reviewed += 1
         outcomes = record.get("decision_slot_outcomes")
         outcomes = outcomes if isinstance(outcomes, Mapping) else {}
         marks = record.get("decision_slot_marks")
-        marked = {str(m)[5:] for m in marks if str(m).startswith("seen:")} if isinstance(marks, (list, tuple)) else set()
+        marks = [str(m) for m in marks] if isinstance(marks, (list, tuple)) else []
+        marked = {m[5:] for m in marks if m.startswith("seen:")}
         for slot in marked | {str(s) for s in outcomes}:
             seen[slot] += 1
             outcome = outcomes.get(slot)
             action = outcome.get("action") if isinstance(outcome, Mapping) else None
+            if f"park:{slot}" in marks:
+                action = "park"
+            elif f"release:{slot}" in marks:
+                action = "release"
             actions.setdefault(slot, Counter())[action if action in _ACTIONS else "none"] += 1
     slots = {}
     for slot in sorted(seen):
@@ -201,7 +218,9 @@ def slot_decision_summary(records: Iterable[Mapping[str, Any]], *, z: float = 1.
         "pipeline": {
             "n": n,
             "archived": archived,
-            "review_rate": _rate(n - archived, n),
+            "reviewed": reviewed,
+            "other": n - archived - reviewed,
+            "review_rate": _rate(reviewed, n),
             "n_scorable_archives": scorable_archives,
             "wrong_archives": wrong,
             "wrong_archive_rate": _rate(wrong, scorable_archives),
