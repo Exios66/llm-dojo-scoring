@@ -344,6 +344,25 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         ),
         "rescore_required": True,
     },
+    {
+        "version": "0.30.2",
+        "metric_ids": (
+            "pipeline.extraction.overall",
+            "pipeline.extraction.field_micro_f1",
+            "pipeline.extraction.field_micro_f2",
+            "pipeline.extraction.field_micro_precision",
+            "pipeline.extraction.field_micro_recall",
+        ),
+        "change": (
+            "Stale Hub labels are no longer scored on either side (schemas.label_policy, "
+            "#164 / #171 / #94): intent with intent_source 'heuristic' (any class), corporate "
+            "SEC EDGAR template subject_matter and provenance-id keywords, correspondence "
+            "templated subject_matter and metadata keywords. A corporate row whose only labels "
+            "are stale is unscorable instead of scoring its template ceiling. "
+            "apply_label_overlays is the one merge rule for the interim and near-gold overlays."
+        ),
+        "rescore_required": True,
+    },
 )
 
 

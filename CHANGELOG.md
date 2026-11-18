@@ -7,6 +7,26 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+- **Score change: stale Hub labels are not scored; one overlay policy (#164, #171, #94).** New
+  `schemas.label_policy`. `stale_hub_labels` names the Hub labels that are not truth:
+  `intent` with `intent_source: heuristic` (any class), corporate-record SEC EDGAR template
+  `subject_matter` and provenance-id `keywords`, and correspondence templated `subject_matter` and
+  metadata `keywords`. `scope_extraction_pair` now drops them from expected **and** predicted
+  before every doc-scorer run, so a correct free-text answer is no longer a miss against a
+  template. A corporate row whose only labels are stale is unscorable (`None`) instead of scoring
+  its template ceiling. `apply_label_overlays` merges the Claude-built interim labels
+  (`mailroom-interim-labels/v1`) and near-gold labels with one rule set that the sandbox and
+  llm-mailroom previously each implemented differently:
+  - Hub labels win.
+  - A `correction` applies only while the Hub value equals its `hub_value`.
+  - `disputed` labels never apply.
+  - Labels bind to the document text (`doc_sha256`) and class.
+  - Enum values must be in the scored vocabulary, and a CMS `claim_type` is `health`.
+  - A null label is a documented absence.
+  - Near-gold labels fill only what nothing else labels.
+
+  Goldens unchanged (no golden input carries a stale label). Consumers adopt the merge
+  after the pin bump.
 - **Score ledger names every score change past `v0.30.1` (#179).** `metrics.score_changelog`
   gains three 0.30.2 entries, all `rescore_required`: CUAD presence credits the agreement and
   expiration dates for recall only (#167; `cuad.sandbox_category_detection.*`); a typed decision
