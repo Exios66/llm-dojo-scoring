@@ -456,7 +456,7 @@ def _parse_date_parts(text) -> Optional[_DateParts]:
     """
     if not isinstance(text, str):
         return None
-    s = _WS_RE.sub(" ", text.strip())
+    s = _WS_RE.sub(" ", text.strip().replace("’", "'"))
     if not s:
         return None
     s = _ORDINAL_RE.sub(r"\1", s)
@@ -734,7 +734,7 @@ _DATE_MONTH_PATTERN = (
 _DATE_SPAN_SEPARATOR = r"[-/.,\s]+"
 _DATE_SPAN_DAY = r"\d{1,2}(?:st|nd|rd|th)?(?:\s*[-–]\s*\d{1,2})?"
 # A clock hour is not a two-digit year ("Aug 18 12:00", "Aug 18 12 PM").
-_DATE_SPAN_YEAR = r"'?(?:\d{4}|\d{2})\b(?!\s*:|\s*(?:am|pm|USD|EUR|GBP|dollars?|euros?|pounds?)\b)"
+_DATE_SPAN_YEAR = r"['’]?(?:\d{4}|\d{2})\b(?!\s*:|\s*(?:am|pm|USD|EUR|GBP|dollars?|euros?|pounds?)\b)"
 _DATE_CURRENCY_AMOUNT_RE = re.compile(
     r"(?:[$€£]|\b(?:USD|EUR|GBP)\s+)\s*\d[\d,]*(?:\.\d+)?"
     r"|\b\d[\d,]*(?:\.\d+)?\s*(?:USD|EUR|GBP|dollars?|euros?|pounds?)\b",

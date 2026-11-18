@@ -907,6 +907,8 @@ def test_abbreviated_date_containment_rejects_false_phrases(pred, exp):
     ("August 1-3, 14", "August 1"),
     ("Aug 18, '14", "Aug 18"),
     ("18 Aug '14", "18 Aug"),
+    ("Aug 18, ’14", "Aug 18"),
+    ("18 Aug ’14", "18 Aug"),
 ])
 def test_prose_date_with_unverified_year_stays_capped(phrase, expected):
     """Prose cannot hide either a two-digit year or a stated century from the cap."""
