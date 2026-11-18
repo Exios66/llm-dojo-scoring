@@ -321,3 +321,27 @@ def test_escaped_quote_recovery_reads_a_linear_number_of_characters(quote, count
     sibling_text = text + ' then {"sender": "Acme"}'
     assert coerce_predicted_payload(sibling_text)[0] == {"sender": "Acme"}
     assert reads <= 3 * len(sibling_text)
+
+
+@pytest.mark.parametrize("count", [100, 2_000])
+def test_completed_escaped_array_candidates_do_not_decode_overlapping_suffixes(count, monkeypatch):
+    """Arrays enforce depth but never consume decoder input intended for dicts."""
+    from llm_dojo_scoring.pipeline import sandbox_schema_adherence as adherence
+
+    decoded = 0
+    original = adherence.json.JSONDecoder.raw_decode
+
+    def count_decode(self, text, *args, **kwargs):
+        """Count decoder input volume, including copies of overlapping suffixes."""
+        nonlocal decoded
+        decoded += len(text)
+        return original(self, text, *args, **kwargs)
+
+    monkeypatch.setattr(adherence.json.JSONDecoder, "raw_decode", count_decode)
+    text = 'x {"bad": "' + ('[\\"' * count) + '" ]'
+    assert coerce_predicted_payload(text)[0] is None
+    assert decoded <= 3 * len(text)
+    decoded = 0
+    sibling_text = text + ' then {"sender": "Acme"}'
+    assert coerce_predicted_payload(sibling_text)[0] == {"sender": "Acme"}
+    assert decoded <= 3 * len(sibling_text)

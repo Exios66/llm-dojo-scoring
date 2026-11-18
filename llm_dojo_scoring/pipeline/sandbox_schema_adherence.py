@@ -275,7 +275,9 @@ def _parse_object_text(text: str) -> tuple[dict[str, Any] | None, str | None]:
         if end > 0 and start in deep_starts:
             # Skip all child candidates too; none may escape the nesting guard.
             resume = end
-        elif end > 0:
+        elif end > 0 and text[start] == "{":
+            # Arrays and tuples only enforce depth; decoding them cannot return
+            # a dict and would copy overlapping quoted suffixes unnecessarily.
             try:
                 obj, _end = decoder.raw_decode(text[start:end])
             except json.JSONDecodeError:
