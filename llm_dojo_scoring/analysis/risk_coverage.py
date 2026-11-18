@@ -157,6 +157,8 @@ def operating_point(
     holds the point estimate, which is what a gate comparing its observed rate to a bar does.
     On a small sample the upper bound is wide, so no point may fit although the observed
     rate is within budget. Ties keep the higher threshold. ``None`` when no point fits.
+    A point that archives nothing has no wrong-archive rate and is never chosen, so ``None``
+    also covers a curve where only "review everything" stays within budget.
     """
     def rate(p: Mapping[str, Any]) -> float | None:
         """The rate held to the budget for point ``p``."""
@@ -197,7 +199,8 @@ def slot_decision_summary(records: Iterable[Mapping[str, Any]], *, z: float = 1.
     as the sandbox slice gate counts it), ``wrong_archive_rate`` and its Wilson
     ``wrong_archive_upper95`` over the scorable archives (archived with a boolean
     ``wrong_archive``), and ``wrong_per_1000`` over the scorable archives plus the reviewed
-    documents.
+    documents. That denominator differs from ``risk_coverage_curve``'s ``wrong_per_1000``
+    (over every scorable row given to the curve), so compare it only with other summaries.
     """
     n = archived = wrong = scorable_archives = reviewed = 0
     seen: Counter[str] = Counter()
