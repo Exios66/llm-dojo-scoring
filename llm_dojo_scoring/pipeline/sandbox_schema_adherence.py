@@ -90,7 +90,7 @@ _FALLBACK_SCHEMA_KEYS: dict[str, frozenset[str]] = {
 # Keep parsing deterministic across Python decoders and below Python repr limits.
 _MAX_TEXT_NESTING = 128
 
-_JSON_CONTAINER_START = re.compile(r'\{\s*["}]|\[')
+_JSON_CONTAINER_START = re.compile(r'''\{\s*["'}]|[\[(]''')
 
 _MODEL_CLASSES = doc_classes.in_order(doc_classes.LIVE_DOC_TYPES, _ADHERENCE_ORDER)
 
@@ -254,8 +254,8 @@ def _parse_object_text(text: str) -> tuple[dict[str, Any] | None, str | None]:
             pass
     # The greedy span runs from the first "{" to the last "}", so braces in the surrounding
     # prose break it. Fall back to decoding a JSON object at each candidate "{" in turn.
-    # Only `{"` / `{}` can open a JSON object; scan arrays too so nested objects
-    # cannot escape an outer array's depth. Each candidate is decoded from its own
+    # Recognize JSON and Python-repr objects; scan arrays and tuples too so nested
+    # objects cannot escape an outer container's depth. Each candidate uses its own
     # slice, ending at its matching "}", so a failed decode builds its JSONDecodeError
     # (which counts lines up to the failure) over that object only, not the whole text.
     # A candidate whose "{" never closes cannot decode and is skipped without trying.
@@ -271,6 +271,7 @@ def _parse_object_text(text: str) -> tuple[dict[str, Any] | None, str | None]:
         end = ends.get(start)
         resume = start + 1
         obj = None
+        how = "wrapped_json"
         if end is None:
             # A malformed wrapper may have an unbalanced quote before a valid
             # object. Scan that candidate independently, under the same guard;
@@ -293,8 +294,14 @@ def _parse_object_text(text: str) -> tuple[dict[str, Any] | None, str | None]:
             except RecursionError:
                 # Too deep to decode; every "{" inside it is deeper still.
                 resume = end
+            if obj is None:
+                try:
+                    obj = ast.literal_eval(text[start:end])
+                    how = "wrapped_python_repr"
+                except (SyntaxError, ValueError, TypeError, MemoryError, RecursionError):
+                    pass
         if isinstance(obj, dict):
-            return obj, "wrapped_json"
+            return obj, how
         candidate = _JSON_CONTAINER_START.search(text, resume)
     return None, None
 
@@ -302,7 +309,8 @@ def _parse_object_text(text: str) -> tuple[dict[str, Any] | None, str | None]:
 def _object_ends(text: str, start: int) -> tuple[dict[int, int], set[int], int]:
     """Match object ends and excessive subtree depths in one linear scan.
 
-    Both arrays and objects contribute depth. Each stack frame keeps its maximum
+    Arrays, objects and tuples contribute depth. Both JSON and Python string
+    delimiters protect quoted brackets. Each stack frame keeps its maximum
     child depth, propagated once on close, so deep objects and all their children
     can be skipped without retrying a decoder at every nested opening brace.
     """
@@ -310,21 +318,22 @@ def _object_ends(text: str, start: int) -> tuple[dict[int, int], set[int], int]:
     deep_starts: set[int] = set()
     # (opening bracket, index, maximum relative subtree depth)
     stack: list[tuple[str, int, int]] = []
-    in_string = escaped = False
+    quote: str | None = None
+    escaped = False
     for index in range(start, len(text)):
         char = text[index]
-        if in_string:
+        if quote is not None:
             if escaped:
                 escaped = False
             elif char == "\\":
                 escaped = True
-            elif char == '"':
-                in_string = False
-        elif char == '"':
-            in_string = True
-        elif char in "[{":
+            elif char == quote:
+                quote = None
+        elif char in "\"'":
+            quote = char
+        elif char in "[{(":
             stack.append((char, index, 1))
-        elif char in "]}" and stack:
+        elif char in "]})" and stack:
             opening, open_index, depth = stack.pop()
             ends[open_index] = index + 1
             if depth > _MAX_TEXT_NESTING:

@@ -266,3 +266,19 @@ def test_malformed_quote_candidates_reuse_scanned_regions(fragment, monkeypatch)
     assert coerce_predicted_payload(text)[0] is None
     assert scanned <= 3 * len(text)
     assert coerce_predicted_payload(text + ' then {"sender": "Acme"}')[0] == {"sender": "Acme"}
+
+
+def test_shallow_repr_after_unrelated_deep_array_is_recovered():
+    """A rejected deep region must not suppress an independent Python-repr payload."""
+    text = "junk " + "[" * 129 + "1" + "]" * 129 + " then {'sender': 'Acme'}"
+    payload, meta = coerce_predicted_payload(text)
+    assert payload == {"sender": "Acme"}
+    assert meta["prose_wrapper"] is True
+
+
+def test_deep_repr_cannot_recover_json_from_a_quoted_value():
+    """Reject the entire deep repr, including JSON text stored inside its strings."""
+    text = "{'junk': " + "[" * 129 + "1" + "]" * 129 + ", 'raw': '{\"sender\": \"Acme\"}'}"
+    payload, meta = coerce_predicted_payload(text)
+    assert payload is None
+    assert meta["parse_error"] is True
