@@ -7,6 +7,15 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+- **Conflicting MAUD consideration variants cannot select scalar gold by order.**
+  `Type of Consideration: All Cash` plus a case variant answering `All Stock`
+  no longer derives the first answer as `merger_consideration`. With independently
+  clean `No-Shop: Yes` gold and an `all_cash` prediction, reversing those labels
+  previously changed overall extraction from 1.0 to 0.5; both orders now score 1.0
+  on the clean question. An explicit valid subclass still supplies scalar gold;
+  equivalent answers and clean variants beside flagged records stay usable.
+  This affects single and batch merger suites and requires the consumer pin/vendor
+  updates noted above.
 - **Abbreviated partial dates in prose retain date credit.** A prediction such as
   `effective on Aug 18 per the notice` against `Aug 18` now scores 1.0 instead of 0.0;
   abbreviated month-year phrases work too. Date boundaries and non-date prose guards
