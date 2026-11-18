@@ -14,6 +14,7 @@ from __future__ import annotations
 import ast
 import json
 import re
+from enum import Enum
 from typing import Any, Callable, Collection, Mapping, Sequence
 
 from ..schemas import doc_classes
@@ -324,6 +325,34 @@ def _typed_valid(
         return False
 
 
+def coerce_expected_payload(expected: Any) -> Mapping[str, Any] | None:
+    """Ground truth as a mapping, or ``None`` when it is not one.
+
+    A mapping passes through. Text (or bytes) holding a JSON object, or a Python-repr
+    object as the Hub's stringified metadata does, is the object it holds. Prose around an
+    object is not ground truth, unlike a prediction (:func:`coerce_predicted_payload`).
+    Everything else (``None``, a list, a number, unparseable text) is ``None``.
+    """
+    if isinstance(expected, Mapping):
+        return expected
+    if isinstance(expected, (bytes, bytearray)):
+        try:
+            expected = expected.decode("utf-8")
+        except UnicodeDecodeError:
+            return None
+    if not isinstance(expected, str) or not expected.strip():
+        return None
+    parsed, how = _parse_object_text(expected.strip())
+    return parsed if how in ("json", "python_repr") else None
+
+
+def _doc_type_key(doc_type: Any) -> str:
+    """``doc_type`` as the lower-case, stripped key the schema tables use (an Enum by its value)."""
+    if isinstance(doc_type, Enum):
+        doc_type = doc_type.value
+    return str(doc_type or "").strip().lower()
+
+
 def assess_extraction_payload(
     predicted: Any,
     doc_type: str,
@@ -338,7 +367,9 @@ def assess_extraction_payload(
     would ignore them. ``doc_subclass`` selects corporate extension keys and value
     types. Without a core validator, a nonempty parsed payload passes when the schema
     is unknown, no public keys are extra, or at least one public key is known.
+    ``doc_type`` is read case-insensitively (``"Contract"`` is ``contract``; an Enum by its value).
     """
+    doc_type = _doc_type_key(doc_type)
     payload, meta = coerce_predicted_payload(predicted)
     parse_error = bool(meta.get("parse_error"))
     extra: list[str] = []

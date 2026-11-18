@@ -29,6 +29,8 @@ the matching suite.
 
 from __future__ import annotations
 
+import re
+from collections import Counter
 from dataclasses import dataclass, field
 from collections.abc import Mapping
 from typing import Any, Iterable
@@ -438,20 +440,33 @@ def _maud_lines_all_ambiguous(lines: Any) -> bool:
     return bool(score_maud_extraction(parse_maud_labels(list(lines)), {}).get("gt_ambiguous"))
 
 
-def _n_unparsed_maud_entries(lines: Any) -> int:
-    """Nonempty predicted clause entries that :func:`parse_maud_labels` cannot read."""
+def _unparsed_maud_lines(lines: Any) -> list[Any]:
+    """Nonempty clause entries that :func:`parse_maud_labels` cannot read (no question named)."""
     from .content_scoring import _span_lines, parse_maud_labels
 
-    if not isinstance(lines, list):
-        return 0
-    count = 0
+    if not isinstance(lines, (list, tuple)):
+        return []
+    unparsed: list[Any] = []
     for entry in lines:
         for item in _span_lines(entry):
             if item is None or (isinstance(item, str) and not item.strip()):
                 continue
             if not parse_maud_labels([item]):
-                count += 1
-    return count
+                unparsed.append(item)
+    return unparsed
+
+
+def _n_unparsed_maud_entries(lines: Any) -> int:
+    """Nonempty predicted clause entries that :func:`parse_maud_labels` cannot read."""
+    return len(_unparsed_maud_lines(lines)) if isinstance(lines, list) else 0
+
+
+_BULLET = re.compile(r"^\s*(?:[-*\u2022]|\d+[.)])\s+")
+
+
+def _free_text_key(line: Any) -> str:
+    """A clause line without a question, folded for equality: bullet, case and spacing aside."""
+    return " ".join(_BULLET.sub("", str(line)).casefold().split())
 
 
 def _score_maud_clauses_by_question(
@@ -474,8 +489,10 @@ def _score_maud_clauses_by_question(
     question whose gold lines conflict. Those are unscored on both sides, so a
     prediction for one is neither a match nor an unmatched prediction. A question
     the Hub leaves blank is not ambiguous; an answer to it is still unmatched.
-    The overall score is recomputed. Gold whose lines name no question is left to
-    the generic matcher.
+    The overall score is recomputed. Gold whose lines name no question at all is left
+    to the generic matcher. In gold that mixes question lines with plain lines, each plain
+    line is still an expected clause (#170): it counts in the recall denominator and is
+    matched only by an equal predicted plain line (bullet, case and spacing aside).
     """
     from .content_scoring import (
         normalize_maud_question_key,
@@ -507,6 +524,18 @@ def _score_maud_clauses_by_question(
     if not n_expected:
         return
     exact = round((scored.get("maud_question_accuracy") or 0.0) * n_expected)
+    # Gold lines that name no question are expected clauses too (#170): dropping them
+    # would shrink the denominator. Each one is met by one equal predicted plain line.
+    free_gold = _unparsed_maud_lines(list(exp_lines))
+    free_pred = Counter(_free_text_key(line) for line in _unparsed_maud_lines(pred_lines))
+    free_matched = 0
+    for line in free_gold:
+        key = _free_text_key(line)
+        if free_pred[key] > 0:
+            free_pred[key] -= 1
+            free_matched += 1
+    n_expected += len(free_gold)
+    exact += free_matched
     # A nonempty entry the parser rejects (free text, no question) is a prediction
     # that matched nothing, the same as a wrong answer.
     unscored = {normalize_maud_question_key(question) for question in skipped}

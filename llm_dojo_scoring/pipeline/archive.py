@@ -489,7 +489,10 @@ def score_archive_block(
     null), ``unlabeled_fields``, ``entity_list_f1`` and ``scorer``. Every key that
     existed before 0.27.0 keeps its meaning; ``overall_score`` stays the field-map mean.
     A prediction that is not a mapping (JSON text, prose, a list) is coerced to the JSON
-    object it holds, else scored as empty; before 0.27.0 it raised.
+    object it holds, else scored as empty; before 0.27.0 it raised. ``expected`` is read
+    as ``score_document`` reads it: text holding a JSON object is that object, and any
+    other non-mapping is ground truth of the wrong shape (``status`` ``unscorable``,
+    ``reason`` ``gt_wrong_schema``) instead of an error.
 
     Raises :class:`KeyError` for a class with no live field map (a retired or
     unknown class) unless a non-empty ``field_types`` is given (#161).
@@ -513,6 +516,13 @@ def score_archive_block(
         from .sandbox_schema_adherence import coerce_predicted_payload
 
         predicted = coerce_predicted_payload(predicted)[0] or {}
+    expected_given = expected
+    if expected is not None and not isinstance(expected, Mapping):
+        # Ground truth read as ``score_document`` reads it: text holding a JSON object is
+        # that object; anything else is no mapping and the block files ``gt_wrong_schema``.
+        from .sandbox_schema_adherence import coerce_expected_payload
+
+        expected = coerce_expected_payload(expected)
     ftypes = _live_field_types(doc_class, field_types)
     exp = _filter_to_live_map(expected, ftypes)
     pred = _filter_to_live_map(predicted, ftypes)
@@ -555,7 +565,7 @@ def score_archive_block(
     # at least one expected event — with none, recall (and so F1) is
     # undefined, and spurious fills alone are not a score (#238).
     assessment = assess_extraction_gt(
-        dict(expected) if isinstance(expected, Mapping) else expected,
+        dict(expected) if isinstance(expected, Mapping) else expected_given,
         ftypes,
         doc_class=doc_class,
     )

@@ -10,9 +10,15 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from ...pipeline.sandbox_schema_adherence import SchemaLookup, assess_extraction_payload, coerce_predicted_payload
+from ...pipeline.sandbox_schema_adherence import (
+    SchemaLookup,
+    assess_extraction_payload,
+    coerce_expected_payload,
+    coerce_predicted_payload,
+)
 from ..extraction_scope import scope_extraction_pair
 from . import canonical_doc_type, get_doc_scorer
+from .base import clean_subclass
 from .common import _warn_once, score_common
 
 
@@ -44,7 +50,7 @@ def score_tiers(
     metric: str | None = None
     try:
         scoped_predicted, _ = scope_extraction_pair(doc_type, predicted or {}, raw_expected)
-        sub = scorer.subclass(doc_subclass or expected_subclass)
+        sub = scorer.subclass(clean_subclass(doc_subclass, expected_subclass))
         extras = dict(scorer.extras(scoped_predicted, raw_expected, subclass=sub, doc_text=doc_text))
         score, metric = scorer.headline({**payload, **extras}, extras)
         payload.update(extras)
@@ -61,16 +67,18 @@ def score_tiers(
 
 def _scorer_info(scorer: Any, doc_type: str, raw_subclass: Any) -> dict[str, Any]:
     """The ``scorer`` record: which module ran, on which subclass, through which tiers."""
+    subclass = scorer.subclass(raw_subclass)
     tiers = ["common"]
     if scorer.doc_type != "generic":
         tiers.append("type")
-        if scorer.subclasses and raw_subclass:
+        # Tier 2 ran only if the raw value resolved to a subclass of this type.
+        if subclass is not None:
             tiers.append("subclass")
     return {
         "doc_type": doc_type,
         # Each type module is named after its doc type (one file per type, spec §3.1).
         "module": f"{__package__}.{scorer.doc_type}",
-        "subclass": scorer.subclass(raw_subclass) if raw_subclass else None,
+        "subclass": subclass,
         "tiers_run": tiers,
     }
 
@@ -100,7 +108,8 @@ def score_document(
     models for adherence come from ``schema_lookup`` (the dojo does not import mailroom).
     """
     doc_type = canonical_doc_type(doc_type)
-    raw_subclass = str(doc_subclass or expected_subclass or "").strip() or None
+    raw_subclass = clean_subclass(doc_subclass, expected_subclass)
+    expected = coerce_expected_payload(expected)
     if isinstance(predicted, Mapping):
         scored_predicted: Mapping[str, Any] = predicted
     else:
@@ -109,7 +118,7 @@ def score_document(
     payload = score_tiers(
         doc_type,
         scored_predicted,
-        expected if isinstance(expected, Mapping) else None,
+        expected,
         doc_text=doc_text,
         doc_subclass=doc_subclass,
         expected_subclass=expected_subclass,
