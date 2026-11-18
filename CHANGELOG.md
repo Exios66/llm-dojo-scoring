@@ -5,6 +5,22 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Added
+
+- **Risk-coverage curve and per-slot decision summary (`analysis/risk_coverage.py`).** For the
+  decision-model experiments: `risk_coverage_curve(rows, thresholds=None)` sweeps an archive
+  cutoff over `{score, wrong}` rows and reports, per cutoff, the review rate, the wrong-archive
+  rate among archived rows (the sandbox slice gate's definition) with its Wilson upper bound,
+  wrong archives per 1,000 scorable rows, and the area under the curve (`aurc`); unscorable
+  rows are counted and left out, a scorable row with no score is always reviewed. `operating_point(curve, max_wrong_archive_rate=…)`
+  picks the lowest review rate whose upper bound (or, with `use_upper=False`, observed rate)
+  fits the budget. `slot_decision_summary(records)` reads llm-mailroom's
+  `decision_slot_outcomes` and `decision_slot_marks` (a `park:`/`release:` mark wins over a
+  cleared or rewritten outcome) into per-slot park, release, capped and unavailable rates next
+  to the pipeline's review rate (reviewed over all documents; crashes are neither), wrong-archive
+  rate and wrong archives per 1,000. Pure and additive: no existing score, metric or
+  golden changes. Tests: `test_risk_coverage.py`.
+
 ### Fixed
 
 - **Score change: stale Hub labels are not scored; one overlay policy (#164, #171, #94).** New
