@@ -5,8 +5,43 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Changed
+
+- **Agent roles inherit the current session model.** User model choices override
+  defaults for implementation and review; Sonnet 4.6 is prohibited. Project role
+  instructions no longer pin historical model tiers. No runtime or scoring change.
+
 ### Fixed
 
+- **Payload nesting limits are deterministic across Python versions.** Completed
+  payload candidates exceeding 128 nested containers are rejected before JSON or
+  Python-repr decoding, including wrapped objects and arrays. Recovery skips the
+  completed deep container and its children; closed objects inside malformed,
+  unclosed wrappers remain recoverable under their own depth guard. A linear
+  boundary index handles quote escapes without rescanning malformed suffixes and
+  still finds later independent JSON or Python-repr siblings. A 30,000-level junk
+  object previously became the payload on Python 3.14 but was skipped on Python 3.11;
+  both now recover the later `{"sender": "Acme"}`. Normal mappings, nested arrays and
+  quoted brackets remain supported. No metric names or public signatures change;
+  consumers need the same coordinated pin/vendor refresh to receive this fix.
+- **Conflicting MAUD consideration variants cannot select scalar gold by order.**
+  `Type of Consideration: All Cash` plus a case variant answering `All Stock`
+  no longer derives the first answer as `merger_consideration`. With independently
+  clean `No-Shop: Yes` gold and an `all_cash` prediction, reversing those labels
+  previously changed overall extraction from 1.0 to 0.5; both orders now score 1.0
+  on the clean question. An explicit valid subclass still supplies scalar gold;
+  equivalent answers and clean variants beside flagged records stay usable.
+  This affects single and batch merger suites and requires the consumer pin/vendor
+  updates noted above.
+- **Abbreviated partial dates in prose retain date credit.** A prediction such as
+  `effective on Aug 18 per the notice` against `Aug 18` now scores 1.0 instead of 0.0;
+  abbreviated month-year phrases work too. Date boundaries and non-date prose guards
+  remain in place. Stated two-digit years and explicit dates outside 1900–2099 also
+  retain the unverified-year cap: `dated August 18, 14` against `August 18` changes
+  from 1.0 to 0.67, using the existing fixed century pivot. Unrelated amounts are
+  not extra years. These scorer corrections require a coordinated `llm-mailroom`
+  pin bump and sandbox vendor refresh after merge. Rescore stored runs containing
+  these date forms before comparing their scores across the consumer update.
 - **Score change: stale Hub labels are not scored; one overlay policy (#164, #171, #94).** New
   `schemas.label_policy`. `stale_hub_labels` names the Hub labels that are not truth:
   `intent` with `intent_source: heuristic` (any class), corporate-record SEC EDGAR template

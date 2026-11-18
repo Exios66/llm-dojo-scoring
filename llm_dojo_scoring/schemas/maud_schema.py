@@ -934,6 +934,37 @@ def _blank_answer(value: object) -> bool:
     return str(value).strip().lower() in {"", "nan"}
 
 
+def _hub_merger_label_answers(labels: object) -> tuple[list[tuple[str, str]], frozenset[str]]:
+    """Resolve canonical-question conflicts before either clauses or scalar gold.
+
+    Discard individually flagged records first: an independently clean variant
+    still supplies truth. Equivalent catalog answers share one canonical line;
+    distinct answers for one canonical question make that question unscorable.
+    """
+    groups: dict[str, list[tuple[str, str, str]]] = {}
+    skipped: set[str] = set()
+    if isinstance(labels, Mapping):
+        for raw_question, record in labels.items():
+            question = str(raw_question).strip()
+            answer, ambiguous = _label_answer_status(question, record)
+            if ambiguous:
+                skipped.add(question)
+            if not answer:
+                continue
+            try:
+                line = maud_clause_line(question, answer)
+            except (KeyError, ValueError):
+                line = f"{question}: {answer}"
+            groups.setdefault(_qkey(question), []).append((question, answer, line))
+    answers: list[tuple[str, str]] = []
+    for records in groups.values():
+        if len({_akey(line) for _, _, line in records}) > 1:
+            skipped.update(question for question, _, _ in records)
+        else:
+            answers.extend((question, answer) for question, answer, _ in records)
+    return answers, frozenset(skipped)
+
+
 def hub_merger_expected_fields(
     gt_fields: Mapping[str, Any] | str | None, subclass: str | None = None
 ) -> dict[str, Any]:
@@ -955,8 +986,9 @@ def hub_merger_expected_fields(
         the ground truth: dropping it would score the model as right for omitting
         a labelled answer. Blank, missing and ``"nan"`` answers are not labels; the Hub class
         ``"None"`` is an answer and stays gold. A question the MAUD content scorer treats as
-        ambiguous (flagged ``gt_ambiguous``, or holding several distinct answers) is
-        skipped, so it stays unscored there and here (:func:`_label_answer`).
+        ambiguous (flagged ``gt_ambiguous``, or holding several distinct answers,
+        including conflicting case variants) is skipped, so it stays unscored there
+        and here (:func:`_label_answer`).
     ``merger_consideration``
         The subclass token of the row's ``Type of Consideration`` answer,
         falling back to *subclass* (then the row's own ``expected_subclass``).
@@ -973,12 +1005,7 @@ def hub_merger_expected_fields(
     labels = parse_json_container(fields.get("maud_clause_labels"))
     if gt_presence_map(fields).get("maud_clause_labels") in ABSENT_PRESENCE_STATUSES:
         labels = {}
-    answers: list[tuple[str, str]] = []
-    if isinstance(labels, Mapping):
-        for question, record in labels.items():
-            answer = _label_answer(str(question), record)
-            if answer:
-                answers.append((str(question).strip(), answer))
+    answers, _skipped = _hub_merger_label_answers(labels)
     order = {q.name: i for i, q in enumerate(MAUD_QUESTIONS)}
 
     def catalog_position(item: tuple[str, str]) -> int:
@@ -1013,8 +1040,8 @@ def hub_merger_expected_fields(
 def hub_merger_skipped_questions(gt_fields: Mapping[str, Any] | str | None) -> frozenset[str]:
     """Questions of one Hub row that :func:`hub_merger_expected_fields` skips as ambiguous.
 
-    A multi-label or flagged question has an annotation the scorer cannot grade,
-    so it is gold on neither side: the suites leave a prediction for it out of
+    A multi-label, conflicting case-variant or flagged question has an annotation
+    the scorer cannot grade, so it is gold on neither side: the suites leave a prediction for it out of
     the ``maud_clauses`` precision denominator. A question the Hub leaves blank or
     ``"nan"`` is *not* returned: it is unanswered, and an answer to it stays an
     unmatched prediction. Names are stripped but not case-folded; a label map
@@ -1026,11 +1053,7 @@ def hub_merger_skipped_questions(gt_fields: Mapping[str, Any] | str | None) -> f
         return frozenset()
     if not isinstance(labels, Mapping):
         return frozenset()
-    return frozenset(
-        str(question).strip()
-        for question, record in labels.items()
-        if _label_answer_status(str(question), record)[1]
-    )
+    return _hub_merger_label_answers(labels)[1]
 
 
 def _consideration_token(value: object) -> str | None:

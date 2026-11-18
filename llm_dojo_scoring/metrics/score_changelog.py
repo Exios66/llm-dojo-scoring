@@ -366,6 +366,42 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         ),
         "rescore_required": True,
     },
+    {
+        # Recent-main audit corrections, following the pending 0.30.2 changes.
+        "version": "0.30.2",
+        "metric_ids": (
+            "cuad.sandbox_category_detection.micro_f1",
+            "cuad.sandbox_category_detection.micro_precision",
+            "cuad.sandbox_category_detection.micro_recall",
+            "pipeline.extraction.overall",
+            "pipeline.extraction.field_micro_f1",
+            "pipeline.extraction.field_micro_f2",
+            "pipeline.extraction.field_micro_precision",
+            "pipeline.extraction.field_micro_recall",
+        ),
+        "change": (
+            "Recent-main audit: abbreviated partial dates in prose regain credit "
+            "('effective on Aug 18' against 'Aug 18': 0.0 -> 1.0). Explicit two-digit "
+            "and other-century date years in prose retain the unverified-year cap "
+            "('dated August 18, 14' against 'August 18': 1.0 -> 0.67); clock hours "
+            "and currency-marked amounts are not years. Ordinal two-digit labels "
+            "retain their stated year. CUAD effective-from-agreement comparison can now "
+            "match those fully stated dates; diagnostics date_mae_days, date_median_ae_days, "
+            "date_mae_per_field, date_r2, date_r2_per_field and date_n_pairs can include "
+            "pairs previously skipped (no canonical metric_ids cover these diagnostics). "
+            "Date-list pairing and factuality audits also "
+            "use the corrected year guard. Conflicting canonical MAUD Type of "
+            "Consideration variants no longer derive insertion-order-dependent scalar "
+            "gold; an independent valid subclass still supplies gold. Single and "
+            "batch merger extraction and field-micro scores can change. Text payloads "
+            "over 128 nested containers are skipped consistently across Python versions, "
+            "so a later independent JSON sibling can supply the payload; sandbox schema "
+            "adherence and downstream extraction can change (no canonical metric_id "
+            "covers the sandbox adherence result). Re-score affected stored predictions "
+            "before comparing across the consumer pin/vendor update."
+        ),
+        "rescore_required": True,
+    },
 )
 
 

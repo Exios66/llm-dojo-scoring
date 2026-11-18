@@ -173,3 +173,175 @@ def test_sibling_scan_stays_linear():
     started = time.perf_counter()
     assert coerce_predicted_payload(text)[0] == {"sender": "Acme"}
     assert time.perf_counter() - started < 5.0
+
+
+@pytest.mark.parametrize("depth", [129, 30_000])
+@pytest.mark.parametrize("style", ["json", "repr", "wrapped_json", "wrapped_repr", "array"])
+def test_nesting_guard_is_deterministic_across_parse_paths(depth, style):
+    """Excess nesting is rejected before Python-dependent decoder limits matter."""
+    nested = "[" * depth + "1" + "]" * depth
+    quote = "'" if "repr" in style else '"'
+    text = "{" + quote + "junk" + quote + ": " + nested + "}"
+    if style.startswith("wrapped"):
+        text = "Here: " + text + " done"
+    elif style == "array":
+        text = "[" * depth + '{"sender": "Acme"}' + "]" * depth
+    payload, meta = coerce_predicted_payload(text)
+    assert payload is None
+    assert meta["parse_error"] is True
+
+
+@pytest.mark.parametrize("nested", [
+    '{"a": ' * 129 + "1" + "}" * 129,
+    '{"a": ' + "[" * 129 + "1" + "]" * 129 + "}",
+], ids=["objects", "arrays"])
+def test_guarded_candidates_are_not_redecoded_as_shallow_children(nested, monkeypatch):
+    """Skip the whole deep region and recover a sibling without decoding its children."""
+    from llm_dojo_scoring.pipeline import sandbox_schema_adherence as adherence
+
+    original = adherence.json.JSONDecoder.raw_decode
+    calls = []
+
+    def record_decode(self, text, *args, **kwargs):
+        """Count decoder attempts to detect child-candidate retry regressions."""
+        calls.append(len(text))
+        return original(self, text, *args, **kwargs)
+
+    monkeypatch.setattr(adherence.json.JSONDecoder, "raw_decode", record_decode)
+    payload, meta = coerce_predicted_payload("x " + nested + ' then {"sender": "Acme"}')
+    assert payload == {"sender": "Acme"}
+    assert meta["prose_wrapper"] is True
+    assert len(calls) <= 3
+
+
+def test_normal_nested_arrays_and_quoted_braces_remain_payloads():
+    """Normal dictionaries, nested arrays and quoted brackets remain supported."""
+    payload = {"sender": "Acme", "items": [{"text": '{}[] and escaped \"quote\"'}], "deep": [[1]]}
+    for text in (json.dumps(payload), repr(payload), "Here: " + json.dumps(payload) + " done"):
+        assert coerce_predicted_payload(text)[0] == payload
+
+
+@pytest.mark.parametrize("text", [
+    'x {"bad": "' + '{"a": ' * 129 + '1' + '}' * 129,
+    'Here: ' + '[' * 129 + '{"sender": "Acme"}' + ']' * 129 + ' done',
+    "Here's " + '[' * 129 + '{"sender": "Acme"}' + ']' * 129,
+], ids=["inside-quoted-junk", "wrapped-deep-array", "apostrophe-wrapper"])
+def test_fallback_cannot_bypass_nesting_guard(text):
+    """Every recovered candidate passes the same explicit nesting guard."""
+    payload, meta = coerce_predicted_payload(text)
+    assert payload is None
+    assert meta["parse_error"] is True
+
+
+@pytest.mark.parametrize("style", ["json", "repr", "wrapped_json", "wrapped_repr"])
+def test_nesting_limit_boundary_and_quoted_brackets_are_accepted(style):
+    """The supported depth boundary and bracket strings remain parseable."""
+    nested = "[" * 127 + "1" + "]" * 127
+    quote = "'" if "repr" in style else '"'
+    text = "{" + quote + "items" + quote + ": " + nested + "}"
+    if style.startswith("wrapped"):
+        text = "Here's " + text + " done"
+    payload, meta = coerce_predicted_payload(text)
+    assert isinstance(payload["items"], list)
+    assert meta["parse_error"] is False
+    assert coerce_predicted_payload(json.dumps({"text": "{" * 200 + "[" * 200}))[0] == {"text": "{" * 200 + "[" * 200}
+
+
+@pytest.mark.parametrize("fragment", ['{"', '{"a": "'])
+def test_malformed_quote_candidates_reuse_scanned_regions(fragment, monkeypatch):
+    """Alternate quote contexts share cached ends instead of rescanning each suffix."""
+    from llm_dojo_scoring.pipeline import sandbox_schema_adherence as adherence
+
+    original = adherence._object_ends
+    scanned = 0
+
+    def count_scan(text, start):
+        """Count a conservative upper bound on characters scanned by each call."""
+        nonlocal scanned
+        scanned += len(text) - start
+        return original(text, start)
+
+    monkeypatch.setattr(adherence, "_object_ends", count_scan)
+    text = 'x {"bad": "' + fragment * 2_000
+    assert coerce_predicted_payload(text)[0] is None
+    assert scanned <= 3 * len(text)
+    assert coerce_predicted_payload(text + ' then {"sender": "Acme"}')[0] == {"sender": "Acme"}
+
+
+def test_shallow_repr_after_unrelated_deep_array_is_recovered():
+    """A rejected deep region must not suppress an independent Python-repr payload."""
+    text = "junk " + "[" * 129 + "1" + "]" * 129 + " then {'sender': 'Acme'}"
+    payload, meta = coerce_predicted_payload(text)
+    assert payload == {"sender": "Acme"}
+    assert meta["prose_wrapper"] is True
+
+
+def test_deep_repr_cannot_recover_json_from_a_quoted_value():
+    """Reject the entire deep repr, including JSON text stored inside its strings."""
+    text = "{'junk': " + "[" * 129 + "1" + "]" * 129 + ", 'raw': '{\"sender\": \"Acme\"}'}"
+    payload, meta = coerce_predicted_payload(text)
+    assert payload is None
+    assert meta["parse_error"] is True
+
+
+@pytest.mark.parametrize("quote", ['"', "'"])
+@pytest.mark.parametrize("count", [80, 2_000])
+@pytest.mark.parametrize("tail", ["", "z" * 4_000], ids=["no-tail", "long-tail"])
+def test_escaped_quote_recovery_reads_a_linear_number_of_characters(quote, count, tail, monkeypatch):
+    """Count real indexing work when malformed candidates change quote contexts."""
+    from llm_dojo_scoring.pipeline import sandbox_schema_adherence as adherence
+
+    reads = 0
+    original = adherence._object_ends
+
+    class CountedText(str):
+        """Instrument character access without relying on machine timing."""
+
+        def __getitem__(self, index):
+            """Count individual indexed reads."""
+            nonlocal reads
+            if isinstance(index, int):
+                reads += 1
+            return super().__getitem__(index)
+
+        def __iter__(self):
+            """Expose iteration through the same read counter."""
+            for index in range(len(self)):
+                yield self[index]
+
+    def count_scan(text, start):
+        """Instrument the index builder without changing payload parsing."""
+        return original(CountedText(text), start)
+
+    monkeypatch.setattr(adherence, "_object_ends", count_scan)
+    text = 'x {"bad": "' + ("[\\" + quote) * count + tail
+    assert coerce_predicted_payload(text)[0] is None
+    assert reads <= 3 * len(text)
+    reads = 0
+    sibling_text = text + ' then {"sender": "Acme"}'
+    assert coerce_predicted_payload(sibling_text)[0] == {"sender": "Acme"}
+    assert reads <= 3 * len(sibling_text)
+
+
+@pytest.mark.parametrize("count", [100, 2_000])
+def test_completed_escaped_array_candidates_do_not_decode_overlapping_suffixes(count, monkeypatch):
+    """Arrays enforce depth but never consume decoder input intended for dicts."""
+    from llm_dojo_scoring.pipeline import sandbox_schema_adherence as adherence
+
+    decoded = 0
+    original = adherence.json.JSONDecoder.raw_decode
+
+    def count_decode(self, text, *args, **kwargs):
+        """Count decoder input volume, including copies of overlapping suffixes."""
+        nonlocal decoded
+        decoded += len(text)
+        return original(self, text, *args, **kwargs)
+
+    monkeypatch.setattr(adherence.json.JSONDecoder, "raw_decode", count_decode)
+    text = 'x {"bad": "' + ('[\\"' * count) + '" ]'
+    assert coerce_predicted_payload(text)[0] is None
+    assert decoded <= 3 * len(text)
+    decoded = 0
+    sibling_text = text + ' then {"sender": "Acme"}'
+    assert coerce_predicted_payload(sibling_text)[0] == {"sender": "Acme"}
+    assert decoded <= 3 * len(sibling_text)

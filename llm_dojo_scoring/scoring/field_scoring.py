@@ -456,7 +456,7 @@ def _parse_date_parts(text) -> Optional[_DateParts]:
     """
     if not isinstance(text, str):
         return None
-    s = _WS_RE.sub(" ", text.strip())
+    s = _WS_RE.sub(" ", text.strip().replace("’", "'"))
     if not s:
         return None
     s = _ORDINAL_RE.sub(r"\1", s)
@@ -482,7 +482,7 @@ def _parse_date_parts(text) -> Optional[_DateParts]:
     )
     # "16 day of August. 2012": a period before the year is OCR/typing noise.
     day_of_month = re.search(
-        r"\b(\d{1,2})\s+day\s+of\s+([A-Za-z]+)[,.\s]*(\d{4})?", s, flags=re.IGNORECASE
+        rf"\b(\d{{1,2}})\s+day\s+of\s+([A-Za-z]+)[,.\s]*({_DATE_SPAN_YEAR})?", s, flags=re.IGNORECASE
     )
     if day_of_month:
         month, day, year = day_of_month.group(2), day_of_month.group(1), day_of_month.group(3)
@@ -727,9 +727,45 @@ def _date_match_similarity(pred, exp, embedding=None) -> float:
     return score_date_field(pred, exp, embedding=embedding)
 
 
+_DATE_MONTH_PATTERN = (
+    r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?"
+    r"|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?"
+)
+_DATE_SPAN_SEPARATOR = r"[-/.,\s]+"
+_DATE_SPAN_DAY = r"\d{1,2}(?:st|nd|rd|th)?(?:\s*[-–]\s*\d{1,2})?"
+# A clock hour is not a two-digit year ("Aug 18 12:00", "Aug 18 12 PM").
+_DATE_SPAN_YEAR = r"['’]?(?:\d{4}|\d{2})\b(?!\s*:|\s*(?:am|pm|USD|EUR|GBP|dollars?|euros?|pounds?)\b)"
+_DATE_CURRENCY_AMOUNT_RE = re.compile(
+    r"(?:[$€£]|\b(?:USD|EUR|GBP)\s+)\s*\d[\d,]*(?:\.\d+)?"
+    r"|\b\d[\d,]*(?:\.\d+)?\s*(?:USD|EUR|GBP|dollars?|euros?|pounds?)\b",
+    re.IGNORECASE,
+)
+_PROSE_DATED_YEAR_RE = re.compile(
+    rf"\b{_DATE_MONTH_PATTERN}{_DATE_SPAN_SEPARATOR}{_DATE_SPAN_DAY}"
+    rf"{_DATE_SPAN_SEPARATOR}{_DATE_SPAN_YEAR}"
+    rf"|\b{_DATE_SPAN_DAY}{_DATE_SPAN_SEPARATOR}(?:day\s+of\s+)?{_DATE_MONTH_PATTERN}"
+    rf"{_DATE_SPAN_SEPARATOR}{_DATE_SPAN_YEAR}"
+    rf"|\b\d{{1,2}}[-/.]\d{{1,2}}[-/.]{_DATE_SPAN_YEAR}"
+    rf"|\b{_DATE_MONTH_PATTERN}\s+\d{{4}}\b"
+    r"|\b\d{4}-\d{1,2}-\d{1,2}\b",
+    re.IGNORECASE,
+)
+
+
 def _stated_years(text) -> set:
-    """Four-digit years (1900-2099) written in *text*."""
-    return {int(y) for y in re.findall(r"(?<!\d)((?:19|20)\d{2})(?!\d)", str(text))}
+    """Common four-digit years, plus all years in explicit date phrases.
+
+    Parse only bounded date spans in prose, using the same fixed century pivot
+    as bare dates; ordinary day numbers never become years.
+    """
+    # Amounts such as "$2014" or "2014 USD" are not document years.
+    text = _DATE_CURRENCY_AMOUNT_RE.sub(" ", str(text))
+    years = {int(y) for y in re.findall(r"(?<!\d)((?:19|20)\d{2})(?!\d)", text)}
+    for match in _PROSE_DATED_YEAR_RE.finditer(text):
+        parts = _parse_date_parts(match.group(0))
+        if parts is not None and parts.year is not None:
+            years.add(parts.year)
+    return years
 
 
 def _integral_float_as_text(value):
@@ -918,13 +954,15 @@ def _date_phrase_contained(container: str, target: str) -> bool:
     target_norm = norm(target)
     if not target_norm:
         return False
-    dt = _parse_date(target)
+    parts = _parse_date_parts(target)
+    dt = parts if parts is not None and parts.is_full else None
     # A month name after another word makes the phrase explicit ("18 august");
     # so does a month-first phrase that also states a number ("august 18",
     # "august 2014"; #162). A lone month word ("may") or month-first prose
     # ("march of") is not a date phrase.
     explicit_month = (
-        any(f" {month}" in target_norm for month in _MONTH_NAMES)
+        (parts is not None and parts.month is not None and len(parts.stated) >= 2)
+        or any(f" {month}" in target_norm for month in _MONTH_NAMES)
         or (
             any(re.search(rf"\b{month}\b", target_norm) for month in _MONTH_NAMES)
             and bool(re.search(r"\b\d+(?:st|nd|rd|th)?\b", target_norm))

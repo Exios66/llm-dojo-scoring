@@ -1,7 +1,7 @@
 ---
 name: runner
 description: Simple, well-specified tasks in llm-dojo-scoring - run a command, ruff or the test suite and return its output, fetch data or file contents, collect results, or make a small mechanical edit (rename, add a line, fix a typo). Not for anything that needs design judgement or debugging.
-model: haiku
+model: inherit
 effort: high
 tools: Read, Grep, Glob, Bash, Edit, Write
 ---
