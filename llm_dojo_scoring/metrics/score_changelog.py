@@ -307,6 +307,30 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         ),
         "rescore_required": True,
     },
+    {
+        # Third 0.30.2 change set: the 0.28.0-review fixes (#127) and MAUD mixed gold (#170).
+        "version": "0.30.2",
+        "metric_ids": (
+            "pipeline.extraction.overall",
+            "pipeline.extraction.field_micro_f1",
+            "pipeline.extraction.field_micro_f2",
+            "pipeline.extraction.field_micro_precision",
+            "pipeline.extraction.field_micro_recall",
+        ),
+        "change": (
+            "A relative merger outside_date ('nine months after the date hereof') scores as "
+            "populated text: an identical prediction was 0.0, a missing one 1.0 (#127). A "
+            "contract's v1 parse-compat keys (merger_consideration, maud_clauses) are not "
+            "scored on the direct score_extraction path or in field-micro (#127). 'partly "
+            "approved' / 'partly denied' fold to partial coverage (#127). A typed (v10) CMS "
+            "row keeps an absent adjuster / denial_reasons as labelled-empty and reads its own "
+            "expected_subclass, like the legacy row (#127). MAUD gold lines that name no "
+            "question stay in the maud_clauses recall denominator (#170). The factuality "
+            "audit compares labels through the scorer's alias fold (#127); field scores "
+            "are unchanged by that part."
+        ),
+        "rescore_required": True,
+    },
 )
 
 

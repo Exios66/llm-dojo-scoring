@@ -325,10 +325,13 @@ def test_emit_serving_scorecard_explicit_scorer_version_wins():
 
 
 def test_score_changelog_0_30_2_names_the_cuad_date_and_decision_lane_fixes():
-    """#179: the #167 and #168 score changes past v0.30.1 are in the ledger for 0.30.2."""
+    """#179: the score changes past v0.30.1 (#167, #168, #127, #170) are in the 0.30.2 ledger."""
     changes = score_changes_between("0.30.1", "0.30.2")
     assert all(entry["version"] == "0.30.2" for entry in changes)
-    by_issue = {issue: [e for e in changes if issue in e["change"]] for issue in ("#167", "#168")}
+    by_issue = {
+        issue: [e for e in changes if issue in e["change"]]
+        for issue in ("#167", "#168", "#127", "#170")
+    }
     assert all(by_issue.values()), by_issue
     assert all(e["rescore_required"] for entries in by_issue.values() for e in entries)
     recall = score_changes_for_metric(
