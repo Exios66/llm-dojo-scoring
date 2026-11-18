@@ -71,7 +71,10 @@ _FALLBACK_SCHEMA_KEYS: dict[str, frozenset[str]] = {
 }
 
 
-_JSON_OBJECT_START = re.compile(r'\{\s*["}]')
+# Keep parsing deterministic across Python decoders and below Python repr limits.
+_MAX_TEXT_NESTING = 128
+
+_JSON_CONTAINER_START = re.compile(r'\{\s*["}]|\[')
 
 _MODEL_CLASSES = doc_classes.in_order(doc_classes.LIVE_DOC_TYPES, _ADHERENCE_ORDER)
 
@@ -111,7 +114,9 @@ def coerce_predicted_payload(predicted: Any) -> tuple[dict[str, Any] | None, dic
     """Turn a specialist prediction into a dict, or explain why it is not one.
 
     Isolated evals keep a dict. Job ``items.jsonl`` stores ``str(value)`` (Python
-    repr, not JSON). Raw LLM text may wrap a JSON object in prose.
+    repr, not JSON). Raw LLM text may wrap a JSON object in prose. Text with
+    more than 128 nested containers is rejected consistently across Python
+    versions; a later independent JSON object can still be recovered.
     """
     meta: dict[str, Any] = {"parse_error": False, "parse_failure_reason": None, "prose_wrapper": False}
     if predicted is None:
@@ -160,17 +165,51 @@ def coerce_predicted_payload(predicted: Any) -> tuple[dict[str, Any] | None, dic
     return None, meta
 
 
+def _exceeds_nesting_limit(text: str) -> bool:
+    """Check container depth without decoding; quoted brackets do not count."""
+    # Prose apostrophes ("Here's ...") are not Python string delimiters. Begin
+    # quote tracking at the first container, where either supported grammar starts.
+    opening = re.search(r"[\[({]", text)
+    if opening is None:
+        return False
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    for char in text[opening.start():]:
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+        elif char in "\"'":
+            quote = char
+        elif char in "[{(":
+            depth += 1
+            if depth > _MAX_TEXT_NESTING:
+                return True
+        elif char in "]})":
+            depth = max(0, depth - 1)
+    return False
+
+
 def _parse_object_text(text: str) -> tuple[dict[str, Any] | None, str | None]:
     """Parse JSON, a Python repr, or either wrapped in prose; say which it was."""
+    text_too_deep = _exceeds_nesting_limit(text)
     # RecursionError: deeply nested input ("[[[[...") exhausts the decoder's stack;
     # that is unparseable text, not a crash (score_document never raises).
     try:
+        if text_too_deep:
+            raise ValueError("excessive nesting")
         obj = json.loads(text)
         if isinstance(obj, dict):
             return obj, "json"
-    except (json.JSONDecodeError, RecursionError):
+    except (ValueError, RecursionError):
         pass
     try:
+        if text_too_deep:
+            raise ValueError("excessive nesting")
         obj = ast.literal_eval(text)
         if isinstance(obj, dict):
             return obj, "python_repr"
@@ -180,14 +219,18 @@ def _parse_object_text(text: str) -> tuple[dict[str, Any] | None, str | None]:
     # on text with many "{" and no "}" the regex rescans from every "{" (quadratic).
     lo, hi = text.find("{"), text.rfind("}")
     span = text[lo : hi + 1] if lo != -1 and hi > lo else None
-    if span is not None and (text[:lo].strip() or text[hi + 1 :].strip()):
+    if span is not None and not text_too_deep and (text[:lo].strip() or text[hi + 1 :].strip()):
         try:
+            if _exceeds_nesting_limit(span):
+                raise ValueError("excessive nesting")
             obj = json.loads(span)
             if isinstance(obj, dict):
                 return obj, "wrapped_json"
-        except (json.JSONDecodeError, RecursionError):
+        except (ValueError, RecursionError):
             pass
         try:
+            if _exceeds_nesting_limit(span):
+                raise ValueError("excessive nesting")
             obj = ast.literal_eval(span)
             if isinstance(obj, dict):
                 return obj, "wrapped_python_repr"
@@ -195,28 +238,30 @@ def _parse_object_text(text: str) -> tuple[dict[str, Any] | None, str | None]:
             pass
     # The greedy span runs from the first "{" to the last "}", so braces in the surrounding
     # prose break it. Fall back to decoding a JSON object at each candidate "{" in turn.
-    # Only `{"` / `{}` can open a JSON object. Each candidate is decoded from its own
+    # Only `{"` / `{}` can open a JSON object; scan arrays too so nested objects
+    # cannot escape an outer array's depth. Each candidate is decoded from its own
     # slice, ending at its matching "}", so a failed decode builds its JSONDecodeError
     # (which counts lines up to the failure) over that object only, not the whole text.
     # A candidate whose "{" never closes cannot decode and is skipped without trying.
     decoder = json.JSONDecoder()
     ends: dict[int, int] = {}
+    deep_starts: set[int] = set()
     region_end = -1
-    candidate = _JSON_OBJECT_START.search(text)
+    candidate = _JSON_CONTAINER_START.search(text)
     while candidate is not None:
         start = candidate.start()
         if start >= region_end:
-            ends, region_end = _object_ends(text, start)
+            ends, deep_starts, region_end = _object_ends(text, start)
         end = ends.get(start)
         resume = start + 1
         obj = None
         if end is None:
-            # Not a "{" of the scanned region (it sits inside one of its strings):
-            # decode from here as a fresh object.
-            try:
-                obj, _end = decoder.raw_decode(text, start)
-            except (json.JSONDecodeError, RecursionError):
-                obj = None
+            # A candidate inside a quoted string is not an independent object.
+            # Decoding from here would bypass the scanned region's depth guard.
+            pass
+        elif end > 0 and start in deep_starts:
+            # Skip all child candidates too; none may escape the nesting guard.
+            resume = end
         elif end > 0:
             try:
                 obj, _end = decoder.raw_decode(text[start:end])
@@ -227,21 +272,21 @@ def _parse_object_text(text: str) -> tuple[dict[str, Any] | None, str | None]:
                 resume = end
         if isinstance(obj, dict):
             return obj, "wrapped_json"
-        candidate = _JSON_OBJECT_START.search(text, resume)
+        candidate = _JSON_CONTAINER_START.search(text, resume)
     return None, None
 
 
-def _object_ends(text: str, start: int) -> tuple[dict[int, int], int]:
-    """Match the braces of the object opening at ``start`` in one pass.
+def _object_ends(text: str, start: int) -> tuple[dict[int, int], set[int], int]:
+    """Match object ends and excessive subtree depths in one linear scan.
 
-    Returns ``(ends, region_end)``. ``ends`` maps each "{" in the region (outside JSON
-    strings, with backslash escapes) to the index just past its closing "}", or -1 when
-    it never closes. ``region_end`` is the index just past the object's own "}", or
-    ``len(text)`` when it never closes. Every "{" is scanned once per region, which
-    keeps the candidate search linear.
+    Both arrays and objects contribute depth. Each stack frame keeps its maximum
+    child depth, propagated once on close, so deep objects and all their children
+    can be skipped without retrying a decoder at every nested opening brace.
     """
     ends: dict[int, int] = {}
-    stack: list[int] = []
+    deep_starts: set[int] = set()
+    # (opening bracket, index, maximum relative subtree depth)
+    stack: list[tuple[str, int, int]] = []
     in_string = escaped = False
     for index in range(start, len(text)):
         char = text[index]
@@ -254,15 +299,20 @@ def _object_ends(text: str, start: int) -> tuple[dict[int, int], int]:
                 in_string = False
         elif char == '"':
             in_string = True
-        elif char == "{":
-            stack.append(index)
-        elif char == "}" and stack:
-            ends[stack.pop()] = index + 1
+        elif char in "[{":
+            stack.append((char, index, 1))
+        elif char in "]}" and stack:
+            opening, open_index, depth = stack.pop()
+            ends[open_index] = index + 1
+            if depth + len(stack) > _MAX_TEXT_NESTING:
+                deep_starts.add(open_index)
             if not stack:
-                return ends, index + 1
-    for open_index in stack:
+                return ends, deep_starts, index + 1
+            parent, parent_index, parent_depth = stack[-1]
+            stack[-1] = (parent, parent_index, max(parent_depth, depth + 1))
+    for _opening, open_index, _depth in stack:
         ends[open_index] = -1
-    return ends, len(text)
+    return ends, deep_starts, len(text)
 
 
 def _typed_valid(

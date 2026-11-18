@@ -7,6 +7,14 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ### Fixed
 
+- **Payload nesting limits are deterministic across Python versions.** Text payloads
+  exceeding 128 nested containers are rejected before JSON or Python-repr decoding,
+  including wrapped objects and arrays. Recovery skips deep child candidates and
+  still finds later independent JSON siblings in linear time. A 30,000-level junk
+  object previously became the payload on Python 3.14 but was skipped on Python 3.11;
+  both now recover the later `{"sender": "Acme"}`. Normal mappings, nested arrays and
+  quoted brackets remain supported. No metric names or public signatures change;
+  consumers need the same coordinated pin/vendor refresh to receive this fix.
 - **Conflicting MAUD consideration variants cannot select scalar gold by order.**
   `Type of Consideration: All Cash` plus a case variant answering `All Stock`
   no longer derives the first answer as `merger_consideration`. With independently

@@ -173,3 +173,72 @@ def test_sibling_scan_stays_linear():
     started = time.perf_counter()
     assert coerce_predicted_payload(text)[0] == {"sender": "Acme"}
     assert time.perf_counter() - started < 5.0
+
+
+@pytest.mark.parametrize("depth", [129, 30_000])
+@pytest.mark.parametrize("style", ["json", "repr", "wrapped_json", "wrapped_repr", "array"])
+def test_nesting_guard_is_deterministic_across_parse_paths(depth, style):
+    """Excess nesting is rejected before Python-dependent decoder limits matter."""
+    nested = "[" * depth + "1" + "]" * depth
+    quote = "'" if "repr" in style else '"'
+    text = "{" + quote + "junk" + quote + ": " + nested + "}"
+    if style.startswith("wrapped"):
+        text = "Here: " + text + " done"
+    elif style == "array":
+        text = "[" * depth + '{"sender": "Acme"}' + "]" * depth
+    payload, meta = coerce_predicted_payload(text)
+    assert payload is None
+    assert meta["parse_error"] is True
+
+
+@pytest.mark.parametrize("nested", [
+    '{"a": ' * 129 + "1" + "}" * 129,
+    '{"a": ' + "[" * 129 + "1" + "]" * 129 + "}",
+], ids=["objects", "arrays"])
+def test_guarded_candidates_are_not_redecoded_as_shallow_children(nested, monkeypatch):
+    """Skip the whole deep region and recover a sibling without decoding its children."""
+    from llm_dojo_scoring.pipeline import sandbox_schema_adherence as adherence
+
+    original = adherence.json.JSONDecoder.raw_decode
+    calls = []
+
+    def record_decode(self, text, *args, **kwargs):
+        calls.append(len(text))
+        return original(self, text, *args, **kwargs)
+
+    monkeypatch.setattr(adherence.json.JSONDecoder, "raw_decode", record_decode)
+    payload, meta = coerce_predicted_payload("x " + nested + ' then {"sender": "Acme"}')
+    assert payload == {"sender": "Acme"}
+    assert meta["prose_wrapper"] is True
+    assert len(calls) <= 3
+
+
+def test_normal_nested_arrays_and_quoted_braces_remain_payloads():
+    payload = {"sender": "Acme", "items": [{"text": '{}[] and escaped \"quote\"'}], "deep": [[1]]}
+    for text in (json.dumps(payload), repr(payload), "Here: " + json.dumps(payload) + " done"):
+        assert coerce_predicted_payload(text)[0] == payload
+
+
+@pytest.mark.parametrize("text", [
+    'x {"bad": "' + '{"a": ' * 129 + '1' + '}' * 129,
+    'Here: ' + '[' * 129 + '{"sender": "Acme"}' + ']' * 129 + ' done',
+    'Here: ' + '[' * 129 + '{"sender": "Acme"}',
+    "Here's " + '[' * 129 + '{"sender": "Acme"}' + ']' * 129,
+], ids=["inside-quoted-junk", "wrapped-deep-array", "unclosed-deep-array", "apostrophe-wrapper"])
+def test_fallback_cannot_bypass_nesting_guard(text):
+    payload, meta = coerce_predicted_payload(text)
+    assert payload is None
+    assert meta["parse_error"] is True
+
+
+@pytest.mark.parametrize("style", ["json", "repr", "wrapped_json", "wrapped_repr"])
+def test_nesting_limit_boundary_and_quoted_brackets_are_accepted(style):
+    nested = "[" * 127 + "1" + "]" * 127
+    quote = "'" if "repr" in style else '"'
+    text = "{" + quote + "items" + quote + ": " + nested + "}"
+    if style.startswith("wrapped"):
+        text = "Here's " + text + " done"
+    payload, meta = coerce_predicted_payload(text)
+    assert isinstance(payload["items"], list)
+    assert meta["parse_error"] is False
+    assert coerce_predicted_payload(json.dumps({"text": "{" * 200 + "[" * 200}))[0] == {"text": "{" * 200 + "[" * 200}
