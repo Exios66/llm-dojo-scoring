@@ -370,6 +370,9 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         # Recent-main audit corrections, following the pending 0.30.2 changes.
         "version": "0.30.2",
         "metric_ids": (
+            "cuad.sandbox_category_detection.micro_f1",
+            "cuad.sandbox_category_detection.micro_precision",
+            "cuad.sandbox_category_detection.micro_recall",
             "pipeline.extraction.overall",
             "pipeline.extraction.field_micro_f1",
             "pipeline.extraction.field_micro_f2",
@@ -382,7 +385,11 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
             "and other-century date years in prose retain the unverified-year cap "
             "('dated August 18, 14' against 'August 18': 1.0 -> 0.67); clock hours "
             "and currency-marked amounts are not years. Ordinal two-digit labels "
-            "retain their stated year. Date-list pairing and factuality audits also "
+            "retain their stated year. CUAD effective-from-agreement comparison can now "
+            "match those fully stated dates; diagnostics date_mae_days, date_median_ae_days, "
+            "date_mae_per_field, date_r2, date_r2_per_field and date_n_pairs can include "
+            "pairs previously skipped (no canonical metric_ids cover these diagnostics). "
+            "Date-list pairing and factuality audits also "
             "use the corrected year guard. Conflicting canonical MAUD Type of "
             "Consideration variants no longer derive insertion-order-dependent scalar "
             "gold; an independent valid subclass still supplies gold. Single and "
