@@ -31,6 +31,7 @@ point (counted under ``n_no_score``).
 
 from __future__ import annotations
 
+import bisect
 import math
 from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
@@ -108,18 +109,25 @@ def risk_coverage_curve(
         cutoffs = sorted({s for s, _ in scored} | {1.01})
     else:
         cutoffs = sorted({c for c in map(_finite, thresholds) if c is not None})
+    # Sorted once: the rows archived at cutoff t are the suffix from bisect_left(scores, t).
+    scored.sort(key=lambda sw: sw[0])
+    scores = [s for s, _ in scored]
+    wrong_before = [0]
+    for _, w in scored:
+        wrong_before.append(wrong_before[-1] + w)
     points: list[dict[str, Any]] = []
     for t in cutoffs:
-        archived = [w for s, w in scored if s >= t]
-        wrong = sum(archived)
+        first = bisect.bisect_left(scores, t)
+        archived = len(scored) - first
+        wrong = wrong_before[-1] - wrong_before[first]
         points.append({
             "threshold": t,
-            "archived": len(archived),
-            "coverage": _rate(len(archived), n_scorable),
-            "review_rate": _rate(n_scorable - len(archived), n_scorable),
+            "archived": archived,
+            "coverage": _rate(archived, n_scorable),
+            "review_rate": _rate(n_scorable - archived, n_scorable),
             "wrong_archives": wrong,
-            "wrong_archive_rate": _rate(wrong, len(archived)),
-            "wrong_archive_upper95": _upper(wrong, len(archived), z),
+            "wrong_archive_rate": _rate(wrong, archived),
+            "wrong_archive_upper95": _upper(wrong, archived, z),
             "wrong_per_1000": round(1000 * wrong / n_scorable, 3) if n_scorable else None,
         })
     covered = sorted((p["coverage"], p["wrong_archive_rate"]) for p in points if p["archived"])
@@ -150,9 +158,18 @@ def operating_point(
     On a small sample the upper bound is wide, so no point may fit although the observed
     rate is within budget. Ties keep the higher threshold. ``None`` when no point fits.
     """
-    key = "wrong_archive_upper95" if use_upper else "wrong_archive_rate"
+    def rate(p: Mapping[str, Any]) -> float | None:
+        """The rate held to the budget for point ``p``."""
+        if use_upper:
+            return p.get("wrong_archive_upper95")
+        # The observed rate unrounded: a rounded 1/3 (0.333333) must not fit a 0.333333 budget.
+        archived, wrong = p.get("archived"), p.get("wrong_archives")
+        if isinstance(archived, int) and isinstance(wrong, int) and archived > 0:
+            return wrong / archived
+        return p.get("wrong_archive_rate")
+
     fits = [p for p in curve.get("points") or []
-            if p.get(key) is not None and p[key] <= max_wrong_archive_rate and p.get("review_rate") is not None]
+            if (r := rate(p)) is not None and r <= max_wrong_archive_rate and p.get("review_rate") is not None]
     if not fits:
         return None
     return dict(min(fits, key=lambda p: (p["review_rate"], -p["threshold"])))

@@ -166,3 +166,21 @@ def test_slot_summary_reads_final_stage_from_a_dumped_run_record():
                {"final_stage": "review", "actual": {"final_stage": "archived"}}]
     pipe = slot_decision_summary(records)["pipeline"]
     assert (pipe["archived"], pipe["reviewed"], pipe["other"]) == (1, 2, 0)
+
+
+def test_observed_operating_point_compares_the_unrounded_rate():
+    """1 wrong of 3 archived is 0.333...: over a 0.333333 budget, within 0.34."""
+    curve = risk_coverage_curve([{"score": 0.9, "wrong": True}, {"score": 0.8, "wrong": False},
+                                 {"score": 0.7, "wrong": False}], thresholds=[0.7, 1.01])
+    # The archive-nothing point has no rate, so nothing fits the tighter budget.
+    assert operating_point(curve, max_wrong_archive_rate=0.333333, use_upper=False) is None
+    assert operating_point(curve, max_wrong_archive_rate=0.34, use_upper=False)["threshold"] == 0.7
+
+
+def test_tied_scores_archive_together_at_their_cutoff():
+    """Rows with the same score are archived by the same cutoff (score >= t)."""
+    rows = [{"score": 0.5, "wrong": True}, {"score": 0.5, "wrong": False}, {"score": 0.2, "wrong": False}]
+    points = {p["threshold"]: p for p in risk_coverage_curve(rows)["points"]}
+    assert (points[0.5]["archived"], points[0.5]["wrong_archives"]) == (2, 1)
+    assert (points[0.2]["archived"], points[1.01]["archived"]) == (3, 0)
+
