@@ -331,6 +331,19 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         ),
         "rescore_required": True,
     },
+    {
+        # Fourth 0.30.2 change set: scorer provenance for blank and off-catalogue subclasses (#119 M5).
+        "version": "0.30.2",
+        "metric_ids": (),
+        "change": (
+            "score_document's scorer record: a blank subclass (None, NaN, 'nan') is no subclass "
+            "and records no 'subclass' tier, and an off-catalogue subclass becomes 'other' only "
+            "where the type's catalogue has it (contract), so insurance 'health' is now None "
+            "with tiers_run ['common', 'type'] (#119 M5). Affects scorer.subclass and "
+            "scorer.tiers_run only; no canonical metric_id covers them."
+        ),
+        "rescore_required": True,
+    },
 )
 
 

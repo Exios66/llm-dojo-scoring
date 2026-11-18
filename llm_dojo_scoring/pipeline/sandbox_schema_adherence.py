@@ -61,12 +61,16 @@ _PARSE_COMPAT_KEYS: dict[str, frozenset[str]] = {
 
 def _parse_compat_keys_for(doc_type: str) -> frozenset[str]:
     """The v1 parse-compat keys for a class name or an agent name (``contracts_specialist``)."""
-    resolved = str(doc_type or "").strip()
+    resolved = str(doc_type or "").strip().lower()
     if resolved in _PARSE_COMPAT_KEYS:
         return _PARSE_COMPAT_KEYS[resolved]
-    for cls, keys in _PARSE_COMPAT_KEYS.items():
-        if cls in resolved:
-            return keys
+    # Only the class's own agent name (``contract_specialist`` / ``contracts_specialist``);
+    # a substring match would hand the contract keys to e.g. ``subcontract``.
+    stem = resolved.removesuffix("_specialist")
+    if stem != resolved:
+        for candidate in (stem, stem.removesuffix("s")):
+            if candidate in _PARSE_COMPAT_KEYS:
+                return _PARSE_COMPAT_KEYS[candidate]
     return frozenset()
 
 

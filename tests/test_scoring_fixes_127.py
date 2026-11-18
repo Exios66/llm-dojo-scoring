@@ -284,3 +284,13 @@ def test_strict_producer_model_does_not_reject_parse_compat_keys(agent):
     # A genuinely unknown key is still rejected.
     bad = assess_extraction_payload({**payload, "bogus": 1}, agent, schema_lookup=lambda _n: _StrictContractModel)
     assert bad["extra_schema_keys"] == ["bogus"] and bad["schema_valid"] is False
+
+
+@pytest.mark.parametrize("name", ["subcontract", "contract_amendment", "contractor_specialist"])
+def test_parse_compat_keys_are_not_handed_to_names_that_merely_contain_contract(name):
+    """Only the contract class and its own agent names get the v1 compat keys."""
+    from llm_dojo_scoring.pipeline.sandbox_schema_adherence import _parse_compat_keys_for
+
+    assert _parse_compat_keys_for(name) == frozenset()
+    assert _parse_compat_keys_for("contract_specialist")
+    assert _parse_compat_keys_for("contracts_specialist")
