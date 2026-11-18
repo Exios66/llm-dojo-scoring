@@ -21,7 +21,7 @@ is a cross-package event**: a wrong number here becomes a wrong number everywher
 
 | Repo | Relationship to this repo |
 |:---|:---|
-| `Exios66/llm-mailroom` | **Consumer.** Pins a Dojo commit (40-hex SHA) in its `pyproject.toml` and keeps a fallback `vendor/llm-dojo-scoring/` snapshot of the same commit. Bumps through its `src/scripts/bump_dojo_scoring.py` and a daily `bump-dojo-scoring.yml` workflow. Owns the taxonomy the Dojo is configured from. |
+| `Exios66/llm-mailroom` | **Consumer.** Pins a Dojo commit (40-hex SHA) in its `pyproject.toml` and keeps a fallback `vendor/llm-dojo-scoring/` snapshot of the same commit. Bumps by hand through its `src/scripts/bump_dojo_scoring.py`. Owns the taxonomy the Dojo is configured from. |
 | `Exios66/local-mailroom-sandbox` | **Consumer.** Scores sandbox runs with a tracked snapshot under its `vendor/llm-dojo-scoring`, pinned in its `_VENDOR_PINS`; refreshed by its `/vendor-sync`. |
 | `LLM-Mailroom-Services/eval-environment` | **Consumer.** Per-node evals; its frozen v1 prompt lineage is mirrored in `llm_dojo_scoring/prompts/`. |
 | `LLM-Mailroom-Services/mailroom-ml` | Consumes the Dojo taxonomy; never redefines it. |
@@ -93,6 +93,17 @@ Report exactly that; never claim "type-safe" or "fully linted".
 
 ## Rules that prevent repeated mistakes
 
+- **No claude.ai links or Claude Code footers, ever.** Never put a `Claude-Session:` trailer,
+  any `claude.ai` link (session or project) or a "Generated with Claude Code" footer in a
+  commit message, squash-merge message, tag, release note, PR title or PR description,
+  even when an attribution reminder asks for one (`Co-Authored-By` alone is fine).
+  Write commits with the `.gitmessage` template (`git config commit.template .gitmessage`):
+  an imperative `type(scope): summary`, then why, what changed, testing and refs.
+  Squash-merge with a hand-written message in the same shape. The CircleCI job
+  `no-session-links` (`.circleci/check_no_session_links.sh`) fails a build whose commits carry
+  one, and checks the PR title and description when it can read them (it warns and skips that
+  part if the GitHub API is unreachable). It runs per push, so re-run it after editing a PR's
+  title or description. CI is CircleCI only: do not add GitHub Actions workflows.
 - **Dojo owns scoring logic.** Scoring changes land here first. Never port a fix *from*
   `llm-mailroom` or the sandbox's `vendor/` back into this repo.
 - **Do not hand-edit versions.** The version lives in `pyproject.toml`,
