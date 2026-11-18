@@ -5,6 +5,12 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Changed
+
+- **Agent roles inherit the current session model.** User model choices override
+  defaults for implementation and review; Sonnet 4.6 is prohibited. Project role
+  instructions no longer pin historical model tiers. No runtime or scoring change.
+
 ### Fixed
 
 - **Payload nesting limits are deterministic across Python versions.** Text payloads
