@@ -74,8 +74,12 @@ scored; the rest are excluded. Failure and review outcomes come first, exactly a
 a non-blank value and a numeric (non-bool) field score: a score of 1.0 or more is correct; else a
 blank prediction is a plain miss; else a score under `FABRICATION_MAX_FIELD_SCORE` (0.5) is wrong
 and anything from 0.5 up is a near miss. A value is blank when `is_empty_value` says so (`None`,
-`n/a`, `nan`, `"[]"`, ...) or it is a list or tuple whose items are all blank, so a placeholder
-is a miss and never an invented value. It returns `{}` when `field_scores` is not a mapping.
+`n/a`, `nan`, `"[]"`, ...), or it is a list or tuple whose items are all `None`, whitespace-only
+strings or empty containers. So a bare placeholder is a miss, never an invented value, but a
+non-empty list holding a placeholder (`["n/a"]`) is a stated value, as the Dojo scorer reads it.
+It returns `{}` when `field_scores` is not a mapping, and when the truth states values but none of
+them has a finite field score (no usable figure: the row's share decides, or it is left out).
+Truth that is entirely blank still returns zero counts.
 
 ## Inputs
 
@@ -165,8 +169,12 @@ score, or a run scored under another `profile`.
 ```python
 from llm_dojo_scoring import PainPointDocument, compare_pain_points, pain_point_breakdown, score_pain_points
 
-docs = [PainPointDocument(doc_id="d1", expected_class="contract", predicted_class="contract",
-                          stage="archived", groups={"experiment": "A"}), ...]
+docs = [
+    PainPointDocument(doc_id="d1", expected_class="contract", predicted_class="contract",
+                      stage="archived", groups={"experiment": "A"}),
+    PainPointDocument(doc_id="d1", expected_class="contract", predicted_class="contract",
+                      stage="review", groups={"experiment": "B"}),
+]
 score_pain_points(docs)                                  # run summary
 pain_point_breakdown(docs, by=("experiment", "doc_class"))
 compare_pain_points(docs, by="experiment", baseline="A")

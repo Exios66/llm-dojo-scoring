@@ -304,7 +304,8 @@ def field_value_outcomes(
     that missed is wrong under :data:`FABRICATION_MAX_FIELD_SCORE` (``n_value_wrong``) or a near
     miss (``n_value_partial``); a missed field with a blank prediction is neither. The detailed
     suite path (corporate records, any row with a subclass) returns no ``tp`` / ``fn``, so these
-    are the event counts there. Empty when ``field_scores`` is not a mapping. A value is blank
+    are the event counts there. Empty when ``field_scores`` is not a mapping, or when the truth
+    states values but the scorer gave none of them a finite score (no usable figure). A value is blank
     when the Dojo reads it as absence (``None``, ``n/a``, ``nan``, ``"[]"`` ...) or it is a list
     of blanks, so a placeholder is a miss, not a value.
     """
@@ -312,11 +313,14 @@ def field_value_outcomes(
         return {}
     expected = expected if isinstance(expected, Mapping) else {}
     predicted = predicted if isinstance(predicted, Mapping) else {}
-    targeted = correct = wrong = partial = 0
+    targeted = correct = wrong = partial = unscored = 0
     for name, value in expected.items():
+        if _blank(value):
+            continue  # blank truth: not a targeted field
         score = _num(field_scores.get(name))
-        if _blank(value) or score is None:
-            continue  # blank truth, or no finite field score: not a targeted field
+        if score is None:
+            unscored += 1  # stated truth the scorer gave no finite score
+            continue
         targeted += 1
         if float(score) >= 1.0:
             correct += 1
@@ -327,6 +331,10 @@ def field_value_outcomes(
             wrong += 1
         else:
             partial += 1
+    if targeted == 0 and unscored:
+        # The truth states values but none was scored: no counts, so the row is never read as a
+        # zero-target complete; its share decides, or it is left out.
+        return {}
     return {"n_targeted": targeted, "n_value_correct": correct, "n_value_wrong": wrong, "n_value_partial": partial}
 
 

@@ -329,10 +329,12 @@ class TestFieldValueOutcomes:
         assert pp.field_value_outcomes({"a": "x"}, {"a": "y"}, [("a", 0.0)]) == {}
 
     def test_unscored_and_non_numeric_scores_are_not_targeted(self):
-        """Unscored and non numeric scores are not targeted."""
+        """Unscored and non numeric scores are not targeted; with none targeted there are no counts."""
         out = pp.field_value_outcomes({"a": "x", "b": "y", "c": "z"}, {"a": "x"},
                                       {"a": True, "b": "1.0"})
-        assert out["n_targeted"] == 0
+        assert out == {}
+        mixed = pp.field_value_outcomes({"a": "x", "b": "y"}, {"a": "x"}, {"a": 1.0, "b": "1.0"})
+        assert mixed["n_targeted"] == 1 and mixed["n_value_correct"] == 1
 
 
 class TestScoreDocument:
@@ -937,10 +939,10 @@ class TestRoundThreeHardening:
             pp.compare([doc("d1", "A"), doc("d1 ", "A"), doc("d2", "B")], baseline="A")
 
     def test_non_finite_field_scores_are_not_targeted(self):
-        """A NaN or infinite field score is no score: the field is not targeted."""
+        """A NaN or infinite field score is no score: no field is targeted, so there are no counts."""
         out = pp.field_value_outcomes({"a": "x", "b": "y"}, {"a": "z", "b": "x"},
                                       {"a": float("nan"), "b": float("inf")})
-        assert out == {"n_targeted": 0, "n_value_correct": 0, "n_value_wrong": 0, "n_value_partial": 0}
+        assert out == {}
 
 
 def test_score_document_tolerates_non_mapping_groups():
@@ -982,3 +984,21 @@ def test_score_document_echoes_a_missing_group_label_as_unknown():
     doc = pp.PainPointDocument(doc_id="1", expected_class="contract", predicted_class="contract", stage="archived",
                                groups={"experiment": float("nan"), "model": "m"})
     assert pp.score_document(doc)["groups"] == {"experiment": "unknown", "model": "m"}
+
+
+class TestCodeRabbitOn185:
+    """CodeRabbit on llm-dojo-scoring#185."""
+
+    @pytest.mark.parametrize("scores", [{}, {"a": float("nan")}, {"a": None}, {"b": 1.0}])
+    def test_stated_truth_without_a_usable_field_score_is_no_figure(self, scores):
+        """Truth with a value but no usable score yields no counts, never a zero-count complete."""
+        out = pp.field_value_outcomes({"a": "x"}, {"a": "x"}, scores)
+        assert out == {}
+        assert _ext({"scoring_method": "suite", **out}) is None
+        assert _ext({"scoring_method": "suite", "overall_extraction_score": 0.5, **out}).reason == "partial"
+
+    def test_genuinely_empty_truth_keeps_its_counts(self):
+        """All-blank truth is targeted nowhere: zero counts, and nothing stated is complete."""
+        out = pp.field_value_outcomes({"a": "", "b": None}, {}, {})
+        assert out == {"n_targeted": 0, "n_value_correct": 0, "n_value_wrong": 0, "n_value_partial": 0}
+        assert _ext({"scoring_method": "suite", **out}).reason == "complete"
