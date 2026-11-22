@@ -941,3 +941,10 @@ class TestRoundThreeHardening:
         out = pp.field_value_outcomes({"a": "x", "b": "y"}, {"a": "z", "b": "x"},
                                       {"a": float("nan"), "b": float("inf")})
         assert out == {"n_targeted": 0, "n_value_correct": 0, "n_value_wrong": 0, "n_value_partial": 0}
+
+
+def test_score_document_tolerates_non_mapping_groups():
+    """A non-mapping ``groups`` reads as no labels, as ``breakdown`` reads it."""
+    doc = pp.PainPointDocument(doc_id="1", expected_class="contract", predicted_class="contract", stage="archived",
+                               groups=["experiment", "A"])  # type: ignore[arg-type]
+    assert pp.score_document(doc)["groups"] == {}

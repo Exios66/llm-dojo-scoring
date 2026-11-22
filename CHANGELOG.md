@@ -25,8 +25,8 @@ Format based on Keep a Changelog; versioning is SemVer.
   as a missing cell), a corrupt invention count makes invention unknown, and a share must lie in
   [0, 1]. Stages compare case-insensitively; `breakdown` intervals do not depend on document
   order; `compare` pairs on the stripped `doc_id`; `seed` and `n_boot` are validated.
-  `PenaltyScale` bounds point values to [0.001, 1000] and refuses non-finite values and refuses a custom scale that keeps
-  the `amfam-v1` profile id. New registry names `pain_points_{classification,extraction}_{mean,score}`
+  `PenaltyScale` bounds point values to [0.001, 1000] and refuses non-finite values and a
+  custom scale that keeps the `amfam-v1` profile id. New registry names `pain_points_{classification,extraction}_{mean,score}`
   with metric ids `pipeline.pain_points.*`. No existing score moves; goldens unchanged. Contract:
   `docs/contracts/PAIN_POINT_SCORING.md`. Tests: `tests/test_pain_points.py`. Consumers: the
   sandbox vendors the module file as its interim hotfix; the module imports only

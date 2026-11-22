@@ -445,7 +445,7 @@ def score_document(doc: PainPointDocument, scale: PenaltyScale = DEFAULT_SCALE) 
     return {
         "doc_id": doc.doc_id,
         "expected_class": doc.expected_class,
-        "groups": {str(k): str(v) for k, v in (doc.groups or {}).items()},
+        "groups": ({str(k): str(v) for k, v in doc.groups.items()} if isinstance(doc.groups, Mapping) else {}),
         CLASSIFICATION: _outcome_dict(classification_outcome(doc, scale)),
         EXTRACTION: _outcome_dict(extraction_outcome(doc, scale)),
     }
