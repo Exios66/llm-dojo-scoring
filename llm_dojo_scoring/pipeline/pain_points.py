@@ -68,6 +68,7 @@ as correct.
 from __future__ import annotations
 
 import math
+import numbers
 from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field, fields
@@ -101,9 +102,33 @@ FINAL_STAGES = ("archived", "review")
 N_BOOT = 2000
 SEED = 42
 
+#: Bounds on every point value of a custom scale, so a mean stays finite and its 6-decimal
+#: rounding never hides a penalty.
+MAX_POINTS_BOUND = 1000.0
+MIN_POINTS_BOUND = 0.001
+
 #: The ``breakdown`` key that reads the document's expected class instead of ``groups``.
 DOC_CLASS_KEY = "doc_class"
 UNKNOWN = "unknown"
+
+
+def _is_bool(value: Any) -> bool:
+    """A Python or numpy boolean (``numpy.bool_`` is not a ``bool`` subclass)."""
+    kind = type(value)
+    return isinstance(value, bool) or (kind.__module__ == "numpy" and kind.__name__ in ("bool", "bool_", "bool8"))
+
+
+def _num(value: Any) -> float | None:
+    """A finite real number as a float (numpy numbers too); booleans, NaN, infinity and
+    non-numbers are None.
+
+    A NaN count (a pandas round trip fills a missing count with NaN) would fail every
+    comparison and fall through to ``complete``; None sends it to the next source instead.
+    """
+    if _is_bool(value) or not isinstance(value, numbers.Real):
+        return None
+    number = float(value)
+    return number if math.isfinite(number) else None
 
 
 @dataclass(frozen=True)
@@ -130,10 +155,15 @@ class PenaltyScale:
         """Refuse non-finite values, a broken ladder order, and a custom scale under the client's profile."""
         # NaN fails every comparison below, so it would pass them; infinity breaks the 0-1 score.
         numeric = {f.name: getattr(self, f.name) for f in fields(self) if f.name != "profile"}
-        bad = {k: v for k, v in numeric.items()
-               if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v)}
+        bad = {k: v for k, v in numeric.items() if _num(v) is None}
         if bad:
             raise ValueError(f"penalty scale values must be finite numbers: {bad}")
+        points = {k: v for k, v in numeric.items() if k != "low_recall_below"}
+        out_of_range = {k: v for k, v in points.items()
+                        if v != 0 and not MIN_POINTS_BOUND <= abs(v) <= MAX_POINTS_BOUND}
+        if out_of_range:
+            raise ValueError(f"penalty scale points must lie in [{MIN_POINTS_BOUND}, {MAX_POINTS_BOUND}]: "
+                             f"{out_of_range}")
 
         def strictly_falling(*names: str) -> None:
             """Require the named points to fall strictly in the given order."""
@@ -154,7 +184,7 @@ class PenaltyScale:
             raise ValueError("penalty scale: low_recall_below must lie in (0, 1)")
         if not isinstance(self.profile, str) or not self.profile.strip():
             raise ValueError("penalty scale: profile must be a non-empty string")
-        if self.profile == PROFILE:
+        if self.profile.strip().casefold() == PROFILE:
             changed = sorted(f.name for f in fields(self)
                              if f.name != "profile" and getattr(self, f.name) != f.default)
             if changed:
@@ -177,6 +207,13 @@ class Outcome:
 
     points: float
     reasons: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        """Refuse negative or non-finite points and an outcome with no reason."""
+        if _num(self.points) is None or self.points < 0:
+            raise ValueError(f"outcome points must be a finite number >= 0, got {self.points!r}")
+        if not self.reasons or not all(isinstance(r, str) and r for r in self.reasons):
+            raise ValueError(f"an outcome needs at least one non-empty reason, got {self.reasons!r}")
 
     @property
     def reason(self) -> str:
@@ -204,21 +241,25 @@ class PainPointDocument:
     groups: Mapping[str, str] = field(default_factory=dict)
 
 
-def _num(value: Any) -> float | None:
-    """A finite real number as a float; booleans, NaN, infinity and non-numbers are None.
-
-    A NaN count (a pandas round trip fills a missing count with NaN) would fail every
-    comparison and fall through to ``complete``; None sends it to the next source instead.
-    """
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
-        return None
-    return float(value)
-
-
 def _count(value: Any) -> float | None:
-    """A usable event count: a finite, non-negative number, else None."""
+    """A usable event count: a finite, non-negative whole number, else None."""
     number = _num(value)
-    return number if number is not None and number >= 0 else None
+    return number if number is not None and number >= 0 and number == int(number) else None
+
+
+def _absent(value: Any) -> bool:
+    """No value: None, or a NaN (how pandas marks a missing cell)."""
+    if value is None:
+        return True
+    try:
+        return isinstance(value, numbers.Real) and not _is_bool(value) and math.isnan(float(value))
+    except (TypeError, ValueError):
+        return False
+
+
+def _flag(value: Any) -> bool | None:
+    """A Python or numpy boolean as ``bool``; anything else is None (unknown)."""
+    return bool(value) if _is_bool(value) else None
 
 
 def _label(value: Any) -> str:
@@ -268,9 +309,9 @@ def field_value_outcomes(
     predicted = predicted if isinstance(predicted, Mapping) else {}
     targeted = correct = wrong = partial = 0
     for name, value in expected.items():
-        score = field_scores.get(name)
-        if _blank(value) or isinstance(score, bool) or not isinstance(score, (int, float)):
-            continue
+        score = _num(field_scores.get(name))
+        if _blank(value) or score is None:
+            continue  # blank truth, or no finite field score: not a targeted field
         targeted += 1
         if float(score) >= 1.0:
             correct += 1
@@ -287,7 +328,7 @@ def field_value_outcomes(
 def _routing(doc: PainPointDocument, scale: PenaltyScale) -> Outcome | None:
     """The outcome shared by both composites for a document that did not archive, else None."""
     stage = _label(doc.stage)
-    if doc.failed is True or stage not in FINAL_STAGES:
+    if _flag(doc.failed) is True or stage not in FINAL_STAGES:
         return Outcome(scale.pipeline_failure, ("pipeline_failure",))
     if stage == "review":
         if (_label(doc.expected_stage) or "archived") == "review":
@@ -321,20 +362,26 @@ def classification_outcome(doc: PainPointDocument, scale: PenaltyScale = DEFAULT
         found.append((scale.wrong_doc_type, "wrong_doc_type"))
     if (_label(doc.expected_stage) or "archived") == "review":
         found.append((scale.missed_review, "missed_review"))
-    if doc.subclass_correct is False and not any(r == "wrong_doc_type" for _, r in found):
+    if _flag(doc.subclass_correct) is False and not any(r == "wrong_doc_type" for _, r in found):
         found.append((scale.wrong_subtype, "wrong_subtype"))
     return _worst(found, "correct")
 
 
 def _field_counts(scored: Mapping[str, Any]) -> tuple[float | None, float | None, float]:
-    """``(correct, targeted, invented)`` of one scored row.
+    """``(correct, targeted, invented)`` of one scored row; ``(None, None, 0)`` without usable counts.
 
     The Dojo event counts (``tp``, ``tp + fn``, ``fp``) when the row has them; otherwise the
     per-field counts (``n_value_correct``, ``n_targeted``), which the detailed suite path needs
     because it returns no ``tp`` / ``fn``. Without ``fp`` the documented-absence hallucinations
     (``n_hallucinated``) stand in for the values stated on empty truth. ``n_value_wrong`` is
-    always added.
+    always added. An absent invention count is 0 (``None`` and NaN, the pandas marker for a
+    missing value, are absent); one that is present but corrupt (negative, infinite, fractional,
+    text) makes the invented values unknown, so the row has no usable counts and the share decides.
     """
+    def present_but_unusable(key: str) -> bool:
+        """The key holds a value that is not absent and not a usable count."""
+        return not _absent(scored.get(key)) and _count(scored.get(key)) is None
+
     tp, fn, fp = (_count(scored.get(k)) for k in ("tp", "fn", "fp"))
     if tp is not None and fn is not None:
         correct, targeted = tp, tp + fn
@@ -342,6 +389,9 @@ def _field_counts(scored: Mapping[str, Any]) -> tuple[float | None, float | None
         correct, targeted = _count(scored.get("n_value_correct")), _count(scored.get("n_targeted"))
         if correct is not None and targeted is not None and correct > targeted:
             correct = targeted = None  # inconsistent counts are no usable figure
+    invention_keys = ("n_hallucinated" if _absent(scored.get("fp")) else "fp", "n_value_wrong")
+    if any(present_but_unusable(k) for k in invention_keys):
+        return None, None, 0.0
     empty_truth = fp if fp is not None else (_count(scored.get("n_hallucinated")) or 0.0)
     return correct, targeted, empty_truth + (_count(scored.get("n_value_wrong")) or 0.0)
 
@@ -362,8 +412,8 @@ def extraction_outcome(doc: PainPointDocument, scale: PenaltyScale = DEFAULT_SCA
     correct, targeted, invented = _field_counts(scored)
     if clause_labels or correct is None or targeted is None:
         share = _num(scored.get("overall_extraction_score"))
-        if share is None:
-            return None
+        if share is None or not 0.0 <= share <= 1.0:
+            return None  # no usable figure: never scored as complete
         if share >= 1.0:
             return Outcome(0.0, ("complete",))
         if share < scale.low_recall_below:
@@ -475,10 +525,17 @@ def _names(by: str | Sequence[str]) -> tuple[str, ...]:
     return names
 
 
-def _check_n_boot(n_boot: int) -> None:
-    """Refuse a resample count the bootstrap cannot use."""
+def _check_n_boot(n_boot: int, seed: int) -> None:
+    """Refuse a resample count the bootstrap cannot use, and a seed that would not be one."""
     if isinstance(n_boot, bool) or not isinstance(n_boot, int) or n_boot < 1:
         raise ValueError(f"n_boot must be a positive integer, got {n_boot!r}")
+    if isinstance(seed, bool) or not isinstance(seed, int):
+        raise ValueError(f"seed must be an integer (a None seed is not deterministic), got {seed!r}")
+
+
+def _doc_key(doc: PainPointDocument) -> str:
+    """The id ``compare`` pairs and de-duplicates on: ``str(doc_id)``, stripped."""
+    return str(doc.doc_id).strip()
 
 
 def breakdown(
@@ -497,7 +554,7 @@ def breakdown(
     documents); it is on the penalty-points scale, like ``mean``.
     """
     names = _names(by)
-    _check_n_boot(n_boot)
+    _check_n_boot(n_boot, seed)
     groups: dict[tuple[str, ...], list[PainPointDocument]] = {}
     for doc in docs:
         groups.setdefault(tuple(_key_value(doc, n) for n in names), []).append(doc)
@@ -525,7 +582,7 @@ def _points_by_doc_id(members: Sequence[PainPointDocument], outcome_of: Any, sca
     for doc in members:
         outcome = outcome_of(doc, scale)
         if outcome is not None:
-            out[str(doc.doc_id)] = outcome.points
+            out[_doc_key(doc)] = outcome.points
     return out
 
 
@@ -551,7 +608,7 @@ def compare(
     if not isinstance(by, str) or not by.strip():
         raise ValueError(f"compare needs one non-empty group key name, got {by!r}")
     by = by.strip()
-    _check_n_boot(n_boot)
+    _check_n_boot(n_boot, seed)
     groups: dict[str, list[PainPointDocument]] = {}
     for doc in docs:
         if doc.doc_id is None or not str(doc.doc_id).strip():
@@ -561,7 +618,7 @@ def compare(
     if baseline not in groups:
         raise ValueError(f"unknown baseline {baseline!r} for {by!r}; groups: {sorted(groups)}")
     for value, members in groups.items():
-        seen = Counter(str(d.doc_id) for d in members)
+        seen = Counter(_doc_key(d) for d in members)
         duplicated = sorted(i for i, c in seen.items() if c > 1)
         if duplicated:
             raise ValueError(f"duplicate doc_id inside {by}={value!r}: {duplicated}")

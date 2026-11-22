@@ -799,7 +799,11 @@ class TestRoundTwoHardening:
         """A NaN, infinite or negative count is no figure; the next source decides."""
         pandas_row = {"tp": bad, "fn": bad, "fp": bad, "n_value_correct": 0.0, "n_targeted": 3.0,
                       "n_value_wrong": 2.0, "n_value_partial": float("nan"), "scoring_method": "suite"}
-        assert _ext(pandas_row).reason == "fabricated"
+        # NaN is how pandas marks a missing cell: absent, so the per-field counts decide. A corrupt
+        # (infinite, negative) fp makes the invented values unknown: the row is no usable figure.
+        expected = "fabricated" if math.isnan(bad) else None
+        outcome = _ext(pandas_row)
+        assert (outcome.reason if outcome else None) == expected
         assert _ext({"tp": bad, "fn": 0, "overall_extraction_score": 0.1}).reason == "low_recall"
         assert _ext({"overall_extraction_score": float("nan")}) is None
 
@@ -864,3 +868,76 @@ def test_the_pain_point_ids_are_in_the_score_ledger():
     listed = {i for entry in SCORE_CHANGELOG for i in entry["metric_ids"]}
     assert {"pipeline.pain_points.classification.mean_penalty", "pipeline.pain_points.extraction.mean_penalty",
             "pipeline.pain_points.classification.score", "pipeline.pain_points.extraction.score"} <= listed
+
+
+class TestRoundThreeHardening:
+    """Adversarial review round 3: invention counts, numpy values, scale and id edge cases."""
+
+    @pytest.mark.parametrize("fp", [-2, "2", 2.5, float("inf")])
+    def test_a_corrupt_fp_is_never_read_as_no_invention(self, fp):
+        """A present but corrupt fp makes invention unknown: never complete, the share decides."""
+        assert _ext({"tp": 3, "fn": 0, "fp": fp}) is None
+        assert _ext({"tp": 3, "fn": 0, "fp": fp, "overall_extraction_score": 0.5}).reason == "partial"
+
+    def test_numpy_counts_are_counts(self):
+        """numpy integers and floats (a DataFrame row) are read like Python numbers."""
+        np = pytest.importorskip("numpy")
+        assert _ext({"tp": np.int64(3), "fn": np.int64(0), "fp": np.int64(2)}).reason == "partial"
+        assert _ext({"tp": np.float64(3), "fn": np.float64(0), "fp": np.float64(0)}).reason == "complete"
+        assert _ext({"tp": 3, "fn": 0, "fp": np.float64("nan")}).reason == "complete"  # NaN = missing
+
+    def test_fractional_counts_and_out_of_range_shares_are_no_figure(self):
+        """A count must be whole; a share must lie in [0, 1]."""
+        assert _ext({"tp": 0.4, "fn": 0}) is None
+        assert _ext({"overall_extraction_score": 7}) is None
+        assert _ext({"overall_extraction_score": -0.1}) is None
+
+    def test_numpy_flags_are_read(self):
+        """numpy booleans on failed / subclass_correct count like Python ones."""
+        np = pytest.importorskip("numpy")
+        base = pp.PainPointDocument(expected_class="contract", predicted_class="contract", stage="archived")
+        assert pp.classification_outcome(dataclasses.replace(base, failed=np.True_)).reason == "pipeline_failure"
+        assert pp.classification_outcome(dataclasses.replace(base, subclass_correct=np.False_)).reason == "wrong_subtype"
+
+    @pytest.mark.parametrize("profile", [" amfam-v1", "AMFAM-v1", "amfam-v1 "])
+    def test_the_client_profile_cannot_be_spoofed(self, profile):
+        """A custom scale under any spelling of the client's profile id is refused."""
+        with pytest.raises(ValueError, match="own profile id"):
+            pp.PenaltyScale(profile=profile, partial=0.5)
+
+    @pytest.mark.parametrize("points", [1e308, 1e4, 4e-7])
+    def test_scale_points_are_bounded(self, points):
+        """Points outside [0.001, 1000] are refused, so means stay finite and visible."""
+        with pytest.raises(ValueError, match="must lie in"):
+            pp.PenaltyScale(profile="x", unnecessary_review=points, pipeline_failure=points)
+
+    def test_outcomes_must_be_valid(self):
+        """summarize cannot be fed negative points or an outcome without a reason."""
+        with pytest.raises(ValueError):
+            pp.Outcome(-5.0, ("bogus",))
+        with pytest.raises(ValueError):
+            pp.Outcome(1.0, ())
+
+    def test_seed_must_be_an_integer(self):
+        """A None seed would not be deterministic."""
+        with pytest.raises(ValueError, match="seed"):
+            pp.breakdown(_run_docs(), seed=None)  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="seed"):
+            pp.compare(_run_docs(), baseline="A", seed=None)  # type: ignore[arg-type]
+
+    def test_compare_pairs_and_deduplicates_on_the_stripped_id(self):
+        """``d1`` and ``d1 `` are one document: paired across groups, a duplicate within one."""
+        def doc(i, exp):
+            """A correct archived contract with an id and an experiment label."""
+            return pp.PainPointDocument(doc_id=i, expected_class="contract", predicted_class="contract",
+                                        stage="archived", groups={"experiment": exp})
+        out = pp.compare([doc("d1", "A"), doc("d1 ", "B")], baseline="A")
+        assert out["classification"][0]["n_paired"] == 1
+        with pytest.raises(ValueError, match="duplicate"):
+            pp.compare([doc("d1", "A"), doc("d1 ", "A"), doc("d2", "B")], baseline="A")
+
+    def test_non_finite_field_scores_are_not_targeted(self):
+        """A NaN or infinite field score is no score: the field is not targeted."""
+        out = pp.field_value_outcomes({"a": "x", "b": "y"}, {"a": "z", "b": "x"},
+                                      {"a": float("nan"), "b": float("inf")})
+        assert out == {"n_targeted": 0, "n_value_correct": 0, "n_value_wrong": 0, "n_value_partial": 0}

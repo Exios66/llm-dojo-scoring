@@ -17,10 +17,10 @@ and writes nothing. Its only Dojo imports are `schemas.gt_metadata.is_empty_valu
 defaults are this profile.
 
 **A scale whose values differ from the defaults must carry its own `profile` id.** Building
-`PenaltyScale(partial=0.5)` (or any other changed value) under `amfam-v1` raises `ValueError`
-("a custom scale needs its own profile id"), so a custom scale can never be reported as the
-client's numbers. Every numeric value must be finite (NaN and infinity are refused before the
-ordering checks), the ladder order is enforced (a needless review is the worst outcome on both
+`PenaltyScale(partial=0.5)` (or any other changed value) under `amfam-v1`, in any casing or
+padding, raises `ValueError` ("a custom scale needs its own profile id"), so a custom scale can
+never be reported as the client's numbers. Every numeric value must be finite (NaN and infinity
+are refused before the ordering checks), every non-zero point value must lie in [0.001, 1000], the ladder order is enforced (a needless review is the worst outcome on both
 composites, a wrong subtype costs less than a wrong class, `fabricated > low_recall > partial`),
 and `low_recall_below` lies in (0, 1). `score_run`, `breakdown` and `compare` echo `profile`
 and `scale` so a number can be traced to its scale.
@@ -95,10 +95,15 @@ is a miss and never an invented value. It returns `{}` when `field_scores` is no
 **Consumers own row loading, stage naming and scoring.** They map their rows to
 `PainPointDocument` and attach the scored extraction row (for example from `score_extraction` and
 `extraction_binary_metrics`, plus `field_value_outcomes`). Stages, like classes, are compared
-stripped and lower-cased (`" Archived"` is `archived`); `failed` must be the boolean `True` to
-count. Counts (`tp`, `fn`, `fp`, `n_*`) are used only when finite and non-negative, so a NaN
-count (a pandas round trip fills a missing one with NaN) falls back to the next source and is
-never read as `complete`; `n_value_correct` above `n_targeted` is no usable figure. A
+stripped and lower-cased (`" Archived"` is `archived`); `failed` and `subclass_correct` count
+only as booleans (Python or numpy). Counts (`tp`, `fn`, `fp`, `n_*`; Python or numpy numbers) are
+used only when finite, non-negative and whole. `None` and NaN (how pandas marks a missing cell)
+are absent: a missing `fp`, `n_hallucinated` or `n_value_wrong` counts as 0 invented values, and a
+missing `tp` / `fn` falls back to the per-field counts. A present but corrupt invention count
+(negative, infinite, fractional, text) makes the invented values unknown, so the row has no
+usable counts and its `overall_extraction_score` decides; a share must lie in [0, 1], else the
+row is left out. `n_value_correct` above `n_targeted` is no usable figure. A row with no usable
+figure is left out, never read as `complete`. A
 run without expected stages cannot separate needed from needless reviews, so every review counts
 as needless; read the `necessary_review` count before comparing such runs.
 
@@ -134,8 +139,9 @@ as needless; read the `necessary_review` count before comparing such runs.
   composite that scored no document).
 
 The bootstrap is stdlib-only and seeded, and `breakdown` sorts each group's points first, so the
-same documents give the same interval in any order. `n_boot` must be a positive integer; `by`
-key names are stripped and may not repeat.
+same documents give the same interval in any order. `n_boot` must be a positive integer and
+`seed` an integer; `by` key names are stripped and may not repeat. `compare` pairs and
+de-duplicates on `str(doc_id)` stripped (`1` and `"1"` pair; `1` and `1.0` do not).
 
 ## Registry and metric ids
 
