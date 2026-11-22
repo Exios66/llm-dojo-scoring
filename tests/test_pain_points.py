@@ -283,7 +283,7 @@ class TestFieldValueOutcomes:
     """Tests for field value outcomes."""
 
     @pytest.mark.parametrize("placeholder", ["n/a", "N/A", "null", "none", "nan", "[]", "{}", "n.a.", "", None,
-                                              [], ["", None], [["n/a"], []], float("nan")])
+                                              [], ["", None], [[""], []], (), {}, float("nan")])
     def test_placeholder_predictions_are_blank_not_wrong(self, placeholder):
         """The Dojo scores these placeholders as blank, so a field filled with one is a plain miss,
         never an invented value that could make an extraction fabricated."""
@@ -292,6 +292,13 @@ class TestFieldValueOutcomes:
         assert out == {"n_targeted": 2, "n_value_correct": 0, "n_value_wrong": 0, "n_value_partial": 0}
         scored = {"n_targeted": 2, "n_value_correct": 0, "scoring_method": "suite", **out}
         assert _ext(scored).reason == "low_recall"
+
+    def test_a_list_holding_a_placeholder_is_a_stated_value(self):
+        """Parity with the sandbox and the Dojo scorer: ``["n/a"]`` is a non-empty list, a value."""
+        out = pp.field_value_outcomes({"parties": ["Acme"]}, {"parties": ["n/a"]}, {"parties": 0.0})
+        assert out["n_value_wrong"] == 1
+        scored = {"n_targeted": 1, "n_value_correct": 0, "scoring_method": "suite", **out}
+        assert _ext(scored).reason == "fabricated"
 
     def test_placeholder_truth_is_not_targeted(self):
         """Placeholder truth is not targeted."""
@@ -608,6 +615,10 @@ class TestCompare:
         with pytest.raises(ValueError, match="unknown baseline 'Z'"):
             pp.compare(_run_docs(), baseline="Z")
 
+    def test_baseline_label_is_stripped(self):
+        """A baseline with surrounding spaces names the same group the labels do."""
+        assert pp.compare(_run_docs(), baseline=" A ")["baseline"] == "A"
+
     def test_missing_doc_id_is_refused(self):
         """Missing doc id is refused."""
         docs = _run_docs() + [pp.PainPointDocument(expected_class="contract", groups={"experiment": "B"})]
@@ -763,3 +774,17 @@ class TestPublicSurface:
         # score = 1 - mean / max points, so the means are what a run reports as the headline.
         run = pp.score_run([_doc(stage="review"), _doc()])
         assert math.isclose(run["classification"]["score"], 1 - run["classification"]["mean"] / 4)
+
+
+def test_headline_scores_use_the_registry_names():
+    """The run headlines carry the four registry names, None for an empty composite."""
+    from llm_dojo_scoring.metrics.registry import get_registry
+
+    run = pp.score_run([pp.PainPointDocument(doc_id="1", expected_class="contract", predicted_class="contract",
+                                             stage="review")])
+    out = pp.headline_scores(run)
+    assert out == {"pain_points_classification_mean": 4.0, "pain_points_classification_score": 0.0,
+                   "pain_points_extraction_mean": None, "pain_points_extraction_score": None}
+    names = set(get_registry().names())
+    assert set(out) <= names
+

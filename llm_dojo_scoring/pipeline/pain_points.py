@@ -214,11 +214,26 @@ def _label(value: Any) -> str:
     return str(value or "").strip().lower()
 
 
-def _blank(value: Any) -> bool:
-    """Absence: a Dojo-blank value, or a list / tuple whose items are all blank (recursively)."""
+def _empty_container(value: Any) -> bool:
+    """None, a blank string, an empty dict, or a list / tuple whose items are all of these."""
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return True
+    if isinstance(value, dict):
+        return not value
     if isinstance(value, (list, tuple)):
-        return all(_blank(item) for item in value)
-    return is_empty_value(value)
+        return all(_empty_container(item) for item in value)
+    return False
+
+
+def _blank(value: Any) -> bool:
+    """Absence: a Dojo-blank value (``None``, ``n/a``, ``nan``, ``"[]"`` ...: ``is_empty_value``), or a
+    list / tuple whose items are all None, blank strings or empty containers.
+
+    A list holding a placeholder string (``["n/a"]``) is a stated value, as the Dojo's own scorer
+    reads it: ``is_empty_value`` treats any non-empty list as a value, and entity-list matching
+    scores its items.
+    """
+    return _empty_container(value) or is_empty_value(value)
 
 
 def field_value_outcomes(
@@ -502,8 +517,9 @@ def compare(
     both groups. ``delta`` is candidate minus baseline mean penalty (positive = more penalty =
     worse); ``ci`` is ``bootstrap_ci`` over the per-document differences (None under two pairs).
     ``only_baseline`` / ``only_candidate`` count documents scored on the composite in one group
-    only. Raises ``ValueError`` for an unknown baseline, a missing ``doc_id`` or a duplicate
-    ``doc_id`` inside one group.
+    only. Documents without a label under ``by`` form the ``"unknown"`` group, which is compared
+    like any other. Raises ``ValueError`` for an unknown baseline, a missing ``doc_id`` or a
+    duplicate ``doc_id`` inside one group.
     """
     if not isinstance(by, str) or not by.strip():
         raise ValueError(f"compare needs one non-empty group key name, got {by!r}")
@@ -512,7 +528,7 @@ def compare(
         if doc.doc_id is None or not str(doc.doc_id).strip():
             raise ValueError(f"compare needs a doc_id on every document; missing on {doc!r}")
         groups.setdefault(_key_value(doc, by), []).append(doc)
-    baseline = str(baseline)
+    baseline = str(baseline).strip()
     if baseline not in groups:
         raise ValueError(f"unknown baseline {baseline!r} for {by!r}; groups: {sorted(groups)}")
     for value, members in groups.items():
@@ -547,10 +563,25 @@ def compare(
     return out
 
 
+def headline_scores(run: Mapping[str, Any]) -> dict[str, float | None]:
+    """The registry-named run headlines of a :func:`score_run` result.
+
+    ``pain_points_{classification,extraction}_mean`` (mean penalty points, lower is better) and
+    ``pain_points_{classification,extraction}_score`` (``1 - mean / max_points``, higher is better);
+    None when the composite scored no document.
+    """
+    out: dict[str, float | None] = {}
+    for composite in (CLASSIFICATION, EXTRACTION):
+        summary = run.get(composite) or {}
+        out[f"pain_points_{composite}_mean"] = summary.get("mean")
+        out[f"pain_points_{composite}_score"] = summary.get("score")
+    return out
+
+
 __all__ = [
     "CLASSIFICATION", "CLASSIFICATION_REASONS", "DEFAULT_SCALE", "DOC_CLASS_KEY", "EXTRACTION",
     "EXTRACTION_REASONS", "FABRICATION_MAX_FIELD_SCORE", "FINAL_STAGES", "Outcome",
     "PROFILE", "PainPointDocument", "PenaltyScale", "breakdown", "classification_outcome",
-    "compare", "extraction_outcome", "field_value_outcomes", "score_document", "score_run",
+    "compare", "extraction_outcome", "field_value_outcomes", "headline_scores", "score_document", "score_run",
     "summarize",
 ]

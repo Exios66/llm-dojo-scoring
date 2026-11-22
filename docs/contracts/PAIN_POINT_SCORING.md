@@ -123,8 +123,11 @@ as needless; read the `necessary_review` count before comparing such runs.
   over the paired documents. **`delta = candidate - baseline`, so positive means more penalty,
   which is worse.** `ci` is `bootstrap_ci` over the per-document differences (`None` under two
   pairs); `only_*` count documents scored on the composite in one group only. Unpaired documents
-  never enter a mean or a delta. It raises `ValueError` for an unknown baseline, a missing
-  `doc_id`, or a duplicate `doc_id` inside one group.
+  never enter a mean or a delta. Documents without a label under `by` form the `"unknown"`
+  group, compared like any other; `baseline` is stripped like the labels. It raises `ValueError`
+  for an unknown baseline, a missing `doc_id`, or a duplicate `doc_id` inside one group.
+- `headline_scores(run)` maps a `score_run` result to the four registry names below (`None` for a
+  composite that scored no document).
 
 The bootstrap is stdlib-only and seeded, so the same documents give the same interval.
 
@@ -138,7 +141,7 @@ The bootstrap is stdlib-only and seeded, so the same documents give the same int
 | `pain_points_extraction_score` | `pipeline.pain_points.extraction.score` | higher is better |
 
 The registry has no direction field; the means say "lower is better" in their description. These
-are run-level headlines (`aggregation: none`): `score_run` and `breakdown` produce them, and the
+are run-level headlines (`aggregation: none`): `headline_scores(score_run(...))` emits them, and the
 per-document points are the `score_document` payload. Never compare a penalty mean with a 0-1
 score, or a run scored under another `profile`.
 

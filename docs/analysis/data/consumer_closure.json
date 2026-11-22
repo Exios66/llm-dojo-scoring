@@ -172,7 +172,7 @@
     },
     "pipeline.pain_points": {
       "decision": "hold",
-      "lines": 556,
+      "lines": 587,
       "reason": "pain-point penalty composites; the sandbox vendors this file as its hotfix and llm-mailroom wires it next (Dojo issue number pending: placeholder #0)"
     },
     "pipeline.pilot_labels": {
