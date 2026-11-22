@@ -262,9 +262,14 @@ def _flag(value: Any) -> bool | None:
     return bool(value) if _is_bool(value) else None
 
 
+def _missing(value: Any) -> bool:
+    """A missing cell: None, NaN, or pandas' ``NA`` / ``NaT`` (which ``str()`` would turn into text)."""
+    return _absent(value) or type(value).__name__ in ("NAType", "NaTType")
+
+
 def _label(value: Any) -> str:
-    """A class or stage label, stripped and lower-cased; blank for None."""
-    return str(value or "").strip().lower()
+    """A class or stage label, stripped and lower-cased; blank for a missing cell."""
+    return "" if _missing(value) else str(value).strip().lower()
 
 
 def _empty_container(value: Any) -> bool:
@@ -389,7 +394,8 @@ def _field_counts(scored: Mapping[str, Any]) -> tuple[float | None, float | None
         correct, targeted = _count(scored.get("n_value_correct")), _count(scored.get("n_targeted"))
         if correct is not None and targeted is not None and correct > targeted:
             correct = targeted = None  # inconsistent counts are no usable figure
-    invention_keys = ("n_hallucinated" if _absent(scored.get("fp")) else "fp", "n_value_wrong")
+    # n_value_partial too: a corrupt near-miss count read as 0 could turn low_recall into fabricated.
+    invention_keys = ("n_hallucinated" if _absent(scored.get("fp")) else "fp", "n_value_wrong", "n_value_partial")
     if any(present_but_unusable(k) for k in invention_keys):
         return None, None, 0.0
     empty_truth = fp if fp is not None else (_count(scored.get("n_hallucinated")) or 0.0)
@@ -445,7 +451,8 @@ def score_document(doc: PainPointDocument, scale: PenaltyScale = DEFAULT_SCALE) 
     return {
         "doc_id": doc.doc_id,
         "expected_class": doc.expected_class,
-        "groups": ({str(k): str(v) for k, v in doc.groups.items()} if isinstance(doc.groups, Mapping) else {}),
+        "groups": ({str(k): (UNKNOWN if _missing(v) else str(v)) for k, v in doc.groups.items()}
+                   if isinstance(doc.groups, Mapping) else {}),
         CLASSIFICATION: _outcome_dict(classification_outcome(doc, scale)),
         EXTRACTION: _outcome_dict(extraction_outcome(doc, scale)),
     }
@@ -508,7 +515,7 @@ def _key_value(doc: PainPointDocument, name: str) -> str:
     if name == DOC_CLASS_KEY:
         return _label(doc.expected_class) or UNKNOWN
     value = doc.groups.get(name) if isinstance(doc.groups, Mapping) else None
-    text = str(value).strip() if value is not None else ""
+    text = "" if _missing(value) else str(value).strip()
     return text or UNKNOWN
 
 
@@ -614,7 +621,8 @@ def compare(
         if doc.doc_id is None or not str(doc.doc_id).strip():
             raise ValueError(f"compare needs a doc_id on every document; missing on {doc!r}")
         groups.setdefault(_key_value(doc, by), []).append(doc)
-    baseline = str(baseline).strip()
+    # Fold the baseline exactly as the group labels are folded (doc_class is lower-cased).
+    baseline = _label(baseline) if by == DOC_CLASS_KEY else str(baseline).strip()
     if baseline not in groups:
         raise ValueError(f"unknown baseline {baseline!r} for {by!r}; groups: {sorted(groups)}")
     for value, members in groups.items():

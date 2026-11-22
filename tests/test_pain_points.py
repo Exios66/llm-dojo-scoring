@@ -948,3 +948,37 @@ def test_score_document_tolerates_non_mapping_groups():
     doc = pp.PainPointDocument(doc_id="1", expected_class="contract", predicted_class="contract", stage="archived",
                                groups=["experiment", "A"])  # type: ignore[arg-type]
     assert pp.score_document(doc)["groups"] == {}
+
+
+class TestBugbotOn185:
+    """Cursor Bugbot on llm-dojo-scoring#185."""
+
+    def test_missing_labels_from_a_dataframe_are_missing(self):
+        """A NaN or pd.NA expected class excludes the document; a NaN group label is "unknown"."""
+        pd = pytest.importorskip("pandas")
+        for missing in (float("nan"), pd.NA):
+            doc = pp.PainPointDocument(doc_id="1", expected_class=missing, predicted_class="contract",
+                                       stage="archived", groups={"experiment": missing})
+            assert pp.classification_outcome(doc) is None
+            (group,) = pp.breakdown([doc], n_boot=10)["groups"]
+            assert group["key"] == {"experiment": "unknown"}
+
+    @pytest.mark.parametrize("partial", [-1, 2.5, float("inf"), "x"])
+    def test_a_corrupt_near_miss_count_is_never_read_as_zero(self, partial):
+        """A corrupt n_value_partial makes the row no usable figure, not fabricated."""
+        row = {"tp": 0, "fn": 3, "fp": 1, "n_value_partial": partial}
+        assert _ext(row) is None
+        assert _ext({**row, "overall_extraction_score": 0.1}).reason == "low_recall"
+
+    def test_a_doc_class_baseline_is_folded_like_the_groups(self):
+        """``compare(by="doc_class", baseline="Contract")`` names the ``contract`` group."""
+        docs = [pp.PainPointDocument(doc_id=str(i), expected_class=c, predicted_class=c, stage="archived")
+                for i, c in enumerate(["Contract", "correspondence"])]
+        assert pp.compare(docs, by="doc_class", baseline="Contract")["baseline"] == "contract"
+
+
+def test_score_document_echoes_a_missing_group_label_as_unknown():
+    """A NaN group label is "unknown" in score_document, as in breakdown."""
+    doc = pp.PainPointDocument(doc_id="1", expected_class="contract", predicted_class="contract", stage="archived",
+                               groups={"experiment": float("nan"), "model": "m"})
+    assert pp.score_document(doc)["groups"] == {"experiment": "unknown", "model": "m"}
