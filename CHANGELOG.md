@@ -20,7 +20,9 @@ Format based on Keep a Changelog; versioning is SemVer.
   bootstrap CI on each mean, and `compare` pairs documents on `doc_id` for a candidate-minus-baseline
   delta with a CI; `headline_scores` emits the registry-named run headlines. A list holding a
   placeholder (`["n/a"]`) is a stated value, as the sandbox and the Dojo scorer read it, so the
-  per-field counts match the sandbox exactly. `PenaltyScale` refuses non-finite values and refuses a custom scale that keeps
+  per-field counts match the sandbox exactly. A NaN, infinite or negative count is no usable
+  figure (never read as `complete`); stages compare case-insensitively; `breakdown` intervals do
+  not depend on document order. `PenaltyScale` refuses non-finite values and refuses a custom scale that keeps
   the `amfam-v1` profile id. New registry names `pain_points_{classification,extraction}_{mean,score}`
   with metric ids `pipeline.pain_points.*`. No existing score moves; goldens unchanged. Contract:
   `docs/contracts/PAIN_POINT_SCORING.md`. Tests: `tests/test_pain_points.py`. Consumers: the

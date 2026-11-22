@@ -146,6 +146,8 @@ class PenaltyScale:
         strictly_falling("unnecessary_review", "fabricated", "low_recall", "partial")
         if not self.wrong_doc_type > self.missed_review > 0 or self.wrong_subtype <= 0:
             raise ValueError("penalty scale: wrong_doc_type > missed_review > 0 and wrong_subtype > 0")
+        if self.partial <= 0:
+            raise ValueError("penalty scale: partial > 0 (a partial extraction is never free)")
         if not 0 < self.pipeline_failure <= self.unnecessary_review:
             raise ValueError("penalty scale: 0 < pipeline_failure <= unnecessary_review")
         if not 0 < self.low_recall_below < 1:
@@ -203,10 +205,20 @@ class PainPointDocument:
 
 
 def _num(value: Any) -> float | None:
-    """A real number as a float; booleans and non-numbers are None."""
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
+    """A finite real number as a float; booleans, NaN, infinity and non-numbers are None.
+
+    A NaN count (a pandas round trip fills a missing count with NaN) would fail every
+    comparison and fall through to ``complete``; None sends it to the next source instead.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
         return None
     return float(value)
+
+
+def _count(value: Any) -> float | None:
+    """A usable event count: a finite, non-negative number, else None."""
+    number = _num(value)
+    return number if number is not None and number >= 0 else None
 
 
 def _label(value: Any) -> str:
@@ -274,11 +286,11 @@ def field_value_outcomes(
 
 def _routing(doc: PainPointDocument, scale: PenaltyScale) -> Outcome | None:
     """The outcome shared by both composites for a document that did not archive, else None."""
-    stage = str(doc.stage or "")
-    if doc.failed or stage not in FINAL_STAGES:
+    stage = _label(doc.stage)
+    if doc.failed is True or stage not in FINAL_STAGES:
         return Outcome(scale.pipeline_failure, ("pipeline_failure",))
     if stage == "review":
-        if str(doc.expected_stage or "archived") == "review":
+        if (_label(doc.expected_stage) or "archived") == "review":
             return Outcome(0.0, ("necessary_review",))
         return Outcome(scale.unnecessary_review, ("unnecessary_review",))
     return None
@@ -307,7 +319,7 @@ def classification_outcome(doc: PainPointDocument, scale: PenaltyScale = DEFAULT
     found: list[tuple[float, str]] = []
     if _label(doc.predicted_class) != expected:
         found.append((scale.wrong_doc_type, "wrong_doc_type"))
-    if str(doc.expected_stage or "archived") == "review":
+    if (_label(doc.expected_stage) or "archived") == "review":
         found.append((scale.missed_review, "missed_review"))
     if doc.subclass_correct is False and not any(r == "wrong_doc_type" for _, r in found):
         found.append((scale.wrong_subtype, "wrong_subtype"))
@@ -323,13 +335,15 @@ def _field_counts(scored: Mapping[str, Any]) -> tuple[float | None, float | None
     (``n_hallucinated``) stand in for the values stated on empty truth. ``n_value_wrong`` is
     always added.
     """
-    tp, fn, fp = (_num(scored.get(k)) for k in ("tp", "fn", "fp"))
+    tp, fn, fp = (_count(scored.get(k)) for k in ("tp", "fn", "fp"))
     if tp is not None and fn is not None:
         correct, targeted = tp, tp + fn
     else:
-        correct, targeted = _num(scored.get("n_value_correct")), _num(scored.get("n_targeted"))
-    empty_truth = fp if fp is not None else (_num(scored.get("n_hallucinated")) or 0.0)
-    return correct, targeted, empty_truth + (_num(scored.get("n_value_wrong")) or 0.0)
+        correct, targeted = _count(scored.get("n_value_correct")), _count(scored.get("n_targeted"))
+        if correct is not None and targeted is not None and correct > targeted:
+            correct = targeted = None  # inconsistent counts are no usable figure
+    empty_truth = fp if fp is not None else (_count(scored.get("n_hallucinated")) or 0.0)
+    return correct, targeted, empty_truth + (_count(scored.get("n_value_wrong")) or 0.0)
 
 
 def extraction_outcome(doc: PainPointDocument, scale: PenaltyScale = DEFAULT_SCALE) -> Outcome | None:
@@ -338,7 +352,7 @@ def extraction_outcome(doc: PainPointDocument, scale: PenaltyScale = DEFAULT_SCA
     A row the scorer gave no usable figure is left out too, never scored as complete.
     """
     scored = doc.extraction
-    if scored is None or not _label(doc.expected_class):
+    if not isinstance(scored, Mapping) or not _label(doc.expected_class):
         return None
     routed = _routing(doc, scale)
     if routed is not None:
@@ -355,7 +369,7 @@ def extraction_outcome(doc: PainPointDocument, scale: PenaltyScale = DEFAULT_SCA
         if share < scale.low_recall_below:
             return Outcome(scale.low_recall, ("low_recall",))
         return Outcome(scale.partial, ("partial",))
-    near_miss = _num(scored.get("n_value_partial")) or 0.0
+    near_miss = _count(scored.get("n_value_partial")) or 0.0
     if targeted <= 0:
         # The truth holds only empty fields: anything stated was invented.
         return Outcome(scale.fabricated, ("fabricated",)) if invented > 0 else Outcome(0.0, ("complete",))
@@ -381,7 +395,7 @@ def score_document(doc: PainPointDocument, scale: PenaltyScale = DEFAULT_SCALE) 
     return {
         "doc_id": doc.doc_id,
         "expected_class": doc.expected_class,
-        "groups": dict(doc.groups),
+        "groups": {str(k): str(v) for k, v in (doc.groups or {}).items()},
         CLASSIFICATION: _outcome_dict(classification_outcome(doc, scale)),
         EXTRACTION: _outcome_dict(extraction_outcome(doc, scale)),
     }
@@ -450,10 +464,21 @@ def _key_value(doc: PainPointDocument, name: str) -> str:
 
 def _names(by: str | Sequence[str]) -> tuple[str, ...]:
     """Breakdown key names as a tuple; a bare string is one key, an empty or blank one is refused."""
+    if by is None:
+        raise ValueError("breakdown keys must be non-empty strings, got None")
     names = (by,) if isinstance(by, str) else tuple(by)
     if not names or any(not isinstance(n, str) or not n.strip() for n in names):
         raise ValueError(f"breakdown keys must be non-empty strings, got {by!r}")
+    names = tuple(n.strip() for n in names)
+    if len(set(names)) != len(names):
+        raise ValueError(f"breakdown keys repeat: {list(names)}")
     return names
+
+
+def _check_n_boot(n_boot: int) -> None:
+    """Refuse a resample count the bootstrap cannot use."""
+    if isinstance(n_boot, bool) or not isinstance(n_boot, int) or n_boot < 1:
+        raise ValueError(f"n_boot must be a positive integer, got {n_boot!r}")
 
 
 def breakdown(
@@ -472,6 +497,7 @@ def breakdown(
     documents); it is on the penalty-points scale, like ``mean``.
     """
     names = _names(by)
+    _check_n_boot(n_boot)
     groups: dict[tuple[str, ...], list[PainPointDocument]] = {}
     for doc in docs:
         groups.setdefault(tuple(_key_value(doc, n) for n in names), []).append(doc)
@@ -484,7 +510,8 @@ def breakdown(
             outcomes = [(outcome_of(d, scale), d.expected_class) for d in members]
             reasons = CLASSIFICATION_REASONS if composite == CLASSIFICATION else EXTRACTION_REASONS
             summary = summarize(outcomes, reasons, scale)
-            points = [o.points for o, _ in outcomes if o is not None]
+            # Sorted, so the interval does not depend on the order the documents came in.
+            points = sorted(o.points for o, _ in outcomes if o is not None)
             summary["ci"] = bootstrap_ci(points, n_boot=n_boot, seed=seed)
             entry[composite] = summary
         entries.append(entry)
@@ -523,6 +550,8 @@ def compare(
     """
     if not isinstance(by, str) or not by.strip():
         raise ValueError(f"compare needs one non-empty group key name, got {by!r}")
+    by = by.strip()
+    _check_n_boot(n_boot)
     groups: dict[str, list[PainPointDocument]] = {}
     for doc in docs:
         if doc.doc_id is None or not str(doc.doc_id).strip():

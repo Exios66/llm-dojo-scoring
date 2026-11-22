@@ -94,7 +94,11 @@ is a miss and never an invented value. It returns `{}` when `field_scores` is no
 
 **Consumers own row loading, stage naming and scoring.** They map their rows to
 `PainPointDocument` and attach the scored extraction row (for example from `score_extraction` and
-`extraction_binary_metrics`, plus `field_value_outcomes`). Stage strings are compared exactly. A
+`extraction_binary_metrics`, plus `field_value_outcomes`). Stages, like classes, are compared
+stripped and lower-cased (`" Archived"` is `archived`); `failed` must be the boolean `True` to
+count. Counts (`tp`, `fn`, `fp`, `n_*`) are used only when finite and non-negative, so a NaN
+count (a pandas round trip fills a missing one with NaN) falls back to the next source and is
+never read as `complete`; `n_value_correct` above `n_targeted` is no usable figure. A
 run without expected stages cannot separate needed from needless reviews, so every review counts
 as needless; read the `necessary_review` count before comparing such runs.
 
@@ -129,7 +133,9 @@ as needless; read the `necessary_review` count before comparing such runs.
 - `headline_scores(run)` maps a `score_run` result to the four registry names below (`None` for a
   composite that scored no document).
 
-The bootstrap is stdlib-only and seeded, so the same documents give the same interval.
+The bootstrap is stdlib-only and seeded, and `breakdown` sorts each group's points first, so the
+same documents give the same interval in any order. `n_boot` must be a positive integer; `by`
+key names are stripped and may not repeat.
 
 ## Registry and metric ids
 

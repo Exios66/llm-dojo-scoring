@@ -10,6 +10,7 @@ extended with the per-document, breakdown and compare APIs.
 from __future__ import annotations
 
 import dataclasses
+import json
 import math
 
 import pytest
@@ -788,3 +789,78 @@ def test_headline_scores_use_the_registry_names():
     names = set(get_registry().names())
     assert set(out) <= names
 
+
+
+class TestRoundTwoHardening:
+    """Adversarial review round 2: unusable figures, order, odd inputs."""
+
+    @pytest.mark.parametrize("bad", [float("nan"), float("inf"), -1.0])
+    def test_an_unusable_count_is_never_complete(self, bad):
+        """A NaN, infinite or negative count is no figure; the next source decides."""
+        pandas_row = {"tp": bad, "fn": bad, "fp": bad, "n_value_correct": 0.0, "n_targeted": 3.0,
+                      "n_value_wrong": 2.0, "n_value_partial": float("nan"), "scoring_method": "suite"}
+        assert _ext(pandas_row).reason == "fabricated"
+        assert _ext({"tp": bad, "fn": 0, "overall_extraction_score": 0.1}).reason == "low_recall"
+        assert _ext({"overall_extraction_score": float("nan")}) is None
+
+    def test_inconsistent_per_field_counts_are_no_figure(self):
+        """More correct fields than targeted ones falls back to the share."""
+        assert _ext({"n_value_correct": 5, "n_targeted": 3, "overall_extraction_score": 0.5}).reason == "partial"
+
+    def test_stages_compare_case_insensitively(self):
+        """``Archived`` is archived and ``Review`` is review, as classes are case-folded."""
+        doc = pp.PainPointDocument(expected_class="contract", predicted_class="contract", stage=" Archived ",
+                                   expected_stage="Review")
+        assert pp.classification_outcome(doc).reason == "missed_review"
+        review = dataclasses.replace(doc, stage="REVIEW")
+        assert pp.classification_outcome(review).reason == "necessary_review"
+
+    def test_only_a_boolean_true_is_a_failure(self):
+        """``failed`` is a boolean; the string ``"false"`` is not a failure."""
+        doc = pp.PainPointDocument(expected_class="contract", predicted_class="contract", stage="archived",
+                                   failed="false")  # type: ignore[arg-type]
+        assert pp.classification_outcome(doc).reason == "correct"
+
+    def test_partial_must_cost_something(self):
+        """A custom scale cannot make a partial extraction free or negative."""
+        for partial in (0.0, -1.0):
+            with pytest.raises(ValueError, match="partial"):
+                pp.PenaltyScale(profile="custom", partial=partial)
+
+    def test_breakdown_interval_does_not_depend_on_order(self):
+        """Shuffled documents give the same intervals."""
+        import random
+
+        docs = _run_docs() * 5
+        docs = [dataclasses.replace(d, doc_id=f"{d.doc_id}-{i}") for i, d in enumerate(docs)]
+        shuffled = list(docs)
+        random.Random(7).shuffle(shuffled)
+        assert pp.breakdown(docs, n_boot=300) == pp.breakdown(shuffled, n_boot=300)
+
+    def test_odd_inputs_are_refused_or_tolerated_consistently(self):
+        """None groups, non-mapping extraction, repeated or padded keys, bad n_boot."""
+        doc = pp.PainPointDocument(doc_id="1", expected_class="contract", predicted_class="contract",
+                                   stage="archived", extraction=["not", "a", "mapping"],  # type: ignore[arg-type]
+                                   groups=None)  # type: ignore[arg-type]
+        out = pp.score_document(doc)
+        assert out["groups"] == {} and out["extraction"] is None
+        assert json.dumps(pp.score_document(dataclasses.replace(doc, groups={"experiment": 3})))
+        with pytest.raises(ValueError, match="repeat"):
+            pp.breakdown(_run_docs(), by=("experiment", "experiment"))
+        assert pp.breakdown(_run_docs(), by=" experiment ")["by"] == ["experiment"]
+        with pytest.raises(ValueError, match="None"):
+            pp.breakdown(_run_docs(), by=None)  # type: ignore[arg-type]
+        for n_boot in (0, -5):
+            with pytest.raises(ValueError, match="n_boot"):
+                pp.breakdown(_run_docs(), n_boot=n_boot)
+            with pytest.raises(ValueError, match="n_boot"):
+                pp.compare(_run_docs(), baseline="A", n_boot=n_boot)
+
+
+def test_the_pain_point_ids_are_in_the_score_ledger():
+    """A release that adds metric ids lists them in the score ledger (COMPARABILITY.md)."""
+    from llm_dojo_scoring.metrics.score_changelog import SCORE_CHANGELOG
+
+    listed = {i for entry in SCORE_CHANGELOG for i in entry["metric_ids"]}
+    assert {"pipeline.pain_points.classification.mean_penalty", "pipeline.pain_points.extraction.mean_penalty",
+            "pipeline.pain_points.classification.score", "pipeline.pain_points.extraction.score"} <= listed
