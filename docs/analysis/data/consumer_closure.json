@@ -65,6 +65,11 @@
       "lines": 184,
       "reason": "source of registry metric failure_mode_breakdown (sorter bundle), Dojo #66"
     },
+    "analysis.risk_coverage": {
+      "decision": "hold",
+      "lines": 272,
+      "reason": "risk-coverage curve and per-slot decision summary for the decision-model experiments; the sandbox slice gate reads it after its next vendor refresh (local-mailroom-sandbox #339)"
+    },
     "analysis.serving": {
       "decision": "keep",
       "lines": 1557,
