@@ -408,6 +408,23 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         ),
         "rescore_required": True,
     },
+    {
+        # Sixth 0.30.2 change set: the client pain-point composites (pipeline.pain_points).
+        "version": "0.30.2",
+        "metric_ids": (
+            "pipeline.pain_points.classification.mean_penalty",
+            "pipeline.pain_points.extraction.mean_penalty",
+            "pipeline.pain_points.classification.score",
+            "pipeline.pain_points.extraction.score",
+        ),
+        "change": (
+            "New metrics: the pain-point composites (profile amfam-v1), classification and "
+            "extraction penalty points per document (0 correct and complete to 4 a needless "
+            "human review) and their run means and 0-1 scores (pipeline.pain_points). "
+            "No existing metric value changes."
+        ),
+        "rescore_required": False,
+    },
 )
 
 

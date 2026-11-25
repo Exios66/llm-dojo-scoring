@@ -5,6 +5,33 @@ Format based on Keep a Changelog; versioning is SemVer.
 
 ## [Unreleased]
 
+### Added
+
+- **Pain-point composites: two penalty scores per document, run and experiment.** New
+  `pipeline.pain_points` (root names `score_pain_points`, `pain_point_breakdown`,
+  `compare_pain_points`, `PainPointDocument`; module `pain_points`) moves the sandbox's client
+  pain-point composites (profile `amfam-v1`) into the Dojo as a scorer-agnostic, record-based
+  module. Each document earns 0 (correct and complete) to 4 (reviewed although the pipeline
+  could have finished it) penalty points, lower is better, on a classification ladder
+  (`unnecessary_review` and `pipeline_failure` 4, `wrong_doc_type` 3, `missed_review` 2,
+  `wrong_subtype` 1) and an extraction ladder (`fabricated` 3, `low_recall` 2, `partial` 1).
+  `score_document` evaluates one document, `score_run` summarises a run (mean, 0-1 score, reason
+  counts, per class), `breakdown` splits a run by experiment, model, prompt, arm or class with a
+  bootstrap CI on each mean, and `compare` pairs documents on `doc_id` for a candidate-minus-baseline
+  delta with a CI; `headline_scores` emits the registry-named run headlines. A list holding a
+  placeholder (`["n/a"]`) is a stated value, as the sandbox and the Dojo scorer read it, so the
+  per-field counts match the sandbox exactly. A row with no usable figure is left out, never read
+  as `complete`: counts must be finite, non-negative and whole (numpy numbers accepted, NaN read
+  as a missing cell), a corrupt invention count makes invention unknown, and a share must lie in
+  [0, 1]. Stages compare case-insensitively; `breakdown` intervals do not depend on document
+  order; `compare` pairs on the stripped `doc_id`; `seed` and `n_boot` are validated.
+  `PenaltyScale` bounds point values to [0.001, 1000] and refuses non-finite values and a
+  custom scale that keeps the `amfam-v1` profile id. New registry names `pain_points_{classification,extraction}_{mean,score}`
+  with metric ids `pipeline.pain_points.*`. No existing score moves; goldens unchanged. Contract:
+  `docs/contracts/PAIN_POINT_SCORING.md`. Tests: `tests/test_pain_points.py`. Consumers: the
+  sandbox vendors the module file as its interim hotfix; the module imports only
+  `schemas.gt_metadata.is_empty_value` and `analysis.bootstrap.bootstrap_ci`.
+
 ### Changed
 
 - **Agent roles inherit the current session model.** User model choices override

@@ -193,7 +193,7 @@ Digital-Mailroom `governance/TASKS.md`.
 - `docs/guides/` — `SCORING.md`, `PUBLIC_API.md`, `RELEASES.md`, `MIGRATION.md`,
   `ADDING_A_DOCUMENT_TYPE.md`, `COMPARABILITY.md`, `PROMPTS.md`,
   `UPDATE_AWARENESS.md`.
-- `docs/contracts/` — metric ids, scorecard honesty, archive / reviewer / sandbox scoring.
+- `docs/contracts/` — metric ids, scorecard honesty, archive / reviewer / sandbox / pain-point scoring.
 - `docs/schemas/` — extraction, CUAD, MAUD, corporate-record and GT metadata schemas.
 - `docs/history/`, `docs/plans/` — past transfers, TODOs and plans; not current contracts.
 - `CHANGELOG.md` — every user-visible change under `[Unreleased]` until `release.py cut`.
