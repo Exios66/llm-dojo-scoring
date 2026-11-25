@@ -393,6 +393,29 @@ def test_reviewed_intent_leaves_a_real_hub_intent_source_alone() -> None:
     assert merged.report["superseded"] == ["intent"]
 
 
+def test_applied_intent_replaces_any_hub_intent_metadata() -> None:
+    """An applied correction over a non-heuristic source takes the overlay's source; the
+    replaced label's confidence and status go with it, and the input keeps them."""
+    hub = {
+        "intent": "update",
+        "intent_source": "llm_zero_shot",
+        "intent_confidence": 0.9,
+        "intent_status": "auto_labeled",
+        "sender": "Phillip Allen",
+    }
+    before = copy.deepcopy(hub)
+    merged = apply_label_overlays(
+        hub,
+        doc_class="correspondence",
+        doc_text=TEXT,
+        interim=_rec({"intent": _lab("notice", "correction", hub_value="update")}),
+    )
+    assert merged.fields["intent"] == "notice"
+    assert merged.fields["intent_source"] == "interim:correction"
+    assert "intent_confidence" not in merged.fields and "intent_status" not in merged.fields
+    assert hub == before
+
+
 def test_null_intent_overlay_is_a_documented_absence_and_does_not_mutate_the_input() -> None:
     """A null reviewed intent is no heuristic label either; the input row keeps its source."""
     hub = copy.deepcopy(HEURISTIC_INTENT)
