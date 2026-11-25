@@ -1068,13 +1068,19 @@ def _clause_pattern() -> str:
     return f"^(?:{alts}): .+"
 
 
+def _party_role_pattern() -> str:
+    """``^.+: (?:licensor|...|other)$``: one '<party>: <role>' line with a known role."""
+    return "^.+: (?:" + "|".join(CONTRACT_PARTY_ROLES) + ")$"
+
+
 def cuad_json_schema(*, include_trace: bool = True) -> dict[str, Any]:
     """JSON Schema (draft-07-compatible subset) for ``ContractExtraction``.
 
     Built for vLLM guided decoding: nullable scalars are
     ``["string", "null"]``, lists default to ``[]``, ``cuad_family`` is the 25
     families + ``other`` (or ``null``), and each ``cuad_clauses`` item must
-    match ``^<Atticus category>: .+``; dates are ISO-shaped. The v1 parse-compat
+    match ``^<Atticus category>: .+``, each ``party_roles`` item must end in
+    ``: <role>`` with a role from :data:`CONTRACT_PARTY_ROLES`; dates are ISO-shaped. The v1 parse-compat
     keys (``merger_consideration``, ``maud_clauses``) are not in the v2 schema:
     a guided decoder never emits them. Every scored field is required.
     ``include_trace`` adds the prompt's unscored ``reasoning`` object and
@@ -1090,6 +1096,12 @@ def cuad_json_schema(*, include_trace: bool = True) -> dict[str, Any]:
             }
         elif f.name == "cuad_clauses":
             prop = {"type": "array", "items": {"type": "string", "pattern": _clause_pattern()}, "default": []}
+        elif f.name == "party_roles":
+            prop = {
+                "type": "array",
+                "items": {"type": "string", "minLength": 1, "pattern": _party_role_pattern()},
+                "default": [],
+            }
         elif f.is_list:
             prop = {"type": "array", "items": {"type": "string", "minLength": 1}, "default": []}
         elif f.scoring_type == "date":

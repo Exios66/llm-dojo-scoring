@@ -36,6 +36,7 @@ The docs are grouped by purpose. The package layout itself is described in
 | [`contracts/SANDBOX_SCORING.md`](contracts/SANDBOX_SCORING.md) | Sandbox MAUD/CUAD rubrics and the v0.26.0 contract truth corrections |
 | [`contracts/REVIEWER_SCORING.md`](contracts/REVIEWER_SCORING.md) | Decision/LLM reviewer records, risk bounds, calibration, routing, and cost |
 | [`contracts/ARCHIVE_SCORING.md`](contracts/ARCHIVE_SCORING.md) | The archivist scoring block and audit row |
+| [`contracts/PAIN_POINT_SCORING.md`](contracts/PAIN_POINT_SCORING.md) | Pain-point penalty composites (profile `amfam-v1`): per document, per run, per experiment, paired comparison |
 
 ## Analysis: measured evidence behind a change
 

@@ -110,6 +110,7 @@ HOLD: dict[str, str] = {
     "ml.metrics": "intake-classifier scorecard for mailroom-ml evaluation reports (stacked on Dojo #142)",
     "prompts.alignment": "guard that each specialist prompt asks for the fields the schema scores; no consumer imports it, CI runs it (stacked on Dojo #143)",
     "scoring.decision_lanes": "judge/arbiter/boss/review-tray scorecards; llm-mailroom wires its decision export next (stacked on Dojo #140)",
+    "pipeline.pain_points": "pain-point penalty composites; Exios66/local-mailroom-sandbox#393 serves this file as its scoring hotfix SHF-014 until its vendor pin ships it, and llm-mailroom wires it next",
 }
 
 #: Dispatch functions whose first (or named) argument selects what runs.
