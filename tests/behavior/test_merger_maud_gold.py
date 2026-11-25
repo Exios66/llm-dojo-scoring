@@ -578,3 +578,19 @@ def test_clean_consideration_variant_survives_flagged_variant(reverse):
     expected = {"maud_clauses": ["No-Shop: Yes", "Type of Consideration: All Stock"], "merger_consideration": "all_stock"}
     assert hub_merger_expected_fields(row) == expected
     assert score(row, expected, subclass=None)["overall_score"] == 1.0
+
+
+def test_trailing_period_catalog_answers_share_one_gold_line():
+    """A trailing period does not make an equivalent catalog answer a conflict."""
+    lab = labels({"No-Shop": "Yes.", "no-shop": "Yes"})
+    row = hub_row(maud_label_count="2", maud_clause_labels=lab, expected_subclass="")
+    assert hub_merger_expected_fields(row) == {"maud_clauses": ["No-Shop: Yes"]}
+    lone = hub_row(
+        maud_label_count="1",
+        maud_clause_labels=labels({"No-Shop": "Yes."}),
+        expected_subclass="",
+    )
+    assert hub_merger_expected_fields(lone) == {"maud_clauses": ["No-Shop: Yes"]}
+    conflicting = labels({"No-Shop": "Yes.", "no-shop": "No"})
+    dropped = hub_row(maud_label_count="2", maud_clause_labels=conflicting, expected_subclass="")
+    assert hub_merger_expected_fields(dropped) == {}

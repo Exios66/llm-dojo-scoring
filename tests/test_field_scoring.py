@@ -954,3 +954,40 @@ def test_yearless_date_does_not_treat_currency_amount_as_year(amount):
     prediction = f"effective Aug 18; consideration {amount}"
     assert fs.score_date_field(prediction, "Aug 18") == 1.0
     assert not fs._stated_years(prediction)
+
+
+def test_clock_time_is_not_a_numeric_date():
+    """A colon time must not satisfy a slash date after separators are normalized."""
+    assert fs.score_date_field("time at 08:18", "08/18") == 0.0
+    assert not fs._date_phrase_contained("time at 08:18", "08/18")
+
+
+def test_currency_code_after_a_comma_does_not_consume_the_date_year():
+    """The date year stays when the next amount is a separate currency-marked number."""
+    prediction = "dated August 18, 2014, USD 100"
+    assert 2014 in fs._stated_years(prediction)
+    assert fs.score_date_field(prediction, "August 18") <= 0.67
+    assert fs.score_date_field(prediction, "August 18, 2014") == 1.0
+
+
+@pytest.mark.parametrize("phrase", ["August 18 12 p.m.", "August 18 12 a.m.", "August 18 12 P.M."])
+def test_dotted_meridiem_is_not_a_year(phrase):
+    """Dotted meridiem is a clock, not a two-digit year."""
+    assert fs.score_date_field(phrase, "August 18") == 1.0
+    assert not fs._stated_years(phrase)
+
+
+def test_ordinal_duration_is_not_a_year():
+    """A duration after an ordinal date is not a two-digit year."""
+    prediction = "18th day of August, 10 days after signing"
+    assert fs.parse_date(prediction) is None
+    assert 2010 not in fs._stated_years(prediction)
+    assert fs.score_date_field(prediction, "18th day of August") == 1.0
+
+
+@pytest.mark.parametrize("amount", ["2014 CAD", "CAD 2014", "2014 AUD", "CHF 2014"])
+def test_additional_currency_codes_are_not_years(amount):
+    """Currency codes beside a yearless date do not add an unverified year."""
+    prediction = f"effective Aug 18; consideration {amount}"
+    assert fs.score_date_field(prediction, "Aug 18") == 1.0
+    assert not fs._stated_years(prediction)

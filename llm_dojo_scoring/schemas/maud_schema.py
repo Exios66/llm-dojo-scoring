@@ -954,7 +954,18 @@ def _hub_merger_label_answers(labels: object) -> tuple[list[tuple[str, str]], fr
             try:
                 line = maud_clause_line(question, answer)
             except (KeyError, ValueError):
-                line = f"{question}: {answer}"
+                # parse_maud_clause already accepts a trailing period. The same
+                # catalog class must share one canonical line here, or "Yes."
+                # and "Yes" look like a conflict and the question loses its gold.
+                trimmed = answer.rstrip(".").strip()
+                if trimmed and trimmed != answer:
+                    try:
+                        line = maud_clause_line(question, trimmed)
+                        answer = trimmed
+                    except (KeyError, ValueError):
+                        line = f"{question}: {answer}"
+                else:
+                    line = f"{question}: {answer}"
             groups.setdefault(_qkey(question), []).append((question, answer, line))
     answers: list[tuple[str, str]] = []
     for records in groups.values():

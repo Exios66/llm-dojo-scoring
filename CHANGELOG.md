@@ -31,6 +31,8 @@ Format based on Keep a Changelog; versioning is SemVer.
   previously changed overall extraction from 1.0 to 0.5; both orders now score 1.0
   on the clean question. An explicit valid subclass still supplies scalar gold;
   equivalent answers and clean variants beside flagged records stay usable.
+  A trailing period on a catalog answer (`Yes.`) is the same gold line as the
+  class without it.
   This affects single and batch merger suites and requires the consumer pin/vendor
   updates noted above.
 - **Abbreviated partial dates in prose retain date credit.** A prediction such as
@@ -39,7 +41,11 @@ Format based on Keep a Changelog; versioning is SemVer.
   remain in place. Stated two-digit years and explicit dates outside 1900–2099 also
   retain the unverified-year cap: `dated August 18, 14` against `August 18` changes
   from 1.0 to 0.67, using the existing fixed century pivot. Unrelated amounts are
-  not extra years. These scorer corrections require a coordinated `llm-mailroom`
+  not extra years: a currency word after a comma does not consume the date year
+  (`August 18, 2014, USD 100` against `August 18` stays 0.67), and CAD, AUD, CHF,
+  JPY and CNY amounts are not years. A clock time is not a numeric date
+  (`08:18` against `08/18` stays 0.0). Dotted meridiem (`12 p.m.`) and a
+  following duration (`10 days after`) are not years. These scorer corrections require a coordinated `llm-mailroom`
   pin bump and sandbox vendor refresh after merge. Rescore stored runs containing
   these date forms before comparing their scores across the consumer update.
 - **Score change: stale Hub labels are not scored; one overlay policy (#164, #171, #94).** New

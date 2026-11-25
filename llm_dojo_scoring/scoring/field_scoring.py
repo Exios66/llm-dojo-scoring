@@ -733,11 +733,33 @@ _DATE_MONTH_PATTERN = (
 )
 _DATE_SPAN_SEPARATOR = r"[-/.,\s]+"
 _DATE_SPAN_DAY = r"\d{1,2}(?:st|nd|rd|th)?(?:\s*[-–]\s*\d{1,2})?"
-# A clock hour is not a two-digit year ("Aug 18 12:00", "Aug 18 12 PM").
-_DATE_SPAN_YEAR = r"['’]?(?:\d{4}|\d{2})\b(?!\s*:|\s*(?:am|pm|USD|EUR|GBP|dollars?|euros?|pounds?)\b)"
+# Clock hours, dotted meridiem, durations and currency words are not years.
+_DATE_MERIDIEM = r"(?:a\.?m\.?|p\.?m\.?)"
+_DATE_DURATION = (
+    r"(?:(?:business|calendar|consecutive)\s+)?"
+    r"(?:days?|weeks?|months?|years?|hours?|minutes?)"
+)
+_DATE_CURRENCY_WORD = r"(?:USD|EUR|GBP|CAD|AUD|CHF|JPY|CNY|dollars?|euros?|pounds?)"
+_DATE_SPAN_YEAR = (
+    r"['’]?(?:\d{4}|\d{2})\b(?!\s*:|\s*"
+    + _DATE_MERIDIEM
+    + r"(?![A-Za-z])|\s*"
+    + _DATE_DURATION
+    + r"\b|\s*"
+    + _DATE_CURRENCY_WORD
+    + r"\b)"
+)
+# Thousands separators stay inside an amount. A comma before a currency word
+# separates a date year from the next amount ("2014, USD 100"), so it is not
+# part of the number.
 _DATE_CURRENCY_AMOUNT_RE = re.compile(
-    r"(?:[$€£]|\b(?:USD|EUR|GBP)\s+)\s*\d[\d,]*(?:\.\d+)?"
-    r"|\b\d[\d,]*(?:\.\d+)?\s*(?:USD|EUR|GBP|dollars?|euros?|pounds?)\b",
+    r"(?:[$€£]|\b" + _DATE_CURRENCY_WORD + r"\s+)\s*\d+(?:,\d{3})*(?:\.\d+)?"
+    r"|\b\d+(?:,\d{3})*(?:\.\d+)?\s*" + _DATE_CURRENCY_WORD + r"\b",
+    re.IGNORECASE,
+)
+_ALPHA_MONTH_RE = re.compile(
+    r"\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?"
+    r"|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b",
     re.IGNORECASE,
 )
 _PROSE_DATED_YEAR_RE = re.compile(
@@ -961,7 +983,12 @@ def _date_phrase_contained(container: str, target: str) -> bool:
     # "august 2014"; #162). A lone month word ("may") or month-first prose
     # ("march of") is not a date phrase.
     explicit_month = (
-        (parts is not None and parts.month is not None and len(parts.stated) >= 2)
+        (
+            parts is not None
+            and parts.month is not None
+            and len(parts.stated) >= 2
+            and _ALPHA_MONTH_RE.search(target) is not None
+        )
         or any(f" {month}" in target_norm for month in _MONTH_NAMES)
         or (
             any(re.search(rf"\b{month}\b", target_norm) for month in _MONTH_NAMES)
