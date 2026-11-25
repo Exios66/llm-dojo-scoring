@@ -32,6 +32,10 @@ Format based on Keep a Changelog; versioning is SemVer.
   sandbox vendors the module file as its interim hotfix; the module imports only
   `schemas.gt_metadata.is_empty_value` and `analysis.bootstrap.bootstrap_ci`.
 
+### Changed
+
+- **CI rejects leaked links.** CircleCI job `no-session-links` fails when a commit message carries a claude.ai link, a `Claude-Session` trailer, a Claude Code attribution footer, or the claude.com product URL that footer uses. It checks the title and description of every pull request attached to the build, and warns and skips one the GitHub API cannot return. Commit text follows the new `.gitmessage` template. The required status stays `ci/circleci: test`.
+
 ### Fixed
 
 - **Score change: stale Hub labels are not scored; one overlay policy (#164, #171, #94).** New
