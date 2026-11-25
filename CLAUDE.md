@@ -10,8 +10,8 @@ is a cross-package event**: a wrong number here becomes a wrong number everywher
 
 **Always loaded with this file** (`.claude/rules/`), and binding on every task:
 
-- `orchestration.md` — Opus orchestrates; Sonnet and Haiku subagents do the work; 1–3
-  adversarial review rounds; orchestrator re-verifies.
+- `orchestration.md` — delegate with the current session model unless the user selects
+  another; Sonnet 4.6 is prohibited; 1–3 adversarial rounds; orchestrator re-verifies.
 - `evidence-contract.md` — what counts as proof before anything is called done.
 - `pr-flow.md` — local gate → fresh-context pre-PR review → draft PR → bot review.
 - `code-mode.md` — bulk work (many files, fixtures, score diffs, logs) runs as one script
@@ -118,9 +118,9 @@ Report exactly that; never claim "type-safe" or "fully linted".
 
 ## Subagents and skills
 
-- Project subagents (`.claude/agents/`): `implementer` (Sonnet), `runner` (Haiku),
-  `adversarial-reviewer` (Sonnet), `pre-pr-reviewer` (Sonnet). How and when to use them:
-  `.claude/rules/orchestration.md`.
+- Project subagents (`.claude/agents/`): `implementer`, `runner`, `adversarial-reviewer`
+  and `pre-pr-reviewer` inherit the session model. Roles do not select model tiers.
+  Selection and review rules: `.claude/rules/orchestration.md`.
 - `/cross-repo-bump` (`.claude/skills/cross-repo-bump/`) — walk a release or a public-API
   change through Dojo, then llm-mailroom, then the sandbox vendor snapshot. User-invoked
   only; every mutating release step still needs the user's explicit go-ahead.

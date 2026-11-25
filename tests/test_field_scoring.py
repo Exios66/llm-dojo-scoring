@@ -872,3 +872,122 @@ def test_audit_list_field_does_not_match_an_unverified_year():
 def test_strict_date_list_matching_cases(pred, label, matched):
     """List pairing for dates: unverified or stray years never match; exact copies do."""
     assert fs.score_entity_list("date", pred, label).matched == matched
+
+
+@pytest.mark.parametrize("phrase", ["Aug 18", "Aug. 18", "Sept 18", "18 Aug", "18th Aug.", "Feb 29", "Aug 2014", "Sept. 2014"])
+def test_abbreviated_partial_date_in_prose(phrase):
+    """A valid abbreviated date retains containment credit without an invented year."""
+    assert fs.score_date_field(f"effective on {phrase} per the notice", phrase) == 1.0
+
+
+@pytest.mark.parametrize("pred, exp", [
+    ("effective on Aug 18 per the notice", "Aug 1"),
+    ("effective on 18 Aug per the notice", "8 Aug"),
+    ("effective on Sept 18 per the notice", "Sept 1"),
+    ("Aug of the notice", "Aug of"),
+    ("the party may act", "May"),
+    ("effective on Feb 30 per the notice", "Feb 30"),
+])
+def test_abbreviated_date_containment_rejects_false_phrases(pred, exp):
+    """Only a valid date phrase at word boundaries can earn containment."""
+    assert not fs._date_phrase_contained(pred, exp)
+
+
+@pytest.mark.parametrize("phrase, expected", [
+    ("Aug 18, 2014", "Aug 18"),
+    ("Sept 18, 14", "Sept 18"),
+    ("18 Aug 14", "18 Aug"),
+    ("August 18, 14", "August 18"),
+    ("August 18, 1899", "August 18"),
+    ("August 18, 2100", "August 18"),
+    ("08/18/14", "08/18"),
+    ("18th day of August, 14", "18th day of August"),
+    ("18/Aug/14", "18/Aug"),
+    ("Aug-18-14", "Aug-18"),
+    ("August 1-3, 14", "August 1"),
+    ("Aug 18, '14", "Aug 18"),
+    ("18 Aug '14", "18 Aug"),
+    ("Aug 18, ’14", "Aug 18"),
+    ("18 Aug ’14", "18 Aug"),
+])
+def test_prose_date_with_unverified_year_stays_capped(phrase, expected):
+    """Prose cannot hide either a two-digit year or a stated century from the cap."""
+    assert fs.score_date_field(f"dated {phrase}", expected) <= 0.67
+    assert fs._date_year_unverified(f"dated {phrase}", expected)
+
+
+@pytest.mark.parametrize("year, canonical", [("14", 2014), ("68", 2068), ("69", 1969), ("99", 1999)])
+def test_prose_two_digit_years_use_the_fixed_pivot(year, canonical):
+    """A prose date uses the same fixed year pivot as a bare date."""
+    assert canonical in fs._stated_years(f"dated Aug 18, {year}")
+    assert not fs._stated_years("effective on Aug 18 per the notice")
+
+
+def test_prose_date_does_not_treat_unrelated_amount_as_an_extra_year():
+    """Amounts beside a valid date do not introduce unverified years."""
+    assert fs.score_date_field("effective August 18, 2014; consideration $5000", "August 18, 2014") == 1.0
+
+
+@pytest.mark.parametrize("phrase, expected", [
+    ("Aug 18 12:00", "Aug 18"),
+    ("August 18 14:30", "August 18"),
+    ("August 18, 12:00 PM", "August 18"),
+    ("August 18 12 AM", "August 18"),
+    ("18th day of August 12:00 PM", "18th day of August"),
+    ("18th day of August 12 AM", "18th day of August"),
+])
+def test_time_in_yearless_date_is_not_a_stated_year(phrase, expected):
+    """Clock hours in valid date text must never be interpreted as two-digit years."""
+    assert fs.score_date_field(phrase, expected) == 1.0
+    assert not fs._stated_years(phrase)
+
+
+@pytest.mark.parametrize("prediction", ["18th day of August, 14", "August 18, 2014", "2014-08-18"])
+def test_ordinal_label_retains_its_two_digit_year(prediction):
+    """An ordinal two-digit year label verifies the canonical year and exact copies."""
+    assert fs.score_date_field(prediction, "18th day of August, 14") == 1.0
+
+
+@pytest.mark.parametrize("amount", ["$2014", "USD 2014", "2014 USD", "14 dollars", "€2014", "2014 GBP"])
+def test_yearless_date_does_not_treat_currency_amount_as_year(amount):
+    """Currency-marked amounts beside a date do not add an unverified year."""
+    prediction = f"effective Aug 18; consideration {amount}"
+    assert fs.score_date_field(prediction, "Aug 18") == 1.0
+    assert not fs._stated_years(prediction)
+
+
+def test_clock_time_is_not_a_numeric_date():
+    """A colon time must not satisfy a slash date after separators are normalized."""
+    assert fs.score_date_field("time at 08:18", "08/18") == 0.0
+    assert not fs._date_phrase_contained("time at 08:18", "08/18")
+
+
+def test_currency_code_after_a_comma_does_not_consume_the_date_year():
+    """The date year stays when the next amount is a separate currency-marked number."""
+    prediction = "dated August 18, 2014, USD 100"
+    assert 2014 in fs._stated_years(prediction)
+    assert fs.score_date_field(prediction, "August 18") <= 0.67
+    assert fs.score_date_field(prediction, "August 18, 2014") == 1.0
+
+
+@pytest.mark.parametrize("phrase", ["August 18 12 p.m.", "August 18 12 a.m.", "August 18 12 P.M."])
+def test_dotted_meridiem_is_not_a_year(phrase):
+    """Dotted meridiem is a clock, not a two-digit year."""
+    assert fs.score_date_field(phrase, "August 18") == 1.0
+    assert not fs._stated_years(phrase)
+
+
+def test_ordinal_duration_is_not_a_year():
+    """A duration after an ordinal date is not a two-digit year."""
+    prediction = "18th day of August, 10 days after signing"
+    assert fs.parse_date(prediction) is None
+    assert 2010 not in fs._stated_years(prediction)
+    assert fs.score_date_field(prediction, "18th day of August") == 1.0
+
+
+@pytest.mark.parametrize("amount", ["2014 CAD", "CAD 2014", "2014 AUD", "CHF 2014"])
+def test_additional_currency_codes_are_not_years(amount):
+    """Currency codes beside a yearless date do not add an unverified year."""
+    prediction = f"effective Aug 18; consideration {amount}"
+    assert fs.score_date_field(prediction, "Aug 18") == 1.0
+    assert not fs._stated_years(prediction)

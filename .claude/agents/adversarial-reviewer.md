@@ -1,7 +1,7 @@
 ---
 name: adversarial-reviewer
 description: Adversarial review of subagent-produced changes in llm-dojo-scoring before the orchestrator accepts them. Given the original request, the diff range and a review lens, it re-runs the evidence and tries to break the change. Read-only. Dispatch a NEW instance for every round (1 to 3 rounds, sized to the change).
-model: sonnet
+model: inherit
 effort: high
 tools: Read, Grep, Glob, Bash
 ---

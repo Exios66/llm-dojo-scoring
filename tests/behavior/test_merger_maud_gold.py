@@ -532,3 +532,65 @@ def test_a_skipped_variant_does_not_unscore_a_clean_gold_question(clean_name):
     assert (clauses.matched, clauses.unmatched_predicted) == (2, 0)
     assert clauses.precision == 1.0
     assert scored["extraction_precision"] == 1.0
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("fallback", [None, "all_stock"])
+def test_conflicting_consideration_variants_do_not_derive_scalar_gold(reverse, fallback):
+    """Conflicting canonical questions cannot select scalar gold by insertion order."""
+    lab = labels({"Type of Consideration": "All Cash", "type of consideration": "All Stock", "No-Shop": "Yes"})
+    if reverse:
+        lab = dict(reversed(list(lab.items())))
+    row = hub_row(maud_label_count="3", maud_clause_labels=lab, expected_subclass=fallback or "")
+    expected = {"maud_clauses": ["No-Shop: Yes"]}
+    if fallback:
+        expected["merger_consideration"] = fallback
+    assert hub_merger_expected_fields(row) == expected
+    prediction = {"maud_clauses": ["No-Shop: Yes", "Type of Consideration: All Cash"], "merger_consideration": "all_cash"}
+    single = score(row, prediction, subclass=None)
+    batch = get_suite("merger_agreement").score_document([row, row], [prediction, prediction])
+    expected_score = 0.5 if fallback else 1.0
+    assert single["overall_score"] == expected_score
+    assert batch["quality_mean"] == expected_score
+    assert set(single["extraction"].field_scores) == set(expected)
+    assert all(set(item.field_scores) == set(expected) for item in batch["extraction"])
+    assert hub_merger_expected_fields(row, "mixed_cash_stock")["merger_consideration"] == "mixed_cash_stock"
+
+
+@pytest.mark.parametrize("variant", ["all_cash", "all cash", "ALL CASH"])
+def test_equivalent_consideration_variants_keep_one_gold_answer(variant):
+    """Catalog-equivalent answers give the same gold in either order."""
+    lab = labels({"Type of Consideration": "All Cash", "type of consideration": variant, "No-Shop": "Yes"})
+    expected = {"maud_clauses": ["No-Shop: Yes", "Type of Consideration: All Cash"], "merger_consideration": "all_cash"}
+    for ordered in (lab, dict(reversed(list(lab.items())))):
+        row = hub_row(maud_label_count="3", maud_clause_labels=ordered, expected_subclass="")
+        assert hub_merger_expected_fields(row) == expected
+        assert score(row, expected, subclass=None)["overall_score"] == 1.0
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_clean_consideration_variant_survives_flagged_variant(reverse):
+    """A flagged variant cannot override independently clean consideration gold."""
+    lab = {"Type of Consideration": {"answer": "All Cash", "gt_ambiguous": True}, "type of consideration": {"answer": "All Stock"}, "No-Shop": {"answer": "Yes"}}
+    if reverse:
+        lab = dict(reversed(list(lab.items())))
+    row = hub_row(maud_label_count="3", maud_clause_labels=lab, expected_subclass="all_cash")
+    expected = {"maud_clauses": ["No-Shop: Yes", "Type of Consideration: All Stock"], "merger_consideration": "all_stock"}
+    assert hub_merger_expected_fields(row) == expected
+    assert score(row, expected, subclass=None)["overall_score"] == 1.0
+
+
+def test_trailing_period_catalog_answers_share_one_gold_line():
+    """A trailing period does not make an equivalent catalog answer a conflict."""
+    lab = labels({"No-Shop": "Yes.", "no-shop": "Yes"})
+    row = hub_row(maud_label_count="2", maud_clause_labels=lab, expected_subclass="")
+    assert hub_merger_expected_fields(row) == {"maud_clauses": ["No-Shop: Yes"]}
+    lone = hub_row(
+        maud_label_count="1",
+        maud_clause_labels=labels({"No-Shop": "Yes."}),
+        expected_subclass="",
+    )
+    assert hub_merger_expected_fields(lone) == {"maud_clauses": ["No-Shop: Yes"]}
+    conflicting = labels({"No-Shop": "Yes.", "no-shop": "No"})
+    dropped = hub_row(maud_label_count="2", maud_clause_labels=conflicting, expected_subclass="")
+    assert hub_merger_expected_fields(dropped) == {}

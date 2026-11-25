@@ -19,12 +19,11 @@ and for humans. Read it by section, on demand.
    - `.claude/rules/evidence-contract.md` — what counts as proof before you call anything
      done, fixed or passing, and how evidence (test output, ruff, golden diffs,
      screenshots) reaches the PR.
-   - `.claude/rules/orchestration.md` — how work is delegated: the main session
-     orchestrates on the top model tier and never spawns a subagent on that tier; scoped
-     higher-level work goes to mid-tier subagents (Sonnet, effort high); simple tasks
-     (run, fetch, collect, mechanical edits) go to the small tier (Haiku, effort high);
-     every subagent change gets 1–3 adversarial review rounds sized to the change, then
-     the orchestrator re-verifies.
+   - `.claude/rules/orchestration.md` — how work is delegated: use the current session's
+     provider and model by default; roles do not force a cheaper or older model.
+     User model choices take precedence, and Sonnet 4.6 is prohibited. Every subagent
+     change gets 1–3 adversarial review rounds sized to the change, then the orchestrator
+     re-verifies.
    - `.claude/rules/pr-flow.md` — local gate → self-review → fresh-context pre-PR review
      → draft PR → bot review (CodeRabbit, CodeAnt). Pushing and opening a PR happen only
      when the user asked for one; nothing is pushed for review unvetted.
@@ -33,12 +32,10 @@ and for humans. Read it by section, on demand.
 3. **Fill in `.github/pull_request_template.md`** for every PR: problem, change, evidence,
    what was not verified, review log, public API and consumer impact.
 
-Tools without named model tiers: use your strongest model only for orchestration and final
-verification, a mid-size model for implementation and review, and a small model for
-mechanical work. A tool with only one model uses it for every role; the review rules still
-hold, so each adversarial round and the pre-PR review run in a new session or subagent that
-has not seen the implementation. The subagent briefs in `.claude/agents/` work as prompts
-in any tool.
+Use the current session's model for every role unless the user selects another model.
+Each adversarial round and the pre-PR review still run in a fresh session or subagent
+that has not seen the implementation. The briefs in `.claude/agents/` work as prompts
+in any tool; they inherit the session model rather than pinning historical model tiers.
 
 ## Contents
 
