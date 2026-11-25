@@ -322,3 +322,83 @@ def test_enum_label_is_stored_as_the_scored_token() -> None:
     merged = apply_label_overlays({}, doc_class="correspondence", doc_text=TEXT,
                                   interim=_rec({"urgency": _lab(" URGENT ")}))
     assert merged.fields["urgency"] == "urgent"
+
+
+# --- reviewed overlay intent on a heuristic Hub row (the overlay's source replaces `heuristic`) ---
+
+HEURISTIC_INTENT = {"intent": "payment_demand", "intent_source": "heuristic", "sender": "Phillip Allen"}
+
+
+def _scored_intent_pair(fields: dict, predicted_intent: str) -> tuple[dict, dict]:
+    """What the correspondence scorer keeps of *fields* and a prediction (``scope_extraction_pair``)."""
+    return scope_extraction_pair("correspondence", {"intent": predicted_intent, "sender": "Phillip Allen"}, fields)
+
+
+def test_reviewed_interim_intent_on_a_heuristic_row_survives_scoring() -> None:
+    """A correction of the heuristic intent is reviewed truth: it replaces the stale label, not joins it."""
+    lab = _lab("update", "correction", hub_value="payment_demand")
+    merged = apply_label_overlays(
+        HEURISTIC_INTENT, doc_class="correspondence", doc_text=TEXT, interim=_rec({"intent": lab})
+    )
+    assert merged.fields["intent"] == "update"
+    assert merged.sources == {"intent": "interim:correction"}
+    pred, exp = _scored_intent_pair(merged.fields, "update")
+    assert exp == {"intent": "update", "sender": "Phillip Allen"}
+    assert pred == {"intent": "update", "sender": "Phillip Allen"}
+    assert merged.fields["intent_source"] == "interim:correction"
+    assert stale_hub_labels("correspondence", merged.fields) == {}
+    assert score_common("correspondence", {"intent": "update", "sender": "Phillip Allen"},
+                        merged.fields)["overall_extraction_score"] == 1.0
+    wrong = score_common("correspondence", {"intent": "payment_demand", "sender": "Phillip Allen"},
+                         merged.fields)["overall_extraction_score"]
+    assert wrong is not None and wrong < 1.0
+
+
+def test_interim_gap_fill_and_near_gold_intent_replace_the_heuristic_source() -> None:
+    """A fill into the field a stale heuristic label left unlabelled is not itself heuristic."""
+    gap = apply_label_overlays(
+        HEURISTIC_INTENT, doc_class="correspondence", doc_text=TEXT, interim=_rec({"intent": _lab("update")})
+    )
+    assert gap.sources == {"intent": "interim:gap_fill"}
+    assert gap.fields["intent_source"] == "interim:gap_fill"
+    assert _scored_intent_pair(gap.fields, "update")[1] == {"intent": "update", "sender": "Phillip Allen"}
+    near = apply_label_overlays(
+        HEURISTIC_INTENT, doc_class="correspondence", doc_text=TEXT,
+        near_gold=_rec({"intent": {"value": "update", "basis": "near_gold:two_pass_agree"}}),
+    )
+    assert near.fields["intent_source"] == "near_gold:two_pass_agree"
+    assert _scored_intent_pair(near.fields, "update")[1] == {"intent": "update", "sender": "Phillip Allen"}
+
+
+def test_heuristic_intent_without_an_overlay_is_still_dropped() -> None:
+    """No behaviour change where no overlay applies: the stale label stays out of the score."""
+    for kwargs in (
+        {},
+        {"interim": _rec({"recipient": _lab("John Lavorato")})},
+        {"interim": _rec({"intent": _lab("update", "correction", hub_value="notice")})},  # Hub moved on: superseded
+        {"interim": _rec({"intent": _lab("update", "disputed", truth=False)})},
+    ):
+        merged = apply_label_overlays(HEURISTIC_INTENT, doc_class="correspondence", doc_text=TEXT, **kwargs)
+        assert "intent" not in merged.fields and merged.fields["intent_source"] == "heuristic", kwargs
+        assert "intent" not in _scored_intent_pair(merged.fields, "update")[1]
+
+
+def test_reviewed_intent_leaves_a_real_hub_intent_source_alone() -> None:
+    """An overlay that does not apply to intent does not touch ``intent_source``."""
+    hub = {"intent": "update", "intent_source": "llm_zero_shot", "sender": "Phillip Allen"}
+    merged = apply_label_overlays(
+        hub, doc_class="correspondence", doc_text=TEXT, interim=_rec({"intent": _lab("notice")})
+    )
+    assert merged.fields["intent"] == "update" and merged.fields["intent_source"] == "llm_zero_shot"
+    assert merged.report["superseded"] == ["intent"]
+
+
+def test_null_intent_overlay_is_a_documented_absence_and_does_not_mutate_the_input() -> None:
+    """A null reviewed intent is no heuristic label either; the input row keeps its source."""
+    hub = copy.deepcopy(HEURISTIC_INTENT)
+    merged = apply_label_overlays(
+        hub, doc_class="correspondence", doc_text=TEXT, interim=_rec({"intent": _lab(None, "correction", hub_value="payment_demand")})
+    )
+    assert merged.fields["intent"] is None and merged.fields["intent_source"] == "interim:correction"
+    assert merged.fields["gt_presence"] == {"intent": "schema_documented_absence"}
+    assert hub == HEURISTIC_INTENT

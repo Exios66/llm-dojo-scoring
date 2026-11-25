@@ -53,6 +53,11 @@ Rules shared by both overlays (:func:`apply_label_overlays`):
 * Every applied field is named in :attr:`OverlayMerge.sources`
   (``interim:<status>`` or ``near_gold:<how>``), so a score that used them is never
   read as a Hub-GT score.
+* An applied ``intent`` carries that source as the row's ``intent_source``, replacing the
+  Hub's ``heuristic``. The reviewed value is not the heuristic label it replaced, so the
+  stale-label drop that every doc scorer runs leaves it alone and it is scored. An
+  ``intent`` the overlays do not apply keeps its ``intent_source``: a heuristic one is
+  still dropped.
 
 Before this module the sandbox (``interim_labels.apply_overlay``,
 ``gold_labels.apply_near_gold``) and llm-mailroom (``interim_gt.apply_interim_labels``)
@@ -299,8 +304,17 @@ class _Merge:
         return token, None
 
     def put(self, name: str, value: Any, source: str) -> None:
-        """Apply one overlay value (a copy) and record where it came from."""
+        """Apply one overlay value (a copy) and record where it came from.
+
+        An applied ``intent`` also replaces the row's ``intent_source`` with *source*:
+        the Hub's ``heuristic`` tag described the label this value took the place of, and
+        left on the row it would make the next :func:`drop_stale_hub_labels` (every doc
+        scorer runs one) throw the reviewed value away. A null intent is tagged too, so
+        the row never pairs an overlay's documented absence with a heuristic source.
+        """
         self.fields[name] = value
+        if name == "intent":
+            self.fields["intent_source"] = source
         self.presence[name] = _ABSENT if value is None else _POPULATED
         self.sources[name] = source
         self.report["applied"][name] = source

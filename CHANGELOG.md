@@ -59,6 +59,19 @@ Format based on Keep a Changelog; versioning is SemVer.
   `populated` as labelled, fills over a documented absence and `"None"` / `"N/A"`, and applies
   corrections unconditionally; llm-mailroom reports null labels instead of applying them and has
   no near-gold.
+- **Score change: a reviewed overlay `intent` on a heuristic Hub row is scored, not dropped.**
+  `apply_label_overlays` drops a Hub `intent` whose `intent_source` is `heuristic`, then may
+  apply a reviewed one into the field (an interim `correction` of the published heuristic value,
+  an interim `gap_fill`, or a near-gold fill). It left `intent_source: heuristic` on the merged
+  row, so `scope_extraction_pair` (every doc scorer) and `score_archive_block` dropped the
+  reviewed value again before scoring. An applied `intent` now sets `intent_source` to the source
+  that supplied it (`interim:correction`, `interim:gap_fill`, `near_gold:<how>`, the same string
+  as `OverlayMerge.sources["intent"]`), including a null reviewed intent (a documented absence).
+  `stale_hub_labels`' rule is unchanged, and an `intent` no overlay applies keeps its
+  `intent_source`, so an un-overlaid heuristic intent is still dropped. Only rows merged by `apply_label_overlays` move (`pipeline.extraction.*`);
+  goldens do not call it and are unchanged. `llm-mailroom` and the sandbox do not call this
+  function (the sandbox has its own `corpus.apply_label_overlays`), so no consumer score moves on
+  the next pin bump. Tests: `tests/test_label_policy.py`.
 - **Score ledger names every score change past `v0.30.1` (#179).** `metrics.score_changelog`
   gains three 0.30.2 entries, all `rescore_required`: CUAD presence credits the agreement and
   expiration dates for recall only (#167; `cuad.sandbox_category_detection.*`); a typed decision
