@@ -2,12 +2,12 @@ version: 2.1
 
 # Free-tier CircleCI gate for the Dojo (shared scoring engine for llm-mailroom
 # and local-mailroom-sandbox, so a red main here breaks both). Same shape as
-# llm-mailroom/.circleci/config.yml: ONE job named `test` that runs every
-# network-free, key-free correctness check, so branch protection needs a single
-# required context:
+# llm-mailroom/.circleci/config.yml: the job named `test` runs every
+# network-free, key-free correctness check, so branch protection needs:
 #
 #   ci/circleci: test
 #
+# `no-session-links` is a separate status. It does not replace `test`.
 # Keep the job name `test`: renaming it (or splitting it into a matrix) changes
 # the status context and silently un-requires the gate.
 #
@@ -18,7 +18,7 @@ version: 2.1
 #   stacked branch carrying identical files restores the marker and halts as a
 #   success in seconds, before any fetch or install.
 # - Installs come from uv.lock through a cached uv store (no pip resolve).
-# - Small executor, single job, no matrix.
+# - Small executor. `test` is one job, not a matrix.
 
 executors:
   py:
@@ -28,8 +28,8 @@ executors:
 
 jobs:
   no-session-links:
-    # Rejects claude.ai links, Claude-Session trailers and "Generated with
-    # Claude Code" footers in commit messages and the PR description.
+    # Rejects claude.ai links, Claude-Session trailers and Claude Code
+    # attribution footers in commit messages and every attached PR.
     docker:
       - image: cimg/python:3.11
     resource_class: small
