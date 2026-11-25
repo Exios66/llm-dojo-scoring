@@ -7,13 +7,13 @@ import json
 
 import pytest
 
+from llm_dojo_scoring.pipeline.archive import score_archive_block
 from llm_dojo_scoring.schemas.label_policy import (
     apply_label_overlays,
     doc_sha,
     drop_stale_hub_labels,
     stale_hub_labels,
 )
-from llm_dojo_scoring.pipeline.archive import score_archive_block
 from llm_dojo_scoring.scoring.doc_scorers.common import score_common
 from llm_dojo_scoring.scoring.extraction_scope import scope_extraction_pair
 

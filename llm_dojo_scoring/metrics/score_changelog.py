@@ -395,9 +395,9 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         ),
         "change": (
             "apply_label_overlays sets intent_source to the applying overlay's source when it "
-            "applies an intent (#164 / #171 follow-up), so an overlay intent (interim correction "
-            "gap_fill or derived, near-gold) "
-            "that replaced a heuristic Hub intent is scored instead of being dropped again by "
+            "applies an intent (#164 / #171 follow-up), so an overlay intent (an interim "
+            "correction, gap_fill or derived; a near-gold fill) that replaced a heuristic Hub "
+            "intent is scored instead of being dropped again by "
             "scope_extraction_pair. Affects only rows merged by apply_label_overlays; an intent "
             "no overlay applies is unchanged."
         ),
