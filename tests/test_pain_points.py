@@ -1002,3 +1002,18 @@ class TestCodeRabbitOn185:
         out = pp.field_value_outcomes({"a": "", "b": None}, {}, {})
         assert out == {"n_targeted": 0, "n_value_correct": 0, "n_value_wrong": 0, "n_value_partial": 0}
         assert _ext({"scoring_method": "suite", **out}).reason == "complete"
+
+
+class TestCodeAntOn185:
+    """CodeAnt on llm-dojo-scoring#185 (raised after the merge)."""
+
+    def test_a_missing_scoring_method_cell_reads_as_no_method(self):
+        """A pandas NA / NaN / None ``scoring_method`` is no method, as an absent key is; never a TypeError."""
+        pd = pytest.importorskip("pandas")
+        absent = _ext(_scored(tp=1, fn=0))
+        assert absent.reason == "complete"
+        for missing in (pd.NA, float("nan"), None):
+            assert _ext(_scored(tp=1, fn=0, scoring_method=missing)) == absent
+            # Without counts the share decides, as it does for a row with no method.
+            row = {"scoring_method": missing, "overall_extraction_score": 0.5}
+            assert _ext(row).reason == "partial"

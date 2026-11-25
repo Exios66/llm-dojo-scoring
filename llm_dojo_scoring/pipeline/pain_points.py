@@ -421,7 +421,8 @@ def extraction_outcome(doc: PainPointDocument, scale: PenaltyScale = DEFAULT_SCA
     routed = _routing(doc, scale)
     if routed is not None:
         return routed
-    method = str(scored.get("scoring_method") or "")
+    raw_method = scored.get("scoring_method")
+    method = "" if _missing(raw_method) else str(raw_method)  # bool(pd.NA) raises, so no ``or ""``
     clause_labels = "+maud" in method or "+cuad" in method
     correct, targeted, invented = _field_counts(scored)
     if clause_labels or correct is None or targeted is None:
