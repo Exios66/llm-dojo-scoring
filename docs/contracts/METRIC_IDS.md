@@ -64,6 +64,10 @@ mismatch; `compare_serving` sets `incomparable: true` on the quality block.
 | `sandbox_cuad_presence_f1` | `cuad.sandbox_category_detection.micro_f1` |
 | `sandbox_cuad_presence_precision` | `cuad.sandbox_category_detection.micro_precision` |
 | `sandbox_cuad_presence_recall` | `cuad.sandbox_category_detection.micro_recall` |
+| `pain_points_classification_mean` | `pipeline.pain_points.classification.mean_penalty` |
+| `pain_points_extraction_mean` | `pipeline.pain_points.extraction.mean_penalty` |
+| `pain_points_classification_score` | `pipeline.pain_points.classification.score` |
+| `pain_points_extraction_score` | `pipeline.pain_points.extraction.score` |
 
 Resolve helpers: `llm_dojo_scoring.metrics.scorecard_honesty.metric_id_for(...)`,
 `metric_ids_for_class(...)`, `metric_id_allowed(...)`.
@@ -297,3 +301,17 @@ Three paths stamp a `metric_id`, and they agree:
 | `sandbox_cuad_presence_f1` | `cuad.sandbox_category_detection.micro_f1` | Category detection within the row-labeled universe; empty universe is unscorable. |
 | `sandbox_cuad_presence_precision` | `cuad.sandbox_category_detection.micro_precision` | TP/(TP+FP) within row-labeled categories; zero when no detected categories on a labeled row. |
 | `sandbox_cuad_presence_recall` | `cuad.sandbox_category_detection.micro_recall` | TP/(TP+FN) within row-labeled categories; zero when no positive categories on a labeled row. |
+
+## Pain-point composites
+
+The four run headlines below are listed in the canonical table above. The means are penalty
+points per document (0-4, **lower is better**); the scores are `1 - mean / max points` (0-1,
+higher is better). The identities are comparable only under one `profile` (default `amfam-v1`).
+Definitions, ladders and the per-experiment breakdown: [PAIN_POINT_SCORING.md](PAIN_POINT_SCORING.md).
+
+| Registry name | Metric identity | Inclusion |
+| --- | --- | --- |
+| `pain_points_classification_mean` | `pipeline.pain_points.classification.mean_penalty` | Documents with an expected class; None with none. |
+| `pain_points_extraction_mean` | `pipeline.pain_points.extraction.mean_penalty` | Documents with an expected class and a scored extraction row; None with none. |
+| `pain_points_classification_score` | `pipeline.pain_points.classification.score` | As the mean; `1 - mean / max points`. |
+| `pain_points_extraction_score` | `pipeline.pain_points.extraction.score` | As the mean; `1 - mean / max points`. |

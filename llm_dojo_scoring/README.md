@@ -53,6 +53,7 @@ llm_dojo_scoring/
 | | `archive` | Archivist scoring block and the hash-chained `archived` audit row |
 | | `sandbox_scoring` | Sandbox MAUD/CUAD rubrics, including the per-field contract truth |
 | | `sandbox_schema_adherence` | Sandbox payload quality |
+| | `pain_points` | Pain-point penalty composites: per document, per run, per experiment breakdown with bootstrap CIs, paired comparison |
 | **`metrics/`** | `registry`, `metric_meta` | Every score name → tier, and its citation/GT metadata |
 | | `bundles`, `doc_bundles`, `pruning` | Named metric groupings and the tier filter |
 | | `profiles` | One declarative scoring identity per agent |

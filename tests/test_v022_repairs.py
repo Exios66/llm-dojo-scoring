@@ -380,9 +380,13 @@ def test_every_canonical_id_is_allowed_somewhere():
     decision_lanes = {
         mid for mid in _METRIC_ID_BY_NAME.values() if mid.startswith(("decision.", "ml."))
     }
+    # Run-level composites over classification and extraction, not a per-class extraction score.
+    pain_points = {
+        mid for mid in _METRIC_ID_BY_NAME.values() if mid.startswith("pipeline.pain_points.")
+    }
     assert (
         set(_METRIC_ID_BY_NAME.values()) - allowed
-        <= classification_or_content | reviewer_lane | decision_lanes
+        <= classification_or_content | reviewer_lane | decision_lanes | pain_points
     )
 
 

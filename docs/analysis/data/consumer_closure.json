@@ -170,6 +170,11 @@
       "lines": 318,
       "reason": "consumer import: MAIL, MAIL@origin/claude/howdy-n8vcc1, MAIL@origin/claude/vibrant-sagan-fltg8i, MAIL@origin/claude/vibrant-sagan-fltg8i-scoring-fixes, MAIL@origin/stack/01-audit-storage, MAIL@origin/stack/02-diagnostics-workbench, MAIL@origin/stack/03-audit-live-row, SBX, consumer_surface"
     },
+    "pipeline.pain_points": {
+      "decision": "hold",
+      "lines": 689,
+      "reason": "pain-point penalty composites; Exios66/local-mailroom-sandbox#393 serves this file as its scoring hotfix SHF-014 until its vendor pin ships it, and llm-mailroom wires it next"
+    },
     "pipeline.pilot_labels": {
       "decision": "keep",
       "lines": 172,
