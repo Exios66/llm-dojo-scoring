@@ -72,6 +72,18 @@ def test_money_counts_only_document_numbers_that_read_as_money(value, text, expe
     assert value_verdict("money", value, text)[0] == expected
 
 
+def test_non_finite_money_is_unverifiable():
+    """An amount that cannot be a finite float does not abort the audit."""
+    huge = 10 ** 309
+    text = "owes $1.00"
+    assert value_verdict("money", huge, text) == ("unverifiable", None)
+    assert value_verdict("money", -huge, text) == ("unverifiable", None)
+    assert value_verdict("money", float("inf"), text) == ("unverifiable", None)
+    assert value_verdict("money", float("nan"), text) == ("unverifiable", None)
+    assert value_verdict("money", "1" + "0" * 400, text) == ("unverifiable", None)
+    assert value_verdict("money", "$1.00", "fee of " + "9" * 400 + ".00 and also $1.00")[0] == "grounded"
+
+
 @pytest.mark.parametrize(("value", "text", "expected"), [
     ("12", "Invoice dated 2012 and page 3", "unverifiable"),
     ("ab12", "ab 1 23", "not_found"),

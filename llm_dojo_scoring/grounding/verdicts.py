@@ -19,6 +19,7 @@ values of one document scans it once. Deterministic and network-free.
 
 from __future__ import annotations
 
+import math
 import re
 from functools import lru_cache
 from typing import Any, Callable
@@ -80,11 +81,22 @@ def _spell_scale(text: str) -> str:
 
 
 def _parse_amount(value: Any) -> float | None:
-    """A money value as a non-negative float, or ``None`` when it is not an amount."""
+    """A money value as a non-negative finite float, or ``None`` when it is not an amount.
+
+    An integer or digit string too large for ``float``, and ``inf`` or ``NaN``, are not
+    amounts. They are ``None`` (the verdict is ``unverifiable``) rather than an
+    ``OverflowError`` that would abort the rest of the document's audit.
+    """
     if isinstance(value, bool):
         return None
-    amount = _parse_money(value if isinstance(value, (int, float)) else _spell_scale(str(value)))
-    return None if amount is None else abs(amount)
+    try:
+        raw = value if isinstance(value, (int, float)) else _spell_scale(str(value))
+        amount = _parse_money(raw)
+    except OverflowError:
+        return None
+    if amount is None or not math.isfinite(amount):
+        return None
+    return abs(amount)
 
 
 @lru_cache(maxsize=8)

@@ -90,6 +90,9 @@ Format based on Keep a Changelog; versioning is SemVer.
   `grounding_n_candidates`, `grounding_n_valid_labels`, `grounding_n_label_conflicts`.
   `io.read_jsonl` rejects `NaN` and `Infinity`, as the writer does; a `valid` verdict on a
   value that is not text or a number (a predicted `false`) needs a `corrected_value`.
+- A money value that is not a finite amount (an integer or digit string too large for
+  `float`, or `inf` / `NaN`) is `unverifiable`. It does not raise and abort the rest of
+  the document's grounding audit.
 - `config.GroundingSettings` (`Settings.grounding`, a `grounding:` YAML or taxonomy block,
   `configure(grounding__…)`): reviewer-trust thresholds (`trust_bar`, `trust_min_n`,
   `trust_window`, `certainty_floor`, `spot_check_rate`, `spot_check_min_per_agent`), validated
