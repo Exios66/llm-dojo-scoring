@@ -383,6 +383,26 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         ),
         "rescore_required": False,
     },
+    {
+        # Seventh 0.30.2 change set: an overlay intent on a heuristic Hub row is scored.
+        "version": "0.30.2",
+        "metric_ids": (
+            "pipeline.extraction.overall",
+            "pipeline.extraction.field_micro_f1",
+            "pipeline.extraction.field_micro_f2",
+            "pipeline.extraction.field_micro_precision",
+            "pipeline.extraction.field_micro_recall",
+        ),
+        "change": (
+            "apply_label_overlays sets intent_source to the applying overlay's source when it "
+            "applies an intent (#164 / #171 follow-up), so an overlay intent (an interim "
+            "correction, gap_fill or derived; a near-gold fill) that replaced a heuristic Hub "
+            "intent is scored instead of being dropped again by "
+            "scope_extraction_pair. Affects only rows merged by apply_label_overlays; an intent "
+            "no overlay applies is unchanged."
+        ),
+        "rescore_required": True,
+    },
 )
 
 

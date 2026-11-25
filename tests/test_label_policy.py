@@ -7,6 +7,7 @@ import json
 
 import pytest
 
+from llm_dojo_scoring.pipeline.archive import score_archive_block
 from llm_dojo_scoring.schemas.label_policy import (
     apply_label_overlays,
     doc_sha,
@@ -322,3 +323,139 @@ def test_enum_label_is_stored_as_the_scored_token() -> None:
     merged = apply_label_overlays({}, doc_class="correspondence", doc_text=TEXT,
                                   interim=_rec({"urgency": _lab(" URGENT ")}))
     assert merged.fields["urgency"] == "urgent"
+
+
+# --- reviewed overlay intent on a heuristic Hub row (the overlay's source replaces `heuristic`) ---
+
+HEURISTIC_INTENT = {"intent": "payment_demand", "intent_source": "heuristic", "sender": "Phillip Allen"}
+
+
+def _scored_intent_pair(fields: dict, predicted_intent: str) -> tuple[dict, dict]:
+    """What the correspondence scorer keeps of *fields* and a prediction (``scope_extraction_pair``)."""
+    return scope_extraction_pair("correspondence", {"intent": predicted_intent, "sender": "Phillip Allen"}, fields)
+
+
+def test_reviewed_interim_intent_on_a_heuristic_row_survives_scoring() -> None:
+    """A correction of the heuristic intent is reviewed truth: it replaces the stale label, not joins it."""
+    lab = _lab("update", "correction", hub_value="payment_demand")
+    merged = apply_label_overlays(
+        HEURISTIC_INTENT, doc_class="correspondence", doc_text=TEXT, interim=_rec({"intent": lab})
+    )
+    assert merged.fields["intent"] == "update"
+    assert merged.sources == {"intent": "interim:correction"}
+    pred, exp = _scored_intent_pair(merged.fields, "update")
+    assert exp == {"intent": "update", "sender": "Phillip Allen"}
+    assert pred == {"intent": "update", "sender": "Phillip Allen"}
+    assert merged.fields["intent_source"] == "interim:correction"
+    assert stale_hub_labels("correspondence", merged.fields) == {}
+    assert score_common("correspondence", {"intent": "update", "sender": "Phillip Allen"},
+                        merged.fields)["overall_extraction_score"] == 1.0
+    wrong = score_common("correspondence", {"intent": "payment_demand", "sender": "Phillip Allen"},
+                         merged.fields)["overall_extraction_score"]
+    assert wrong is not None and wrong < 1.0
+
+
+def test_interim_gap_fill_and_near_gold_intent_replace_the_heuristic_source() -> None:
+    """A fill into the field a stale heuristic label left unlabelled is not itself heuristic."""
+    gap = apply_label_overlays(
+        HEURISTIC_INTENT, doc_class="correspondence", doc_text=TEXT, interim=_rec({"intent": _lab("update")})
+    )
+    assert gap.sources == {"intent": "interim:gap_fill"}
+    assert gap.fields["intent_source"] == "interim:gap_fill"
+    assert _scored_intent_pair(gap.fields, "update")[1] == {"intent": "update", "sender": "Phillip Allen"}
+    near = apply_label_overlays(
+        HEURISTIC_INTENT, doc_class="correspondence", doc_text=TEXT,
+        near_gold=_rec({"intent": {"value": "update", "basis": "near_gold:two_pass_agree"}}),
+    )
+    assert near.fields["intent_source"] == "near_gold:two_pass_agree"
+    assert _scored_intent_pair(near.fields, "update")[1] == {"intent": "update", "sender": "Phillip Allen"}
+
+
+def test_heuristic_intent_without_an_overlay_is_still_dropped() -> None:
+    """No behaviour change where no overlay applies: the stale label stays out of the score."""
+    for kwargs in (
+        {},
+        {"interim": _rec({"recipient": _lab("John Lavorato")})},
+        {"interim": _rec({"intent": _lab("update", "correction", hub_value="notice")})},  # Hub moved on: superseded
+        {"interim": _rec({"intent": _lab("update", "disputed", truth=False)})},
+    ):
+        merged = apply_label_overlays(HEURISTIC_INTENT, doc_class="correspondence", doc_text=TEXT, **kwargs)
+        assert "intent" not in merged.fields and merged.fields["intent_source"] == "heuristic", kwargs
+        assert "intent" not in _scored_intent_pair(merged.fields, "update")[1]
+
+
+def test_reviewed_intent_leaves_a_real_hub_intent_source_alone() -> None:
+    """An overlay that does not apply to intent does not touch ``intent_source``."""
+    hub = {"intent": "update", "intent_source": "llm_zero_shot", "sender": "Phillip Allen"}
+    merged = apply_label_overlays(
+        hub, doc_class="correspondence", doc_text=TEXT, interim=_rec({"intent": _lab("notice")})
+    )
+    assert merged.fields["intent"] == "update" and merged.fields["intent_source"] == "llm_zero_shot"
+    assert merged.report["superseded"] == ["intent"]
+
+
+def test_applied_intent_replaces_any_hub_intent_metadata() -> None:
+    """An applied correction over a non-heuristic source takes the overlay's source; the
+    replaced label's confidence and status go with it, and the input keeps them."""
+    hub = {
+        "intent": "update",
+        "intent_source": "llm_zero_shot",
+        "intent_confidence": 0.9,
+        "intent_status": "auto_labeled",
+        "sender": "Phillip Allen",
+    }
+    before = copy.deepcopy(hub)
+    merged = apply_label_overlays(
+        hub,
+        doc_class="correspondence",
+        doc_text=TEXT,
+        interim=_rec({"intent": _lab("notice", "correction", hub_value="update")}),
+    )
+    assert merged.fields["intent"] == "notice"
+    assert merged.fields["intent_source"] == "interim:correction"
+    assert "intent_confidence" not in merged.fields and "intent_status" not in merged.fields
+    assert hub == before
+
+
+def test_overlay_intent_is_scored_by_the_archive_block_and_survives_a_re_merge() -> None:
+    """``score_archive_block`` runs the stale drop too; a JSON-string Hub row keeps the
+    overlay intent there, and merging the merged row again changes nothing."""
+    correction = _rec({"intent": _lab("update", "correction", hub_value="payment_demand")})
+    merged = apply_label_overlays(
+        json.dumps(HEURISTIC_INTENT), doc_class="correspondence", doc_text=TEXT, interim=correction
+    )
+    right = score_archive_block("correspondence", {"intent": "update", "sender": "Phillip Allen"}, merged.fields)
+    old = score_archive_block("correspondence", {"intent": "payment_demand", "sender": "Phillip Allen"}, merged.fields)
+    assert right["overall_score"] == 1.0 and old["overall_score"] < 1.0
+    hub_only = score_archive_block("correspondence", {"intent": "update", "sender": "Phillip Allen"}, HEURISTIC_INTENT)
+    assert hub_only["overall_score"] == 1.0  # the heuristic intent is dropped, so only sender is scored
+    again = apply_label_overlays(merged.fields, doc_class="correspondence", doc_text=TEXT, interim=correction)
+    assert again.fields == merged.fields and again.report["superseded"] == ["intent"]
+
+
+@pytest.mark.parametrize("meta", ["intent_source", "intent_confidence", "intent_status"])
+def test_an_overlay_cannot_write_intent_metadata(meta: str) -> None:
+    """A record's own ``intent_source`` (or confidence, status) label is rejected, so it can
+    neither re-tag the applied intent as heuristic nor restore the replaced label's metadata."""
+    record = _rec({
+        "intent": _lab("update", "correction", hub_value="payment_demand"),
+        # a correction of the Hub value reaches the guard; a gap fill of a set field is superseded
+        meta: _lab("heuristic", "correction", hub_value="heuristic") if meta == "intent_source" else _lab(0.9),
+    })
+    merged = apply_label_overlays(HEURISTIC_INTENT, doc_class="correspondence", doc_text=TEXT, interim=record)
+    assert merged.fields["intent_source"] == "interim:correction"
+    assert meta == "intent_source" or meta not in merged.fields
+    assert any(r.startswith(f"{meta}:") for r in merged.report["rejected"])
+    _, expected = scope_extraction_pair("correspondence", {"intent": "update"}, merged.fields)
+    assert expected.get("intent") == "update"
+
+
+def test_null_intent_overlay_is_a_documented_absence_and_does_not_mutate_the_input() -> None:
+    """A null reviewed intent is no heuristic label either; the input row keeps its source."""
+    hub = copy.deepcopy(HEURISTIC_INTENT)
+    merged = apply_label_overlays(
+        hub, doc_class="correspondence", doc_text=TEXT, interim=_rec({"intent": _lab(None, "correction", hub_value="payment_demand")})
+    )
+    assert merged.fields["intent"] is None and merged.fields["intent_source"] == "interim:correction"
+    assert merged.fields["gt_presence"] == {"intent": "schema_documented_absence"}
+    assert hub == HEURISTIC_INTENT
