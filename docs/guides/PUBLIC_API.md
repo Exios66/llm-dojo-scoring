@@ -108,6 +108,13 @@ Treat as stable:
   on the prediction as given, and `None` is a parse error. It never raises on a bad
   prediction or a bad field value: a failing type extras or headline keeps the tier 0
   score and appends `+extras-failed` to `scoring_method`.
+  `expected` is a mapping or text holding a JSON object (as `score_archive_block` reads it);
+  any other value is no ground truth. The payload carries no `status` / `reason`: the
+  ground-truth verdict (`scored` / `unscorable` and why) is a key of the `score_archive_block`
+  row, not of `score_document`. A blank subclass (`None`, `""`, NaN, `"nan"`) is no subclass,
+  a subclass outside the type's catalogue is `other` only where the type has that bucket
+  (`contract`, `corporate_record`, `correspondence`, `merger_agreement`), and `doc_type` may
+  be a `str`-`Enum`.
 - `assess_extraction_payload(predicted, doc_type, doc_subclass=None, *, schema_lookup=None)`
   (`pipeline.sandbox_schema_adherence`): parse and schema-adherence facts. Pydantic models
   come from `schema_lookup(doc_type)`, so the dojo never imports mailroom.

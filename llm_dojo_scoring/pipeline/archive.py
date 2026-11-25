@@ -446,6 +446,32 @@ def _document_keys(
     return out
 
 
+def _archive_pair(doc_class: str, predicted: Any, expected: Any) -> tuple[Any, Any]:
+    """``(predicted, expected)`` as :func:`score_archive_block` scores them.
+
+    Job items and raw LLM text arrive as strings or lists: the prediction is the JSON
+    object they hold, else an empty extraction (the block never raises on them). Ground
+    truth is read as ``score_document`` reads it: text holding a JSON object is that
+    object; anything else stays a non-mapping and the block files ``gt_wrong_schema``.
+    Stale Hub labels (heuristic intent, templated subject_matter / keywords) are no
+    truth: not a scoring event on either side, as in ``scope_extraction_pair`` (0.30.2).
+    """
+    from .sandbox_schema_adherence import coerce_expected_payload, coerce_predicted_payload
+
+    if predicted is not None and not isinstance(predicted, Mapping):
+        predicted = coerce_predicted_payload(predicted)[0] or {}
+    if expected is not None and not isinstance(expected, Mapping):
+        expected = coerce_expected_payload(expected)
+    if not isinstance(expected, Mapping):
+        return predicted, expected
+    from ..schemas.label_policy import drop_stale_hub_labels
+
+    expected, stale = drop_stale_hub_labels(doc_class, expected)
+    if stale and predicted:
+        predicted = {k: v for k, v in predicted.items() if k not in stale}
+    return predicted, expected
+
+
 def score_archive_block(
     doc_class: str,
     predicted: Mapping[str, Any] | None,
@@ -489,7 +515,10 @@ def score_archive_block(
     null), ``unlabeled_fields``, ``entity_list_f1`` and ``scorer``. Every key that
     existed before 0.27.0 keeps its meaning; ``overall_score`` stays the field-map mean.
     A prediction that is not a mapping (JSON text, prose, a list) is coerced to the JSON
-    object it holds, else scored as empty; before 0.27.0 it raised.
+    object it holds, else scored as empty; before 0.27.0 it raised. ``expected`` is read
+    as ``score_document`` reads it: text holding a JSON object is that object, and any
+    other non-mapping is ground truth of the wrong shape (``status`` ``unscorable``,
+    ``reason`` ``gt_wrong_schema``) instead of an error.
 
     Raises :class:`KeyError` for a class with no live field map (a retired or
     unknown class) unless a non-empty ``field_types`` is given (#161).
@@ -507,12 +536,8 @@ def score_archive_block(
     with a non-null ``headline_score`` are judged by the headline; readers that filter on
     ``status == 'scored'`` must also keep rows whose ``headline_score`` is not null.
     """
-    if predicted is not None and not isinstance(predicted, Mapping):
-        # Job items and raw LLM text arrive as strings or lists: score the JSON object
-        # they hold, else score an empty extraction. The block never raises on them.
-        from .sandbox_schema_adherence import coerce_predicted_payload
-
-        predicted = coerce_predicted_payload(predicted)[0] or {}
+    expected_given = expected
+    predicted, expected = _archive_pair(doc_class, predicted, expected)
     ftypes = _live_field_types(doc_class, field_types)
     exp = _filter_to_live_map(expected, ftypes)
     pred = _filter_to_live_map(predicted, ftypes)
@@ -555,7 +580,7 @@ def score_archive_block(
     # at least one expected event — with none, recall (and so F1) is
     # undefined, and spurious fills alone are not a score (#238).
     assessment = assess_extraction_gt(
-        dict(expected) if isinstance(expected, Mapping) else expected,
+        dict(expected) if isinstance(expected, Mapping) else expected_given,
         ftypes,
         doc_class=doc_class,
     )

@@ -1412,6 +1412,44 @@ metrics:
     aggregation: none
     ground_truth: required
 
+  # Pain-point composites (profile amfam-v1): run-level penalty points per document, 0 = correct
+  # and complete, 4 = a person reviewed what the pipeline could have finished. The registry has
+  # no direction field, so the means say "lower is better" in their description.
+  pain_points_classification_mean:
+    tier: 1
+    units: penalty_points
+    description: "Mean classification penalty points per scored document (0-4); LOWER IS BETTER."
+    applicable_agents: [ALL]
+    source: "pain_points.score_run"
+    aggregation: none
+    citation: "Client pain-point ladder (profile amfam-v1): needless review and pipeline failure 4, wrong doc type 3, missed review 2, wrong subtype 1; worst reason wins."
+    inclusion: "Documents with an expected class; None with none. Aggregated by score_run / breakdown, not per document."
+    ground_truth: required
+  pain_points_extraction_mean:
+    tier: 1
+    units: penalty_points
+    description: "Mean extraction penalty points per scored document (0-4); LOWER IS BETTER."
+    applicable_agents: [ALL]
+    source: "pain_points.score_run"
+    aggregation: none
+    citation: "Client pain-point ladder (profile amfam-v1): needless review and pipeline failure 4, fabricated 3, low recall 2, partial 1; worst reason wins."
+    inclusion: "Documents with an expected class and a scored extraction row (field or clause-label truth); None with none."
+    ground_truth: required
+  pain_points_classification_score:
+    tier: 2
+    description: "Classification composite on a 0-1 scale, 1 - mean penalty / max points; higher is better."
+    applicable_agents: [ALL]
+    source: "pain_points.score_run"
+    aggregation: none
+    ground_truth: required
+  pain_points_extraction_score:
+    tier: 2
+    description: "Extraction composite on a 0-1 scale, 1 - mean penalty / max points; higher is better."
+    applicable_agents: [ALL]
+    source: "pain_points.score_run"
+    aggregation: none
+    ground_truth: required
+
   # ===================== T3 — LOG =====================
   classification_confidence:
     tier: 3

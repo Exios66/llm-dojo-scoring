@@ -262,6 +262,127 @@ SCORE_CHANGELOG: tuple[dict[str, Any], ...] = (
         ),
         "rescore_required": True,
     },
+    {
+        # First 0.30.2 change set: CUAD agreement and expiration dates (#167, #173).
+        # Consumers pinned at 025400f already score this way while reporting 0.30.1
+        # (the commit sits past the v0.30.1 tag); see #179.
+        "version": "0.30.2",
+        "metric_ids": (
+            "cuad.sandbox_category_detection.micro_f1",
+            "cuad.sandbox_category_detection.micro_precision",
+            "cuad.sandbox_category_detection.micro_recall",
+        ),
+        "change": (
+            "CUAD presence credits agreement_date and expiration_date toward the "
+            "Agreement Date / Expiration Date categories, for recall only (#167): a filled "
+            "date earns the category when CUAD labels it, and is never a false positive "
+            "when CUAD leaves it unlabelled (RECALL_ONLY_FIELDS). Recall can rise on "
+            "unchanged predictions; precision never falls."
+        ),
+        "rescore_required": True,
+    },
+    {
+        # Second 0.30.2 change set: decision lanes (#168, #169).
+        "version": "0.30.2",
+        "metric_ids": (
+            "decision.judge.verdict_accuracy",
+            "decision.judge.macro_f1",
+            "decision.judge.escalation_recall",
+            "decision.judge.false_escalation_rate",
+            "decision.arbiter.decision_accuracy",
+            "decision.arbiter.retry_usefulness",
+            "decision.arbiter.wrongful_accept_rate",
+            "decision.arbiter.unnecessary_escalation_rate",
+            "decision.boss.wrongful_approve_rate",
+            "decision.boss.needless_review_rate",
+            "decision.review_tray.wasted_review_rate",
+            "decision.review_tray.correction_rate",
+            "decision.review_tray.reject_rate",
+        ),
+        "change": (
+            "A typed decision is never graded by an untyped score when the graded attempt "
+            "has typed extractions but none of the decision's class (#168): it counts under "
+            "no_gold instead of earning a verdict. Attempts with only untyped extractions "
+            "keep the untyped fallback. Lane denominators can shrink on unchanged records."
+        ),
+        "rescore_required": True,
+    },
+    {
+        # Third 0.30.2 change set: the 0.28.0-review fixes (#127) and MAUD mixed gold (#170).
+        "version": "0.30.2",
+        "metric_ids": (
+            "pipeline.extraction.overall",
+            "pipeline.extraction.field_micro_f1",
+            "pipeline.extraction.field_micro_f2",
+            "pipeline.extraction.field_micro_precision",
+            "pipeline.extraction.field_micro_recall",
+        ),
+        "change": (
+            "A relative merger outside_date ('nine months after the date hereof') scores as "
+            "populated text: an identical prediction was 0.0, a missing one 1.0 (#127). A "
+            "contract's v1 parse-compat keys (merger_consideration, maud_clauses) are not "
+            "scored on the direct score_extraction path or in field-micro (#127). 'partly "
+            "approved' / 'partly denied' fold to partial coverage (#127). A typed (v10) CMS "
+            "row keeps an absent adjuster / denial_reasons as labelled-empty and reads its own "
+            "expected_subclass, like the legacy row (#127). MAUD gold lines that name no "
+            "question stay in the maud_clauses recall denominator, also when every question line is "
+            "ambiguous (#170). The factuality "
+            "audit compares labels through the scorer's alias fold (#127); field scores "
+            "are unchanged by that part."
+        ),
+        "rescore_required": True,
+    },
+    {
+        # Fourth 0.30.2 change set: scorer provenance for blank and off-catalogue subclasses (#119 M5).
+        "version": "0.30.2",
+        "metric_ids": (),
+        "change": (
+            "score_document's scorer record: a blank subclass (None, NaN, 'nan') is no subclass "
+            "and records no 'subclass' tier, and an off-catalogue subclass becomes 'other' only "
+            "where the type's catalogue has it (contract), so insurance 'health' is now None "
+            "with tiers_run ['common', 'type'] (#119 M5). Affects scorer.subclass and "
+            "scorer.tiers_run only; no canonical metric_id covers them."
+        ),
+        "rescore_required": True,
+    },
+    {
+        # Fifth 0.30.2 change set: stale Hub labels (#164, #171, #94).
+        "version": "0.30.2",
+        "metric_ids": (
+            "pipeline.extraction.overall",
+            "pipeline.extraction.field_micro_f1",
+            "pipeline.extraction.field_micro_f2",
+            "pipeline.extraction.field_micro_precision",
+            "pipeline.extraction.field_micro_recall",
+        ),
+        "change": (
+            "Stale Hub labels are no longer scored on either side (schemas.label_policy, "
+            "#164 / #171 / #94): intent with intent_source 'heuristic' (any class), corporate "
+            "SEC EDGAR template subject_matter and provenance-id keywords, correspondence "
+            "templated subject_matter and metadata keywords. A corporate row whose only labels "
+            "are stale is unscorable instead of scoring its template ceiling. Applies to "
+            "scope_extraction_pair (every doc scorer) and score_archive_block. "
+            "apply_label_overlays is the one merge rule for the interim and near-gold overlays."
+        ),
+        "rescore_required": True,
+    },
+    {
+        # Sixth 0.30.2 change set: the client pain-point composites (pipeline.pain_points).
+        "version": "0.30.2",
+        "metric_ids": (
+            "pipeline.pain_points.classification.mean_penalty",
+            "pipeline.pain_points.extraction.mean_penalty",
+            "pipeline.pain_points.classification.score",
+            "pipeline.pain_points.extraction.score",
+        ),
+        "change": (
+            "New metrics: the pain-point composites (profile amfam-v1), classification and "
+            "extraction penalty points per document (0 correct and complete to 4 a needless "
+            "human review) and their run means and 0-1 scores (pipeline.pain_points). "
+            "No existing metric value changes."
+        ),
+        "rescore_required": False,
+    },
 )
 
 

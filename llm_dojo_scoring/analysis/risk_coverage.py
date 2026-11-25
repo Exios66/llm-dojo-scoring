@@ -192,7 +192,11 @@ def slot_decision_summary(records: Iterable[Mapping[str, Any]], *, z: float = 1.
     present. The marks are the durable record (llm-mailroom keeps only each slot's latest
     outcome and clears them when a person resolves a park), so a ``park:<slot>`` or
     ``release:<slot>`` mark counts the document as parked or released by that slot whatever
-    its outcome says now; otherwise the outcome's ``action`` counts. Per slot: ``n_seen``,
+    its outcome says now. When both marks are present the later one is the action: a slot
+    can park on one pass and release on a later one, and both marks stay. With neither
+    mark, the outcome's ``action`` counts. ``capped_rate`` counts that action only. The closed-field
+    resolver records a spent release cap as ``closed_field_resolutions[].status == "capped"``
+    and does not write an outcome action, so those caps are not in this summary. Per slot: ``n_seen``,
     ``actions`` (count per action, the marks applied), ``park_rate``, ``release_rate``,
     ``capped_rate`` and ``unavailable_rate`` over ``n_seen``. Pipeline: ``n``, ``archived``,
     ``reviewed``, ``other`` (neither, e.g. crashed), ``review_rate`` (reviewed over ``n``,
@@ -229,9 +233,13 @@ def slot_decision_summary(records: Iterable[Mapping[str, Any]], *, z: float = 1.
             seen[slot] += 1
             outcome = outcomes.get(slot)
             action = outcome.get("action") if isinstance(outcome, Mapping) else None
-            if f"park:{slot}" in marks:
+            park_tag, release_tag = f"park:{slot}", f"release:{slot}"
+            if park_tag in marks and release_tag in marks:
+                # Marks append in decision order and survive a cleared outcome.
+                action = "release" if marks.index(release_tag) > marks.index(park_tag) else "park"
+            elif park_tag in marks:
                 action = "park"
-            elif f"release:{slot}" in marks:
+            elif release_tag in marks:
                 action = "release"
             actions.setdefault(slot, Counter())[action if action in _ACTIONS else "none"] += 1
     slots = {}

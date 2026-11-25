@@ -177,6 +177,21 @@ def test_observed_operating_point_compares_the_unrounded_rate():
     assert operating_point(curve, max_wrong_archive_rate=0.34, use_upper=False)["threshold"] == 0.7
 
 
+def test_slot_summary_uses_the_later_mark_when_a_slot_both_parked_and_released():
+    """A later release mark wins, including after the outcome was cleared; a later park mark wins too."""
+    records = [
+        {"final_stage": "archived", "wrong_archive": False,
+         "decision_slot_marks": ["seen:archive_gate", "park:archive_gate", "release:archive_gate"],
+         "decision_slot_outcomes": {}},
+        {"final_stage": "review",
+         "decision_slot_marks": ["seen:sorter_reviewer", "release:sorter_reviewer", "park:sorter_reviewer"],
+         "decision_slot_outcomes": {"sorter_reviewer": {"action": "agree"}}},
+    ]
+    out = slot_decision_summary(records)
+    assert out["slots"]["archive_gate"]["actions"] == {"release": 1}
+    assert out["slots"]["sorter_reviewer"]["actions"] == {"park": 1}
+
+
 def test_tied_scores_archive_together_at_their_cutoff():
     """Rows with the same score are archived by the same cutoff (score >= t)."""
     rows = [{"score": 0.5, "wrong": True}, {"score": 0.5, "wrong": False}, {"score": 0.2, "wrong": False}]

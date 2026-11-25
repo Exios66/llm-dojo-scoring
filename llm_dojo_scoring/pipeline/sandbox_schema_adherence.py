@@ -14,6 +14,7 @@ from __future__ import annotations
 import ast
 import json
 import re
+from enum import Enum
 from typing import Any, Callable, Collection, Mapping, Sequence
 
 from ..schemas import doc_classes
@@ -58,6 +59,21 @@ _PARSE_COMPAT_KEYS: dict[str, frozenset[str]] = {
     "contract": frozenset({"merger_consideration", "maud_clauses"}),
 }
 
+def _parse_compat_keys_for(doc_type: str) -> frozenset[str]:
+    """The v1 parse-compat keys for a class name or an agent name (``contracts_specialist``)."""
+    resolved = str(doc_type or "").strip().lower()
+    if resolved in _PARSE_COMPAT_KEYS:
+        return _PARSE_COMPAT_KEYS[resolved]
+    # Only the class's own agent name (``contract_specialist`` / ``contracts_specialist``);
+    # a substring match would hand the contract keys to e.g. ``subcontract``.
+    stem = resolved.removesuffix("_specialist")
+    if stem != resolved:
+        for candidate in (stem, stem.removesuffix("s")):
+            if candidate in _PARSE_COMPAT_KEYS:
+                return _PARSE_COMPAT_KEYS[candidate]
+    return frozenset()
+
+
 #: Legacy order of the adherence tables (it decides which suffix match wins in
 #: :func:`schema_keys_for`); a class added to the registry is appended after these.
 _ADHERENCE_ORDER = ("correspondence", "contract", "insurance_claim", "corporate_record", "merger_agreement")
@@ -96,7 +112,7 @@ def schema_keys_for(
             if model is not None:
                 keys = frozenset(model.model_fields) - {"confidence", "reasoning"}
                 # Parse-compat keys stay accepted whatever the producer's model lists.
-                return keys | _PARSE_COMPAT_KEYS.get(resolved, frozenset())
+                return keys | _parse_compat_keys_for(resolved)
         except Exception:
             pass
     if resolved in _FALLBACK_SCHEMA_KEYS:
@@ -303,10 +319,42 @@ def _typed_valid(
     if model is None:
         return None
     try:
-        model.model_validate(dict(payload))
+        # A producer model that forbids extras must not reject the v1 parse-compat keys
+        # the adherence rubric accepts; leave them out unless the model declares them.
+        declared = getattr(model, "model_fields", None) or {}
+        compat = _parse_compat_keys_for(doc_type) - set(declared)
+        model.model_validate({k: v for k, v in payload.items() if k not in compat})
         return True
     except Exception:
         return False
+
+
+def coerce_expected_payload(expected: Any) -> Mapping[str, Any] | None:
+    """Ground truth as a mapping, or ``None`` when it is not one.
+
+    A mapping passes through. Text (or bytes) holding a JSON object, or a Python-repr
+    object as the Hub's stringified metadata does, is the object it holds. Prose around an
+    object is not ground truth, unlike a prediction (:func:`coerce_predicted_payload`).
+    Everything else (``None``, a list, a number, unparseable text) is ``None``.
+    """
+    if isinstance(expected, Mapping):
+        return expected
+    if isinstance(expected, (bytes, bytearray)):
+        try:
+            expected = expected.decode("utf-8")
+        except UnicodeDecodeError:
+            return None
+    if not isinstance(expected, str) or not expected.strip():
+        return None
+    parsed, how = _parse_object_text(expected.strip())
+    return parsed if how in ("json", "python_repr") else None
+
+
+def _doc_type_key(doc_type: Any) -> str:
+    """``doc_type`` as the lower-case, stripped key the schema tables use (an Enum by its value)."""
+    if isinstance(doc_type, Enum):
+        doc_type = doc_type.value
+    return str(doc_type or "").strip().lower()
 
 
 def assess_extraction_payload(
@@ -323,7 +371,9 @@ def assess_extraction_payload(
     would ignore them. ``doc_subclass`` selects corporate extension keys and value
     types. Without a core validator, a nonempty parsed payload passes when the schema
     is unknown, no public keys are extra, or at least one public key is known.
+    ``doc_type`` is read case-insensitively (``"Contract"`` is ``contract``; an Enum by its value).
     """
+    doc_type = _doc_type_key(doc_type)
     payload, meta = coerce_predicted_payload(predicted)
     parse_error = bool(meta.get("parse_error"))
     extra: list[str] = []

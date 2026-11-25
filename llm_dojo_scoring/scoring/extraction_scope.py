@@ -172,7 +172,17 @@ def scope_extraction_pair(
     predicted: Mapping[str, Any] | None,
     expected: Mapping[str, Any] | None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Return ``(predicted, expected)`` scoped to this class before scoring."""
+    """Return ``(predicted, expected)`` scoped to this class before scoring.
+
+    Stale Hub labels (heuristic ``intent``, templated ``subject_matter``, metadata
+    ``keywords``; :func:`~llm_dojo_scoring.schemas.label_policy.stale_hub_labels`) are
+    dropped from **both** sides first (0.30.2, #164 / #171 / #94): a field with no truth
+    is not a scoring event, so a correct answer is neither a miss nor a false positive.
+    """
+    from ..schemas.label_policy import drop_stale_hub_labels
+
+    expected, stale = drop_stale_hub_labels(doc_type, expected)
+    predicted = {k: v for k, v in (predicted or {}).items() if k not in stale}
     return (
         scope_predicted_fields(doc_type, predicted),
         applicable_expected_fields(doc_type, expected),

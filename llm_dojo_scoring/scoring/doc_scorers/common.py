@@ -17,6 +17,7 @@ from ..extraction_metrics import extraction_binary_metrics
 from ..extraction_scope import scope_extraction_pair
 from ..field_scoring import score_extraction
 from ..suites import suite_for_doc_type
+from .base import clean_subclass
 
 logger = structlog.get_logger(__name__)
 
@@ -68,13 +69,14 @@ def score_common(
 ) -> dict[str, Any]:
     """Score one document's extraction with the class suite (tier 0).
 
-    ``doc_subclass`` wins over ``expected_subclass``. ``detailed=None`` keeps the
+    ``doc_subclass`` wins over ``expected_subclass`` unless it is blank (``None``, ``""``, NaN,
+    ``"nan"``). ``detailed=None`` keeps the
     sandbox rule: the detailed suite path runs when a subclass is known or the type is
     ``corporate_record``. Suite lookup or scoring errors fall back to generic
     ``score_extraction`` and say so in ``scoring_method``; a failed PRF derivation
     omits those keys. ``predicted`` and ``expected`` must be mappings (or ``None``).
     """
-    sub = str(doc_subclass or expected_subclass or "").strip() or None
+    sub = clean_subclass(doc_subclass, expected_subclass)
     scoring_method = "suite"
     try:
         suite = suite_for_doc_type(doc_type)

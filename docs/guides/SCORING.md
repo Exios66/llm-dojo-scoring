@@ -7,6 +7,7 @@
 - Headline scope (MAUD-only merger, partial correspondence): [`SCORECARD_HONESTY.md`](../contracts/SCORECARD_HONESTY.md#headline-scope-which-fields-a-class-score-covers-95)
 - Metric identity: [`METRIC_IDS.md`](../contracts/METRIC_IDS.md)
 - Controlled `intent` labels (`label` field type): `llm_dojo_scoring/schemas/intents.py`
+- What counts as truth: stale Hub labels are never scored, and interim / near-gold overlays merge by one rule: `llm_dojo_scoring/schemas/label_policy.py` (0.30.2, #164 / #171 / #94)
 
 ## Field types by class
 

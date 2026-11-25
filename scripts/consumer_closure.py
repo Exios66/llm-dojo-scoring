@@ -111,6 +111,7 @@ HOLD: dict[str, str] = {
     "prompts.alignment": "guard that each specialist prompt asks for the fields the schema scores; no consumer imports it, CI runs it (stacked on Dojo #143)",
     "scoring.decision_lanes": "judge/arbiter/boss/review-tray scorecards; llm-mailroom wires its decision export next (stacked on Dojo #140)",
     "analysis.risk_coverage": "risk-coverage curve and per-slot decision summary for the decision-model experiments; the sandbox slice gate reads it after its next vendor refresh (local-mailroom-sandbox #339)",
+    "pipeline.pain_points": "pain-point penalty composites; Exios66/local-mailroom-sandbox#393 serves this file as its scoring hotfix SHF-014 until its vendor pin ships it, and llm-mailroom wires it next",
 }
 
 #: Dispatch functions whose first (or named) argument selects what runs.
