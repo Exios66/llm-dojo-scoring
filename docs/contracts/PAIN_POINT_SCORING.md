@@ -103,9 +103,10 @@ stripped and lower-cased (`" Archived"` is `archived`), and a missing cell (`Non
 `NA`) is a missing label: no expected class excludes the document, and a missing group label is
 `"unknown"`; `compare(by="doc_class")` folds its baseline the same way. `failed` and `subclass_correct` count
 only as booleans (Python or numpy). Counts (`tp`, `fn`, `fp`, `n_*`; Python or numpy numbers) are
-used only when finite, non-negative and whole. `None` and NaN (how pandas marks a missing cell)
-are absent: a missing `fp`, `n_hallucinated` or `n_value_wrong` counts as 0 invented values, and a
-missing `tp` / `fn` falls back to the per-field counts. A present but corrupt invention or
+used only when finite, non-negative and whole. `None`, NaN and pandas `NA` (how pandas marks a
+missing cell) are absent: a missing `fp`, `n_hallucinated`, `n_value_wrong` or `n_value_partial`
+counts as 0 invented values, and a missing `tp` / `fn` falls back to the per-field counts. A
+missing `scoring_method` cell is no method, as an absent key is. A present but corrupt invention or
 near-miss count (`fp` / `n_hallucinated`, `n_value_wrong`, `n_value_partial`: negative, infinite,
 fractional, text) makes the invented values unknown, so the row has no
 usable counts and its `overall_extraction_score` decides; a share must lie in [0, 1], else the
