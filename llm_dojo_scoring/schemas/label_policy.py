@@ -58,7 +58,9 @@ Rules shared by both overlays (:func:`apply_label_overlays`):
   and ``intent_status``, which described the replaced label. The overlay value is not the
   heuristic label it replaced, so the stale-label drop that every doc scorer runs leaves it
   alone and it is scored. An ``intent`` the overlays do not apply keeps its metadata: a
-  heuristic one is still dropped.
+  heuristic one is still dropped. An overlay label named ``intent_source``,
+  ``intent_confidence`` or ``intent_status`` is rejected: that metadata is the merge's to
+  write.
 
 Before this module the sandbox (``interim_labels.apply_overlay``,
 ``gold_labels.apply_near_gold``) and llm-mailroom (``interim_gt.apply_interim_labels``)
@@ -100,6 +102,10 @@ NEAR_GOLD_BASIS_PREFIX = "near_gold:"
 
 _PENDING = "pending_annotation"
 _ABSENT = "schema_documented_absence"
+#: Hub bookkeeping about the ``intent`` label. The merge writes ``intent_source`` itself when an
+#: overlay applies ``intent``; an overlay label under one of these names is rejected, so a record
+#: cannot re-tag its own intent as ``heuristic`` or restore the replaced label's confidence.
+_INTENT_META = frozenset({"intent_source", "intent_confidence", "intent_status"})
 _POPULATED = "populated"
 #: Presence codes that mean the Hub row has decided the field (a value, an absence, or
 #: out of schema). ``pending_annotation`` is not one: the label was never made.
@@ -339,7 +345,11 @@ class _Merge:
         return True
 
     def offer(self, name: str, value: Any, source: str) -> None:
-        """Apply *value* unless the scored vocabulary or the CMS rule rejects it."""
+        """Apply *value* unless it is intent metadata, or the scored vocabulary or the CMS rule
+        rejects it."""
+        if name in _INTENT_META:
+            self.report["rejected"].append(f"{name}: intent metadata is set by the merge, not by an overlay")
+            return
         stored, why = self.admissible(name, value)
         if why:
             self.report["rejected"].append(f"{name}: {why}")

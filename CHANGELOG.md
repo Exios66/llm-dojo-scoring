@@ -66,11 +66,13 @@ Format based on Keep a Changelog; versioning is SemVer.
   left `intent_source: heuristic` on the merged row, so `scope_extraction_pair` (every doc
   scorer) and `score_archive_block` dropped the overlay value again before scoring. An applied
   `intent` now sets `intent_source` to the source that supplied it (`interim:correction`,
-  `interim:gap_fill`, `near_gold:<how>`, the same string as `OverlayMerge.sources["intent"]`),
+  `interim:gap_fill`, `interim:derived`, `near_gold:<how>`, the same string as
+  `OverlayMerge.sources["intent"]`),
   whatever the Hub source was, and drops the Hub's `intent_confidence` and `intent_status`,
   which described the replaced label; a null overlay intent (a documented absence) is tagged
   too. `stale_hub_labels`' rule is unchanged, and an `intent` no overlay applies keeps its
-  metadata, so an un-overlaid heuristic intent is still dropped. Only rows merged by
+  metadata, so an un-overlaid heuristic intent is still dropped. An overlay label named `intent_source`,
+  `intent_confidence` or `intent_status` is rejected, so a record cannot re-tag its own intent. Only rows merged by
   `apply_label_overlays` move (`pipeline.extraction.*`); goldens do not call it and are
   unchanged. `llm-mailroom` and the sandbox do not call this function (the sandbox has its own
   `corpus.apply_label_overlays`, and its scoring seam strips `intent_source` before the Dojo

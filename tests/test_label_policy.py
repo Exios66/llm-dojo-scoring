@@ -433,6 +433,23 @@ def test_overlay_intent_is_scored_by_the_archive_block_and_survives_a_re_merge()
     assert again.fields == merged.fields and again.report["superseded"] == ["intent"]
 
 
+@pytest.mark.parametrize("meta", ["intent_source", "intent_confidence", "intent_status"])
+def test_an_overlay_cannot_write_intent_metadata(meta: str) -> None:
+    """A record's own ``intent_source`` (or confidence, status) label is rejected, so it can
+    neither re-tag the applied intent as heuristic nor restore the replaced label's metadata."""
+    record = _rec({
+        "intent": _lab("update", "correction", hub_value="payment_demand"),
+        # a correction of the Hub value reaches the guard; a gap fill of a set field is superseded
+        meta: _lab("heuristic", "correction", hub_value="heuristic") if meta == "intent_source" else _lab(0.9),
+    })
+    merged = apply_label_overlays(HEURISTIC_INTENT, doc_class="correspondence", doc_text=TEXT, interim=record)
+    assert merged.fields["intent_source"] == "interim:correction"
+    assert meta == "intent_source" or meta not in merged.fields
+    assert any(r.startswith(f"{meta}:") for r in merged.report["rejected"])
+    _, expected = scope_extraction_pair("correspondence", {"intent": "update"}, merged.fields)
+    assert expected.get("intent") == "update"
+
+
 def test_null_intent_overlay_is_a_documented_absence_and_does_not_mutate_the_input() -> None:
     """A null reviewed intent is no heuristic label either; the input row keeps its source."""
     hub = copy.deepcopy(HEURISTIC_INTENT)
