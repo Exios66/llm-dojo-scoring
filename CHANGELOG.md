@@ -67,14 +67,15 @@ Format based on Keep a Changelog; versioning is SemVer.
   scorer) and `score_archive_block` dropped the overlay value again before scoring. An applied
   `intent` now sets `intent_source` to the source that supplied it (`interim:correction`,
   `interim:gap_fill`, `near_gold:<how>`, the same string as `OverlayMerge.sources["intent"]`),
-  whatever the Hub source was, and drops the Hub's `intent_confidence` and `intent_status`, which
-  described the replaced label; a null overlay intent (a documented absence) is tagged too.
-  `stale_hub_labels`' rule is unchanged, and an `intent` no overlay applies keeps its metadata,
-  so an un-overlaid heuristic intent is still dropped. Only rows merged by
+  whatever the Hub source was, and drops the Hub's `intent_confidence` and `intent_status`,
+  which described the replaced label; a null overlay intent (a documented absence) is tagged
+  too. `stale_hub_labels`' rule is unchanged, and an `intent` no overlay applies keeps its
+  metadata, so an un-overlaid heuristic intent is still dropped. Only rows merged by
   `apply_label_overlays` move (`pipeline.extraction.*`); goldens do not call it and are
   unchanged. `llm-mailroom` and the sandbox do not call this function (the sandbox has its own
-  `corpus.apply_label_overlays`), so no consumer score moves on the next pin bump. Tests:
-  `tests/test_label_policy.py`.
+  `corpus.apply_label_overlays`, and its scoring seam strips `intent_source` before the Dojo
+  sees it, so it already scores these overlay intents), so no consumer score moves on the next
+  pin bump. Tests: `tests/test_label_policy.py`.
 - **Score ledger names every score change past `v0.30.1` (#179).** `metrics.score_changelog`
   gains three 0.30.2 entries, all `rescore_required`: CUAD presence credits the agreement and
   expiration dates for recall only (#167; `cuad.sandbox_category_detection.*`); a typed decision

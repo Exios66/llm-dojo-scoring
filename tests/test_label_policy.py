@@ -13,6 +13,7 @@ from llm_dojo_scoring.schemas.label_policy import (
     drop_stale_hub_labels,
     stale_hub_labels,
 )
+from llm_dojo_scoring.pipeline.archive import score_archive_block
 from llm_dojo_scoring.scoring.doc_scorers.common import score_common
 from llm_dojo_scoring.scoring.extraction_scope import scope_extraction_pair
 
@@ -414,6 +415,22 @@ def test_applied_intent_replaces_any_hub_intent_metadata() -> None:
     assert merged.fields["intent_source"] == "interim:correction"
     assert "intent_confidence" not in merged.fields and "intent_status" not in merged.fields
     assert hub == before
+
+
+def test_overlay_intent_is_scored_by_the_archive_block_and_survives_a_re_merge() -> None:
+    """``score_archive_block`` runs the stale drop too; a JSON-string Hub row keeps the
+    overlay intent there, and merging the merged row again changes nothing."""
+    correction = _rec({"intent": _lab("update", "correction", hub_value="payment_demand")})
+    merged = apply_label_overlays(
+        json.dumps(HEURISTIC_INTENT), doc_class="correspondence", doc_text=TEXT, interim=correction
+    )
+    right = score_archive_block("correspondence", {"intent": "update", "sender": "Phillip Allen"}, merged.fields)
+    old = score_archive_block("correspondence", {"intent": "payment_demand", "sender": "Phillip Allen"}, merged.fields)
+    assert right["overall_score"] == 1.0 and old["overall_score"] < 1.0
+    hub_only = score_archive_block("correspondence", {"intent": "update", "sender": "Phillip Allen"}, HEURISTIC_INTENT)
+    assert hub_only["overall_score"] == 1.0  # the heuristic intent is dropped, so only sender is scored
+    again = apply_label_overlays(merged.fields, doc_class="correspondence", doc_text=TEXT, interim=correction)
+    assert again.fields == merged.fields and again.report["superseded"] == ["intent"]
 
 
 def test_null_intent_overlay_is_a_documented_absence_and_does_not_mutate_the_input() -> None:
