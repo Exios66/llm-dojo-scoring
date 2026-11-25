@@ -387,13 +387,13 @@ def _field_counts(scored: Mapping[str, Any]) -> tuple[float | None, float | None
     per-field counts (``n_value_correct``, ``n_targeted``), which the detailed suite path needs
     because it returns no ``tp`` / ``fn``. Without ``fp`` the documented-absence hallucinations
     (``n_hallucinated``) stand in for the values stated on empty truth. ``n_value_wrong`` is
-    always added. An absent invention count is 0 (``None`` and NaN, the pandas marker for a
-    missing value, are absent); one that is present but corrupt (negative, infinite, fractional,
+    always added. An absent invention count is 0 (``None``, NaN and pandas ``NA``, the markers
+    for a missing value, are absent); one that is present but corrupt (negative, infinite, fractional,
     text) makes the invented values unknown, so the row has no usable counts and the share decides.
     """
     def present_but_unusable(key: str) -> bool:
         """The key holds a value that is not absent and not a usable count."""
-        return not _absent(scored.get(key)) and _count(scored.get(key)) is None
+        return not _missing(scored.get(key)) and _count(scored.get(key)) is None
 
     tp, fn, fp = (_count(scored.get(k)) for k in ("tp", "fn", "fp"))
     if tp is not None and fn is not None:
@@ -403,7 +403,7 @@ def _field_counts(scored: Mapping[str, Any]) -> tuple[float | None, float | None
         if correct is not None and targeted is not None and correct > targeted:
             correct = targeted = None  # inconsistent counts are no usable figure
     # n_value_partial too: a corrupt near-miss count read as 0 could turn low_recall into fabricated.
-    invention_keys = ("n_hallucinated" if _absent(scored.get("fp")) else "fp", "n_value_wrong", "n_value_partial")
+    invention_keys = ("n_hallucinated" if _missing(scored.get("fp")) else "fp", "n_value_wrong", "n_value_partial")
     if any(present_but_unusable(k) for k in invention_keys):
         return None, None, 0.0
     empty_truth = fp if fp is not None else (_count(scored.get("n_hallucinated")) or 0.0)

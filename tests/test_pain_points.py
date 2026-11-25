@@ -1017,3 +1017,15 @@ class TestCodeAntOn185:
             # Without counts the share decides, as it does for a row with no method.
             row = {"scoring_method": missing, "overall_extraction_score": 0.5}
             assert _ext(row).reason == "partial"
+
+    def test_a_pandas_na_invention_count_is_absent_like_nan(self):
+        """A nullable-integer column marks a missing count with ``pd.NA``; it is absent, as NaN is, not corrupt."""
+        pd = pytest.importorskip("pandas")
+        base = {"tp": 1, "fn": 0, "scoring_method": "suite", "overall_extraction_score": 0.5}
+        for key in ("fp", "n_value_wrong", "n_value_partial"):
+            nan_reason = _ext({**base, key: float("nan")}).reason
+            assert nan_reason == "complete"
+            assert _ext({**base, key: pd.NA}).reason == nan_reason, key
+        # Without ``fp`` the documented-absence hallucinations stand in, for NA as for NaN.
+        invented = {**base, "n_hallucinated": 1}
+        assert _ext({**invented, "fp": pd.NA}) == _ext({**invented, "fp": float("nan")})
